@@ -14,11 +14,12 @@
         .pricing h2 { margin-bottom: 20px; }
         .pricing form { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         .pricing label { font-weight: bold; }
-        .pricing input { padding: 12px; width: 80%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+        .pricing input, .pricing select { padding: 12px; width: 80%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px; }
         .pricing button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .pricing button:hover { background: #0056b3; }
         .result-container { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #333; }
         .compute-type { margin-top: 15px; font-size: 1em; font-weight: bold; color: #007bff; }
+        .firewall-options { display: none; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
         footer { background: #333; color: white; text-align: center; padding: 10px; margin-top: 20px; }
     </style>
 </head>
@@ -42,6 +43,25 @@
                 <input type='number' id='storage' min='10' required>
                 <label for='bandwidth'>Bandwidth (Mbps):</label>
                 <input type='number' id='bandwidth' min='1' required>
+                
+                <label for='firewall'>Include Firewall?</label>
+                <select id='firewall'>
+                    <option value="none">No</option>
+                    <option value="basic">Basic Firewall</option>
+                    <option value="advanced">Advanced Firewall</option>
+                    <option value="enterprise">Enterprise Firewall</option>
+                </select>
+                
+                <div id="firewall-options" class="firewall-options">
+                    <label for='firewall-features'>Firewall Features:</label>
+                    <select id='firewall-features'>
+                        <option value="standard">Standard Security</option>
+                        <option value="vpn">VPN Support</option>
+                        <option value="ips">Intrusion Prevention System (IPS)</option>
+                        <option value="all">All Security Features</option>
+                    </select>
+                </div>
+                
                 <button type='submit'>Calculate</button>
             </form>
             <div class="result-container" id='result'></div>
@@ -63,33 +83,32 @@
             const form = document.getElementById("pricing-form");
             const result = document.getElementById("result");
             const computeType = document.getElementById("compute-type");
+            const firewallSelect = document.getElementById("firewall");
+            const firewallOptions = document.getElementById("firewall-options");
+            const firewallFeatures = document.getElementById("firewall-features");
+            
+            firewallSelect.addEventListener("change", function() {
+                firewallOptions.style.display = (firewallSelect.value !== "none") ? "flex" : "none";
+            });
             
             form.addEventListener("input", function () {
                 const cpu = parseInt(document.getElementById("cpu").value) || 0;
                 const ram = parseInt(document.getElementById("ram").value) || 0;
                 const storage = parseInt(document.getElementById("storage").value) || 0;
                 const bandwidth = parseInt(document.getElementById("bandwidth").value) || 0;
+                let firewallCost = 0;
+
+                if (firewallSelect.value === "basic") firewallCost = pricingData.firewall.basic;
+                if (firewallSelect.value === "advanced") firewallCost = pricingData.firewall.advanced;
+                if (firewallSelect.value === "enterprise") firewallCost = pricingData.firewall.enterprise;
 
                 const cpuCost = cpu * pricingData.cpu;
                 const ramCost = ram * pricingData.ram;
                 const storageCost = storage * pricingData.storage;
                 const bandwidthCost = bandwidth * pricingData.bandwidth_mbps;
-
-                const totalCost = cpuCost + ramCost + storageCost + bandwidthCost;
-                result.innerHTML = `Estimated Monthly Cost: $${totalCost.toFixed(2)}`;
                 
-                // Determine Compute Type
-                let computeCategory = "";
-                if (ram / cpu >= 16) {
-                    computeCategory = "Memory-Optimized: Ideal for databases, caching, and in-memory computing.";
-                } else if (ram / cpu >= 8) {
-                    computeCategory = "Balanced: Suitable for general-purpose applications and business workloads.";
-                } else if (ram / cpu >= 4) {
-                    computeCategory = "Compute-Optimized: Ideal for CPU-intensive tasks.";
-                } else {
-                    computeCategory = "High-Performance Compute: Workloads requiring heavy CPU cycles.";
-                }
-                computeType.innerHTML = computeCategory;
+                const totalCost = cpuCost + ramCost + storageCost + bandwidthCost + firewallCost;
+                result.innerHTML = `Estimated Monthly Cost: $${totalCost.toFixed(2)}`;
             });
         });
     </script>
