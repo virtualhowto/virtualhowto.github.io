@@ -6,14 +6,19 @@
     <title>VMaaS - Virtual Machine as a Service</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-        .container { width: 80%; margin: auto; overflow: hidden; padding: 20px; }
+        .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; }
         header { background: #333; color: #fff; padding: 20px 0; text-align: center; }
         .hero { text-align: center; padding: 50px; background: #007bff; color: white; }
-        .hero h1 { margin: 0; }
-        .services { display: flex; justify-content: space-around; padding: 20px; }
-        .service { background: white; padding: 20px; border-radius: 5px; box-shadow: 0px 0px 10px 0px #aaa; }
+        .hero h1 { margin: 0; font-size: 2.5em; }
+        .services { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
+        .service { background: white; padding: 20px; border-radius: 5px; box-shadow: 0px 0px 10px 0px #aaa; width: 300px; text-align: center; }
         .cta { text-align: center; padding: 20px; }
         .cta a { background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+        .pricing, .inclusions { text-align: center; padding: 20px; }
+        .pricing form { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .pricing input, .pricing button { padding: 10px; width: 80%; max-width: 300px; }
+        .inclusions ul { list-style: none; padding: 0; }
+        .inclusions li { background: white; padding: 10px; margin: 5px 0; border-radius: 5px; box-shadow: 0px 0px 5px 0px #aaa; }
         footer { background: #333; color: white; text-align: center; padding: 10px; margin-top: 20px; }
     </style>
 </head>
@@ -29,22 +34,34 @@
         <section class="services">
             <div class="service">
                 <h2>Basic Tier</h2>
-                <p>Affordable VM hosting with self-service provisioning.</p>
+                <p>✅ Self-service VM provisioning</p>
+                <p>✅ Shared resources</p>
+                <p>✅ Basic email support</p>
             </div>
             <div class="service">
                 <h2>Business Tier</h2>
-                <p>Managed cloud VMs with monitoring and support.</p>
+                <p>✅ Managed VM hosting</p>
+                <p>✅ 24/7 monitoring</p>
+                <p>✅ Daily backups</p>
             </div>
             <div class="service">
                 <h2>Enterprise Tier</h2>
-                <p>Fully managed infrastructure with dedicated security and compliance.</p>
+                <p>✅ Dedicated infrastructure</p>
+                <p>✅ Advanced security</p>
+                <p>✅ Compliance & SLA-backed support</p>
             </div>
         </section>
-        <section class="cta">
-            <h2>Get Started Today</h2>
-            <a href="#">Request a Demo</a>
+        <section class="inclusions">
+            <h2>What’s Included</h2>
+            <ul>
+                <li>🔹 High-Performance SSD Storage</li>
+                <li>🔹 Scalable Compute Resources</li>
+                <li>🔹 DDoS Protection & Firewall</li>
+                <li>🔹 24/7 Monitoring & Alerts</li>
+                <li>🔹 Automated Backups</li>
+                <li>🔹 API & Automation Support</li>
+            </ul>
         </section>
-        
         <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <form id='pricing-form'>
