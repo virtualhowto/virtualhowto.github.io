@@ -31,35 +31,6 @@
         <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
     </section>
     <div class="container">
-        <section class="services">
-            <div class="service">
-                <h2>Basic Tier</h2>
-                <p> Self-service VM provisioning</p>
-                <p> Shared resources</p>
-                <p> Basic email support</p>
-            </div>
-            <div class="service">
-                <h2>Business Tier</h2>
-                <p> Managed VM hosting</p>
-                <p> 24/7 monitoring</p>
-                <p> Daily backups</p>
-            </div>
-            <div class="service">
-                <h2>Enterprise Tier</h2>
-                <p> Dedicated infrastructure</p>
-                <p> Advanced security</p>
-                <p> Compliance & SLA-backed support</p>
-            </div>
-        </section>
-        <section class="inclusions">
-            <h2>What’s Included</h2>
-            <ul>
-                <li> High-Performance SSD Storage</li>
-                <li> Scalable Compute Resources</li>
-                <li> DDoS Protection</li>
-                <li> 24/7 Monitoring & Alerts</li>
-            </ul>
-        </section>
         <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <form id='pricing-form'>
@@ -81,22 +52,26 @@
     </footer>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        async function fetchPricing() {
+            const response = await fetch('pricing.json');
+            return response.json();
+        }
+        
+        document.addEventListener("DOMContentLoaded", async function () {
+            const pricingData = await fetchPricing();
             const form = document.getElementById("pricing-form");
             const result = document.getElementById("result");
+            
+            form.addEventListener("input", function () {
+                const cpu = parseInt(document.getElementById("cpu").value) || 0;
+                const ram = parseInt(document.getElementById("ram").value) || 0;
+                const storage = parseInt(document.getElementById("storage").value) || 0;
+                const bandwidth = parseInt(document.getElementById("bandwidth").value) || 0;
 
-            form.addEventListener("submit", function (event) {
-                event.preventDefault();
-
-                const cpu = parseInt(document.getElementById("cpu").value);
-                const ram = parseInt(document.getElementById("ram").value);
-                const storage = parseInt(document.getElementById("storage").value);
-                const bandwidth = parseInt(document.getElementById("bandwidth").value);
-
-                const cpuCost = cpu * 10;  // $10 per vCPU
-                const ramCost = ram * 5;   // $5 per GB RAM
-                const storageCost = storage * 0.10; // $0.10 per GB storage
-                const bandwidthCost = bandwidth * 0.05; // $0.05 per GB bandwidth
+                const cpuCost = cpu * pricingData.cpu;
+                const ramCost = ram * pricingData.ram;
+                const storageCost = storage * pricingData.storage;
+                const bandwidthCost = bandwidth * pricingData.bandwidth;
 
                 const totalCost = cpuCost + ramCost + storageCost + bandwidthCost;
                 result.innerHTML = `<h3>Estimated Monthly Cost: $${totalCost.toFixed(2)}</h3>`;
