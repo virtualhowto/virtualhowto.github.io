@@ -10,15 +10,14 @@
         header { background: #333; color: #fff; padding: 20px 0; text-align: center; }
         .hero { text-align: center; padding: 50px; background: #007bff; color: white; }
         .hero h1 { margin: 0; font-size: 2.5em; }
-        .services { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
-        .service { background: white; padding: 20px; border-radius: 5px; box-shadow: 0px 0px 10px 0px #aaa; width: 300px; text-align: center; }
-        .cta { text-align: center; padding: 20px; }
-        .cta a { background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
-        .pricing, .inclusions { text-align: center; padding: 20px; }
-        .pricing form { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .pricing input, .pricing button { padding: 10px; width: 80%; max-width: 300px; }
-        .inclusions ul { list-style: none; padding: 0; }
-        .inclusions li { background: white; padding: 10px; margin: 5px 0; border-radius: 5px; box-shadow: 0px 0px 5px 0px #aaa; }
+        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); border-radius: 10px; }
+        .pricing h2 { margin-bottom: 20px; }
+        .pricing form { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .pricing label { font-weight: bold; }
+        .pricing input { padding: 12px; width: 80%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+        .pricing button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        .pricing button:hover { background: #0056b3; }
+        .result-container { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #333; }
         footer { background: #333; color: white; text-align: center; padding: 10px; margin-top: 20px; }
     </style>
 </head>
@@ -44,7 +43,7 @@
                 <input type='number' id='bandwidth' min='1' required>
                 <button type='submit'>Calculate</button>
             </form>
-            <div id='result'></div>
+            <div class="result-container" id='result'></div>
         </section>
     </div>
     <footer>
@@ -74,7 +73,7 @@
                 const bandwidthCost = bandwidth * pricingData.bandwidth_mbps;
 
                 const totalCost = cpuCost + ramCost + storageCost + bandwidthCost;
-                result.innerHTML = `<h3>Estimated Monthly Cost: $${totalCost.toFixed(2)}</h3>`;
+                result.innerHTML = `Estimated Monthly Cost: $${totalCost.toFixed(2)}`;
             });
         });
     </script>
