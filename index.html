@@ -6,7 +6,7 @@
     <title>VMaaS - Virtual Machine as a Service</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-        .container { width: 80%; margin: auto; overflow: hidden; }
+        .container { width: 80%; margin: auto; overflow: hidden; padding: 20px; }
         header { background: #333; color: #fff; padding: 20px 0; text-align: center; }
         .hero { text-align: center; padding: 50px; background: #007bff; color: white; }
         .hero h1 { margin: 0; }
@@ -44,34 +44,8 @@
             <h2>Get Started Today</h2>
             <a href="#">Request a Demo</a>
         </section>
-    </div>
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("pricing-form");
-    const result = document.getElementById("result");
-
-    form.addEventListener("submit", function (event) {
-        event.preventDefault();
-
-        const cpu = parseInt(document.getElementById("cpu").value);
-        const ram = parseInt(document.getElementById("ram").value);
-        const storage = parseInt(document.getElementById("storage").value);
-        const bandwidth = parseInt(document.getElementById("bandwidth").value);
-
-        const cpuCost = cpu * 10;  // $10 per vCPU
-        const ramCost = ram * 5;   // $5 per GB RAM
-        const storageCost = storage * 0.10; // $0.10 per GB storage
-        const bandwidthCost = bandwidth * 0.05; // $0.05 per GB bandwidth
-
-        const totalCost = cpuCost + ramCost + storageCost + bandwidthCost;
-        result.innerHTML = `<h3>Estimated Monthly Cost: $${totalCost.toFixed(2)}</h3>`;
-    });
-});
-
-// Adding the calculator to the landing page
-document.addEventListener("DOMContentLoaded", function () {
-    const calculatorSection = document.createElement("section");
-    calculatorSection.innerHTML = `
-        <div class='container'>
+        
+        <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <form id='pricing-form'>
                 <label for='cpu'>vCPU:</label>
@@ -85,12 +59,34 @@ document.addEventListener("DOMContentLoaded", function () {
                 <button type='submit'>Calculate</button>
             </form>
             <div id='result'></div>
-        </div>
-    `;
-    document.body.appendChild(calculatorSection);
-});
+        </section>
+    </div>
     <footer>
         <p>&copy; 2025 VMaaS - All Rights Reserved</p>
     </footer>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("pricing-form");
+            const result = document.getElementById("result");
+
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                const cpu = parseInt(document.getElementById("cpu").value);
+                const ram = parseInt(document.getElementById("ram").value);
+                const storage = parseInt(document.getElementById("storage").value);
+                const bandwidth = parseInt(document.getElementById("bandwidth").value);
+
+                const cpuCost = cpu * 10;  // $10 per vCPU
+                const ramCost = ram * 5;   // $5 per GB RAM
+                const storageCost = storage * 0.10; // $0.10 per GB storage
+                const bandwidthCost = bandwidth * 0.05; // $0.05 per GB bandwidth
+
+                const totalCost = cpuCost + ramCost + storageCost + bandwidthCost;
+                result.innerHTML = `<h3>Estimated Monthly Cost: $${totalCost.toFixed(2)}</h3>`;
+            });
+        });
+    </script>
 </body>
 </html>
