@@ -18,6 +18,7 @@
         .pricing button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .pricing button:hover { background: #0056b3; }
         .result-container { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #333; }
+        .compute-type { margin-top: 15px; font-size: 1em; font-weight: bold; color: #007bff; }
         footer { background: #333; color: white; text-align: center; padding: 10px; margin-top: 20px; }
     </style>
 </head>
@@ -44,6 +45,7 @@
                 <button type='submit'>Calculate</button>
             </form>
             <div class="result-container" id='result'></div>
+            <div class="compute-type" id='compute-type'></div>
         </section>
     </div>
     <footer>
@@ -60,6 +62,7 @@
             const pricingData = await fetchPricing();
             const form = document.getElementById("pricing-form");
             const result = document.getElementById("result");
+            const computeType = document.getElementById("compute-type");
             
             form.addEventListener("input", function () {
                 const cpu = parseInt(document.getElementById("cpu").value) || 0;
@@ -74,6 +77,19 @@
 
                 const totalCost = cpuCost + ramCost + storageCost + bandwidthCost;
                 result.innerHTML = `Estimated Monthly Cost: $${totalCost.toFixed(2)}`;
+                
+                // Determine Compute Type
+                let computeCategory = "";
+                if (ram / cpu >= 16) {
+                    computeCategory = "Memory-Optimized: Ideal for databases, caching, and in-memory computing.";
+                } else if (ram / cpu >= 8) {
+                    computeCategory = "Balanced: Suitable for general-purpose applications and business workloads.";
+                } else if (ram / cpu >= 4) {
+                    computeCategory = "Compute-Optimized: Ideal for CPU-intensive tasks like high-performance computing and AI.";
+                } else {
+                    computeCategory = "High-Performance Compute: Best for AI/ML, scientific simulations, and workloads requiring heavy CPU cycles.";
+                }
+                computeType.innerHTML = computeCategory;
             });
         });
     </script>
