@@ -93,9 +93,10 @@
         <h2>Pricing Summary</h2>
         <label for="pricingOption">Select Pricing Model:</label>
         <select id="pricingOption" onchange="generateSummary()">
-            <option value="vmware">VMware</option>
-            <option value="azure">Azure LOCAL</option>
-            <option value="hpe">HPE VME</option>
+            <option value="vmware-standard">VMware Standard ($50/core/year)</option>
+            <option value="vmware-enterprise">VMware Enterprise Plus ($4780/CPU socket)</option>
+            <option value="azure">Azure LOCAL ($10/core/month + $23.30/core/month for Windows Server)</option>
+            <option value="hpe">HPE VME (Placeholder - Update with Quote)</option>
         </select>
         <p>Estimated Cost: $<span id="pricingResult"></span></p>
     </div>
@@ -140,15 +141,16 @@
 
         function generateSummary() {
             const totalCores = parseInt(document.getElementById("totalCores").innerText) || 0;
+            const totalSockets = parseInt(document.getElementById("totalCPUSockets").innerText) || 0;
             const pricingOption = document.getElementById("pricingOption").value;
 
-            let costPerCore = 0;
-            if (pricingOption === "vmware") costPerCore = 50;
-            else if (pricingOption === "azure") costPerCore = 60;
-            else if (pricingOption === "hpe") costPerCore = 40;
+            let totalCost = 0;
+            if (pricingOption === "vmware-standard") totalCost = totalCores * 50;
+            else if (pricingOption === "vmware-enterprise") totalCost = totalSockets * 4780;
+            else if (pricingOption === "azure") totalCost = totalCores * (10 + 23.30) * 12;
+            else if (pricingOption === "hpe") totalCost = "Awaiting Quote";
 
-            const totalCost = totalCores * costPerCore;
-            document.getElementById("pricingResult").innerText = totalCost.toFixed(2);
+            document.getElementById("pricingResult").innerText = totalCost;
             document.getElementById("pricingSummary").classList.remove("hidden");
         }
     </script>
