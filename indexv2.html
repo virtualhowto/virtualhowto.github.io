@@ -77,22 +77,29 @@
         </div>
     </div>
     <script>
-        function calculateCost(cpu, ram, storage, os) {
-            let cost = (cpu * 10) + (ram * 5) + (storage * 0.1);
-            const licensingOption = document.getElementById("os-licensing").value;
-            if (os.includes("Windows")) {
-                if (licensingOption === "included") cost += cpu * 15; // Full licensing
-                if (licensingOption === "hybrid") cost += cpu * 7.5; // Discounted hybrid use licensing
-            }
-            return cost;
+        function exportFullCSV() {
+            let csvContent = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Azure vCPU Cost,Azure RAM Cost,Azure Storage Cost,Total Azure Cost\n";
+            document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+                let cells = row.children;
+                let os = cells[1].textContent;
+                let cpu = parseInt(cells[2].textContent);
+                let ram = parseFloat(cells[3].textContent);
+                let storage = parseFloat(cells[4].textContent);
+                let azureCpuCost = cpu * 15;
+                let azureRamCost = ram * 6;
+                let azureStorageCost = storage * 0.2;
+                let totalAzureCost = azureCpuCost + azureRamCost + azureStorageCost;
+                csvContent += `${cells[0].textContent},${os},${cpu},${ram},${storage},$${azureCpuCost.toFixed(2)},$${azureRamCost.toFixed(2)},$${azureStorageCost.toFixed(2)},$${totalAzureCost.toFixed(2)}\n`;
+            });
+            let blob = new Blob([csvContent], { type: 'text/csv' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'azure_cost_breakdown.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
-
-        function calculateAzureCost(cpu, ram, storage) {
-            return (cpu * 15) + (ram * 6) + (storage * 0.2);
-        }
-
-        document.getElementById("os-licensing").addEventListener("change", updateCart);
-        document.getElementById("export-csv").addEventListener("click", exportAzureCSV);
+        document.getElementById("export-csv").addEventListener("click", exportFullCSV);
     </script>
 </body>
 </html>
