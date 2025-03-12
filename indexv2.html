@@ -15,8 +15,8 @@
         .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border-radius: 10px; transition: all 0.3s ease; }
         .pricing:hover { box-shadow: 0px 6px 20px rgba(0,0,0,0.15); }
         .pricing h2 { margin-bottom: 20px; color: #cc5500; font-size: 2em; }
-        .pricing input { padding: 14px; width: 100%; max-width: 400px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; }
-        .pricing input:focus { border-color: #cc5500; outline: none; }
+        .pricing input, .pricing select { padding: 14px; width: 100%; max-width: 400px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; }
+        .pricing input:focus, .pricing select:focus { border-color: #cc5500; outline: none; }
         .vm-table-container { width: 100%; max-width: 100%; overflow-x: auto; margin-top: 20px; }
         .vm-table { width: 100%; border-collapse: collapse; }
         .vm-table th, .vm-table td { padding: 10px; border: 1px solid #ddd; text-align: center; cursor: pointer; }
@@ -42,12 +42,18 @@
         <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <input type="file" id="fileUpload" accept=".xlsx">
+            <label for="os-licensing">OS Licensing Option:</label>
+            <select id="os-licensing">
+                <option value="included">Include Licensing</option>
+                <option value="mobility">License Mobility</option>
+                <option value="hybrid">Hybrid Use Benefit</option>
+            </select>
             <div class="vm-table-container">
                 <table id="vm-table" class="vm-table">
                     <thead>
                         <tr>
                             <th>VM Name</th>
-                            <th>OS</th>
+                            <th>OS according to the configuration file</th>
                             <th>vCPU</th>
                             <th>RAM (GB)</th>
                             <th>Storage (GB)</th>
@@ -71,33 +77,21 @@
         </div>
     </div>
     <script>
-        function calculateCost(cpu, ram, storage) {
-            return (cpu * 10) + (ram * 5) + (storage * 0.1);
+        function calculateCost(cpu, ram, storage, os) {
+            let cost = (cpu * 10) + (ram * 5) + (storage * 0.1);
+            const licensingOption = document.getElementById("os-licensing").value;
+            if (os.includes("Windows")) {
+                if (licensingOption === "included") cost += cpu * 15; // Full licensing
+                if (licensingOption === "hybrid") cost += cpu * 7.5; // Discounted hybrid use licensing
+            }
+            return cost;
         }
 
         function calculateAzureCost(cpu, ram, storage) {
             return (cpu * 15) + (ram * 6) + (storage * 0.2);
         }
 
-        function exportAzureCSV() {
-            let csvContent = "VM Name,vCPU,RAM (GB),Storage (GB),Azure Cost\n";
-            document.querySelectorAll(".vm-table tr.selected").forEach(row => {
-                let cells = row.children;
-                let cpu = parseInt(cells[2].textContent);
-                let ram = parseFloat(cells[3].textContent);
-                let storage = parseFloat(cells[4].textContent);
-                let azureCost = calculateAzureCost(cpu, ram, storage);
-                csvContent += `${cells[0].textContent},${cpu},${ram},${storage},$${azureCost.toFixed(2)}\n`;
-            });
-            let blob = new Blob([csvContent], { type: 'text/csv' });
-            let link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'azure_cost_estimate.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
+        document.getElementById("os-licensing").addEventListener("change", updateCart);
         document.getElementById("export-csv").addEventListener("click", exportAzureCSV);
     </script>
 </body>
