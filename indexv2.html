@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMaaS - Virtual Machine as a Service</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #ffffff; }
+        .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; }
+        header { background: linear-gradient(90deg, #1c3f94, #cc5500); color: #fff; padding: 20px 0; text-align: center; font-size: 1.5em; font-weight: bold; }
+        .hero { text-align: center; padding: 50px; background: #cc5500; color: white; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); }
+        .hero h1 { margin: 0; font-size: 2.8em; font-weight: bold; }
+        .hero p { font-size: 1.2em; margin-top: 10px; }
+        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border-radius: 10px; transition: all 0.3s ease; }
+        .pricing:hover { box-shadow: 0px 6px 20px rgba(0,0,0,0.15); }
+        .pricing h2 { margin-bottom: 20px; color: #cc5500; font-size: 2em; }
+        .pricing input { padding: 14px; width: 100%; max-width: 400px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; }
+        .pricing input:focus { border-color: #cc5500; outline: none; }
+        .vm-table-container { width: 100%; max-width: 100%; overflow-x: auto; margin-top: 20px; }
+        .vm-table { width: 100%; border-collapse: collapse; }
+        .vm-table th, .vm-table td { padding: 10px; border: 1px solid #ddd; text-align: center; cursor: pointer; }
+        .vm-table th { background: #cc5500; color: white; }
+        .vm-table tr.selected { background: #ffcc80; }
+        .cart { position: fixed; right: 20px; top: 120px; width: 350px; background: white; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); border-radius: 10px; }
+        .cart h3 { margin-top: 0; color: #cc5500; font-size: 1.5em; text-align: center; }
+        .cart ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
+        .cart p { text-align: center; font-size: 1.2em; font-weight: bold; }
+        .cost-comparison { display: flex; justify-content: space-between; margin-top: 20px; padding: 10px; background: #f4f4f4; border-radius: 8px; }
+        .cost-comparison div { width: 48%; text-align: center; }
+        footer { text-align: center; background: #1c3f94; color: white; padding: 15px; font-size: 1em; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <header>Virtual Machine as a Service (VMaaS)</header>
+    <section class="hero">
+        <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
+        <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
+    </section>
+    <div class="container">
+        <section class="pricing">
+            <h2>VM Pricing Calculator</h2>
+            <input type="file" id="fileUpload" accept=".xlsx">
+            <div class="vm-table-container">
+                <table id="vm-table" class="vm-table">
+                    <thead>
+                        <tr>
+                            <th>VM Name</th>
+                            <th>OS</th>
+                            <th>vCPU</th>
+                            <th>RAM (GB)</th>
+                            <th>Storage (GB)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="cart" id="cart">
+        <h3>Summary</h3>
+        <ul id="cart-list"></ul>
+        <div class="cost-comparison">
+            <div>
+                <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
+            </div>
+            <div>
+                <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
+            </div>
+        </div>
+    </div>
+    <script>
+        function calculateCost(cpu, ram, storage) {
+            return (cpu * 10) + (ram * 5) + (storage * 0.1);
+        }
+
+        function calculateAzureCost(cpu, ram, storage) {
+            return (cpu * 15) + (ram * 6) + (storage * 0.2);
+        }
+
+        document.getElementById("fileUpload").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.readAsBinaryString(file);
+            reader.onload = function(e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: "binary" });
+                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+                const vmTableBody = document.querySelector("#vm-table tbody");
+                vmTableBody.innerHTML = "";
+                
+                vInfo.forEach(vm => {
+                    let row = document.createElement("tr");
+                    row.innerHTML = `<td>${vm["VM"]}</td>
+                                     <td>${vm["OS according to the configuration file"]}</td>
+                                     <td>${vm["CPUs"]}</td>
+                                     <td>${(vm["Memory"] / 1024).toFixed(2)}</td>
+                                     <td>${(vm["Provisioned MB"] / 1024).toFixed(2)}</td>`;
+                    row.addEventListener("click", function() {
+                        row.classList.toggle("selected");
+                        updateCart();
+                    });
+                    vmTableBody.appendChild(row);
+                });
+            };
+        });
+
+        function updateCart() {
+            const cartList = document.getElementById("cart-list");
+            const cartTotal = document.getElementById("cart-total");
+            const azureTotal = document.getElementById("azure-total");
+            let totalCost = 0;
+            let totalAzureCost = 0;
+            cartList.innerHTML = "";
+            
+            document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+                let cells = row.children;
+                let cpu = parseInt(cells[2].textContent);
+                let ram = parseFloat(cells[3].textContent);
+                let storage = parseFloat(cells[4].textContent);
+                let cost = calculateCost(cpu, ram, storage);
+                let azureCost = calculateAzureCost(cpu, ram, storage);
+                totalCost += cost;
+                totalAzureCost += azureCost;
+                
+                let li = document.createElement("li");
+                li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
+                cartList.appendChild(li);
+            });
+            cartTotal.textContent = `$${totalCost.toFixed(2)}`;
+            azureTotal.textContent = `$${totalAzureCost.toFixed(2)}`;
+        }
+    </script>
+</body>
+</html>
