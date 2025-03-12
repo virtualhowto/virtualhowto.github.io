@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RVTools Summary</title>
+    <link rel="stylesheet" href="https://virtualhowto.github.io/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2b2b2b;
+            color: #ffffff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .summary-panel {
+            width: 48%;
+            background: #264653;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #f4a261;
+        }
+        h1 {
+            color: #f4a261;
+        }
+        input[type="file"] {
+            padding: 10px;
+            background: #264653;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .card {
+            border: 1px solid #f4a261;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #264653;
+            text-align: left;
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            background: #f4a261;
+            color: black;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>RVTools Summary</h1>
+    <input type="file" id="fileInput" accept=".xlsx" />
+    <div class="container">
+        <div id="summary" class="summary-panel hidden">
+            <h2>VMINFO & vHost Summary</h2>
+            <p>Total VMs: <span id="totalVMs"></span></p>
+            <p>Total vCPUs: <span id="totalVCPUs"></span></p>
+            <p>Total Memory (GB): <span id="totalMemoryGB"></span></p>
+            <p>Total Provisioned Storage (GB): <span id="totalStorageGB"></span></p>
+            <p>Total Hosts: <span id="totalHosts"></span></p>
+            <p>Total Physical Cores: <span id="totalCores"></span></p>
+            <p>Total Memory (GB): <span id="totalHostMemoryGB"></span></p>
+            <p>Total CPU Sockets: <span id="totalCPUSockets"></span></p>
+            <button onclick="generateSummary()">Generate Pricing Summary</button>
+        </div>
+
+        <div id="pricingSummary" class="summary-panel hidden">
+            <h2>Pricing Comparison</h2>
+            <table>
+                <tr>
+                    <th>Model</th>
+                    <th>Cost</th>
+                </tr>
+                <tr>
+                    <td>VMware Standard</td>
+                    <td>$<span id="vmwareStandard"></span></td>
+                </tr>
+                <tr>
+                    <td>VMware Enterprise Plus</td>
+                    <td>$<span id="vmwareEnterprise"></span></td>
+                </tr>
+                <tr>
+                    <td>Azure LOCAL</td>
+                    <td>$<span id="azure"></span></td>
+                </tr>
+                <tr>
+                    <td>HPE VME</td>
+                    <td>$<span id="hpe"></span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                processWorkbook(workbook);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function processWorkbook(workbook) {
+            const vInfoSheet = workbook.Sheets["vInfo"];
+            const vHostSheet = workbook.Sheets["vHost"];
+            if (!vInfoSheet || !vHostSheet) {
+                alert("Invalid RVTools file: Missing required sheets");
+                return;
+            }
+
+            const vInfo = XLSX.utils.sheet_to_json(vInfoSheet);
+            const vHost = XLSX.utils.sheet_to_json(vHostSheet);
+
+            document.getElementById("totalVMs").innerText = vInfo.length;
+            document.getElementById("totalVCPUs").innerText = vInfo.reduce((sum, vm) => sum + (vm["CPUs"] || 0), 0);
+            document.getElementById("totalMemoryGB").innerText = (vInfo.reduce((sum, vm) => sum + (vm["Memory"] || 0), 0) / 1024).toFixed(2);
+            document.getElementById("totalStorageGB").innerText = (vInfo.reduce((sum, vm) => sum + (vm["Provisioned MB"] || 0), 0) / 1024).toFixed(2);
+
+            document.getElementById("totalHosts").innerText = vHost.length;
+            document.getElementById("totalCores").innerText = vHost.reduce((sum, host) => sum + (host["# Cores"] || 0), 0);
+            document.getElementById("totalHostMemoryGB").innerText = (vHost.reduce((sum, host) => sum + (host["# Memory"] || 0), 0) / 1024).toFixed(2);
+            document.getElementById("totalCPUSockets").innerText = vHost.reduce((sum, host) => sum + (host["# CPU"] || 0), 0);
+
+            document.getElementById("summary").classList.remove("hidden");
+        }
+
+        function generateSummary() {
+            const totalCores = parseInt(document.getElementById("totalCores").innerText) || 0;
+            const totalSockets = parseInt(document.getElementById("totalCPUSockets").innerText) || 0;
+
+            document.getElementById("vmwareStandard").innerText = (totalCores * 50).toFixed(2);
+            document.getElementById("vmwareEnterprise").innerText = (totalSockets * 4780).toFixed(2);
+            document.getElementById("azure").innerText = (totalCores * (10 + 23.30) * 12).toFixed(2);
+            document.getElementById("hpe").innerText = "Awaiting Quote";
+            document.getElementById("pricingSummary").classList.remove("hidden");
+        }
+    </script>
+</body>
+</html>
