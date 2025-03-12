@@ -6,27 +6,27 @@
     <title>VMaaS - Virtual Machine as a Service</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #ffffff; }
         .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; }
-        header { background: #333; color: #fff; padding: 20px 0; text-align: center; }
-        .hero { text-align: center; padding: 50px; background: #007bff; color: white; }
+        header { background: #1c3f94; color: #fff; padding: 20px 0; text-align: center; }
+        .hero { text-align: center; padding: 50px; background: #2d4fad; color: white; }
         .hero h1 { margin: 0; font-size: 2.5em; }
         .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); border-radius: 10px; }
-        .pricing h2 { margin-bottom: 20px; }
+        .pricing h2 { margin-bottom: 20px; color: #1c3f94; }
         .pricing form { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .pricing label { font-weight: bold; }
+        .pricing label { font-weight: bold; color: #1c3f94; }
         .pricing input, .pricing select, .pricing input[type='range'] { padding: 12px; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 5px; }
-        .pricing button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
-        .pricing button:hover { background: #0056b3; }
+        .pricing button { padding: 12px 20px; background: #e31837; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        .pricing button:hover { background: #c2172f; }
         .result-container { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #333; }
-        .compute-type { margin-top: 15px; font-size: 1em; font-weight: bold; color: #007bff; }
+        .compute-type { margin-top: 15px; font-size: 1em; font-weight: bold; color: #1c3f94; }
         .firewall-options { display: none; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
-        .vm-list-container { width: 100%; max-width: 400px; background: #f8f8f8; padding: 10px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.1); }
+        .vm-list-container { width: 100%; max-width: 400px; background: #f0f2f5; padding: 10px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.1); }
         .vm-list { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
         .vm-list li { display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #ddd; }
         .vm-list input { margin-right: 10px; }
         .cart { position: fixed; right: 20px; top: 100px; width: 300px; background: white; padding: 20px; box-shadow: 0px 0px 10px rgba(0,0,0,0.2); border-radius: 10px; }
-        .cart h3 { margin-top: 0; }
+        .cart h3 { margin-top: 0; color: #1c3f94; }
     </style>
 </head>
 <body>
@@ -81,25 +81,6 @@
         document.getElementById("bandwidth").addEventListener("input", function() {
             document.getElementById("bandwidth-value").textContent = this.value;
         });
-
-        function addToCart() {
-            const cartList = document.getElementById("cart-list");
-            let cpu = parseInt(document.getElementById("cpu").value) || 0;
-            let ram = parseInt(document.getElementById("ram").value) || 0;
-            let storage = parseInt(document.getElementById("storage").value) || 0;
-            let bandwidth = parseInt(document.getElementById("bandwidth").value) || 0;
-            let firewall = document.getElementById("firewall").value;
-            
-            let totalCost = (cpu * 10) + (ram * 5) + (storage * 0.1) + (bandwidth * 0.05);
-            if (firewall !== "none") totalCost += 50;
-            
-            let item = document.createElement("li");
-            item.textContent = `vCPU: ${cpu}, RAM: ${ram}GB, Storage: ${storage}GB, Bandwidth: ${bandwidth}Mbps, Firewall: ${firewall}, Cost: $${totalCost.toFixed(2)}`;
-            cartList.appendChild(item);
-            
-            let cartTotal = parseFloat(document.getElementById("cart-total").textContent.replace("$", "")) + totalCost;
-            document.getElementById("cart-total").textContent = `$${cartTotal.toFixed(2)}`;
-        }
     </script>
 </body>
 </html>
