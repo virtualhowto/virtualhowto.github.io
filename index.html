@@ -82,41 +82,28 @@
             document.getElementById("bandwidth-value").textContent = this.value;
         });
 
-        document.getElementById("fileUpload").addEventListener("change", function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.readAsBinaryString(file);
-            reader.onload = function(e) {
-                const data = e.target.result;
-                const workbook = XLSX.read(data, { type: "binary" });
-                
-                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
-                const vmList = document.getElementById("vm-list");
-                vmList.innerHTML = "";
-                
-                vInfo.forEach(vm => {
-                    let li = document.createElement("li");
-                    let checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.value = vm["VM"];
-                    checkbox.addEventListener("change", updateCart);
-                    li.appendChild(checkbox);
-                    li.appendChild(document.createTextNode(`${vm["VM"]} - ${vm["GuestOS"]}`));
-                    vmList.appendChild(li);
-                });
-            };
-        });
+        document.getElementById("pricing-form").addEventListener("input", updateCart);
 
         function updateCart() {
             const cartList = document.getElementById("cart-list");
             cartList.innerHTML = "";
+            
             document.querySelectorAll("#vm-list input:checked").forEach(vm => {
                 let li = document.createElement("li");
                 li.textContent = vm.value;
                 cartList.appendChild(li);
             });
+            
+            let cpu = parseInt(document.getElementById("cpu").value) || 0;
+            let ram = parseInt(document.getElementById("ram").value) || 0;
+            let storage = parseInt(document.getElementById("storage").value) || 0;
+            let bandwidth = parseInt(document.getElementById("bandwidth").value) || 0;
+            let firewall = document.getElementById("firewall").value;
+            
+            let totalCost = (cpu * 10) + (ram * 5) + (storage * 0.1) + (bandwidth * 0.05);
+            if (firewall !== "none") totalCost += 50;
+            
+            document.getElementById("cart-total").textContent = `$${totalCost.toFixed(2)}`;
         }
     </script>
 </body>
