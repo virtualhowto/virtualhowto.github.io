@@ -10,7 +10,7 @@
         header { background: #333; color: #fff; padding: 20px 0; text-align: center; }
         .hero { text-align: center; padding: 50px; background: #007bff; color: white; }
         .hero h1 { margin: 0; font-size: 2.5em; }
-        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); border-radius: 10px; }
+        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); border-radius: 10px; position: absolute; cursor: grab; }
         .pricing h2 { margin-bottom: 20px; }
         .pricing form { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         .pricing label { font-weight: bold; }
@@ -32,7 +32,7 @@
         <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
     </section>
     <div class="container">
-        <section class="pricing">
+        <section id="pricing-panel" class="pricing">
             <h2>VM Pricing Calculator</h2>
             <form id='pricing-form'>
                 <label for='cpu'>vCPU:</label>
@@ -47,9 +47,8 @@
                 <label for='firewall'>Include Firewall?</label>
                 <select id='firewall'>
                     <option value="none">No</option>
-                    <option value="basic">Basic Firewall</option>
-                    <option value="advanced">Advanced Firewall</option>
-                    <option value="enterprise">Enterprise Firewall</option>
+                    <option value="hosting">Hosting Platform Firewall</option>
+                    <option value="aggregated">Aggregated SD-WAN/MPLS Firewall</option>
                 </select>
                 
                 <div id="firewall-options" class="firewall-options">
@@ -86,6 +85,7 @@
             const firewallSelect = document.getElementById("firewall");
             const firewallOptions = document.getElementById("firewall-options");
             const firewallFeatures = document.getElementById("firewall-features");
+            const pricingPanel = document.getElementById("pricing-panel");
             
             firewallSelect.addEventListener("change", function() {
                 firewallOptions.style.display = (firewallSelect.value !== "none") ? "flex" : "none";
@@ -95,13 +95,16 @@
                 const cpu = parseInt(document.getElementById("cpu").value) || 0;
                 const ram = parseInt(document.getElementById("ram").value) || 0;
                 const storage = parseInt(document.getElementById("storage").value) || 0;
-                const bandwidth = parseInt(document.getElementById("bandwidth").value) || 0;
+                let bandwidth = parseInt(document.getElementById("bandwidth").value) || 0;
                 let firewallCost = 0;
-
-                if (firewallSelect.value === "basic") firewallCost = pricingData.firewall.basic;
-                if (firewallSelect.value === "advanced") firewallCost = pricingData.firewall.advanced;
-                if (firewallSelect.value === "enterprise") firewallCost = pricingData.firewall.enterprise;
-
+                
+                if (firewallSelect.value === "hosting") {
+                    firewallCost = pricingData.firewall.hosting.cost;
+                } else if (firewallSelect.value === "aggregated") {
+                    firewallCost = pricingData.firewall.aggregated.cost;
+                    bandwidth += pricingData.firewall.aggregated.extra_bandwidth;
+                }
+                
                 const cpuCost = cpu * pricingData.cpu;
                 const ramCost = ram * pricingData.ram;
                 const storageCost = storage * pricingData.storage;
@@ -110,6 +113,27 @@
                 const totalCost = cpuCost + ramCost + storageCost + bandwidthCost + firewallCost;
                 result.innerHTML = `Estimated Monthly Cost: $${totalCost.toFixed(2)}`;
             });
+            
+            pricingPanel.onmousedown = function(event) {
+                let shiftX = event.clientX - pricingPanel.getBoundingClientRect().left;
+                let shiftY = event.clientY - pricingPanel.getBoundingClientRect().top;
+
+                function moveAt(pageX, pageY) {
+                    pricingPanel.style.left = pageX - shiftX + 'px';
+                    pricingPanel.style.top = pageY - shiftY + 'px';
+                }
+
+                function onMouseMove(event) {
+                    moveAt(event.pageX, event.pageY);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+
+                document.onmouseup = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.onmouseup = null;
+                };
+            };
         });
     </script>
 </body>
