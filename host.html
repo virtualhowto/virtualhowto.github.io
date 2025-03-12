@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RVTools Summary</title>
+    <link rel="stylesheet" href="https://virtualhowto.github.io/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .card { border: 1px solid #ccc; padding: 20px; margin: 10px 0; border-radius: 8px; background: #f9f9f9; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RVTools Summary</h1>
+        <input type="file" id="fileInput" accept=".xlsx" />
+        <div id="summary" class="hidden">
+            <div class="card">
+                <h2>VMINFO Summary</h2>
+                <p>Total VMs: <span id="totalVMs"></span></p>
+                <p>Total vCPUs: <span id="totalVCPUs"></span></p>
+                <p>Total Memory (GB): <span id="totalMemoryGB"></span></p>
+                <p>Total Provisioned Storage (GB): <span id="totalStorageGB"></span></p>
+            </div>
+            <div class="card">
+                <h2>vHost Summary</h2>
+                <p>Total Hosts: <span id="totalHosts"></span></p>
+                <p>Total Physical Cores: <span id="totalCores"></span></p>
+                <p>Total Memory (GB): <span id="totalHostMemoryGB"></span></p>
+                <p>Total CPU Sockets: <span id="totalCPUSockets"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                processWorkbook(workbook);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function processWorkbook(workbook) {
+            const vInfoSheet = workbook.Sheets["vInfo"];
+            const vHostSheet = workbook.Sheets["vHost"];
+            if (!vInfoSheet || !vHostSheet) {
+                alert("Invalid RVTools file: Missing required sheets");
+                return;
+            }
+
+            const vInfo = XLSX.utils.sheet_to_json(vInfoSheet);
+            const vHost = XLSX.utils.sheet_to_json(vHostSheet);
+
+            document.getElementById("totalVMs").innerText = vInfo.length;
+            document.getElementById("totalVCPUs").innerText = vInfo.reduce((sum, vm) => sum + (vm["CPUs"] || 0), 0);
+            document.getElementById("totalMemoryGB").innerText = (vInfo.reduce((sum, vm) => sum + (vm["Memory"] || 0), 0) / 1024).toFixed(2);
+            document.getElementById("totalStorageGB").innerText = (vInfo.reduce((sum, vm) => sum + (vm["Provisioned MB"] || 0), 0) / 1024).toFixed(2);
+
+            document.getElementById("totalHosts").innerText = vHost.length;
+            document.getElementById("totalCores").innerText = vHost.reduce((sum, host) => sum + (host["# Cores"] || 0), 0);
+            document.getElementById("totalHostMemoryGB").innerText = (vHost.reduce((sum, host) => sum + (host["# Memory"] || 0), 0) / 1024).toFixed(2);
+            document.getElementById("totalCPUSockets").innerText = vHost.reduce((sum, host) => sum + (host["# CPU"] || 0), 0);
+
+            document.getElementById("summary").classList.remove("hidden");
+        }
+    </script>
+</body>
+</html>
