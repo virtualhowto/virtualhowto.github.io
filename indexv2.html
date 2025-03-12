@@ -69,37 +69,37 @@
         <ul id="cart-list"></ul>
         <div class="cost-comparison">
             <div>
-                <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
+                <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span> - <a id="export-your-cost" class="export-link">Export CSV</a></p>
             </div>
             <div>
-                <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span> - <a id="export-csv" class="export-link">Export CSV</a></p>
+                <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span> - <a id="export-azure-cost" class="export-link">Export CSV</a></p>
             </div>
         </div>
     </div>
     <script>
-        function exportFullCSV() {
-            let csvContent = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Azure vCPU Cost,Azure RAM Cost,Azure Storage Cost,Total Azure Cost\n";
+        function exportYourCostCSV() {
+            let csvContent = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Your vCPU Cost,Your RAM Cost,Your Storage Cost,Total Your Cost\n";
             document.querySelectorAll(".vm-table tr.selected").forEach(row => {
                 let cells = row.children;
                 let os = cells[1].textContent;
                 let cpu = parseInt(cells[2].textContent);
                 let ram = parseFloat(cells[3].textContent);
                 let storage = parseFloat(cells[4].textContent);
-                let azureCpuCost = cpu * 15;
-                let azureRamCost = ram * 6;
-                let azureStorageCost = storage * 0.2;
-                let totalAzureCost = azureCpuCost + azureRamCost + azureStorageCost;
-                csvContent += `${cells[0].textContent},${os},${cpu},${ram},${storage},$${azureCpuCost.toFixed(2)},$${azureRamCost.toFixed(2)},$${azureStorageCost.toFixed(2)},$${totalAzureCost.toFixed(2)}\n`;
+                let yourCpuCost = cpu * 10;
+                let yourRamCost = ram * 5;
+                let yourStorageCost = storage * 0.1;
+                let totalYourCost = yourCpuCost + yourRamCost + yourStorageCost;
+                csvContent += `${cells[0].textContent},${os},${cpu},${ram},${storage},$${yourCpuCost.toFixed(2)},$${yourRamCost.toFixed(2)},$${yourStorageCost.toFixed(2)},$${totalYourCost.toFixed(2)}\n`;
             });
             let blob = new Blob([csvContent], { type: 'text/csv' });
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'azure_cost_breakdown.csv';
+            link.download = 'your_cost_breakdown.csv';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
-        document.getElementById("export-csv").addEventListener("click", exportFullCSV);
+        document.getElementById("export-your-cost").addEventListener("click", exportYourCostCSV);
     </script>
 </body>
 </html>
