@@ -26,8 +26,9 @@
         .cart h3 { margin-top: 0; color: #cc5500; font-size: 1.5em; text-align: center; }
         .cart ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
         .cart p { text-align: center; font-size: 1.2em; font-weight: bold; }
-        .cost-comparison { display: flex; justify-content: space-between; margin-top: 20px; padding: 10px; background: #f4f4f4; border-radius: 8px; }
+        .cost-comparison { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 10px; background: #f4f4f4; border-radius: 8px; }
         .cost-comparison div { width: 48%; text-align: center; }
+        .export-link { text-decoration: none; color: #cc5500; font-weight: bold; cursor: pointer; }
         footer { text-align: center; background: #1c3f94; color: white; padding: 15px; font-size: 1em; margin-top: 30px; }
     </style>
 </head>
@@ -65,7 +66,7 @@
                 <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
             </div>
             <div>
-                <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
+                <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span> - <a id="export-csv" class="export-link">Export CSV</a></p>
             </div>
         </div>
     </div>
@@ -78,59 +79,26 @@
             return (cpu * 15) + (ram * 6) + (storage * 0.2);
         }
 
-        document.getElementById("fileUpload").addEventListener("change", function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.readAsBinaryString(file);
-            reader.onload = function(e) {
-                const data = e.target.result;
-                const workbook = XLSX.read(data, { type: "binary" });
-                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
-                const vmTableBody = document.querySelector("#vm-table tbody");
-                vmTableBody.innerHTML = "";
-                
-                vInfo.forEach(vm => {
-                    let row = document.createElement("tr");
-                    row.innerHTML = `<td>${vm["VM"]}</td>
-                                     <td>${vm["OS according to the configuration file"]}</td>
-                                     <td>${vm["CPUs"]}</td>
-                                     <td>${(vm["Memory"] / 1024).toFixed(2)}</td>
-                                     <td>${(vm["Provisioned MB"] / 1024).toFixed(2)}</td>`;
-                    row.addEventListener("click", function() {
-                        row.classList.toggle("selected");
-                        updateCart();
-                    });
-                    vmTableBody.appendChild(row);
-                });
-            };
-        });
-
-        function updateCart() {
-            const cartList = document.getElementById("cart-list");
-            const cartTotal = document.getElementById("cart-total");
-            const azureTotal = document.getElementById("azure-total");
-            let totalCost = 0;
-            let totalAzureCost = 0;
-            cartList.innerHTML = "";
-            
+        function exportAzureCSV() {
+            let csvContent = "VM Name,vCPU,RAM (GB),Storage (GB),Azure Cost\n";
             document.querySelectorAll(".vm-table tr.selected").forEach(row => {
                 let cells = row.children;
                 let cpu = parseInt(cells[2].textContent);
                 let ram = parseFloat(cells[3].textContent);
                 let storage = parseFloat(cells[4].textContent);
-                let cost = calculateCost(cpu, ram, storage);
                 let azureCost = calculateAzureCost(cpu, ram, storage);
-                totalCost += cost;
-                totalAzureCost += azureCost;
-                
-                let li = document.createElement("li");
-                li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
-                cartList.appendChild(li);
+                csvContent += `${cells[0].textContent},${cpu},${ram},${storage},$${azureCost.toFixed(2)}\n`;
             });
-            cartTotal.textContent = `$${totalCost.toFixed(2)}`;
-            azureTotal.textContent = `$${totalAzureCost.toFixed(2)}`;
+            let blob = new Blob([csvContent], { type: 'text/csv' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'azure_cost_estimate.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
+
+        document.getElementById("export-csv").addEventListener("click", exportAzureCSV);
     </script>
 </body>
 </html>
