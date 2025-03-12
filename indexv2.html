@@ -67,17 +67,18 @@
             reader.onload = function(e) {
                 const data = e.target.result;
                 const workbook = XLSX.read(data, { type: "binary" });
-                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+                const sheetName = workbook.SheetNames.includes("vInfo") ? "vInfo" : workbook.SheetNames[0];
+                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
                 const vmTableBody = document.querySelector("#vm-table tbody");
                 vmTableBody.innerHTML = "";
                 
                 vInfo.forEach(vm => {
                     let row = document.createElement("tr");
-                    row.innerHTML = `<td>${vm["VM Name"]}</td>
+                    row.innerHTML = `<td>${vm["VM Name"] || vm["VM"] || "Unknown"}</td>
                                      <td>${vm["OS according to the configuration file"] || "Unknown"}</td>
-                                     <td>${vm["vCPU"] || 0}</td>
-                                     <td>${(vm["RAM (GB)"] || 0).toFixed(2)}</td>
-                                     <td>${(vm["Storage (GB)"] || 0).toFixed(2)}</td>`;
+                                     <td>${vm["NumCpu"] || vm["CPUs"] || 0}</td>
+                                     <td>${((vm["MemoryMB"] || vm["Memory"] || 0) / 1024).toFixed(2)}</td>
+                                     <td>${((vm["ProvisionedGB"] || vm["Storage"] || vm["Provisioned MB"] || 0) / 1024).toFixed(2)}</td>`;
                     row.addEventListener("click", function() {
                         row.classList.toggle("selected");
                     });
