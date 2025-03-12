@@ -62,7 +62,7 @@
                     <option value="aggregated">Aggregated SD-WAN/MPLS Firewall</option>
                 </select>
                 
-                <button type='submit'>Calculate</button>
+                <button type='button' onclick='addToCart()'>Add to Cart</button>
             </form>
             <div class="result-container" id='result'></div>
             <div class="compute-type" id='compute-type'></div>
@@ -82,18 +82,8 @@
             document.getElementById("bandwidth-value").textContent = this.value;
         });
 
-        document.getElementById("pricing-form").addEventListener("input", updateCart);
-
-        function updateCart() {
+        function addToCart() {
             const cartList = document.getElementById("cart-list");
-            cartList.innerHTML = "";
-            
-            document.querySelectorAll("#vm-list input:checked").forEach(vm => {
-                let li = document.createElement("li");
-                li.textContent = vm.value;
-                cartList.appendChild(li);
-            });
-            
             let cpu = parseInt(document.getElementById("cpu").value) || 0;
             let ram = parseInt(document.getElementById("ram").value) || 0;
             let storage = parseInt(document.getElementById("storage").value) || 0;
@@ -103,7 +93,12 @@
             let totalCost = (cpu * 10) + (ram * 5) + (storage * 0.1) + (bandwidth * 0.05);
             if (firewall !== "none") totalCost += 50;
             
-            document.getElementById("cart-total").textContent = `$${totalCost.toFixed(2)}`;
+            let item = document.createElement("li");
+            item.textContent = `vCPU: ${cpu}, RAM: ${ram}GB, Storage: ${storage}GB, Bandwidth: ${bandwidth}Mbps, Firewall: ${firewall}, Cost: $${totalCost.toFixed(2)}`;
+            cartList.appendChild(item);
+            
+            let cartTotal = parseFloat(document.getElementById("cart-total").textContent.replace("$", "")) + totalCost;
+            document.getElementById("cart-total").textContent = `$${cartTotal.toFixed(2)}`;
         }
     </script>
 </body>
