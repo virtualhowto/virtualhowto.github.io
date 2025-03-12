@@ -84,30 +84,44 @@
                 <tr>
                     <th>Model</th>
                     <th>Cost</th>
+                    <th>Quantity</th>
+                    <th>Total Price</th>
                 </tr>
                 <tr>
                     <td>VMware Standard</td>
                     <td>$<span id="vmwareStandard"></span> <span id="vmwareStandardUnit"></span></td>
+                    <td><span id="vmwareStandardQty"></span></td>
+                    <td>$<span id="vmwareStandardTotal"></span></td>
                 </tr>
                 <tr>
                     <td>VMware Enterprise Plus</td>
                     <td>$<span id="vmwareEnterprise"></span> <span id="vmwareEnterpriseUnit"></span></td>
+                    <td><span id="vmwareEnterpriseQty"></span></td>
+                    <td>$<span id="vmwareEnterpriseTotal"></span></td>
                 </tr>
                 <tr>
                     <td>Azure LOCAL</td>
                     <td>$<span id="azure"></span> <span id="azureUnit"></span></td>
+                    <td><span id="azureQty"></span></td>
+                    <td>$<span id="azureTotal"></span></td>
                 </tr>
                 <tr>
                     <td>HPE VME</td>
                     <td>$<span id="hpe"></span> <span id="hpeUnit"></span></td>
+                    <td><span id="hpeQty"></span></td>
+                    <td>$<span id="hpeTotal"></span></td>
                 </tr>
                 <tr>
                     <td>Red Hat OpenShift</td>
                     <td>$<span id="openshift"></span> <span id="openshiftUnit"></span></td>
+                    <td><span id="openshiftQty"></span></td>
+                    <td>$<span id="openshiftTotal"></span></td>
                 </tr>
                 <tr>
                     <td>OpenVirt</td>
                     <td>$<span id="openvirt"></span> <span id="openvirtUnit"></span></td>
+                    <td><span id="openvirtQty"></span></td>
+                    <td>$<span id="openvirtTotal"></span></td>
                 </tr>
             </table>
         </div>
@@ -125,45 +139,23 @@
             }
         }
 
-        document.getElementById("dropZone").addEventListener("click", () => {
-            document.getElementById("fileInput").click();
-        });
-
-        document.getElementById("dropZone").addEventListener("dragover", (event) => {
-            event.preventDefault();
-        });
-
-        document.getElementById("dropZone").addEventListener("drop", (event) => {
-            event.preventDefault();
-            const file = event.dataTransfer.files[0];
-            if (file) processFile(file);
-        });
-
-        document.getElementById("fileInput").addEventListener("change", function(event) {
-            const file = event.target.files[0];
-            if (file) processFile(file);
-        });
-
-        function processFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: "array" });
-                processWorkbook(workbook);
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function processWorkbook(workbook) {
-            document.getElementById("vminfoSummary").classList.remove("hidden");
-            document.getElementById("vhostSummary").classList.remove("hidden");
-        }
-
         async function generateSummary() {
             await loadPricing();
+            const totalCores = parseInt(document.getElementById("totalCores").innerText) || 0;
+            const totalSockets = parseInt(document.getElementById("totalCPUSockets").innerText) || 0;
+
             Object.keys(pricingData).forEach(key => {
-                document.getElementById(key).innerText = pricingData[key].cost || "TBD";
-                document.getElementById(`${key}Unit`).innerText = pricingData[key].unit || "";
+                const price = pricingData[key].cost || "TBD";
+                const unit = pricingData[key].unit || "";
+                let quantity = 0;
+                if (unit.includes("core")) quantity = totalCores;
+                else if (unit.includes("CPU socket")) quantity = totalSockets;
+                const totalCost = price !== "TBD" ? (price * quantity).toFixed(2) : "TBD";
+                
+                document.getElementById(key).innerText = price;
+                document.getElementById(`${key}Unit`).innerText = unit;
+                document.getElementById(`${key}Qty`).innerText = quantity;
+                document.getElementById(`${key}Total`).innerText = totalCost;
             });
             document.getElementById("pricingSummary").classList.remove("hidden");
         }
