@@ -11,4 +11,11 @@
         "education": 15,
         "corporate": 25
     }
+    "vmwareStandard": 50,
+    "vmwareEnterprise": 4780,
+    "azure": 33.30,
+    "hpe": "Awaiting Quote",
+    "openshift": "Awaiting Quote",
+    "openvirt": "Awaiting Quote"
+
 }
