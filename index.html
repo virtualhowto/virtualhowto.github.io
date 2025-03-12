@@ -49,39 +49,32 @@
                 <h3>Select Virtual Machines:</h3>
                 <ul id="vm-list" class="vm-list"></ul>
             </div>
-            <form id='pricing-form'>
-                <label for='cpu'>vCPU:</label>
-                <input type='number' id='cpu' min='1' required>
-                <label for='ram'>RAM (GB):</label>
-                <input type='number' id='ram' min='1' required>
-                <label for='storage'>Storage (GB):</label>
-                <input type='number' id='storage' min='10' required>
-                <label for='bandwidth'>Bandwidth (Mbps): <span id="bandwidth-value">100</span></label>
-                <input type='range' id='bandwidth' min='100' max='1000' step='100' value='100'>
-                
-                <label for='firewall'>Include Firewall?</label>
-                <select id='firewall'>
-                    <option value="none">No</option>
-                    <option value="hosting">Hosting Platform Firewall</option>
-                    <option value="aggregated">Aggregated SD-WAN/MPLS Firewall</option>
-                </select>
-                
-                <button type='button' onclick='addToCart()'>Add to Cart</button>
-            </form>
         </section>
     </div>
-    <div class="cart" id="cart">
-        <h3>Summary</h3>
-        <ul id="cart-list"></ul>
-        <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
-    </div>
-    <footer>
-        <p>&copy; 2025 VMaaS - All Rights Reserved</p>
-    </footer>
     <script>
-        document.getElementById("bandwidth").addEventListener("input", function() {
-            document.getElementById("bandwidth-value").textContent = this.value;
+        document.getElementById("fileUpload").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.readAsBinaryString(file);
+            reader.onload = function(e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: "binary" });
+                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+                const vmList = document.getElementById("vm-list");
+                vmList.innerHTML = "";
+                vInfo.forEach(vm => {
+                    let li = document.createElement("li");
+                    let checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.value = vm["VM"];
+                    li.appendChild(checkbox);
+                    li.appendChild(document.createTextNode(`${vm["VM"]} - ${vm["GuestOS"]}, ${vm["NumCpu"]} vCPU, ${vm["MemoryMB"] / 1024} GB RAM`));
+                    vmList.appendChild(li);
+                });
+            };
         });
     </script>
 </body>
 </html>
+
