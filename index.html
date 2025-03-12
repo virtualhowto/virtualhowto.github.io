@@ -17,12 +17,14 @@
         .pricing h2 { margin-bottom: 20px; color: #cc5500; font-size: 2em; }
         .pricing form { display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .pricing label { font-weight: bold; color: #cc5500; font-size: 1.1em; }
-        .pricing input, .pricing select, .pricing input[type='range'] { padding: 14px; width: 100%; max-width: 400px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; }
+        .pricing input, .pricing select { padding: 14px; width: 100%; max-width: 400px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; }
         .pricing input:focus, .pricing select:focus { border-color: #cc5500; outline: none; }
         .pricing button { padding: 14px 24px; background: #cc5500; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.2em; font-weight: bold; transition: 0.3s ease; }
         .pricing button:hover { background: #b04b00; transform: scale(1.05); }
-        .result-container { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #333; }
-        .compute-type { margin-top: 15px; font-size: 1.1em; font-weight: bold; color: #cc5500; }
+        .vm-list-container { width: 100%; max-width: 600px; background: #f8f9fa; padding: 15px; border-radius: 10px; box-shadow: 0px 2px 8px rgba(0,0,0,0.1); }
+        .vm-list { list-style: none; padding: 0; max-height: 250px; overflow-y: auto; }
+        .vm-list li { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #ddd; }
+        .vm-list input { margin-right: 10px; }
         .cart { position: fixed; right: 20px; top: 120px; width: 320px; background: white; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); border-radius: 10px; }
         .cart h3 { margin-top: 0; color: #cc5500; font-size: 1.5em; text-align: center; }
         .cart ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
@@ -46,14 +48,7 @@
             </div>
         </section>
     </div>
-    <div class="cart" id="cart">
-        <h3>Summary</h3>
-        <ul id="cart-list"></ul>
-        <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
-    </div>
     <script>
-        const pricing = { cpu: 10, ram: 5, storage: 0.1, windowsLicense: 15 };
-        
         document.getElementById("fileUpload").addEventListener("change", function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -64,29 +59,30 @@
                 const workbook = XLSX.read(data, { type: "binary" });
                 const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
                 const vmList = document.getElementById("vm-list");
-                const cartList = document.getElementById("cart-list");
-                const cartTotal = document.getElementById("cart-total");
-                let totalCost = 0;
-                
                 vmList.innerHTML = "";
-                cartList.innerHTML = "";
                 
                 vInfo.forEach(vm => {
-                    let cpu = vm["CPUs"] || 0;
-                    let ram = (vm["Memory"] || 0) / 1024;
-                    let storage = (vm["Provisioned MB"] || 0) / 1024;
-                    let os = vm["OS according to the configuration file"];
-                    let windowsCost = os.includes("Windows") ? cpu * pricing.windowsLicense : 0;
-                    let vmCost = (cpu * pricing.cpu) + (ram * pricing.ram) + (storage * pricing.storage) + windowsCost;
-                    totalCost += vmCost;
-                    
                     let li = document.createElement("li");
-                    li.textContent = `${vm["VM"]} - ${cpu} vCPU, ${ram}GB RAM, ${storage}GB Storage, Cost: $${vmCost.toFixed(2)}`;
-                    cartList.appendChild(li);
+                    let checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.value = vm["VM"];
+                    checkbox.addEventListener("change", updateCart);
+                    li.appendChild(checkbox);
+                    li.appendChild(document.createTextNode(`${vm["VM"]} - ${vm["OS according to the configuration file"]}, ${vm["CPUs"]} vCPU, ${vm["Memory"] / 1024}GB RAM, ${vm["Provisioned MB"] / 1024}GB Storage`));
+                    vmList.appendChild(li);
                 });
-                cartTotal.textContent = `$${totalCost.toFixed(2)}`;
             };
         });
+        
+        function updateCart() {
+            const cartList = document.getElementById("cart-list");
+            cartList.innerHTML = "";
+            document.querySelectorAll("#vm-list input:checked").forEach(vm => {
+                let li = document.createElement("li");
+                li.textContent = vm.value;
+                cartList.appendChild(li);
+            });
+        }
     </script>
 </body>
 </html>
