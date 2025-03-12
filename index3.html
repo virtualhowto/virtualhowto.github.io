@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMaaS - Virtual Machine as a Service</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #ffffff; }
+        .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; display: flex; }
+        .content { flex: 3; padding-right: 20px; }
+        .cart { 
+            flex: 1; 
+            background: white; 
+            padding: 20px; 
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.2); 
+            border-radius: 10px; 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            width: 300px;
+            z-index: 1000;
+        }
+        header { background: linear-gradient(90deg, #1c3f94, #cc5500); color: #fff; padding: 20px 0; text-align: center; font-size: 1.5em; font-weight: bold; }
+        .hero { text-align: center; padding: 50px; background: #cc5500; color: white; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); }
+        .hero h1 { margin: 0; font-size: 2.8em; font-weight: bold; }
+        .hero p { font-size: 1.2em; margin-top: 10px; }
+        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border-radius: 10px; transition: all 0.3s ease; }
+        .pricing:hover { box-shadow: 0px 6px 20px rgba(0,0,0,0.15); }
+        .drop-zone { border: 2px dashed #cc5500; padding: 20px; text-align: center; margin: 10px 0; cursor: pointer; }
+        .drop-zone.highlight { background: #ffe0b2; }
+        .vm-table-container { width: 100%; max-width: 100%; overflow-x: auto; margin-top: 20px; }
+        .vm-table { width: 100%; border-collapse: collapse; }
+        .vm-table th, .vm-table td { padding: 10px; border: 1px solid #ddd; text-align: center; cursor: pointer; }
+        .vm-table th { background: #cc5500; color: white; }
+        .vm-table tr.selected { background: #ffcc80; }
+    </style>
+</head>
+<body>
+    <header>Virtual Machine as a Service (VMaaS)</header>
+    <section class="hero">
+        <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
+        <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
+    </section>
+    <div class="container">
+        <div class="content">
+            <section class="pricing">
+                <h2>VM Pricing Calculator</h2>
+                <div class="drop-zone" id="drop-zone">Drag & Drop RVTools file here or Click to Upload</div>
+                <input type="file" id="fileUpload" accept=".xlsx" style="display: none;">
+                <div class="vm-table-container">
+                    <table id="vm-table" class="vm-table">
+                        <thead>
+                            <tr>
+                                <th>VM Name</th>
+                                <th>OS according to the configuration file</th>
+                                <th>vCPU</th>
+                                <th>RAM (GB)</th>
+                                <th>Storage (GB)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+        <div class="cart">
+            <h3>Summary</h3>
+            <ul id="cart-list"></ul>
+            <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
+            <p><strong>Azure Cost:</strong> <a id="azure-cost-link" href="#">$0.00</a></p>
+        </div>
+    </div>
+    <script>
+        document.getElementById("azure-cost-link").addEventListener("click", function() {
+            exportAzureBreakdown();
+        });
+
+        function exportAzureBreakdown() {
+            let csvContent = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Azure vCPU Cost,Azure RAM Cost,Azure Storage Cost,Total Azure Cost\n";
+            document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+                let cells = row.children;
+                let os = cells[1].textContent;
+                let cpu = parseInt(cells[2].textContent);
+                let ram = parseFloat(cells[3].textContent);
+                let storage = parseFloat(cells[4].textContent);
+                let azureCpuCost = cpu * 15;
+                let azureRamCost = ram * 6;
+                let azureStorageCost = storage * 0.2;
+                let totalAzureCost = azureCpuCost + azureRamCost + azureStorageCost;
+                csvContent += `${cells[0].textContent},${os},${cpu},${ram},${storage},$${azureCpuCost.toFixed(2)},$${azureRamCost.toFixed(2)},$${azureStorageCost.toFixed(2)},$${totalAzureCost.toFixed(2)}\n`;
+            });
+            let blob = new Blob([csvContent], { type: 'text/csv' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'azure_cost_breakdown.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
