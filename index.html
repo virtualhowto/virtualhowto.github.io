@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VMaaS - Virtual Machine as a Service</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
         .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; }
@@ -34,6 +35,7 @@
     <div class="container">
         <section class="pricing">
             <h2>VM Pricing Calculator</h2>
+            <input type="file" id="fileUpload" accept=".xlsx">
             <form id='pricing-form'>
                 <label for='cpu'>vCPU:</label>
                 <input type='number' id='cpu' min='1' required>
@@ -72,52 +74,23 @@
     </footer>
 
     <script>
-        async function fetchPricing() {
-            const response = await fetch('pricing.json');
-            return response.json();
-        }
-        
-        document.addEventListener("DOMContentLoaded", async function () {
-            const pricingData = await fetchPricing();
-            const form = document.getElementById("pricing-form");
-            const result = document.getElementById("result");
-            const computeType = document.getElementById("compute-type");
-            const firewallSelect = document.getElementById("firewall");
-            const firewallOptions = document.getElementById("firewall-options");
-            const firewallFeatures = document.getElementById("firewall-features");
-            const bandwidthSlider = document.getElementById("bandwidth");
-            const bandwidthValue = document.getElementById("bandwidth-value");
+        document.getElementById("fileUpload").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            firewallSelect.addEventListener("change", function() {
-                firewallOptions.style.display = (firewallSelect.value !== "none") ? "flex" : "none";
-            });
-            
-            bandwidthSlider.addEventListener("input", function() {
-                bandwidthValue.textContent = bandwidthSlider.value;
-            });
-            
-            form.addEventListener("input", function () {
-                const cpu = parseInt(document.getElementById("cpu").value) || 0;
-                const ram = parseInt(document.getElementById("ram").value) || 0;
-                const storage = parseInt(document.getElementById("storage").value) || 0;
-                let bandwidth = parseInt(bandwidthSlider.value) || 0;
-                let firewallCost = 0;
+            const reader = new FileReader();
+            reader.readAsBinaryString(file);
+            reader.onload = function(e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: "binary" });
                 
-                if (firewallSelect.value === "hosting") {
-                    firewallCost = pricingData.firewall.hosting.cost;
-                } else if (firewallSelect.value === "aggregated") {
-                    firewallCost = pricingData.firewall.aggregated.cost;
-                    bandwidth += pricingData.firewall.aggregated.extra_bandwidth;
+                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+                if (vInfo.length > 0) {
+                    document.getElementById("cpu").value = vInfo[0]["NumCpu"] || 0;
+                    document.getElementById("ram").value = vInfo[0]["MemoryMB"] ? vInfo[0]["MemoryMB"] / 1024 : 0;
+                    document.getElementById("storage").value = vInfo[0]["ProvisionedGB"] || 0;
                 }
-                
-                const cpuCost = cpu * pricingData.cpu;
-                const ramCost = ram * pricingData.ram;
-                const storageCost = storage * pricingData.storage;
-                const bandwidthCost = bandwidth * pricingData.bandwidth_mbps;
-                
-                const totalCost = cpuCost + ramCost + storageCost + bandwidthCost + firewallCost;
-                result.innerHTML = `Estimated Monthly Cost: $${totalCost.toFixed(2)}`;
-            });
+            };
         });
     </script>
 </body>
