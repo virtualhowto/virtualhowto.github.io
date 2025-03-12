@@ -13,13 +13,18 @@
             color: #ffffff;
             padding: 20px;
             display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .container {
-            max-width: 600px;
-            margin-right: 20px;
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
         }
         .summary-panel {
-            max-width: 300px;
+            width: 48%;
             background: #264653;
             padding: 20px;
             border-radius: 8px;
@@ -28,21 +33,14 @@
         h1 {
             color: #f4a261;
         }
-        input[type="file"] {
-            padding: 10px;
-            background: #264653;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .card {
-            border: 1px solid #f4a261;
+        .drop-zone {
+            width: 100%;
             padding: 20px;
-            margin: 10px 0;
-            border-radius: 8px;
+            text-align: center;
+            border: 2px dashed #f4a261;
             background: #264653;
-            text-align: left;
+            cursor: pointer;
+            margin-bottom: 20px;
         }
         .hidden {
             display: none;
@@ -56,101 +54,109 @@
             cursor: pointer;
             border-radius: 5px;
         }
-        select {
-            padding: 5px;
-            margin-top: 10px;
-            background: #f4a261;
-            border: none;
-            color: black;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
+    <h1>RVTools Summary</h1>
+    <div class="drop-zone" id="dropZone">Drag & Drop your file here or Click to Upload</div>
+    <input type="file" id="fileInput" accept=".xlsx" class="hidden" />
     <div class="container">
-        <h1>RVTools Summary</h1>
-        <input type="file" id="fileInput" accept=".xlsx" />
-        <div id="summary" class="hidden">
-            <div class="card">
-                <h2>VMINFO Summary</h2>
-                <p>Total VMs: <span id="totalVMs"></span></p>
-                <p>Total vCPUs: <span id="totalVCPUs"></span></p>
-                <p>Total Memory (GB): <span id="totalMemoryGB"></span></p>
-                <p>Total Provisioned Storage (GB): <span id="totalStorageGB"></span></p>
-            </div>
-            <div class="card">
-                <h2>vHost Summary</h2>
-                <p>Total Hosts: <span id="totalHosts"></span></p>
-                <p>Total Physical Cores: <span id="totalCores"></span></p>
-                <p>Total Memory (GB): <span id="totalHostMemoryGB"></span></p>
-                <p>Total CPU Sockets: <span id="totalCPUSockets"></span></p>
-            </div>
+        <div id="vminfoSummary" class="summary-panel hidden">
+            <h2>VMINFO Summary</h2>
+            <p>Total VMs: <span id="totalVMs"></span></p>
+            <p>Total vCPUs: <span id="totalVCPUs"></span></p>
+            <p>Total Memory (GB): <span id="totalMemoryGB"></span></p>
+            <p>Total Provisioned Storage (GB): <span id="totalStorageGB"></span></p>
+        </div>
+        
+        <div id="vhostSummary" class="summary-panel hidden">
+            <h2>vHost Summary</h2>
+            <p>Total Hosts: <span id="totalHosts"></span></p>
+            <p>Total Physical Cores: <span id="totalCores"></span></p>
+            <p>Total Memory (GB): <span id="totalHostMemoryGB"></span></p>
+            <p>Total CPU Sockets: <span id="totalCPUSockets"></span></p>
             <button onclick="generateSummary()">Generate Pricing Summary</button>
+        </div>
+
+        <div id="pricingSummary" class="summary-panel hidden">
+            <h2>Pricing Comparison</h2>
+            <table>
+                <tr>
+                    <th>Model</th>
+                    <th>Cost</th>
+                    <th>Quantity</th>
+                    <th>Total Price</th>
+                </tr>
+                <tr>
+                    <td>VMware Standard</td>
+                    <td>$<span id="vmwareStandard"></span> <span id="vmwareStandardUnit"></span></td>
+                    <td><span id="vmwareStandardQty"></span></td>
+                    <td>$<span id="vmwareStandardTotal"></span></td>
+                </tr>
+                <tr>
+                    <td>VMware Enterprise Plus</td>
+                    <td>$<span id="vmwareEnterprise"></span> <span id="vmwareEnterpriseUnit"></span></td>
+                    <td><span id="vmwareEnterpriseQty"></span></td>
+                    <td>$<span id="vmwareEnterpriseTotal"></span></td>
+                </tr>
+                <tr>
+                    <td>Azure LOCAL</td>
+                    <td>$<span id="azure"></span> <span id="azureUnit"></span></td>
+                    <td><span id="azureQty"></span></td>
+                    <td>$<span id="azureTotal"></span></td>
+                </tr>
+                <tr>
+                    <td>HPE VME</td>
+                    <td>$<span id="hpe"></span> <span id="hpeUnit"></span></td>
+                    <td><span id="hpeQty"></span></td>
+                    <td>$<span id="hpeTotal"></span></td>
+                </tr>
+                <tr>
+                    <td>Red Hat OpenShift</td>
+                    <td>$<span id="openshift"></span> <span id="openshiftUnit"></span></td>
+                    <td><span id="openshiftQty"></span></td>
+                    <td>$<span id="openshiftTotal"></span></td>
+                </tr>
+                <tr>
+                    <td>OpenVirt</td>
+                    <td>$<span id="openvirt"></span> <span id="openvirtUnit"></span></td>
+                    <td><span id="openvirtQty"></span></td>
+                    <td>$<span id="openvirtTotal"></span></td>
+                </tr>
+            </table>
         </div>
     </div>
 
-    <div id="pricingSummary" class="summary-panel hidden">
-        <h2>Pricing Summary</h2>
-        <label for="pricingOption">Select Pricing Model:</label>
-        <select id="pricingOption" onchange="generateSummary()">
-            <option value="vmware-standard">VMware Standard ($50/core/year)</option>
-            <option value="vmware-enterprise">VMware Enterprise Plus ($4780/CPU socket)</option>
-            <option value="azure">Azure LOCAL ($10/core/month + $23.30/core/month for Windows Server)</option>
-            <option value="hpe">HPE VME (Placeholder - Update with Quote)</option>
-        </select>
-        <p>Estimated Cost: $<span id="pricingResult"></span></p>
-    </div>
-
     <script>
-        document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        let pricingData = {};
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: "array" });
-                processWorkbook(workbook);
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        function processWorkbook(workbook) {
-            const vInfoSheet = workbook.Sheets["vInfo"];
-            const vHostSheet = workbook.Sheets["vHost"];
-            if (!vInfoSheet || !vHostSheet) {
-                alert("Invalid RVTools file: Missing required sheets");
-                return;
+        async function loadPricing() {
+            try {
+                const response = await fetch('pricing.json');
+                pricingData = await response.json();
+            } catch (error) {
+                console.error("Error loading pricing.json", error);
             }
-
-            const vInfo = XLSX.utils.sheet_to_json(vInfoSheet);
-            const vHost = XLSX.utils.sheet_to_json(vHostSheet);
-
-            document.getElementById("totalVMs").innerText = vInfo.length;
-            document.getElementById("totalVCPUs").innerText = vInfo.reduce((sum, vm) => sum + (vm["CPUs"] || 0), 0);
-            document.getElementById("totalMemoryGB").innerText = (vInfo.reduce((sum, vm) => sum + (vm["Memory"] || 0), 0) / 1024).toFixed(2);
-            document.getElementById("totalStorageGB").innerText = (vInfo.reduce((sum, vm) => sum + (vm["Provisioned MB"] || 0), 0) / 1024).toFixed(2);
-
-            document.getElementById("totalHosts").innerText = vHost.length;
-            document.getElementById("totalCores").innerText = vHost.reduce((sum, host) => sum + (host["# Cores"] || 0), 0);
-            document.getElementById("totalHostMemoryGB").innerText = (vHost.reduce((sum, host) => sum + (host["# Memory"] || 0), 0) / 1024).toFixed(2);
-            document.getElementById("totalCPUSockets").innerText = vHost.reduce((sum, host) => sum + (host["# CPU"] || 0), 0);
-
-            document.getElementById("summary").classList.remove("hidden");
         }
 
-        function generateSummary() {
+        async function generateSummary() {
+            await loadPricing();
             const totalCores = parseInt(document.getElementById("totalCores").innerText) || 0;
             const totalSockets = parseInt(document.getElementById("totalCPUSockets").innerText) || 0;
-            const pricingOption = document.getElementById("pricingOption").value;
 
-            let totalCost = 0;
-            if (pricingOption === "vmware-standard") totalCost = totalCores * 50;
-            else if (pricingOption === "vmware-enterprise") totalCost = totalSockets * 4780;
-            else if (pricingOption === "azure") totalCost = totalCores * (10 + 23.30) * 12;
-            else if (pricingOption === "hpe") totalCost = "Awaiting Quote";
-
-            document.getElementById("pricingResult").innerText = totalCost;
+            Object.keys(pricingData).forEach(key => {
+                const price = pricingData[key].cost || "TBD";
+                const unit = pricingData[key].unit || "";
+                let quantity = 0;
+                if (unit.includes("core")) quantity = totalCores;
+                else if (unit.includes("CPU socket")) quantity = totalSockets;
+                const totalCost = price !== "TBD" ? (price * quantity).toFixed(2) : "TBD";
+                
+                document.getElementById(key).innerText = price;
+                document.getElementById(`${key}Unit`).innerText = unit;
+                document.getElementById(`${key}Qty`).innerText = quantity;
+                document.getElementById(`${key}Total`).innerText = totalCost;
+            });
             document.getElementById("pricingSummary").classList.remove("hidden");
         }
     </script>
