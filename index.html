@@ -15,13 +15,18 @@
         .pricing h2 { margin-bottom: 20px; }
         .pricing form { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         .pricing label { font-weight: bold; }
-        .pricing input, .pricing select, .pricing input[type='range'] { padding: 12px; width: 80%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+        .pricing input, .pricing select, .pricing input[type='range'] { padding: 12px; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 5px; }
         .pricing button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .pricing button:hover { background: #0056b3; }
         .result-container { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #333; }
         .compute-type { margin-top: 15px; font-size: 1em; font-weight: bold; color: #007bff; }
         .firewall-options { display: none; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
-        footer { background: #333; color: white; text-align: center; padding: 10px; margin-top: 20px; }
+        .vm-list-container { width: 100%; max-width: 400px; background: #f8f8f8; padding: 10px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.1); }
+        .vm-list { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
+        .vm-list li { display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #ddd; }
+        .vm-list input { margin-right: 10px; }
+        .cart { position: fixed; right: 20px; top: 100px; width: 300px; background: white; padding: 20px; box-shadow: 0px 0px 10px rgba(0,0,0,0.2); border-radius: 10px; }
+        .cart h3 { margin-top: 0; }
     </style>
 </head>
 <body>
@@ -36,8 +41,10 @@
         <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <input type="file" id="fileUpload" accept=".xlsx">
-            <label for='vm-select'>Select Virtual Machines:</label>
-            <select id='vm-select' multiple></select>
+            <div class="vm-list-container">
+                <h3>Select Virtual Machines:</h3>
+                <ul id="vm-list" class="vm-list"></ul>
+            </div>
             <form id='pricing-form'>
                 <label for='cpu'>vCPU:</label>
                 <input type='number' id='cpu' min='1' required>
@@ -55,27 +62,26 @@
                     <option value="aggregated">Aggregated SD-WAN/MPLS Firewall</option>
                 </select>
                 
-                <div id="firewall-options" class="firewall-options">
-                    <label for='firewall-features'>Firewall Features:</label>
-                    <select id='firewall-features'>
-                        <option value="standard">Standard Security</option>
-                        <option value="vpn">VPN Support</option>
-                        <option value="ips">Intrusion Prevention System (IPS)</option>
-                        <option value="all">All Security Features</option>
-                    </select>
-                </div>
-                
                 <button type='submit'>Calculate</button>
             </form>
             <div class="result-container" id='result'></div>
             <div class="compute-type" id='compute-type'></div>
         </section>
     </div>
+    <div class="cart" id="cart">
+        <h3>Summary</h3>
+        <ul id="cart-list"></ul>
+        <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
+    </div>
     <footer>
         <p>&copy; 2025 VMaaS - All Rights Reserved</p>
     </footer>
 
     <script>
+        document.getElementById("bandwidth").addEventListener("input", function() {
+            document.getElementById("bandwidth-value").textContent = this.value;
+        });
+
         document.getElementById("fileUpload").addEventListener("change", function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -87,26 +93,31 @@
                 const workbook = XLSX.read(data, { type: "binary" });
                 
                 const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
-                const vmSelect = document.getElementById("vm-select");
-                vmSelect.innerHTML = "";
+                const vmList = document.getElementById("vm-list");
+                vmList.innerHTML = "";
                 
                 vInfo.forEach(vm => {
-                    let option = document.createElement("option");
-                    option.value = vm["VM"];
-                    option.textContent = `${vm["VM"]} - ${vm["GuestOS"]}`;
-                    vmSelect.appendChild(option);
-                });
-                
-                vmSelect.addEventListener("change", function() {
-                    const selectedVM = vInfo.find(vm => vm["VM"] === vmSelect.value);
-                    if (selectedVM) {
-                        document.getElementById("cpu").value = selectedVM["NumCpu"] || 0;
-                        document.getElementById("ram").value = selectedVM["MemoryMB"] ? selectedVM["MemoryMB"] / 1024 : 0;
-                        document.getElementById("storage").value = selectedVM["ProvisionedGB"] || 0;
-                    }
+                    let li = document.createElement("li");
+                    let checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.value = vm["VM"];
+                    checkbox.addEventListener("change", updateCart);
+                    li.appendChild(checkbox);
+                    li.appendChild(document.createTextNode(`${vm["VM"]} - ${vm["GuestOS"]}`));
+                    vmList.appendChild(li);
                 });
             };
         });
+
+        function updateCart() {
+            const cartList = document.getElementById("cart-list");
+            cartList.innerHTML = "";
+            document.querySelectorAll("#vm-list input:checked").forEach(vm => {
+                let li = document.createElement("li");
+                li.textContent = vm.value;
+                cartList.appendChild(li);
+            });
+        }
     </script>
 </body>
 </html>
