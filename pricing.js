@@ -1,9 +1,11 @@
 async function fetchAzurePricing() {
     try {
         let response = await axios.get("https://api.cloudprice.net/v1/prices?currency=AUD&region=australiaeast");
+        console.log("Azure pricing data fetched successfully:", response.data);
         return response.data;
     } catch (error) {
         console.error("Error fetching Azure pricing", error);
+        alert("Failed to fetch Azure pricing. Check your network connection.");
         return null;
     }
 }
@@ -29,18 +31,27 @@ async function processVMData(vmData) {
     tableBody.innerHTML = "";
     
     for (let vm of vmData) {
-        let cpu = vm["NumCpu"] || 0;
-        let ram = (vm["MemoryMB"] || 0) / 1024;
-        let match = await matchAzureVM(cpu, ram);
-        let row = `<tr>
+        let cpu = parseInt(vm["CPUs"] || vm["NumCpu"] || 0);
+        let ramMB = parseInt(vm["Memory"] || vm["MemoryMB"] || 0);
+        let ramGB = (ramMB / 1024).toFixed(2);
+        let storageGB = parseFloat(vm["Provisioned MB"] || vm["ProvisionedGB"] || 0).toFixed(2);
+        let osType = vm["OS according to the configuration file"] || "Unknown";
+
+        console.log(`Processing VM: CPU=${cpu}, RAM=${ramGB}GB, Storage=${storageGB}GB, OS=${osType}`);
+        
+        let match = await matchAzureVM(cpu, ramGB);
+        console.log("Matched Azure VM:", match);
+        
+        let row = document.createElement("tr");
+        row.innerHTML = `
             <td>${vm["VM Name"] || "Unknown"}</td>
-            <td>${vm["OS according to the configuration file"] || "Unknown"}</td>
+            <td>${osType}</td>
             <td>${cpu}</td>
-            <td>${ram.toFixed(2)}</td>
-            <td>${(vm["ProvisionedGB"] || 0).toFixed(2)}</td>
+            <td>${ramGB}</td>
+            <td>${storageGB}</td>
             <td>${match.vmSize}</td>
             <td>${match.cost}</td>
-        </tr>`;
-        tableBody.innerHTML += row;
+        `;
+        tableBody.appendChild(row);
     }
 }
