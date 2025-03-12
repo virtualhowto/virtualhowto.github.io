@@ -7,10 +7,63 @@
     <link rel="stylesheet" href="https://virtualhowto.github.io/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        .card { border: 1px solid #ccc; padding: 20px; margin: 10px 0; border-radius: 8px; background: #f9f9f9; }
-        .hidden { display: none; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2b2b2b;
+            color: #ffffff;
+            padding: 20px;
+            display: flex;
+        }
+        .container {
+            max-width: 600px;
+            margin-right: 20px;
+        }
+        .summary-panel {
+            max-width: 300px;
+            background: #264653;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #f4a261;
+        }
+        h1 {
+            color: #f4a261;
+        }
+        input[type="file"] {
+            padding: 10px;
+            background: #264653;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .card {
+            border: 1px solid #f4a261;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #264653;
+            text-align: left;
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            background: #f4a261;
+            color: black;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        select {
+            padding: 5px;
+            margin-top: 10px;
+            background: #f4a261;
+            border: none;
+            color: black;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -32,7 +85,19 @@
                 <p>Total Memory (GB): <span id="totalHostMemoryGB"></span></p>
                 <p>Total CPU Sockets: <span id="totalCPUSockets"></span></p>
             </div>
+            <button onclick="generateSummary()">Generate Pricing Summary</button>
         </div>
+    </div>
+
+    <div id="pricingSummary" class="summary-panel hidden">
+        <h2>Pricing Summary</h2>
+        <label for="pricingOption">Select Pricing Model:</label>
+        <select id="pricingOption" onchange="generateSummary()">
+            <option value="vmware">VMware</option>
+            <option value="azure">Azure LOCAL</option>
+            <option value="hpe">HPE VME</option>
+        </select>
+        <p>Estimated Cost: $<span id="pricingResult"></span></p>
     </div>
 
     <script>
@@ -71,6 +136,20 @@
             document.getElementById("totalCPUSockets").innerText = vHost.reduce((sum, host) => sum + (host["# CPU"] || 0), 0);
 
             document.getElementById("summary").classList.remove("hidden");
+        }
+
+        function generateSummary() {
+            const totalCores = parseInt(document.getElementById("totalCores").innerText) || 0;
+            const pricingOption = document.getElementById("pricingOption").value;
+
+            let costPerCore = 0;
+            if (pricingOption === "vmware") costPerCore = 50;
+            else if (pricingOption === "azure") costPerCore = 60;
+            else if (pricingOption === "hpe") costPerCore = 40;
+
+            const totalCost = totalCores * costPerCore;
+            document.getElementById("pricingResult").innerText = totalCost.toFixed(2);
+            document.getElementById("pricingSummary").classList.remove("hidden");
         }
     </script>
 </body>
