@@ -11,11 +11,11 @@
         "education": 15,
         "corporate": 25
     }
-    "vmwareStandard": 50,
-    "vmwareEnterprise": 4780,
-    "azure": 33.30,
-    "hpe": "Awaiting Quote",
-    "openshift": "Awaiting Quote",
-    "openvirt": "Awaiting Quote"
+    "vmwareStandard": { "cost": 50, "unit": "per core per month" },
+    "vmwareEnterprise": { "cost": 4780, "unit": "per CPU socket per month" },
+    "azure": { "cost": 33.30, "unit": "per core per month" },
+    "hpe": { "cost": "Awaiting Quote", "unit": "TBD" },
+    "openshift": { "cost": "Awaiting Quote", "unit": "TBD" },
+    "openvirt": { "cost": "Awaiting Quote", "unit": "TBD" }
 
 }
