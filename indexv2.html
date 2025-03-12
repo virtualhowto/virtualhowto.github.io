@@ -59,5 +59,61 @@
             <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
         </div>
     </div>
+    <script>
+        const dropZone = document.getElementById("drop-zone");
+        const fileInput = document.getElementById("fileUpload");
+        const vmTableBody = document.querySelector("#vm-table tbody");
+
+        dropZone.addEventListener("click", () => fileInput.click());
+
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("highlight");
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("highlight");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("highlight");
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.readAsBinaryString(file);
+            reader.onload = function(e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: "binary" });
+                const sheetName = workbook.SheetNames.includes("vInfo") ? "vInfo" : workbook.SheetNames[0];
+                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                vmTableBody.innerHTML = "";
+
+                vInfo.forEach(vm => {
+                    let row = document.createElement("tr");
+                    row.innerHTML = `<td>${vm["VM"] || vm["VM Name"] || "Unknown"}</td>
+                                     <td>${vm["OS according to the configuration file"] || "Unknown"}</td>
+                                     <td>${vm["NumCpu"] || vm["CPUs"] || 0}</td>
+                                     <td>${((vm["MemoryMB"] || vm["Memory"] || 0) / 1024).toFixed(2)}</td>
+                                     <td>${((vm["ProvisionedGB"] || vm["Storage"] || vm["Provisioned MB"] || 0) / 1024).toFixed(2)}</td>`;
+                    row.addEventListener("click", function() {
+                        row.classList.toggle("selected");
+                    });
+                    vmTableBody.appendChild(row);
+                });
+            };
+        }
+    </script>
 </body>
 </html>
