@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VMaaS - Virtual Machine as a Service</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <script src="upload.js" defer></script>
+    <script src="pricing.js" defer></script>
     <style>
         body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #ffffff; }
         .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; display: flex; }
@@ -57,6 +60,8 @@
                                 <th>vCPU</th>
                                 <th>RAM (GB)</th>
                                 <th>Storage (GB)</th>
+                                <th>Azure VM Match</th>
+                                <th>Azure Cost (AUD)</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -71,33 +76,5 @@
             <p><strong>Azure Cost:</strong> <a id="azure-cost-link" href="#">$0.00</a></p>
         </div>
     </div>
-    <script>
-        document.getElementById("azure-cost-link").addEventListener("click", function() {
-            exportAzureBreakdown();
-        });
-
-        function exportAzureBreakdown() {
-            let csvContent = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Azure vCPU Cost,Azure RAM Cost,Azure Storage Cost,Total Azure Cost\n";
-            document.querySelectorAll(".vm-table tr.selected").forEach(row => {
-                let cells = row.children;
-                let os = cells[1].textContent;
-                let cpu = parseInt(cells[2].textContent);
-                let ram = parseFloat(cells[3].textContent);
-                let storage = parseFloat(cells[4].textContent);
-                let azureCpuCost = cpu * 15;
-                let azureRamCost = ram * 6;
-                let azureStorageCost = storage * 0.2;
-                let totalAzureCost = azureCpuCost + azureRamCost + azureStorageCost;
-                csvContent += `${cells[0].textContent},${os},${cpu},${ram},${storage},$${azureCpuCost.toFixed(2)},$${azureRamCost.toFixed(2)},$${azureStorageCost.toFixed(2)},$${totalAzureCost.toFixed(2)}\n`;
-            });
-            let blob = new Blob([csvContent], { type: 'text/csv' });
-            let link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'azure_cost_breakdown.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    </script>
 </body>
 </html>
