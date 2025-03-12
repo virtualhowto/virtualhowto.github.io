@@ -36,6 +36,8 @@
         <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <input type="file" id="fileUpload" accept=".xlsx">
+            <label for='vm-select'>Select Virtual Machines:</label>
+            <select id='vm-select' multiple></select>
             <form id='pricing-form'>
                 <label for='cpu'>vCPU:</label>
                 <input type='number' id='cpu' min='1' required>
@@ -85,11 +87,24 @@
                 const workbook = XLSX.read(data, { type: "binary" });
                 
                 const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
-                if (vInfo.length > 0) {
-                    document.getElementById("cpu").value = vInfo[0]["NumCpu"] || 0;
-                    document.getElementById("ram").value = vInfo[0]["MemoryMB"] ? vInfo[0]["MemoryMB"] / 1024 : 0;
-                    document.getElementById("storage").value = vInfo[0]["ProvisionedGB"] || 0;
-                }
+                const vmSelect = document.getElementById("vm-select");
+                vmSelect.innerHTML = "";
+                
+                vInfo.forEach(vm => {
+                    let option = document.createElement("option");
+                    option.value = vm["VM"];
+                    option.textContent = `${vm["VM"]} - ${vm["GuestOS"]}`;
+                    vmSelect.appendChild(option);
+                });
+                
+                vmSelect.addEventListener("change", function() {
+                    const selectedVM = vInfo.find(vm => vm["VM"] === vmSelect.value);
+                    if (selectedVM) {
+                        document.getElementById("cpu").value = selectedVM["NumCpu"] || 0;
+                        document.getElementById("ram").value = selectedVM["MemoryMB"] ? selectedVM["MemoryMB"] / 1024 : 0;
+                        document.getElementById("storage").value = selectedVM["ProvisionedGB"] || 0;
+                    }
+                });
             };
         });
     </script>
