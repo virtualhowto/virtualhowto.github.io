@@ -10,11 +10,11 @@
         header { background: #333; color: #fff; padding: 20px 0; text-align: center; }
         .hero { text-align: center; padding: 50px; background: #007bff; color: white; }
         .hero h1 { margin: 0; font-size: 2.5em; }
-        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); border-radius: 10px; position: absolute; cursor: grab; }
+        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); border-radius: 10px; }
         .pricing h2 { margin-bottom: 20px; }
         .pricing form { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         .pricing label { font-weight: bold; }
-        .pricing input, .pricing select { padding: 12px; width: 80%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+        .pricing input, .pricing select, .pricing input[type='range'] { padding: 12px; width: 80%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px; }
         .pricing button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .pricing button:hover { background: #0056b3; }
         .result-container { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #333; }
@@ -32,7 +32,7 @@
         <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
     </section>
     <div class="container">
-        <section id="pricing-panel" class="pricing">
+        <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <form id='pricing-form'>
                 <label for='cpu'>vCPU:</label>
@@ -41,8 +41,8 @@
                 <input type='number' id='ram' min='1' required>
                 <label for='storage'>Storage (GB):</label>
                 <input type='number' id='storage' min='10' required>
-                <label for='bandwidth'>Bandwidth (Mbps):</label>
-                <input type='number' id='bandwidth' min='1' required>
+                <label for='bandwidth'>Bandwidth (Mbps): <span id="bandwidth-value">100</span></label>
+                <input type='range' id='bandwidth' min='100' max='1000' step='100' value='100'>
                 
                 <label for='firewall'>Include Firewall?</label>
                 <select id='firewall'>
@@ -85,17 +85,22 @@
             const firewallSelect = document.getElementById("firewall");
             const firewallOptions = document.getElementById("firewall-options");
             const firewallFeatures = document.getElementById("firewall-features");
-            const pricingPanel = document.getElementById("pricing-panel");
+            const bandwidthSlider = document.getElementById("bandwidth");
+            const bandwidthValue = document.getElementById("bandwidth-value");
             
             firewallSelect.addEventListener("change", function() {
                 firewallOptions.style.display = (firewallSelect.value !== "none") ? "flex" : "none";
+            });
+            
+            bandwidthSlider.addEventListener("input", function() {
+                bandwidthValue.textContent = bandwidthSlider.value;
             });
             
             form.addEventListener("input", function () {
                 const cpu = parseInt(document.getElementById("cpu").value) || 0;
                 const ram = parseInt(document.getElementById("ram").value) || 0;
                 const storage = parseInt(document.getElementById("storage").value) || 0;
-                let bandwidth = parseInt(document.getElementById("bandwidth").value) || 0;
+                let bandwidth = parseInt(bandwidthSlider.value) || 0;
                 let firewallCost = 0;
                 
                 if (firewallSelect.value === "hosting") {
@@ -113,27 +118,6 @@
                 const totalCost = cpuCost + ramCost + storageCost + bandwidthCost + firewallCost;
                 result.innerHTML = `Estimated Monthly Cost: $${totalCost.toFixed(2)}`;
             });
-            
-            pricingPanel.onmousedown = function(event) {
-                let shiftX = event.clientX - pricingPanel.getBoundingClientRect().left;
-                let shiftY = event.clientY - pricingPanel.getBoundingClientRect().top;
-
-                function moveAt(pageX, pageY) {
-                    pricingPanel.style.left = pageX - shiftX + 'px';
-                    pricingPanel.style.top = pageY - shiftY + 'px';
-                }
-
-                function onMouseMove(event) {
-                    moveAt(event.pageX, event.pageY);
-                }
-
-                document.addEventListener('mousemove', onMouseMove);
-
-                document.onmouseup = function() {
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.onmouseup = null;
-                };
-            };
         });
     </script>
 </body>
