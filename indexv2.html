@@ -42,12 +42,6 @@
         <section class="pricing">
             <h2>VM Pricing Calculator</h2>
             <input type="file" id="fileUpload" accept=".xlsx">
-            <label for="os-licensing">OS Licensing Option:</label>
-            <select id="os-licensing">
-                <option value="included">Include Licensing</option>
-                <option value="mobility">License Mobility</option>
-                <option value="hybrid">Hybrid Use Benefit</option>
-            </select>
             <div class="vm-table-container">
                 <table id="vm-table" class="vm-table">
                     <thead>
@@ -64,42 +58,33 @@
             </div>
         </section>
     </div>
-    <div class="cart" id="cart">
-        <h3>Summary</h3>
-        <ul id="cart-list"></ul>
-        <div class="cost-comparison">
-            <div>
-                <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span> - <a id="export-your-cost" class="export-link">Export CSV</a></p>
-            </div>
-            <div>
-                <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span> - <a id="export-azure-cost" class="export-link">Export CSV</a></p>
-            </div>
-        </div>
-    </div>
     <script>
-        function exportYourCostCSV() {
-            let csvContent = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Your vCPU Cost,Your RAM Cost,Your Storage Cost,Total Your Cost\n";
-            document.querySelectorAll(".vm-table tr.selected").forEach(row => {
-                let cells = row.children;
-                let os = cells[1].textContent;
-                let cpu = parseInt(cells[2].textContent);
-                let ram = parseFloat(cells[3].textContent);
-                let storage = parseFloat(cells[4].textContent);
-                let yourCpuCost = cpu * 10;
-                let yourRamCost = ram * 5;
-                let yourStorageCost = storage * 0.1;
-                let totalYourCost = yourCpuCost + yourRamCost + yourStorageCost;
-                csvContent += `${cells[0].textContent},${os},${cpu},${ram},${storage},$${yourCpuCost.toFixed(2)},$${yourRamCost.toFixed(2)},$${yourStorageCost.toFixed(2)},$${totalYourCost.toFixed(2)}\n`;
-            });
-            let blob = new Blob([csvContent], { type: 'text/csv' });
-            let link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'your_cost_breakdown.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        document.getElementById("export-your-cost").addEventListener("click", exportYourCostCSV);
+        document.getElementById("fileUpload").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.readAsBinaryString(file);
+            reader.onload = function(e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: "binary" });
+                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+                const vmTableBody = document.querySelector("#vm-table tbody");
+                vmTableBody.innerHTML = "";
+                
+                vInfo.forEach(vm => {
+                    let row = document.createElement("tr");
+                    row.innerHTML = `<td>${vm["VM Name"]}</td>
+                                     <td>${vm["OS according to the configuration file"] || "Unknown"}</td>
+                                     <td>${vm["vCPU"] || 0}</td>
+                                     <td>${(vm["RAM (GB)"] || 0).toFixed(2)}</td>
+                                     <td>${(vm["Storage (GB)"] || 0).toFixed(2)}</td>`;
+                    row.addEventListener("click", function() {
+                        row.classList.toggle("selected");
+                    });
+                    vmTableBody.appendChild(row);
+                });
+            };
+        });
     </script>
 </body>
 </html>
