@@ -87,27 +87,27 @@
                 </tr>
                 <tr>
                     <td>VMware Standard</td>
-                    <td>$<span id="vmwareStandard"></span></td>
+                    <td>$<span id="vmwareStandard"></span> <span id="vmwareStandardUnit"></span></td>
                 </tr>
                 <tr>
                     <td>VMware Enterprise Plus</td>
-                    <td>$<span id="vmwareEnterprise"></span></td>
+                    <td>$<span id="vmwareEnterprise"></span> <span id="vmwareEnterpriseUnit"></span></td>
                 </tr>
                 <tr>
                     <td>Azure LOCAL</td>
-                    <td>$<span id="azure"></span></td>
+                    <td>$<span id="azure"></span> <span id="azureUnit"></span></td>
                 </tr>
                 <tr>
                     <td>HPE VME</td>
-                    <td>$<span id="hpe"></span></td>
+                    <td>$<span id="hpe"></span> <span id="hpeUnit"></span></td>
                 </tr>
                 <tr>
                     <td>Red Hat OpenShift</td>
-                    <td>$<span id="openshift"></span></td>
+                    <td>$<span id="openshift"></span> <span id="openshiftUnit"></span></td>
                 </tr>
                 <tr>
                     <td>OpenVirt</td>
-                    <td>$<span id="openvirt"></span></td>
+                    <td>$<span id="openvirt"></span> <span id="openvirtUnit"></span></td>
                 </tr>
             </table>
         </div>
@@ -125,14 +125,46 @@
             }
         }
 
+        document.getElementById("dropZone").addEventListener("click", () => {
+            document.getElementById("fileInput").click();
+        });
+
+        document.getElementById("dropZone").addEventListener("dragover", (event) => {
+            event.preventDefault();
+        });
+
+        document.getElementById("dropZone").addEventListener("drop", (event) => {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            if (file) processFile(file);
+        });
+
+        document.getElementById("fileInput").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file) processFile(file);
+        });
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                processWorkbook(workbook);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processWorkbook(workbook) {
+            document.getElementById("vminfoSummary").classList.remove("hidden");
+            document.getElementById("vhostSummary").classList.remove("hidden");
+        }
+
         async function generateSummary() {
             await loadPricing();
-            document.getElementById("vmwareStandard").innerText = pricingData.vmwareStandard || "TBD";
-            document.getElementById("vmwareEnterprise").innerText = pricingData.vmwareEnterprise || "TBD";
-            document.getElementById("azure").innerText = pricingData.azure || "TBD";
-            document.getElementById("hpe").innerText = pricingData.hpe || "TBD";
-            document.getElementById("openshift").innerText = pricingData.openshift || "TBD";
-            document.getElementById("openvirt").innerText = pricingData.openvirt || "TBD";
+            Object.keys(pricingData).forEach(key => {
+                document.getElementById(key).innerText = pricingData[key].cost || "TBD";
+                document.getElementById(`${key}Unit`).innerText = pricingData[key].unit || "";
+            });
             document.getElementById("pricingSummary").classList.remove("hidden");
         }
     </script>
