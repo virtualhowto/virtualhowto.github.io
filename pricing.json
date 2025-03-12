@@ -4,8 +4,11 @@
     "storage": 0.10,
     "bandwidth_mbps": 1.50,
     "firewall": {
-        "basic": { "cost": 20, "cpu": 2, "ram": 4 },
-        "advanced": { "cost": 50, "cpu": 4, "ram": 8 },
-        "enterprise": { "cost": 100, "cpu": 8, "ram": 16 }
+        "hosting": { "cost": 50 },
+        "aggregated": { "cost": 150, "extra_bandwidth": 100 }
+    },
+    "microsoft_license": {
+        "education": 15,
+        "corporate": 25
     }
 }
