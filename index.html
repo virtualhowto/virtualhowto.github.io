@@ -29,6 +29,7 @@
         .cart h3 { margin-top: 0; color: #cc5500; font-size: 1.5em; text-align: center; }
         .cart ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
         .cart p { text-align: center; font-size: 1.2em; font-weight: bold; }
+        .azure-estimate { margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1c3f94; }
         footer { text-align: center; background: #1c3f94; color: white; padding: 15px; font-size: 1em; margin-top: 30px; }
     </style>
 </head>
@@ -48,7 +49,20 @@
             </div>
         </section>
     </div>
+    <div class="cart" id="cart">
+        <h3>Summary</h3>
+        <ul id="cart-list"></ul>
+        <p><strong>Azure Cost Estimate:</strong> <span id="azure-estimate">$0.00</span></p>
+        <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
+    </div>
     <script>
+        function getAzureEstimate(cpu, ram, storage) {
+            const azureCpuCost = 15;
+            const azureRamCost = 6;
+            const azureStorageCost = 0.2;
+            return (cpu * azureCpuCost) + (ram * azureRamCost) + (storage * azureStorageCost);
+        }
+
         document.getElementById("fileUpload").addEventListener("change", function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -59,30 +73,25 @@
                 const workbook = XLSX.read(data, { type: "binary" });
                 const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
                 const vmList = document.getElementById("vm-list");
+                const azureEstimateElem = document.getElementById("azure-estimate");
+                let totalAzureCost = 0;
+                
                 vmList.innerHTML = "";
                 
                 vInfo.forEach(vm => {
+                    let cpu = vm["CPUs"] || 0;
+                    let ram = (vm["Memory"] || 0) / 1024;
+                    let storage = (vm["Provisioned MB"] || 0) / 1024;
+                    let azureCost = getAzureEstimate(cpu, ram, storage);
+                    totalAzureCost += azureCost;
+                    
                     let li = document.createElement("li");
-                    let checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.value = vm["VM"];
-                    checkbox.addEventListener("change", updateCart);
-                    li.appendChild(checkbox);
-                    li.appendChild(document.createTextNode(`${vm["VM"]} - ${vm["OS according to the configuration file"]}, ${vm["CPUs"]} vCPU, ${vm["Memory"] / 1024}GB RAM, ${vm["Provisioned MB"] / 1024}GB Storage`));
+                    li.textContent = `${vm["VM"]} - ${cpu} vCPU, ${ram}GB RAM, ${storage}GB Storage, Azure Cost: $${azureCost.toFixed(2)}`;
                     vmList.appendChild(li);
                 });
+                azureEstimateElem.textContent = `$${totalAzureCost.toFixed(2)}`;
             };
         });
-        
-        function updateCart() {
-            const cartList = document.getElementById("cart-list");
-            cartList.innerHTML = "";
-            document.querySelectorAll("#vm-list input:checked").forEach(vm => {
-                let li = document.createElement("li");
-                li.textContent = vm.value;
-                cartList.appendChild(li);
-            });
-        }
     </script>
 </body>
 </html>
