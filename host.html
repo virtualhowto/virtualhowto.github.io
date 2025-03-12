@@ -33,21 +33,14 @@
         h1 {
             color: #f4a261;
         }
-        input[type="file"] {
-            padding: 10px;
-            background: #264653;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .card {
-            border: 1px solid #f4a261;
+        .drop-zone {
+            width: 100%;
             padding: 20px;
-            margin: 10px 0;
-            border-radius: 8px;
+            text-align: center;
+            border: 2px dashed #f4a261;
             background: #264653;
-            text-align: left;
+            cursor: pointer;
+            margin-bottom: 20px;
         }
         .hidden {
             display: none;
@@ -65,14 +58,19 @@
 </head>
 <body>
     <h1>RVTools Summary</h1>
-    <input type="file" id="fileInput" accept=".xlsx" />
+    <div class="drop-zone" id="dropZone">Drag & Drop your file here or Click to Upload</div>
+    <input type="file" id="fileInput" accept=".xlsx" class="hidden" />
     <div class="container">
-        <div id="summary" class="summary-panel hidden">
-            <h2>VMINFO & vHost Summary</h2>
+        <div id="vminfoSummary" class="summary-panel hidden">
+            <h2>VMINFO Summary</h2>
             <p>Total VMs: <span id="totalVMs"></span></p>
             <p>Total vCPUs: <span id="totalVCPUs"></span></p>
             <p>Total Memory (GB): <span id="totalMemoryGB"></span></p>
             <p>Total Provisioned Storage (GB): <span id="totalStorageGB"></span></p>
+        </div>
+        
+        <div id="vhostSummary" class="summary-panel hidden">
+            <h2>vHost Summary</h2>
             <p>Total Hosts: <span id="totalHosts"></span></p>
             <p>Total Physical Cores: <span id="totalCores"></span></p>
             <p>Total Memory (GB): <span id="totalHostMemoryGB"></span></p>
@@ -108,10 +106,30 @@
     </div>
 
     <script>
-        document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
 
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropZone.style.borderColor = '#ffffff';
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = '#f4a261';
+        });
+        dropZone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropZone.style.borderColor = '#f4a261';
+            const file = event.dataTransfer.files[0];
+            if (file) processFile(file);
+        });
+
+        fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) processFile(file);
+        });
+
+        function processFile(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
@@ -119,7 +137,7 @@
                 processWorkbook(workbook);
             };
             reader.readAsArrayBuffer(file);
-        });
+        }
 
         function processWorkbook(workbook) {
             const vInfoSheet = workbook.Sheets["vInfo"];
@@ -142,18 +160,8 @@
             document.getElementById("totalHostMemoryGB").innerText = (vHost.reduce((sum, host) => sum + (host["# Memory"] || 0), 0) / 1024).toFixed(2);
             document.getElementById("totalCPUSockets").innerText = vHost.reduce((sum, host) => sum + (host["# CPU"] || 0), 0);
 
-            document.getElementById("summary").classList.remove("hidden");
-        }
-
-        function generateSummary() {
-            const totalCores = parseInt(document.getElementById("totalCores").innerText) || 0;
-            const totalSockets = parseInt(document.getElementById("totalCPUSockets").innerText) || 0;
-
-            document.getElementById("vmwareStandard").innerText = (totalCores * 50).toFixed(2);
-            document.getElementById("vmwareEnterprise").innerText = (totalSockets * 4780).toFixed(2);
-            document.getElementById("azure").innerText = (totalCores * (10 + 23.30) * 12).toFixed(2);
-            document.getElementById("hpe").innerText = "Awaiting Quote";
-            document.getElementById("pricingSummary").classList.remove("hidden");
+            document.getElementById("vminfoSummary").classList.remove("hidden");
+            document.getElementById("vhostSummary").classList.remove("hidden");
         }
     </script>
 </body>
