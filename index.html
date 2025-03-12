@@ -69,7 +69,7 @@
                     checkbox.type = "checkbox";
                     checkbox.value = vm["VM"];
                     li.appendChild(checkbox);
-                    li.appendChild(document.createTextNode(`${vm["VM"]} - ${vm["GuestOS"]}, ${vm["NumCpu"]} vCPU, ${vm["MemoryMB"] / 1024} GB RAM`));
+                    li.appendChild(document.createTextNode(`${vm["VM"]} - ${vm["OS according to the configuration file"]}, ${vm["CPUs"]} vCPU, ${vm["Provisioned MB"] / 1024} GB RAM`));
                     vmList.appendChild(li);
                 });
             };
@@ -77,4 +77,3 @@
     </script>
 </body>
 </html>
-
