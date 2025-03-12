@@ -29,18 +29,38 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function handleFile(file) {
-    if (!file) return;
+    if (!file) {
+        alert("No file selected.");
+        return;
+    }
+    
+    if (!file.name.endsWith(".xlsx")) {
+        alert("Invalid file type. Please upload an XLSX file.");
+        return;
+    }
+
     const reader = new FileReader();
     reader.readAsBinaryString(file);
     reader.onload = function(event) {
         const data = event.target.result;
         try {
             const workbook = XLSX.read(data, { type: "binary" });
+            console.log("Workbook loaded successfully:", workbook.SheetNames);
+            
             const sheetName = workbook.SheetNames.find(name => name.toLowerCase().includes("vinfo")) || workbook.SheetNames[0];
-            const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            console.log("Using sheet:", sheetName);
+            
+            const sheet = workbook.Sheets[sheetName];
+            if (!sheet) {
+                alert("No valid sheet found in the uploaded file.");
+                return;
+            }
+            
+            const vInfo = XLSX.utils.sheet_to_json(sheet);
+            console.log("Extracted data:", vInfo);
             
             if (!vInfo || vInfo.length === 0) {
-                alert("Invalid RVTools file. No data found.");
+                alert("Invalid RVTools file. No VM data found.");
                 return;
             }
             
