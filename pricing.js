@@ -79,9 +79,10 @@ async function processVMData(vmData) {
                     ${azurePricingData.map(vm => `<option value="${vm.name}" ${vm.name === match.vmSize ? "selected" : ""}>${vm.name}</option>`).join('')}
                 </select>
             </td>
-            <td class="cost-cell">${match.cost}</td>
-            <td class="standard-cost-cell">$${standardCost.toFixed(2)}</td>
         `;
+        
+        row.dataset.azureCost = match.cost;
+        row.dataset.standardCost = `$${standardCost.toFixed(2)}`;
         
         row.addEventListener("click", () => {
             row.classList.toggle("selected");
@@ -93,7 +94,7 @@ async function processVMData(vmData) {
             if (selectedVm) {
                 let pricePerHour = osType.toLowerCase().includes("windows") ? selectedVm.windowsPrice : selectedVm.linuxPrice;
                 let monthlyCost = parseFloat(pricePerHour) * 720;
-                row.querySelector(".cost-cell").textContent = `$${monthlyCost.toFixed(2)}`;
+                row.dataset.azureCost = `$${monthlyCost.toFixed(2)}`;
             }
             updateSummary();
         });
@@ -111,8 +112,8 @@ function updateSummary() {
     document.querySelectorAll("#vm-table tbody tr.selected").forEach(row => {
         let clone = row.cloneNode(true);
         summaryTableBody.appendChild(clone);
-        let azureCost = parseFloat(row.querySelector(".cost-cell").textContent.replace("$", "")) || 0;
-        let standardCost = parseFloat(row.querySelector(".standard-cost-cell").textContent.replace("$", "")) || 0;
+        let azureCost = parseFloat(row.dataset.azureCost.replace("$", "")) || 0;
+        let standardCost = parseFloat(row.dataset.standardCost.replace("$", "")) || 0;
         totalAzureCost += azureCost;
         totalStandardCost += standardCost;
     });
