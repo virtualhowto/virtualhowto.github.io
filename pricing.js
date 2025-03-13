@@ -11,24 +11,6 @@ async function fetchAzurePricing() {
     }
 }
 
-async function matchAzureVM(cpu, ram, osType) {
-    let pricingData = await fetchAzurePricing();
-    if (!pricingData) return { vmSize: "Unknown", cost: "N/A" };
-
-    let bestMatch = pricingData.reduce((best, vm) => {
-        let vmCpu = vm.numberOfCores;
-        let vmRam = vm.memoryInMB / 1024; // Convert MB to GB
-        if (Math.abs(cpu - vmCpu) <= 2 && Math.abs(ram - vmRam) <= 4) {
-            return (!best || parseFloat(vm.linuxPrice) < parseFloat(best.linuxPrice)) ? vm : best;
-        }
-        return best;
-    }, null);
-
-    if (!bestMatch) return { vmSize: "Unknown", cost: "N/A" };
-    
-    let price = osType.toLowerCase().includes("windows") ? bestMatch.windowsPrice : bestMatch.linuxPrice;
-    return { vmSize: bestMatch.name, cost: `$${parseFloat(price).toFixed(2)}` };
-}
 
 async function processVMData(vmData) {
     let tableBody = document.querySelector("#vm-table tbody");
@@ -72,4 +54,24 @@ async function processVMData(vmData) {
         `;
         tableBody.appendChild(row);
     }
+}
+
+async function matchAzureVM(cpu, ramGB, osType) {
+    let pricingData = await fetchAzurePricing();
+    if (!pricingData) return { vmSize: "Unknown", cost: "N/A" };
+
+    let bestMatch = pricingData.reduce((best, vm) => {
+        let vmCpu = vm.numberOfCores;
+        let vmRam = vm.memoryInMB / 1024; // Convert MB to GB
+        if (Math.abs(cpu - vmCpu) <= 2 && Math.abs(ram - vmRam) <= 4) {
+            return (!best || parseFloat(vm.linuxPrice) < parseFloat(best.linuxPrice)) ? vm : best;
+        }
+        return best;
+    }, null);
+
+    if (!bestMatch) return { vmSize: "Unknown", cost: "N/A" };
+    
+    let pricePerHour = osType.toLowerCase().includes("windows") ? bestMatch.windowsPrice : bestMatch.linuxPrice;
+    let monthlyCost = parseFloat(pricePerHour) * 720; // Convert hourly to monthly pricing
+    return { vmSize: bestMatch.name, cost: `$${monthlyCost.toFixed(2)}` };
 }
