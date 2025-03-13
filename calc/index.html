@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VM Pricing Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>VM Pricing Calculator</h1>
+    
+    <div id="upload-container">
+        <input type="file" id="fileUpload" />
+        <div id="drop-zone">Drag & Drop RVTools File Here</div>
+    </div>
+    
+    <table id="vm-table">
+        <thead>
+            <tr>
+                <th>VM Name</th>
+                <th>OS</th>
+                <th>CPU</th>
+                <th>RAM (GB)</th>
+                <th>Storage (GB)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    
+    <div id="summary-panel">
+        <h3>Pricing Summary</h3>
+        <p id="summary-total-standard-cost">Standard Total: $0.00</p>
+        <p id="cart-total">Cart Total: $0.00</p>
+        <table id="summary-table">
+            <thead>
+                <tr>
+                    <th>VM Name</th>
+                    <th>OS</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                    <th>Storage</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    
+    <script src="upload.js"></script>
+    <script src="pricing.js"></script>
+</body>
+</html>
