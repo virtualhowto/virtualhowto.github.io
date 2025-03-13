@@ -13,9 +13,11 @@ async function fetchAzurePricing() {
 
 async function matchAzureVM(cpu, ramGB, osType) {
     let pricingData = await fetchAzurePricing();
-    if (!pricingData) return { vmSize: "Unknown", cost: "$0.00" };
+    if (!pricingData) return { vmSize: "Unknown", cost: `$${(0.00 * 720).toFixed(2)}` };
 
-    let bestMatch = pricingData.reduce((best, vm) => {
+    let filteredPricing = pricingData.filter(vm => vm.name.startsWith("Standard_D")); // Focus only on Standard_D models
+
+    let bestMatch = filteredPricing.reduce((best, vm) => {
         let vmCpu = vm.numberOfCores;
         let vmRam = vm.memoryInMB / 1024; // Convert MB to GB
         let linuxPrice = parseFloat(vm.linuxPrice) || Infinity;
@@ -28,7 +30,7 @@ async function matchAzureVM(cpu, ramGB, osType) {
         return best;
     }, null);
 
-    if (!bestMatch) return { vmSize: "Unknown", cost: "$0.00" };
+    if (!bestMatch) return { vmSize: "Unknown", cost: `$${(0.00 * 720).toFixed(2)}` };
     
     let pricePerHour = osType.toLowerCase().includes("windows") ? bestMatch.windowsPrice : bestMatch.linuxPrice;
     let monthlyCost = parseFloat(pricePerHour) * 720; // Convert hourly to monthly pricing
