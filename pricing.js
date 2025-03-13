@@ -120,4 +120,5 @@ function updateSummary() {
     
     document.getElementById("summary-total-azure-cost").textContent = `Azure Total: $${totalAzureCost.toFixed(2)}`;
     document.getElementById("summary-total-standard-cost").textContent = `Standard Total: $${totalStandardCost.toFixed(2)}`;
+document.getElementById("cart-total").textContent = `Cart Total: $${totalStandardCost.toFixed(2)}`;
 }
