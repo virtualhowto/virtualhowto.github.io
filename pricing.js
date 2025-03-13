@@ -88,9 +88,14 @@ async function processVMData(vmData) {
 function updateSummary() {
     let summaryTableBody = document.querySelector("#summary-table tbody");
     summaryTableBody.innerHTML = "";
+    let totalCost = 0;
     
     document.querySelectorAll("#vm-table tbody tr.selected").forEach(row => {
         let clone = row.cloneNode(true);
         summaryTableBody.appendChild(clone);
+        let cost = parseFloat(row.cells[6].textContent.replace("$", "")) || 0;
+        totalCost += cost;
     });
+    
+    document.getElementById("summary-total-cost").textContent = `Total Cost: $${totalCost.toFixed(2)}`;
 }
