@@ -11,6 +11,19 @@ async function fetchAzurePricing() {
     }
 }
 
+async function fetchStandardPricing() {
+    try {
+        const response = await fetch("pricing.json"); // Load standard pricing JSON file
+        const pricingData = await response.json();
+        console.log("Standard pricing data loaded successfully:", pricingData);
+        return pricingData;
+    } catch (error) {
+        console.error("Error loading standard pricing from JSON", error);
+        alert("Failed to load standard pricing. Ensure the JSON file is available.");
+        return null;
+    }
+}
+
 async function matchAzureVM(cpu, ramGB, osType) {
     let pricingData = await fetchAzurePricing();
     if (!pricingData) return { vmSize: "Unknown", cost: `$${(0.00 * 720).toFixed(2)}` };
@@ -40,7 +53,8 @@ async function matchAzureVM(cpu, ramGB, osType) {
 async function processVMData(vmData) {
     let tableBody = document.querySelector("#vm-table tbody");
     tableBody.innerHTML = "";
-    let pricingData = await fetchAzurePricing();
+    let azurePricingData = await fetchAzurePricing();
+    let standardPricingData = await fetchStandardPricing();
     
     for (let vm of vmData) {
         let cpu = parseInt(vm["CPUs"] || vm["NumCpu"] || 0);
@@ -51,6 +65,7 @@ async function processVMData(vmData) {
         let osType = vm["OS according to the configuration file"] || "Unknown";
         
         let match = await matchAzureVM(cpu, ramGB, osType);
+        let standardCost = standardPricingData ? standardPricingData.defaultPrice * cpu : 0; // Example pricing logic
         
         let row = document.createElement("tr");
         row.innerHTML = `
@@ -61,10 +76,11 @@ async function processVMData(vmData) {
             <td>${storageGB}</td>
             <td>
                 <select class="azure-vm-select">
-                    ${pricingData.map(vm => `<option value="${vm.name}" ${vm.name === match.vmSize ? "selected" : ""}>${vm.name}</option>`).join('')}
+                    ${azurePricingData.map(vm => `<option value="${vm.name}" ${vm.name === match.vmSize ? "selected" : ""}>${vm.name}</option>`).join('')}
                 </select>
             </td>
             <td class="cost-cell">${match.cost}</td>
+            <td class="standard-cost-cell">$${standardCost.toFixed(2)}</td>
         `;
         
         row.addEventListener("click", () => {
@@ -73,7 +89,7 @@ async function processVMData(vmData) {
         });
         
         row.querySelector(".azure-vm-select").addEventListener("change", function() {
-            let selectedVm = pricingData.find(vm => vm.name === this.value);
+            let selectedVm = azurePricingData.find(vm => vm.name === this.value);
             if (selectedVm) {
                 let pricePerHour = osType.toLowerCase().includes("windows") ? selectedVm.windowsPrice : selectedVm.linuxPrice;
                 let monthlyCost = parseFloat(pricePerHour) * 720;
@@ -89,14 +105,18 @@ async function processVMData(vmData) {
 function updateSummary() {
     let summaryTableBody = document.querySelector("#summary-table tbody");
     summaryTableBody.innerHTML = "";
-    let totalCost = 0;
+    let totalAzureCost = 0;
+    let totalStandardCost = 0;
     
     document.querySelectorAll("#vm-table tbody tr.selected").forEach(row => {
         let clone = row.cloneNode(true);
         summaryTableBody.appendChild(clone);
-        let cost = parseFloat(row.querySelector(".cost-cell").textContent.replace("$", "")) || 0;
-        totalCost += cost;
+        let azureCost = parseFloat(row.querySelector(".cost-cell").textContent.replace("$", "")) || 0;
+        let standardCost = parseFloat(row.querySelector(".standard-cost-cell").textContent.replace("$", "")) || 0;
+        totalAzureCost += azureCost;
+        totalStandardCost += standardCost;
     });
     
-    document.getElementById("summary-total-cost").textContent = `Total Cost: $${totalCost.toFixed(2)}`;
+    document.getElementById("summary-total-azure-cost").textContent = `Azure Total: $${totalAzureCost.toFixed(2)}`;
+    document.getElementById("summary-total-standard-cost").textContent = `Standard Total: $${totalStandardCost.toFixed(2)}`;
 }
