@@ -40,6 +40,7 @@ async function matchAzureVM(cpu, ramGB, osType) {
 async function processVMData(vmData) {
     let tableBody = document.querySelector("#vm-table tbody");
     tableBody.innerHTML = "";
+    let pricingData = await fetchAzurePricing();
     
     for (let vm of vmData) {
         let cpu = parseInt(vm["CPUs"] || vm["NumCpu"] || 0);
@@ -49,23 +50,7 @@ async function processVMData(vmData) {
         let storageGB = (storageMB / 1024).toFixed(2);
         let osType = vm["OS according to the configuration file"] || "Unknown";
         
-        // Debugging Logs
-        console.log("Extracted VM Data:", {
-            VM_Name: vm["VM Name"] || "Unknown",
-            CPU: cpu,
-            RAM_GB: ramGB,
-            Storage_GB: storageGB,
-            OS: osType
-        });
-
-        // Ensure all values are valid before inserting into the table
-        if (isNaN(cpu) || isNaN(ramGB) || isNaN(storageGB)) {
-            console.warn("Skipping row due to missing or invalid values:", vm);
-            continue;
-        }
-        
         let match = await matchAzureVM(cpu, ramGB, osType);
-        console.log("Matched Azure VM:", match);
         
         let row = document.createElement("tr");
         row.innerHTML = `
@@ -74,13 +59,29 @@ async function processVMData(vmData) {
             <td>${cpu}</td>
             <td>${ramGB}</td>
             <td>${storageGB}</td>
-            <td>${match.vmSize}</td>
-            <td>${match.cost}</td>
+            <td>
+                <select class="azure-vm-select">
+                    ${pricingData.map(vm => `<option value="${vm.name}" ${vm.name === match.vmSize ? "selected" : ""}>${vm.name}</option>`).join('')}
+                </select>
+            </td>
+            <td class="cost-cell">${match.cost}</td>
         `;
+        
         row.addEventListener("click", () => {
             row.classList.toggle("selected");
             updateSummary();
         });
+        
+        row.querySelector(".azure-vm-select").addEventListener("change", function() {
+            let selectedVm = pricingData.find(vm => vm.name === this.value);
+            if (selectedVm) {
+                let pricePerHour = osType.toLowerCase().includes("windows") ? selectedVm.windowsPrice : selectedVm.linuxPrice;
+                let monthlyCost = parseFloat(pricePerHour) * 720;
+                row.querySelector(".cost-cell").textContent = `$${monthlyCost.toFixed(2)}`;
+            }
+            updateSummary();
+        });
+        
         tableBody.appendChild(row);
     }
 }
@@ -93,7 +94,7 @@ function updateSummary() {
     document.querySelectorAll("#vm-table tbody tr.selected").forEach(row => {
         let clone = row.cloneNode(true);
         summaryTableBody.appendChild(clone);
-        let cost = parseFloat(row.cells[6].textContent.replace("$", "")) || 0;
+        let cost = parseFloat(row.querySelector(".cost-cell").textContent.replace("$", "")) || 0;
         totalCost += cost;
     });
     
