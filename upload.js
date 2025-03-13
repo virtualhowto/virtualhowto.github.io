@@ -1,29 +1,33 @@
 async function fetchAzurePricing() {
     try {
-        let response = await axios.get("https://api.cloudprice.net/v1/prices?currency=AUD&region=australiaeast");
-        console.log("Azure pricing data fetched successfully:", response.data);
-        return response.data;
+        const response = await fetch("az-pricing.json"); // Load local JSON file
+        const pricingData = await response.json();
+        console.log("Azure pricing data loaded successfully:", pricingData);
+        return pricingData;
     } catch (error) {
-        console.error("Error fetching Azure pricing", error);
-        alert("Failed to fetch Azure pricing. Check your network connection.");
+        console.error("Error loading Azure pricing from JSON", error);
+        alert("Failed to load Azure pricing. Ensure the JSON file is available.");
         return null;
     }
 }
 
-async function matchAzureVM(cpu, ram) {
+async function matchAzureVM(cpu, ram, osType) {
     let pricingData = await fetchAzurePricing();
     if (!pricingData) return { vmSize: "Unknown", cost: "N/A" };
 
-    let bestMatch = pricingData.vms.reduce((best, vm) => {
-        let vmCpu = vm.cpu;
-        let vmRam = vm.memory_gb;
+    let bestMatch = pricingData.reduce((best, vm) => {
+        let vmCpu = vm.numberOfCores;
+        let vmRam = vm.memoryInMB / 1024; // Convert MB to GB
         if (Math.abs(cpu - vmCpu) <= 2 && Math.abs(ram - vmRam) <= 4) {
-            return (!best || vm.price_monthly < best.price_monthly) ? vm : best;
+            return (!best || parseFloat(vm.linuxPrice) < parseFloat(best.linuxPrice)) ? vm : best;
         }
         return best;
     }, null);
 
-    return bestMatch ? { vmSize: bestMatch.name, cost: `$${bestMatch.price_monthly.toFixed(2)}` } : { vmSize: "Unknown", cost: "N/A" };
+    if (!bestMatch) return { vmSize: "Unknown", cost: "N/A" };
+    
+    let price = osType.toLowerCase().includes("windows") ? bestMatch.windowsPrice : bestMatch.linuxPrice;
+    return { vmSize: bestMatch.name, cost: `$${parseFloat(price).toFixed(2)}` };
 }
 
 async function processVMData(vmData) {
@@ -53,7 +57,7 @@ async function processVMData(vmData) {
             continue;
         }
         
-        let match = await matchAzureVM(cpu, ramGB);
+        let match = await matchAzureVM(cpu, ramGB, osType);
         console.log("Matched Azure VM:", match);
         
         let row = document.createElement("tr");
