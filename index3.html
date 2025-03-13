@@ -3,78 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VMaaS - Virtual Machine as a Service</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
-    <script src="upload.js" defer></script>
-    <script src="pricing.js" defer></script>
-    <style>
-        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #ffffff; }
-        .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; display: flex; }
-        .content { flex: 3; padding-right: 20px; }
-        .cart { 
-            flex: 1; 
-            background: white; 
-            padding: 20px; 
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.2); 
-            border-radius: 10px; 
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            width: 300px;
-            z-index: 1000;
-        }
-        header { background: linear-gradient(90deg, #1c3f94, #cc5500); color: #fff; padding: 20px 0; text-align: center; font-size: 1.5em; font-weight: bold; }
-        .hero { text-align: center; padding: 50px; background: #cc5500; color: white; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); }
-        .hero h1 { margin: 0; font-size: 2.8em; font-weight: bold; }
-        .hero p { font-size: 1.2em; margin-top: 10px; }
-        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border-radius: 10px; transition: all 0.3s ease; }
-        .pricing:hover { box-shadow: 0px 6px 20px rgba(0,0,0,0.15); }
-        .drop-zone { border: 2px dashed #cc5500; padding: 20px; text-align: center; margin: 10px 0; cursor: pointer; }
-        .drop-zone.highlight { background: #ffe0b2; }
-        .vm-table-container { width: 100%; max-width: 100%; overflow-x: auto; margin-top: 20px; }
-        .vm-table { width: 100%; border-collapse: collapse; }
-        .vm-table th, .vm-table td { padding: 10px; border: 1px solid #ddd; text-align: center; cursor: pointer; }
-        .vm-table th { background: #cc5500; color: white; }
-        .vm-table tr.selected { background: #ffcc80; }
-    </style>
+    <title>VM Pricing Calculator</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>Virtual Machine as a Service (VMaaS)</header>
-    <section class="hero">
-        <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
-        <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
-    </section>
-    <div class="container">
-        <div class="content">
-            <section class="pricing">
-                <h2>VM Pricing Calculator</h2>
-                <div class="drop-zone" id="drop-zone">Drag & Drop RVTools file here or Click to Upload</div>
-                <input type="file" id="fileUpload" accept=".xlsx" style="display: none;">
-                <div class="vm-table-container">
-                    <table id="vm-table" class="vm-table">
-                        <thead>
-                            <tr>
-                                <th>VM Name</th>
-                                <th>OS according to the configuration file</th>
-                                <th>vCPU</th>
-                                <th>RAM (GB)</th>
-                                <th>Storage (GB)</th>
-                                <th>Azure VM Match</th>
-                                <th>Azure Cost (AUD)</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-        <div class="cart">
-            <h3>Summary</h3>
-            <ul id="cart-list"></ul>
-            <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
-            <p><strong>Azure Cost:</strong> <a id="azure-cost-link" href="#">$0.00</a></p>
-        </div>
+    <h1>VM Pricing Calculator</h1>
+    
+    <input type="file" id="fileUpload" />
+    <div id="drop-zone">Drag & Drop RVTools File Here</div>
+    
+    <table id="vm-table">
+        <thead>
+            <tr>
+                <th>VM Name</th>
+                <th>OS</th>
+                <th>CPU</th>
+                <th>RAM (GB)</th>
+                <th>Storage (GB)</th>
+                <th>Azure VM Match</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    
+    <div id="summary-panel">
+        <h3>Pricing Summary</h3>
+        <p id="summary-total-azure-cost">Azure Total: $0.00</p>
+        <p id="summary-total-standard-cost">Standard Total: $0.00</p>
+        <p id="cart-total">Cart Total: $0.00</p>
+        <table id="summary-table">
+            <thead>
+                <tr>
+                    <th>VM Name</th>
+                    <th>OS</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                    <th>Storage</th>
+                    <th>Azure VM Match</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
+    
+    <script src="upload.js"></script>
 </body>
 </html>
