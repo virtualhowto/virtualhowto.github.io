@@ -30,6 +30,16 @@
             border-radius: 8px;
             border: 1px solid #f4a261;
         }
+        .floating-pricing {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            width: 300px;
+            background: #1d3557;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f4a261;
+        }
         h1 {
             color: #f4a261;
         }
@@ -77,87 +87,65 @@
             <p>Total CPU Sockets: <span id="totalCPUSockets"></span></p>
             <button onclick="generateSummary()">Generate Pricing Summary</button>
         </div>
-
-        <div id="pricingSummary" class="summary-panel hidden">
-            <h2>Pricing Comparison</h2>
-            <table>
-                <tr>
-                    <th>Model</th>
-                    <th>Cost</th>
-                    <th>Quantity</th>
-                    <th>Total Price</th>
-                </tr>
-                <tr>
-                    <td>VMware Standard</td>
-                    <td>$<span id="vmwareStandard"></span> <span id="vmwareStandardUnit"></span></td>
-                    <td><span id="vmwareStandardQty"></span></td>
-                    <td>$<span id="vmwareStandardTotal"></span></td>
-                </tr>
-                <tr>
-                    <td>VMware Enterprise Plus</td>
-                    <td>$<span id="vmwareEnterprise"></span> <span id="vmwareEnterpriseUnit"></span></td>
-                    <td><span id="vmwareEnterpriseQty"></span></td>
-                    <td>$<span id="vmwareEnterpriseTotal"></span></td>
-                </tr>
-                <tr>
-                    <td>Azure LOCAL</td>
-                    <td>$<span id="azure"></span> <span id="azureUnit"></span></td>
-                    <td><span id="azureQty"></span></td>
-                    <td>$<span id="azureTotal"></span></td>
-                </tr>
-                <tr>
-                    <td>HPE VME</td>
-                    <td>$<span id="hpe"></span> <span id="hpeUnit"></span></td>
-                    <td><span id="hpeQty"></span></td>
-                    <td>$<span id="hpeTotal"></span></td>
-                </tr>
-                <tr>
-                    <td>Red Hat OpenShift</td>
-                    <td>$<span id="openshift"></span> <span id="openshiftUnit"></span></td>
-                    <td><span id="openshiftQty"></span></td>
-                    <td>$<span id="openshiftTotal"></span></td>
-                </tr>
-                <tr>
-                    <td>OpenVirt</td>
-                    <td>$<span id="openvirt"></span> <span id="openvirtUnit"></span></td>
-                    <td><span id="openvirtQty"></span></td>
-                    <td>$<span id="openvirtTotal"></span></td>
-                </tr>
-            </table>
-        </div>
     </div>
-
+    <div id="pricingPanel" class="floating-pricing hidden">
+        <h2>Cloud & Licensing Costs</h2>
+        <p><strong>Azure Estimate:</strong> $<span id="azureCost"></span>/mo</p>
+        <p><strong>AWS Estimate:</strong> $<span id="awsCost"></span>/mo</p>
+        <p><strong>Storage Costs:</strong> $<span id="storageCost"></span>/mo</p>
+        <p><strong>Licensing Costs:</strong> $<span id="licenseCost"></span>/yr</p>
+        <p><strong>Total Annual Cloud Cost:</strong> $<span id="totalAnnualCloud"></span></p>
+    </div>
     <script>
         let pricingData = {};
 
         async function loadPricing() {
             try {
-                const response = await fetch('pricing.json');
-                pricingData = await response.json();
+                const azResponse = await fetch('az-pricing.json');
+                const awsResponse = await fetch('aws-pricing.json');
+                const storageResponse = await fetch('storage-pricing.json');
+                const licenseResponse = await fetch('pricing.json');
+                
+                pricingData.azure = await azResponse.json();
+                pricingData.aws = await awsResponse.json();
+                pricingData.storage = await storageResponse.json();
+                pricingData.license = await licenseResponse.json();
             } catch (error) {
-                console.error("Error loading pricing.json", error);
+                console.error("Error loading pricing files", error);
             }
         }
 
-        async function generateSummary() {
-            await loadPricing();
-            const totalCores = parseInt(document.getElementById("totalCores").innerText) || 0;
-            const totalSockets = parseInt(document.getElementById("totalCPUSockets").innerText) || 0;
+        async function calculateCloudCosts(vInfoData) {
+            let azureCost = 0;
+            let awsCost = 0;
+            let storageCost = 0;
 
-            Object.keys(pricingData).forEach(key => {
-                const price = pricingData[key].cost || "TBD";
-                const unit = pricingData[key].unit || "";
-                let quantity = 0;
-                if (unit.includes("core")) quantity = totalCores;
-                else if (unit.includes("CPU socket")) quantity = totalSockets;
-                const totalCost = price !== "TBD" ? (price * quantity).toFixed(2) : "TBD";
+            vInfoData.forEach(vm => {
+                let bestMatchAzure = pricingData.azure.find(p => p.cpu === vm["Num vCPUs"] && p.memoryGB === (vm["Memory (MB)"] / 1024));
+                let bestMatchAWS = pricingData.aws.find(p => p.cpu === vm["Num vCPUs"] && p.memoryGB === (vm["Memory (MB)"] / 1024));
+                let storagePrice = pricingData.storage.find(s => s.type === "SSD");
                 
-                document.getElementById(key).innerText = price;
-                document.getElementById(`${key}Unit`).innerText = unit;
-                document.getElementById(`${key}Qty`).innerText = quantity;
-                document.getElementById(`${key}Total`).innerText = totalCost;
+                if (bestMatchAzure) azureCost += bestMatchAzure.cost;
+                if (bestMatchAWS) awsCost += bestMatchAWS.cost;
+                if (storagePrice) storageCost += storagePrice.cost * (parseFloat(vm["Provisioned Storage (GB)"] || 0));
             });
-            document.getElementById("pricingSummary").classList.remove("hidden");
+            
+            document.getElementById("azureCost").innerText = azureCost.toFixed(2);
+            document.getElementById("awsCost").innerText = awsCost.toFixed(2);
+            document.getElementById("storageCost").innerText = storageCost.toFixed(2);
+            document.getElementById("totalAnnualCloud").innerText = ((azureCost + awsCost + storageCost) * 12).toFixed(2);
+        }
+
+        function processWorkbook(workbook) {
+            const vInfoSheet = workbook.Sheets["vInfo"];
+            if (!vInfoSheet) {
+                alert("Invalid RVTools file! Ensure it contains vInfo sheet.");
+                return;
+            }
+            
+            const vInfoData = XLSX.utils.sheet_to_json(vInfoSheet);
+            calculateCloudCosts(vInfoData);
+            document.getElementById("pricingPanel").classList.remove("hidden");
         }
     </script>
 </body>
