@@ -6,43 +6,108 @@
     <title>VMaaS - Virtual Machine as a Service</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #ffffff; }
-        .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; display: flex; }
-        .content { flex: 3; padding-right: 20px; }
-        .cart { flex: 1; background: white; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); border-radius: 10px; position: sticky; top: 20px; height: fit-content; }
-        header { background: linear-gradient(90deg, #1c3f94, #cc5500); color: #fff; padding: 20px 0; text-align: center; font-size: 1.5em; font-weight: bold; }
-        .hero { text-align: center; padding: 50px; background: #cc5500; color: white; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); }
-        .hero h1 { margin: 0; font-size: 2.8em; font-weight: bold; }
-        .hero p { font-size: 1.2em; margin-top: 10px; }
-        .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border-radius: 10px; transition: all 0.3s ease; }
-        .pricing:hover { box-shadow: 0px 6px 20px rgba(0,0,0,0.15); }
-        .drop-zone { border: 2px dashed #cc5500; padding: 20px; text-align: center; margin: 10px 0; cursor: pointer; }
-        .drop-zone.highlight { background: #ffe0b2; }
-        .vm-table-container { width: 100%; max-width: 100%; overflow-x: auto; margin-top: 20px; }
-        .vm-table { width: 100%; border-collapse: collapse; }
-        .vm-table th, .vm-table td { padding: 10px; border: 1px solid #ddd; text-align: center; cursor: pointer; }
-        .vm-table th { background: #cc5500; color: white; }
-        .vm-table tr.selected { background: #ffcc80; }
+        /* General Styling */
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background: #f4f4f4; 
+            display: flex;
+        }
+        .container { 
+            display: flex; 
+            width: 70%; 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            gap: 20px; 
+        }
+
+        /* Header */
+        header { 
+            background: linear-gradient(90deg, #1c3f94, #cc5500); 
+            color: #fff; 
+            text-align: center; 
+            font-size: 1.8em; 
+            padding: 20px;
+            font-weight: bold;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+        
+        /* Hero Section */
+        .hero { 
+            text-align: center; 
+            padding: 50px; 
+            background: #cc5500; 
+            color: white; 
+            border-radius: 10px; 
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); 
+            margin: 80px 20px 20px; /* Offset for fixed header */
+        }
+
+        /* Content & Floating Cart */
+        .content { flex: 3; padding-bottom: 100px; }
+        .cart { 
+            flex: 1; 
+            background: white; 
+            padding: 20px; 
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.2); 
+            border-radius: 10px; 
+            position: fixed; 
+            right: 20px; 
+            top: 100px; /* Adjusted for fixed header */
+            width: 280px;
+            z-index: 999;
+        }
+
+        /* Drop Zone */
+        .drop-zone { 
+            border: 2px dashed #cc5500; 
+            padding: 20px; 
+            text-align: center; 
+            margin: 20px 0; 
+            cursor: pointer; 
+            background: white; 
+            transition: background 0.3s ease;
+        }
+        .drop-zone:hover, .drop-zone.highlight { background: #ffe0b2; }
+
+        /* Table Styling */
+        .vm-table-container { overflow-x: auto; margin-top: 20px; }
+        .vm-table { width: 100%; border-collapse: collapse; background: white; }
+        .vm-table th, .vm-table td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+        .vm-table th { background: #cc5500; color: white; font-weight: bold; }
+        .vm-table tr:nth-child(even) { background: #f9f9f9; }
+        .vm-table tr:hover { background: #ffcc80; cursor: pointer; }
+        .vm-table tr.selected { background: #ffb74d; }
     </style>
 </head>
 <body>
+
     <header>Virtual Machine as a Service (VMaaS)</header>
-    <section class="hero">
-        <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
-        <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
-    </section>
+
     <div class="container">
+        <!-- Main Content -->
         <div class="content">
+            <section class="hero">
+                <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
+                <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
+            </section>
+
             <section class="pricing">
                 <h2>VM Pricing Calculator</h2>
                 <div class="drop-zone" id="drop-zone">Drag & Drop RVTools file here or Click to Upload</div>
-                <input type="file" id="fileUpload" accept=".xlsx" style="display: none;">
+                <input type="file" id="fileUpload" accept=".xlsx" hidden>
+                
                 <div class="vm-table-container">
                     <table id="vm-table" class="vm-table">
                         <thead>
                             <tr>
                                 <th>VM Name</th>
-                                <th>OS according to the configuration file</th>
+                                <th>OS</th>
                                 <th>vCPU</th>
                                 <th>RAM (GB)</th>
                                 <th>Storage (GB)</th>
@@ -53,44 +118,52 @@
                 </div>
             </section>
         </div>
-        <div class="cart">
-            <h3>Summary</h3>
-            <ul id="cart-list"></ul>
-            <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
-        </div>
     </div>
+
+    <!-- Floating Cart -->
+    <div class="cart">
+        <h3>Summary</h3>
+        <ul id="cart-list"></ul>
+        <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
+    </div>
+
     <script>
         const dropZone = document.getElementById("drop-zone");
         const fileInput = document.getElementById("fileUpload");
         const vmTableBody = document.querySelector("#vm-table tbody");
+        const cartList = document.getElementById("cart-list");
+        const cartTotal = document.getElementById("cart-total");
 
+        let selectedVMs = [];
+
+        // Click to trigger file upload
         dropZone.addEventListener("click", () => fileInput.click());
 
+        // Drag-and-drop event listeners
         dropZone.addEventListener("dragover", (e) => {
             e.preventDefault();
             dropZone.classList.add("highlight");
         });
 
-        dropZone.addEventListener("dragleave", () => {
-            dropZone.classList.remove("highlight");
-        });
+        dropZone.addEventListener("dragleave", () => dropZone.classList.remove("highlight"));
 
         dropZone.addEventListener("drop", (e) => {
             e.preventDefault();
             dropZone.classList.remove("highlight");
-            if (e.dataTransfer.files.length > 0) {
-                handleFile(e.dataTransfer.files[0]);
-            }
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
         });
 
+        // File input event listener
         fileInput.addEventListener("change", (e) => {
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
         });
 
         function handleFile(file) {
-            if (!file) return;
+            if (!file.name.endsWith(".xlsx")) {
+                alert("Invalid file format. Please upload an .xlsx file.");
+                return;
+            }
+
             const reader = new FileReader();
             reader.readAsBinaryString(file);
             reader.onload = function(e) {
@@ -101,18 +174,44 @@
                 vmTableBody.innerHTML = "";
 
                 vInfo.forEach(vm => {
-                    let row = document.createElement("tr");
-                    row.innerHTML = `<td>${vm["VM"] || vm["VM Name"] || "Unknown"}</td>
-                                     <td>${vm["OS according to the configuration file"] || "Unknown"}</td>
-                                     <td>${vm["NumCpu"] || vm["CPUs"] || 0}</td>
-                                     <td>${((vm["MemoryMB"] || vm["Memory"] || 0) / 1024).toFixed(2)}</td>
-                                     <td>${((vm["ProvisionedGB"] || vm["Storage"] || vm["Provisioned MB"] || 0) / 1024).toFixed(2)}</td>`;
-                    row.addEventListener("click", function() {
-                        row.classList.toggle("selected");
-                    });
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${vm["VM"] || "Unknown"}</td>
+                        <td>${vm["OS"] || "Unknown"}</td>
+                        <td>${vm["NumCpu"] || 0}</td>
+                        <td>${((vm["MemoryMB"] || 0) / 1024).toFixed(2)}</td>
+                        <td>${((vm["ProvisionedGB"] || 0) / 1024).toFixed(2)}</td>
+                    `;
+
+                    row.addEventListener("click", () => toggleVM(row, vm));
                     vmTableBody.appendChild(row);
                 });
             };
+        }
+
+        function toggleVM(row, vm) {
+            row.classList.toggle("selected");
+
+            if (row.classList.contains("selected")) {
+                selectedVMs.push(vm);
+            } else {
+                selectedVMs = selectedVMs.filter(v => v !== vm);
+            }
+
+            updateCart();
+        }
+
+        function updateCart() {
+            cartList.innerHTML = "";
+            let total = 0;
+
+            selectedVMs.forEach(vm => {
+                let price = (vm["NumCpu"] || 1) * 10 + ((vm["MemoryMB"] || 0) / 1024) * 5;
+                total += price;
+                cartList.innerHTML += `<li>${vm["VM"] || "VM"} - $${price.toFixed(2)}</li>`;
+            });
+
+            cartTotal.textContent = `$${total.toFixed(2)}`;
         }
     </script>
 </body>
