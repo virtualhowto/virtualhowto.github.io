@@ -1,0 +1,4 @@
+[
+    { "type": "SSD", "cost": 0.27 },
+    { "type": "HDD", "cost": 0.19 }
+]
