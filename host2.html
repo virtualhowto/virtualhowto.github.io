@@ -115,48 +115,49 @@
             }
         }
 
-        async function calculateCloudCosts(vInfoData) {
-            let azureCost = 0;
-            let awsCost = 0;
-            let storageCost = 0;
-            let licenseCost = 0;
+        document.getElementById("fileInput").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file) processFile(file);
+        });
 
-            vInfoData.forEach(vm => {
-                let memoryInMB = parseFloat(vm["Memory (MB)"] || 0);
-                let numCores = parseInt(vm["Num vCPUs"] || 0);
+        function processFile(file) {
+            console.log("Processing file:", file.name);
 
-                let bestMatchAzure = pricingData.azure.find(p => p.numberOfCores === numCores && p.memoryInMB === memoryInMB);
-                if (!bestMatchAzure) console.warn("No Azure match found for", vm);
-                else {
-                    let pricePerHour = parseFloat(bestMatchAzure.linuxPrice);
-                    let pricePerMonth = pricePerHour * 24 * 30;
-                    azureCost += pricePerMonth;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                try {
+                    const workbook = XLSX.read(data, { type: "array" });
+                    processWorkbook(workbook);
+                } catch (error) {
+                    console.error("Error reading Excel file:", error);
+                    alert("Invalid file format. Please upload a valid Excel file.");
                 }
+            };
+            reader.readAsArrayBuffer(file);
+        }
 
-                let bestMatchAWS = pricingData.aws.find(p => p.ProcessorVCPUCount === numCores && p.MemorySizeInMB === memoryInMB);
-                if (!bestMatchAWS) console.warn("No AWS match found for", vm);
-                else {
-                    let pricePerHour = parseFloat(bestMatchAWS.PricePerHour);
-                    let pricePerMonth = pricePerHour * 24 * 30;
-                    awsCost += pricePerMonth;
-                }
+        function processWorkbook(workbook) {
+            console.log("Workbook loaded:", workbook.SheetNames);
 
-                let storagePrice = pricingData.storage.find(s => s.type === "SSD");
-                if (!storagePrice) console.warn("No Storage price found");
-                else {
-                    storageCost += storagePrice.cost * (parseFloat(vm["Provisioned Storage (GB)"] || 0));
-                }
+            const vInfoSheet = workbook.Sheets["vInfo"];
+            if (!vInfoSheet) {
+                console.error("Missing 'vInfo' sheet in the uploaded file.");
+                alert("Invalid RVTools file! Ensure it contains a 'vInfo' sheet.");
+                return;
+            }
 
-                Object.values(pricingData.license).forEach(license => {
-                    licenseCost += license.cost;
-                });
-            });
-            
-            document.getElementById("azureCost").innerText = azureCost.toFixed(2);
-            document.getElementById("awsCost").innerText = awsCost.toFixed(2);
-            document.getElementById("storageCost").innerText = storageCost.toFixed(2);
-            document.getElementById("licenseCost").innerText = licenseCost.toFixed(2);
-            document.getElementById("totalAnnualCloud").innerText = ((azureCost + awsCost + storageCost) * 12 + licenseCost).toFixed(2);
+            const vInfoData = XLSX.utils.sheet_to_json(vInfoSheet);
+            console.log("Extracted VM Data:", vInfoData);
+
+            if (vInfoData.length === 0) {
+                console.warn("No VM data found in the 'vInfo' sheet.");
+                alert("No VM data found in the uploaded file.");
+                return;
+            }
+
+            document.getElementById("vminfoSummary").classList.remove("hidden");
+            document.getElementById("vhostSummary").classList.remove("hidden");
         }
     </script>
 </body>
