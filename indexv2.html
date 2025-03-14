@@ -45,7 +45,7 @@
             color: white; 
             border-radius: 10px; 
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); 
-            margin: 80px 20px 20px; /* Offset for fixed header */
+            margin: 80px 20px 20px;
         }
 
         /* Content & Floating Cart */
@@ -58,7 +58,7 @@
             border-radius: 10px; 
             position: fixed; 
             right: 20px; 
-            top: 100px; /* Adjusted for fixed header */
+            top: 100px;
             width: 280px;
             z-index: 999;
         }
@@ -90,7 +90,6 @@
     <header>Virtual Machine as a Service (VMaaS)</header>
 
     <div class="container">
-        <!-- Main Content -->
         <div class="content">
             <section class="hero">
                 <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
@@ -140,14 +139,27 @@
             vmTableBody.innerHTML = "";
 
             vmData.forEach(vm => {
+                const vmName = vm["VM"] || vm["VM Name"] || "Unknown";
+                const os = vm["OS"] || vm["OS according to the configuration file"] || "Unknown";
+                
+                // Prioritize "CPUs" over "NumCpu"
+                const vCPU = vm["CPUs"] || vm["NumCpu"] || 0;
+
+                // Convert MemoryMB to GB
+                const ramGB = ((vm["MemoryMB"] || vm["Memory"] || 0) / 1024).toFixed(2);
+
+                // Convert StorageMB to GB
+                const storageGB = ((vm["ProvisionedGB"] || vm["Storage"] || vm["Provisioned MB"] || 0) / 1024).toFixed(2);
+
+                let price = calculateVMPrice(vCPU, ramGB);
+
                 const row = document.createElement("tr");
-                let price = calculateVMPrice(vm);
                 row.innerHTML = `
-                    <td>${vm["VM"] || "Unknown"}</td>
-                    <td>${vm["OS"] || "Unknown"}</td>
-                    <td>${vm["NumCpu"] || 0}</td>
-                    <td>${((vm["MemoryMB"] || 0) / 1024).toFixed(2)}</td>
-                    <td>${((vm["ProvisionedGB"] || 0) / 1024).toFixed(2)}</td>
+                    <td>${vmName}</td>
+                    <td>${os}</td>
+                    <td>${vCPU}</td>
+                    <td>${ramGB}</td>
+                    <td>${storageGB}</td>
                     <td>$${price.toFixed(2)}</td>
                 `;
 
@@ -174,19 +186,12 @@
             let total = 0;
 
             selectedVMs.forEach(vm => {
-                let price = calculateVMPrice(vm);
+                let price = calculateVMPrice(vm.CPUs || vm.NumCpu, (vm.MemoryMB || 0) / 1024);
                 total += price;
                 cartList.innerHTML += `<li>${vm["VM"] || "VM"} - $${price.toFixed(2)}</li>`;
             });
 
             cartTotal.textContent = `$${total.toFixed(2)}`;
-        }
-
-        function calculateVMPrice(vm) {
-            let basePrice = 10; 
-            let cpuCost = (vm["NumCpu"] || 1) * 10;
-            let ramCost = ((vm["MemoryMB"] || 0) / 1024) * 5;
-            return basePrice + cpuCost + ramCost;
         }
     </script>
 </body>
