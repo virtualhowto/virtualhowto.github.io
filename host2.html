@@ -119,33 +119,41 @@
             let azureCost = 0;
             let awsCost = 0;
             let storageCost = 0;
+            let licenseCost = 0;
 
             vInfoData.forEach(vm => {
-                let bestMatchAzure = pricingData.azure.find(p => p.cpu === vm["Num vCPUs"] && p.memoryGB === (vm["Memory (MB)"] / 1024));
-                let bestMatchAWS = pricingData.aws.find(p => p.cpu === vm["Num vCPUs"] && p.memoryGB === (vm["Memory (MB)"] / 1024));
+                let memoryInMB = parseFloat(vm["Memory (MB)"] || 0);
+                let numCores = parseInt(vm["Num vCPUs"] || 0);
+
+                let bestMatchAzure = pricingData.azure.find(p => p.numberOfCores === numCores && p.memoryInMB === memoryInMB);
+                if (bestMatchAzure) {
+                    let pricePerHour = parseFloat(bestMatchAzure.linuxPrice);
+                    let pricePerMonth = pricePerHour * 24 * 30;
+                    azureCost += pricePerMonth;
+                }
+
+                let bestMatchAWS = pricingData.aws.find(p => p.ProcessorVCPUCount === numCores && p.MemorySizeInMB === memoryInMB);
+                if (bestMatchAWS) {
+                    let pricePerHour = parseFloat(bestMatchAWS.PricePerHour);
+                    let pricePerMonth = pricePerHour * 24 * 30;
+                    awsCost += pricePerMonth;
+                }
+
                 let storagePrice = pricingData.storage.find(s => s.type === "SSD");
-                
-                if (bestMatchAzure) azureCost += bestMatchAzure.cost;
-                if (bestMatchAWS) awsCost += bestMatchAWS.cost;
-                if (storagePrice) storageCost += storagePrice.cost * (parseFloat(vm["Provisioned Storage (GB)"] || 0));
+                if (storagePrice) {
+                    storageCost += storagePrice.cost * (parseFloat(vm["Provisioned Storage (GB)"] || 0));
+                }
+
+                Object.values(pricingData.license).forEach(license => {
+                    licenseCost += license.cost;
+                });
             });
             
             document.getElementById("azureCost").innerText = azureCost.toFixed(2);
             document.getElementById("awsCost").innerText = awsCost.toFixed(2);
             document.getElementById("storageCost").innerText = storageCost.toFixed(2);
-            document.getElementById("totalAnnualCloud").innerText = ((azureCost + awsCost + storageCost) * 12).toFixed(2);
-        }
-
-        function processWorkbook(workbook) {
-            const vInfoSheet = workbook.Sheets["vInfo"];
-            if (!vInfoSheet) {
-                alert("Invalid RVTools file! Ensure it contains vInfo sheet.");
-                return;
-            }
-            
-            const vInfoData = XLSX.utils.sheet_to_json(vInfoSheet);
-            calculateCloudCosts(vInfoData);
-            document.getElementById("pricingPanel").classList.remove("hidden");
+            document.getElementById("licenseCost").innerText = licenseCost.toFixed(2);
+            document.getElementById("totalAnnualCloud").innerText = ((azureCost + awsCost + storageCost) * 12 + licenseCost).toFixed(2);
         }
     </script>
 </body>
