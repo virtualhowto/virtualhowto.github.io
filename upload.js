@@ -47,7 +47,7 @@ function handleFile(file) {
             const workbook = XLSX.read(data, { type: "binary" });
             console.log("Workbook loaded successfully:", workbook.SheetNames);
             
-            const sheetName = workbook.SheetNames.find(name => name.toLowerCase().includes("vinfo")) || workbook.SheetNames[0];
+            const sheetName = workbook.SheetNames.find(name => name.toLowerCase().includes("vminfo")) || workbook.SheetNames[0];
             console.log("Using sheet:", sheetName);
             
             const sheet = workbook.Sheets[sheetName];
