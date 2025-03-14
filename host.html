@@ -155,17 +155,20 @@
         }
 
         function processWorkbook(workbook) {
-            document.getElementById("vminfoSummary").classList.remove("hidden");
-            document.getElementById("vhostSummary").classList.remove("hidden");
-        }
+            const vInfoSheet = workbook.Sheets["vInfo"];
+            const vHostSheet = workbook.Sheets["vHost"];
 
-        async function generateSummary() {
-            await loadPricing();
-            Object.keys(pricingData).forEach(key => {
-                document.getElementById(key).innerText = pricingData[key].cost || "TBD";
-                document.getElementById(`${key}Unit`).innerText = pricingData[key].unit || "";
-            });
-            document.getElementById("pricingSummary").classList.remove("hidden");
+            if (!vInfoSheet || !vHostSheet) {
+                alert("Invalid RVTools file! Ensure it contains vInfo and vHost sheets.");
+                return;
+            }
+
+            const vInfoData = XLSX.utils.sheet_to_json(vInfoSheet);
+            document.getElementById("totalVMs").innerText = vInfoData.length;
+            document.getElementById("totalVCPUs").innerText = vInfoData.reduce((sum, vm) => sum + (parseInt(vm["Num vCPUs"] || 0)), 0);
+            document.getElementById("totalMemoryGB").innerText = (vInfoData.reduce((sum, vm) => sum + (parseFloat(vm["Memory (MB)"] || 0) / 1024), 0)).toFixed(2);
+            document.getElementById("totalStorageGB").innerText = (vInfoData.reduce((sum, vm) => sum + parseFloat(vm["Provisioned Storage (GB)"] || 0), 0)).toFixed(2);
+            document.getElementById("vminfoSummary").classList.remove("hidden");
         }
     </script>
 </body>
