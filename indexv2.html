@@ -111,6 +111,7 @@
                                 <th>vCPU</th>
                                 <th>RAM (GB)</th>
                                 <th>Storage (GB)</th>
+                                <th>Price ($)</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -127,66 +128,33 @@
         <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
     </div>
 
+    <script src="upload.js"></script>
+    <script src="pricing.js"></script>
     <script>
-        const dropZone = document.getElementById("drop-zone");
-        const fileInput = document.getElementById("fileUpload");
-        const vmTableBody = document.querySelector("#vm-table tbody");
         const cartList = document.getElementById("cart-list");
         const cartTotal = document.getElementById("cart-total");
-
         let selectedVMs = [];
 
-        // Click to trigger file upload
-        dropZone.addEventListener("click", () => fileInput.click());
+        function processVMData(vmData) {
+            const vmTableBody = document.querySelector("#vm-table tbody");
+            vmTableBody.innerHTML = "";
 
-        // Drag-and-drop event listeners
-        dropZone.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            dropZone.classList.add("highlight");
-        });
+            vmData.forEach(vm => {
+                const row = document.createElement("tr");
+                let price = calculateVMPrice(vm);
+                row.innerHTML = `
+                    <td>${vm["VM"] || "Unknown"}</td>
+                    <td>${vm["OS"] || "Unknown"}</td>
+                    <td>${vm["NumCpu"] || 0}</td>
+                    <td>${((vm["MemoryMB"] || 0) / 1024).toFixed(2)}</td>
+                    <td>${((vm["ProvisionedGB"] || 0) / 1024).toFixed(2)}</td>
+                    <td>$${price.toFixed(2)}</td>
+                `;
 
-        dropZone.addEventListener("dragleave", () => dropZone.classList.remove("highlight"));
-
-        dropZone.addEventListener("drop", (e) => {
-            e.preventDefault();
-            dropZone.classList.remove("highlight");
-            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
-        });
-
-        // File input event listener
-        fileInput.addEventListener("change", (e) => {
-            if (e.target.files.length > 0) handleFile(e.target.files[0]);
-        });
-
-        function handleFile(file) {
-            if (!file.name.endsWith(".xlsx")) {
-                alert("Invalid file format. Please upload an .xlsx file.");
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.readAsBinaryString(file);
-            reader.onload = function(e) {
-                const data = e.target.result;
-                const workbook = XLSX.read(data, { type: "binary" });
-                const sheetName = workbook.SheetNames.includes("vInfo") ? "vInfo" : workbook.SheetNames[0];
-                const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                vmTableBody.innerHTML = "";
-
-                vInfo.forEach(vm => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                        <td>${vm["VM"] || "Unknown"}</td>
-                        <td>${vm["OS"] || "Unknown"}</td>
-                        <td>${vm["NumCpu"] || 0}</td>
-                        <td>${((vm["MemoryMB"] || 0) / 1024).toFixed(2)}</td>
-                        <td>${((vm["ProvisionedGB"] || 0) / 1024).toFixed(2)}</td>
-                    `;
-
-                    row.addEventListener("click", () => toggleVM(row, vm));
-                    vmTableBody.appendChild(row);
-                });
-            };
+                row.dataset.price = price;
+                row.addEventListener("click", () => toggleVM(row, vm));
+                vmTableBody.appendChild(row);
+            });
         }
 
         function toggleVM(row, vm) {
@@ -206,12 +174,19 @@
             let total = 0;
 
             selectedVMs.forEach(vm => {
-                let price = (vm["NumCpu"] || 1) * 10 + ((vm["MemoryMB"] || 0) / 1024) * 5;
+                let price = calculateVMPrice(vm);
                 total += price;
                 cartList.innerHTML += `<li>${vm["VM"] || "VM"} - $${price.toFixed(2)}</li>`;
             });
 
             cartTotal.textContent = `$${total.toFixed(2)}`;
+        }
+
+        function calculateVMPrice(vm) {
+            let basePrice = 10; 
+            let cpuCost = (vm["NumCpu"] || 1) * 10;
+            let ramCost = ((vm["MemoryMB"] || 0) / 1024) * 5;
+            return basePrice + cpuCost + ramCost;
         }
     </script>
 </body>
