@@ -13,9 +13,9 @@
         "corporate": 25
     },
     "vmwareStandard": { "cost": 50, "unit": "per core per month" },
-    "vmwareEnterprise": { "cost": 4780, "unit": "per CPU socket per month" },
+    "vmwareEnterprise": { "cost": 4780, "unit": "# CPU" },
     "azure": { "cost": 33.30, "unit": "per core per month" },
-    "hpe": { "cost": "Awaiting Quote", "unit": "TBD" },
+    "hpe": { "cost": 3350.00, "unit": "# CPU" },
     "openshift": { "cost": "Awaiting Quote", "unit": "TBD" },
     "openvirt": { "cost": "Awaiting Quote", "unit": "TBD" }
 }
