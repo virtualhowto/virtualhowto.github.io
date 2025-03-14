@@ -126,21 +126,24 @@
                 let numCores = parseInt(vm["Num vCPUs"] || 0);
 
                 let bestMatchAzure = pricingData.azure.find(p => p.numberOfCores === numCores && p.memoryInMB === memoryInMB);
-                if (bestMatchAzure) {
+                if (!bestMatchAzure) console.warn("No Azure match found for", vm);
+                else {
                     let pricePerHour = parseFloat(bestMatchAzure.linuxPrice);
                     let pricePerMonth = pricePerHour * 24 * 30;
                     azureCost += pricePerMonth;
                 }
 
                 let bestMatchAWS = pricingData.aws.find(p => p.ProcessorVCPUCount === numCores && p.MemorySizeInMB === memoryInMB);
-                if (bestMatchAWS) {
+                if (!bestMatchAWS) console.warn("No AWS match found for", vm);
+                else {
                     let pricePerHour = parseFloat(bestMatchAWS.PricePerHour);
                     let pricePerMonth = pricePerHour * 24 * 30;
                     awsCost += pricePerMonth;
                 }
 
                 let storagePrice = pricingData.storage.find(s => s.type === "SSD");
-                if (storagePrice) {
+                if (!storagePrice) console.warn("No Storage price found");
+                else {
                     storageCost += storagePrice.cost * (parseFloat(vm["Provisioned Storage (GB)"] || 0));
                 }
 
