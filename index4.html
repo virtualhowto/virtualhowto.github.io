@@ -4,11 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VMaaS - Virtual Machine as a Service</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js">  document.getElementById("bandwidthRange").addEventListener("input", function(e) {
-    const locked = Math.round(e.target.value / 100) * 100;
-    e.target.value = locked;
-    document.getElementById("bandwidthValue").textContent = locked;
-  });
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+<script>
+document.getElementById("bandwidthRange").addEventListener("input", function(e) {
+  const locked = Math.round(e.target.value / 100) * 100;
+  e.target.value = locked;
+  document.getElementById("bandwidthValue").textContent = locked;
+});
+
 document.getElementById("fileUpload").addEventListener("change", function (event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -42,7 +45,6 @@ document.getElementById("fileUpload").addEventListener("change", function (event
       tbody.appendChild(row);
     });
     updateCart();
-    });
   };
   reader.readAsBinaryString(file);
 });
