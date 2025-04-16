@@ -371,9 +371,7 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     <p><strong>Total Estimated Cost:</strong> <span id="cart-total">$0.00</span></p>
   </div>
 </div>
-      <div>
-        <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
-      </div>
+      
     </div>
   </div>
   <footer>&copy; 2025 VMaaS Cloud Services</footer>
@@ -393,11 +391,13 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
           const firewallSelect = document.getElementById("firewallType");
           if (firewallSelect && data.firewall) {
             firewallSelect.innerHTML = '';
-            const options = Object.entries(data.firewall).map(([key, obj]) => {
-              const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-              const price = obj.cost || 0;
-              return `<option value="${key}">${label} ($${price})</option>`;
-            });
+            const options = Object.entries(data.firewall)
+  .filter(([key]) => key !== 'hosting' && key !== 'aggregated')
+  .map(([key, obj]) => {
+    const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+    const price = obj.cost || 0;
+    return `<option value="${key}">${label} ($${price})</option>`;
+  });
             firewallSelect.innerHTML = '<option value="none">None ($0)</option>' + options.join('');
           }
           console.log("Flat pricing loaded:", FLAT_PRICING);
@@ -420,9 +420,7 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
   return base + bandwidthCost + ipCost;
 }
 
-    function calculateAzureCost(cpu, ram, storage) {
-      return (cpu * 15) + (ram * 6) + (storage * 0.2);
-    }
+    
 
     function updateCart() {
   const cartList = document.getElementById("cart-list");
@@ -437,11 +435,7 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
   const publicIPCost = publicIPs * (FLAT_PRICING.public_ip || 15);
   const fwType = document.getElementById('firewallType')?.value;
   let fwCost = 0;
-  if (fwType === 'hosting') {
-    fwCost = publicIPs > 0 || bandwidth > 0 ? (FLAT_PRICING.firewall?.hosting?.cost || 0) : 0;
-  } else if (fwType === 'aggregated') {
-    fwCost = publicIPs > 0 || bandwidth > 0 ? ((FLAT_PRICING.firewall?.aggregated?.cost || 0) + (FLAT_PRICING.firewall?.aggregated?.extra_bandwidth || 0)) : 0;
-  } else if (fwType === 'sophos') {
+   else if (fwType === 'sophos') {
     fwCost = FLAT_PRICING.firewall?.sophos?.cost || 0;
   } else if (fwType === 'ipsec') {
     fwCost = FLAT_PRICING.firewall?.ipsec?.cost || 0;
