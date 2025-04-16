@@ -1,21 +1,22 @@
 {
-    "cpu": 10,
-    "ram": 18,
-    "storage": 0.10,
-    "bandwidth_mbps": 1.50,
-    "vcsp": 47.00,
-    "firewall": {
-        "hosting": { "cost": 50 },
-        "aggregated": { "cost": 150, "extra_bandwidth": 100 }
-    },
-    "microsoft_license": {
-        "education": 15,
-        "corporate": 25
-    },
-    "vmwareStandard": { "cost": 50, "unit": "per core per month" },
-    "vmwareEnterprise": { "cost": 4780, "unit": "# CPU" },
-    "azure": { "cost": 33.30, "unit": "per core per month" },
-    "hpe": { "cost": 3350.00, "unit": "# CPU" },
-    "openshift": { "cost": "Awaiting Quote", "unit": "TBD" },
-    "openvirt": { "cost": "Awaiting Quote", "unit": "TBD" }
+  "cpu": 10,
+  "ram": 18,
+  "storage": 0.10,
+  "bandwidth_mbps": 1.50,
+  "public_ip": 15,
+  "vcsp": 47.00,
+  "firewall": {
+    "hosting": { "cost": 50 },
+    "aggregated": { "cost": 150, "extra_bandwidth": 100 }
+  },
+  "microsoft_license": {
+    "education": 15,
+    "corporate": 25
+  },
+  "vmwareStandard": { "cost": 50, "unit": "per core per month" },
+  "vmwareEnterprise": { "cost": 4780, "unit": "# CPU" },
+  "azure": { "cost": 33.30, "unit": "per core per month" },
+  "hpe": { "cost": 3350.00, "unit": "# CPU" },
+  "openshift": { "cost": "Awaiting Quote", "unit": "TBD" },
+  "openvirt": { "cost": "Awaiting Quote", "unit": "TBD" }
 }
