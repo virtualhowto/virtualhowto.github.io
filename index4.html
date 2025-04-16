@@ -10,6 +10,31 @@
   document.getElementById(id).classList.add('active');
   document.querySelector(`.tab-header li[onclick*="${id}"]`).classList.add('active');
 }
+function calculateBackupSizing() {
+  const retention = parseInt(document.getElementById("backupRetention").value);
+  const changeRate = parseFloat(document.getElementById("dailyChange").value) / 100;
+  const rows = document.querySelectorAll(".vm-table tr.selected");
+  let totalBackupStorage = 0;
+  let html = "<h3>Backup Summary</h3><ul>";
+
+  rows.forEach(row => {
+    const name = row.children[0].textContent;
+    const storage = parseFloat(row.children[4].textContent);
+    const isBaaS = row.querySelector('.baas-tag')?.getAttribute('data-baas') === 'true';
+
+    if (isBaaS) {
+      let backupSize = storage; // base full backup
+      for (let i = 1; i < retention; i++) {
+        backupSize += storage * changeRate;
+      }
+      totalBackupStorage += backupSize;
+      html += `<li>${name}: ${backupSize.toFixed(2)} GB</li>`;
+    }
+  });
+
+  html += `</ul><strong>Total Backup Required:</strong> ${totalBackupStorage.toFixed(2)} GB`;
+  document.getElementById("backupSummary").innerHTML = html;
+}
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -254,7 +279,18 @@ const msCell = row.querySelector('.ms-tag');
       <section class="backup">
         <h2>Backup Sizing &amp; Estimation</h2>
         <p>This section will allow backup-related cost estimations for selected VMs marked with BaaS ✅.</p>
-        <!-- Additional backup UI will go here -->
+        <div style="margin-bottom: 20px;">
+  <label for="backupRetention"><strong>Retention Period (days):</strong></label>
+  <input type="number" id="backupRetention" value="30" min="1" style="width: 80px; margin-left: 10px;">
+</div>
+<div style="margin-bottom: 20px;">
+  <label for="dailyChange"><strong>Daily Change Rate (%):</strong></label>
+  <input type="number" id="dailyChange" value="5" min="0" max="100" step="0.1" style="width: 80px; margin-left: 10px;">
+</div>
+<div>
+  <button onclick="calculateBackupSizing()">Calculate Backup Storage</button>
+</div>
+<div id="backupSummary" style="margin-top: 20px;"></div>
       </section>
     </div>
   </div>
