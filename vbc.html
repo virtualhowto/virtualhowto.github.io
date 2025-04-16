@@ -8,7 +8,7 @@
     body {
       font-family: sans-serif;
       padding: 1rem;
-      max-width: 800px;
+      max-width: 900px;
       margin: auto;
     }
     h1 {
@@ -48,21 +48,39 @@
       justify-content: space-between;
       margin: 0.5rem 0;
     }
-    .diagram {
+    .visual-bar {
       display: flex;
-      flex-wrap: wrap;
+      align-items: center;
+      margin: 4px 0;
+    }
+    .visual-bar span.label {
+      width: 50px;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+    .bar {
+      height: 20px;
+      margin-left: 8px;
+      position: relative;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .bar-inner {
+      height: 100%;
+      background-color: #4caf50;
+      text-align: right;
+      color: white;
+      font-size: 0.75rem;
+      padding-right: 4px;
+      line-height: 20px;
+    }
+    .immutable {
+      color: #c2185b;
+      font-weight: bold;
+      font-size: 0.8rem;
       margin-top: 1rem;
     }
-    .restore-point {
-      width: 16px;
-      height: 16px;
-      margin: 2px;
-      border-radius: 2px;
-    }
-    .daily { background-color: #4caf50; }
-    .weekly { background-color: #2196f3; }
-    .monthly { background-color: #ff9800; }
-    .yearly { background-color: #9c27b0; }
     @media (max-width: 600px) {
       .grid {
         grid-template-columns: 1fr;
@@ -117,8 +135,8 @@
   <div id="results" class="card" style="display:none;">
     <h2>Results (in TB)</h2>
     <div id="output"></div>
-    <h3>Restore Points Diagram</h3>
-    <div id="diagram" class="diagram"></div>
+    <h3>Restore Points Visualization</h3>
+    <div id="bar-visuals"></div>
   </div>
 
   <script>
@@ -145,7 +163,6 @@
       let monthlyGFS = fullBackup * monthlyRetention
       let yearlyGFS = fullBackup * yearlyRetention
 
-      // Immutability overhead (e.g., +10% on GFS)
       if (immutableFlag) {
         weeklyGFS *= 1.1
         monthlyGFS *= 1.1
@@ -177,28 +194,30 @@
         outputDiv.appendChild(div)
       }
 
-      const diagram = document.getElementById("diagram")
-      diagram.innerHTML = ""
-      for (let i = 0; i < dailyRetention; i++) {
-        const el = document.createElement("div")
-        el.className = "restore-point daily"
-        diagram.appendChild(el)
+      const barContainer = document.getElementById("bar-visuals")
+      barContainer.innerHTML = ""
+
+      const pushBar = (label, value, color) => {
+        const bar = document.createElement("div")
+        bar.className = "visual-bar"
+        const innerWidth = Math.min(100, value * 10) + "%" // scale width
+        bar.innerHTML = `
+          <span class="label">${label}</span>
+          <div class="bar" style="width: 300px;">
+            <div class="bar-inner" style="width:${innerWidth}; background:${color};">${value.toFixed(2)} TB</div>
+          </div>
+        `
+        barContainer.appendChild(bar)
       }
-      for (let i = 0; i < weeklyRetention; i++) {
-        const el = document.createElement("div")
-        el.className = "restore-point weekly"
-        diagram.appendChild(el)
-      }
-      for (let i = 0; i < monthlyRetention; i++) {
-        const el = document.createElement("div")
-        el.className = "restore-point monthly"
-        diagram.appendChild(el)
-      }
-      for (let i = 0; i < yearlyRetention; i++) {
-        const el = document.createElement("div")
-        el.className = "restore-point yearly"
-        diagram.appendChild(el)
-      }
+
+      pushBar("D-Inc", dailyTotal, "#4caf50")
+      pushBar("W-GFS", weeklyGFS, "#2196f3")
+      pushBar("M-GFS", monthlyGFS, "#ff9800")
+      pushBar("Y-GFS", yearlyGFS, "#9c27b0")
+      pushBar("Work", workspace, "#607d8b")
+      if (capacityTierEnabled) pushBar("Obj", capacityTierStorage, "#795548")
+      if (immutableFlag) pushBar("IMMUT", (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1, "#c2185b")
+      pushBar("TOTAL", total, "#000")
 
       document.getElementById("results").style.display = "block"
     }
