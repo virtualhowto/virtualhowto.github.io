@@ -252,7 +252,9 @@ document.getElementById("fileUpload").addEventListener("change", function (event
   </div>
   <div class="cart" id="cart">
     <h3>Summary</h3>
-    <ul id="cart-list"></ul>
+    <ul id="cart-list">
+  <li style="font-weight:bold; color:#1c3f94; margin-bottom: 6px;">VMs</li>
+</ul>
     <div class="cost-comparison">
       <div>
         <p><strong>Total Estimated Cost:</strong> <span id="cart-total">$0.00</span></p>
@@ -347,8 +349,23 @@ cartList.appendChild(firewallItem);
         const cpu = parseInt(cells[2].textContent);
         const ram = parseFloat(cells[3].textContent);
         const storage = parseFloat(cells[4].textContent);
-        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24;
-        csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)}\n`;
+        const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+const fwType = document.getElementById("firewallType").value;
+const bandwidthCost = bandwidth * 2.30;
+const ipCost = publicIPs * 15;
+const fwCost = fwType === 'sophos' ? 350 : 0;
+const vcspCost = cpu * 27.13;
+const msLicCost = cpu * 25;
+const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bandwidthCost + ipCost + fwCost;
+        const vcspCost = cpu * 27.13;
+const msLicCost = cpu * 25;
+const bwCost = bandwidth * 2.30;
+const ipAddrCost = publicIPs * 15;
+const fwComponent = fwType === 'sophos' ? 350 : 0;
+const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
+csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)}
+`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const link = document.createElement("a");
@@ -376,7 +393,17 @@ cartList.appendChild(firewallItem);
         y += 6;
         doc.text(`   vCPU: ${cpu}, RAM: ${ram} GB, Storage: ${storage} GB`, 20, y);
         y += 6;
-        doc.text(`   Estimated Cost: $${cost.toFixed(2)}`, 20, y);
+        const vcspCost = cpu * 27.13;
+const msLicCost = cpu * 25;
+const bwCost = bandwidth * 2.30;
+const ipAddrCost = publicIPs * 15;
+const fwComponent = fwType === 'sophos' ? 350 : 0;
+const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
+doc.text(`   Estimated Cost: $${cost.toFixed(2)}`, 20, y);
+y += 6;
+doc.text(`   VCSP: $${vcspCost.toFixed(2)}, MS Lic: $${msLicCost.toFixed(2)}`, 20, y);
+y += 6;
+doc.text(`   Bandwidth: $${bwCost.toFixed(2)}, IPs: $${ipAddrCost.toFixed(2)}, Firewall: $${fwComponent.toFixed(2)}`, 20, y);
         y += 10;
       });
       doc.save("vmaas_estimate.pdf");
