@@ -212,7 +212,13 @@
           <button onclick="addManualVM()">➕</button>
         </div>
       </div>
-      <div class="actions">
+      <label style="display:block;margin:20px auto 10px;font-weight:bold;color:#1c3f94;">Bandwidth (Mbps)
+  <input type="range" id="bandwidthSlider" min="0" max="1000" value="0" style="width:300px;display:block;margin:auto">
+  <span id="bandwidthValue">0</span> Mbps
+</label>
+<label style="display:block;margin:10px auto;font-weight:bold;color:#1c3f94;">Public IPs
+  <select id="publicIPDropdown" style="padding:6px 10px;margin-left:10px;border-radius:6px;">
+    <opt
         <button onclick="exportPDF()">Export as PDF</button>
       </div>
     </section>
