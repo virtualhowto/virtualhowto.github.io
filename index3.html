@@ -26,6 +26,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+</script>
+  }
+
+  if (ipDropdown) {
+    ipDropdown.addEventListener("change", function() {
+      updateCart();
+    });
+  }
+});
 
 <script>
 function exportCSV() {
@@ -435,7 +444,7 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
   const publicIPCost = publicIPs * (FLAT_PRICING.public_ip || 15);
   const fwType = document.getElementById('firewallType')?.value;
   let fwCost = 0;
-   else if (fwType === 'sophos') {
+  if (fwType === 'sophos') {
     fwCost = FLAT_PRICING.firewall?.sophos?.cost || 0;
   } else if (fwType === 'ipsec') {
     fwCost = FLAT_PRICING.firewall?.ipsec?.cost || 0;
