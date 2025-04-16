@@ -285,7 +285,7 @@
         let azureCost = calculateAzureCost(cpu, ram, storage);
         totalCost += cost;
         totalAzureCost += azureCost;
-        selectedVMs.push({ name: cells[0].textContent, cost, azureCost });
+        selectedVMs.push({ name: cells[0].textContent, cost, azureCost, cpu, ram, storage });
 
         let li = document.createElement("li");
         li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
@@ -299,14 +299,29 @@
     }
 
     async function exportPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const vms = JSON.parse(localStorage.getItem('selectedVMs')) || [];
-      doc.text("VMaaS Estimate Summary", 20, 20);
-      vms.forEach((vm, i) => {
-        doc.text(`${i + 1}. ${vm.name} - $${vm.cost.toFixed(2)} (Azure: $${vm.azureCost.toFixed(2)})`, 20, 30 + i * 10);
-      });
-      doc.save("vmaas_estimate.pdf");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const vms = JSON.parse(localStorage.getItem('selectedVMs')) || [];
+  doc.text("VMaaS Estimate Summary", 20, 20);
+
+  vms.forEach((vm, i) => {
+    const baseY = 30 + i * 80;
+    doc.setFont(undefined, 'bold');
+    doc.text(`${i + 1}. ${vm.name} - Total: $${vm.cost.toFixed(2)} (Azure: $${vm.azureCost.toFixed(2)})`, 20, baseY);
+    doc.setFont(undefined, 'normal');
+    doc.text(`  Breakdown:`, 20, baseY + 8);
+    doc.text(`    CPU (${vm.cpu} × $${FLAT_PRICING.cpu}) = $${(vm.cpu * FLAT_PRICING.cpu).toFixed(2)}`, 20, baseY + 16);
+    doc.text(`    RAM (${vm.ram} × $${FLAT_PRICING.ram}) = $${(vm.ram * FLAT_PRICING.ram).toFixed(2)}`, 20, baseY + 24);
+    doc.text(`    Storage (${vm.storage} × $${FLAT_PRICING.storage}) = $${(vm.storage * FLAT_PRICING.storage).toFixed(2)}`, 20, baseY + 32);
+    doc.text(`    Bandwidth (0 × $${FLAT_PRICING.bandwidth_mbps || 0}) = $0.00`, 20, baseY + 40);
+    doc.text(`    Public IPs (1 × $${FLAT_PRICING.public_ip || 15}) = $${(FLAT_PRICING.public_ip || 15).toFixed(2)}`, 20, baseY + 48);
+    doc.text(`    VCSP = $${(FLAT_PRICING.vcsp || 0).toFixed(2)}`, 20, baseY + 56);
+    doc.text(`    Firewall Hosting = $${(FLAT_PRICING.firewall?.hosting?.cost || 0).toFixed(2)}`, 20, baseY + 64);
+    doc.text(`    Microsoft License (corporate) = $${(FLAT_PRICING.microsoft_license?.corporate || 0).toFixed(2)}`, 20, baseY + 72);
+  });
+
+  doc.save("vmaas_estimate.pdf");
+}
     }
 
     function addManualVM() {
