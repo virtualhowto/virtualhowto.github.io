@@ -177,7 +177,7 @@
       }
       const workspace = fullBackup * 1.1
       const totalGFS = weeklyRetention + monthlyRetention + yearlyRetention
-      const dedup = 0.55
+      const dedup = 0.46
       const capacityTierStorage = capacityTierEnabled ? (fullBackup * totalGFS * dedup) : 0
       const total = fullBackup + dailyTotal + weeklyGFS + monthlyGFS + yearlyGFS + workspace
 
