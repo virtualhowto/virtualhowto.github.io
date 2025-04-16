@@ -6,7 +6,179 @@
   <title>VMaaS - Virtual Machine as a Service</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>/* [unchanged styles truncated for brevity] */</style>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom right, #f0f4f8, #d9e4f5);
+      color: #333;
+    }
+    header {
+      background: linear-gradient(90deg, #1c3f94, #cc5500);
+      color: white;
+      padding: 20px 0;
+      text-align: center;
+      font-size: 2em;
+      font-weight: bold;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .hero {
+      background: white;
+      padding: 60px 30px;
+      text-align: center;
+      border-radius: 12px;
+      margin: 30px auto;
+      max-width: 900px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    .hero h1 {
+      font-size: 3em;
+      color: #1c3f94;
+    }
+    .hero p {
+      font-size: 1.2em;
+      color: #555;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+    .pricing {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .pricing h2 {
+      font-size: 2em;
+      color: #cc5500;
+      margin-bottom: 20px;
+    }
+    .pricing input[type="file"] {
+      padding: 12px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      font-size: 1em;
+      margin-bottom: 20px;
+      transition: border-color 0.3s;
+    }
+    .pricing input[type="file"]:focus {
+      border-color: #1c3f94;
+    }
+    .vm-table-container {
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+    .vm-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    .vm-table th, .vm-table td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    .vm-table th {
+      background: #1c3f94;
+      color: white;
+      font-weight: 600;
+    }
+    .vm-table tr:hover {
+      background-color: #f1f9ff;
+    }
+    .vm-table tr.selected {
+      background-color: #ffe0b2;
+    }
+    .manual-entry-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .manual-entry-form input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.95em;
+    }
+    .manual-entry-form button {
+      background: #1c3f94;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .manual-entry-form button:hover {
+      background: #163577;
+    }
+    .actions {
+      margin-top: 20px;
+    }
+    .actions button {
+      background: #cc5500;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1em;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .actions button:hover {
+      background: #b54800;
+    }
+    .cart {
+      position: fixed;
+      top: 120px;
+      right: 20px;
+      width: 360px;
+      background: white;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      border-radius: 12px;
+    }
+    .cart h3 {
+      margin-top: 0;
+      font-size: 1.6em;
+      color: #1c3f94;
+    }
+    .cart ul {
+      list-style: none;
+      padding: 0;
+      max-height: 250px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    .cart ul li {
+      padding: 6px 0;
+      border-bottom: 1px dashed #ddd;
+      font-size: 0.95em;
+    }
+    .cost-comparison {
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+    }
+    footer {
+      margin-top: 50px;
+      text-align: center;
+      padding: 20px;
+      background: #1c3f94;
+      color: white;
+    }
+  </style>
 </head>
 <body>
   <header>Virtual Machine as a Service (VMaaS)</header>
