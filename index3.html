@@ -232,7 +232,7 @@
   <footer>&copy; 2025 VMaaS Cloud Services</footer>
 
   <script>
-    let TIERED_PRICING = [];
+    let FLAT_PRICING = {};
 
     function loadPricing() {
       fetch('pricing.json')
@@ -241,13 +241,9 @@
           return response.json();
         })
         .then(data => {
-          if (!Array.isArray(data)) throw new Error("Invalid pricing data format.");
-          if (!data.every(t => typeof t.maxCPU !== 'undefined' && t.cost)) throw new Error("Missing keys in pricing tiers.");
-          TIERED_PRICING = data.map(t => ({
-            maxCPU: t.maxCPU === 'Infinity' ? Infinity : t.maxCPU,
-            cost: t.cost
-          }));
-          console.log("Pricing loaded successfully", TIERED_PRICING);
+          if (!data.cpu || !data.ram || !data.storage) throw new Error("Invalid flat pricing data format.");
+          FLAT_PRICING = data;
+          console.log("Flat pricing loaded:", FLAT_PRICING);
         })
         .catch(err => {
           alert("Failed to load pricing.json: " + err.message);
@@ -256,18 +252,16 @@
     }
 
     loadPricing();
-
-    // Optional: reload on demand
     window.reloadPricing = loadPricing;
 
-    function getTier(cpu) {
-      return TIERED_PRICING.find(t => cpu <= t.maxCPU).cost;
-    }
+    // getTier no longer needed with flat pricing
 
-    function calculateCost(cpu, ram, storage) {
-      const tier = getTier(cpu);
-      return (cpu * tier.cpu) + (ram * tier.ram) + (storage * tier.storage);
-    }
+    function calculateCost(cpu, ram, storage, bandwidth = 0, publicIPs = 0) {
+  const base = (cpu * FLAT_PRICING.cpu) + (ram * FLAT_PRICING.ram) + (storage * FLAT_PRICING.storage);
+  const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps || 0);
+  const ipCost = publicIPs * (FLAT_PRICING.public_ip || 15); // Fixed $15 per public IP
+  return base + bandwidthCost + ipCost;
+}
 
     function calculateAzureCost(cpu, ram, storage) {
       return (cpu * 15) + (ram * 6) + (storage * 0.2);
@@ -287,7 +281,7 @@
         let cpu = parseInt(cells[2].textContent);
         let ram = parseFloat(cells[3].textContent);
         let storage = parseFloat(cells[4].textContent);
-        let cost = calculateCost(cpu, ram, storage);
+        let cost = calculateCost(cpu, ram, storage, 0, 1); // Default: 1 public IP per VM
         let azureCost = calculateAzureCost(cpu, ram, storage);
         totalCost += cost;
         totalAzureCost += azureCost;
