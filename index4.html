@@ -397,10 +397,20 @@ const firewallItem = document.createElement("li");
 firewallItem.textContent = `Firewall: $${fwCost.toFixed(2)}`;
 cartList.appendChild(firewallItem);
 
-const sqlCell = row.querySelector('.sql-tag');
-const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
-const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
-const sqlLicCost = sqlLicUnits * 390.07;
+document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+        const name = row.children[0].textContent;
+        const os = row.children[1].textContent;
+        const cpu = parseInt(row.children[2].textContent);
+        const ram = parseFloat(row.children[3].textContent);
+        const storage = parseFloat(row.children[4].textContent);
+        const vcspCost = cpu * 27.13;
+        const msCell = row.querySelector('.ms-tag');
+        const msLicensingEnabled = msCell?.getAttribute('data-ms') === 'true';
+        const msLicCost = msLicensingEnabled ? cpu * 25 : 0;
+        const sqlCell = row.querySelector('.sql-tag');
+        const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+        const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
+        const sqlLicCost = sqlLicUnits * 390.07;
         const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + sqlLicCost;
         totalCost += cost;
         const li = document.createElement("li");
