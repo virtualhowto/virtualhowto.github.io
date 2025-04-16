@@ -25,7 +25,7 @@
       display: block;
       margin-bottom: 0.25rem;
     }
-    input {
+    input[type="number"], input[type="checkbox"] {
       width: 100%;
       padding: 0.5rem;
       box-sizing: border-box;
@@ -48,6 +48,21 @@
       justify-content: space-between;
       margin: 0.5rem 0;
     }
+    .diagram {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .restore-point {
+      width: 16px;
+      height: 16px;
+      margin: 2px;
+      border-radius: 2px;
+    }
+    .daily { background-color: #4caf50; }
+    .weekly { background-color: #2196f3; }
+    .monthly { background-color: #ff9800; }
+    .yearly { background-color: #9c27b0; }
     @media (max-width: 600px) {
       .grid {
         grid-template-columns: 1fr;
@@ -90,12 +105,20 @@
       <label>Yearly Retention (Years)</label>
       <input type="number" id="yearlyRetention" value="3" />
     </div>
+    <div style="grid-column: span 2;">
+      <label><input type="checkbox" id="capacityTier" /> Enable Capacity Tier (offload older backups)</label>
+    </div>
+    <div style="grid-column: span 2;">
+      <label><input type="checkbox" id="immutableFlag" /> Enable Immutability for GFS (adds storage overhead)</label>
+    </div>
   </div>
   <button onclick="calculateStorage()">Calculate</button>
 
   <div id="results" class="card" style="display:none;">
     <h2>Results (in TB)</h2>
     <div id="output"></div>
+    <h3>Restore Points Diagram</h3>
+    <div id="diagram" class="diagram"></div>
   </div>
 
   <script>
@@ -109,15 +132,26 @@
       const weeklyRetention = getVal("weeklyRetention")
       const monthlyRetention = getVal("monthlyRetention")
       const yearlyRetention = getVal("yearlyRetention")
+      const capacityTierEnabled = document.getElementById("capacityTier").checked
+      const immutableFlag = document.getElementById("immutableFlag").checked
 
       const adjustedSource = sourceData * (1 + yearlyGrowth / 100)
       const fullBackup = adjustedSource / compression
-      const dailyIncremental = adjustedSource * (dailyChange / 100) / compression
+      const dailyIncremental = (sourceData * dailyChange / 100) / compression
       const dailyTotal = dailyIncremental * dailyRetention
-      const weeklyGFS = fullBackup * weeklyRetention
-      const monthlyGFS = fullBackup * monthlyRetention
-      const yearlyGFS = fullBackup * yearlyRetention
+      let weeklyGFS = fullBackup * weeklyRetention
+      let monthlyGFS = fullBackup * monthlyRetention
+      let yearlyGFS = fullBackup * yearlyRetention
+
+      // Immutability overhead (e.g., +10% on GFS)
+      if (immutableFlag) {
+        weeklyGFS *= 1.1
+        monthlyGFS *= 1.1
+        yearlyGFS *= 1.1
+      }
+
       const workspace = fullBackup * 1.25
+      const capacityTierStorage = capacityTierEnabled ? (monthlyGFS + yearlyGFS) : 0
       const total = fullBackup + dailyTotal + weeklyGFS + monthlyGFS + yearlyGFS + workspace
 
       const resultData = {
@@ -127,6 +161,8 @@
         "Monthly GFS": monthlyGFS,
         "Yearly GFS": yearlyGFS,
         "Workspace": workspace,
+        ...(capacityTierEnabled && {"Capacity Tier (Object Storage)": capacityTierStorage}),
+        ...(immutableFlag && {"Immutability Overhead": (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1}),
         "Total Storage Required": total
       }
 
@@ -137,6 +173,29 @@
         div.className = "result-item"
         div.innerHTML = `<span>${key}</span><span>${val.toFixed(2)} TB</span>`
         outputDiv.appendChild(div)
+      }
+
+      const diagram = document.getElementById("diagram")
+      diagram.innerHTML = ""
+      for (let i = 0; i < dailyRetention; i++) {
+        const el = document.createElement("div")
+        el.className = "restore-point daily"
+        diagram.appendChild(el)
+      }
+      for (let i = 0; i < weeklyRetention; i++) {
+        const el = document.createElement("div")
+        el.className = "restore-point weekly"
+        diagram.appendChild(el)
+      }
+      for (let i = 0; i < monthlyRetention; i++) {
+        const el = document.createElement("div")
+        el.className = "restore-point monthly"
+        diagram.appendChild(el)
+      }
+      for (let i = 0; i < yearlyRetention; i++) {
+        const el = document.createElement("div")
+        el.className = "restore-point yearly"
+        diagram.appendChild(el)
       }
 
       document.getElementById("results").style.display = "block"
