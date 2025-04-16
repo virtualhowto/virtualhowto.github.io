@@ -196,6 +196,10 @@ document.addEventListener("DOMContentLoaded", function () {
   <div class="container">
     <section class="pricing">
       <h2>VM Pricing Calculator</h2>
+<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+  <label for="sqlLicenseToggle"><strong>Include SQL Licensing:</strong></label>
+  <input type="checkbox" id="sqlLicenseToggle" />
+</div>
 
 <!-- Bandwidth slider -->
 <div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
@@ -334,6 +338,19 @@ cartList.appendChild(ipItem);
 const firewallItem = document.createElement("li");
 firewallItem.textContent = `Firewall: $${fwCost.toFixed(2)}`;
 cartList.appendChild(firewallItem);
+
+const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
+let sqlLicSummaryTotal = 0;
+document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+  const cpu = parseInt(row.children[2].textContent);
+  const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
+  if (sqlLicensingEnabled) sqlLicSummaryTotal += sqlLicUnits * 390.07;
+});
+if (sqlLicensingEnabled) {
+  const sqlSummary = document.createElement("li");
+  sqlSummary.textContent = `SQL Licensing: $${sqlLicSummaryTotal.toFixed(2)}`;
+  cartList.appendChild(sqlSummary);
+}
       document.querySelectorAll(".vm-table tr.selected").forEach(row => {
         const cells = row.children;
         const name = cells[0].textContent;
@@ -341,12 +358,20 @@ cartList.appendChild(firewallItem);
         const ram = parseFloat(cells[3].textContent);
         const storage = parseFloat(cells[4].textContent);
         const vcspCost = cpu * 27.13;
-        const msLicCost = cpu * 25;
-        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost;
+        const msLicCost = /Microsoft Windows Server/i.test(cells[1].textContent) ? cpu * 25 : 0;
+        const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
+        const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
+        const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + sqlLicCost;
         totalCost += cost;
         const li = document.createElement("li");
-        li.textContent = `${name} - $${cost.toFixed(2)} (incl. VCSP: $${vcspCost.toFixed(2)}, MS Lic: $${msLicCost.toFixed(2)})`;
-        cartList.appendChild(li);
+        li.innerHTML = `<strong>${name}</strong><br>
+  CPU: ${cpu} @ $${(cpu * 16.61).toFixed(2)}<br>
+  RAM: ${ram} GB @ $${(ram * 10.51).toFixed(2)}<br>
+  Storage: ${storage} GB @ $${(storage * 0.24).toFixed(2)}<br>
+  VCSP: $${vcspCost.toFixed(2)}<br>
+  MS Lic: $${msLicCost.toFixed(2)}<br>
+  SQL Lic: $${sqlLicCost.toFixed(
       });
       cartTotal.textContent = `$${totalCost.toFixed(2)}`;
     }
@@ -357,7 +382,8 @@ cartList.appendChild(firewallItem);
         alert("Please select at least one VM to export.");
         return;
       }
-      let csv = 'VM Name,OS,vCPU,RAM (GB),Storage (GB),Estimated Cost\n';
+      let csv = 'VM Name,OS,vCPU,RAM (GB),Storage (GB),Estimated Cost,VCSP,MS Lic,SQL Lic
+';
       rows.forEach(row => {
         const cells = row.children;
         const name = cells[0].textContent;
@@ -374,7 +400,10 @@ cartList.appendChild(firewallItem);
         const ipAddrCost = publicIPs * 15;
         const fwComponent = fwType === 'sophos' ? 350 : 0;
         const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
-        csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)}
+        const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
+const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
+const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
+csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)},$${vcspCost.toFixed(2)},$${msLicCost.toFixed(2)},$${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses)
 `;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -417,6 +446,11 @@ y += 6;
 doc.text(`   VCSP: $${vcspCost.toFixed(2)}, MS Lic: $${msLicCost.toFixed(2)}`, 20, y);
 y += 6;
 doc.text(`   Bandwidth: $${bwCost.toFixed(2)}, IPs: $${ipAddrCost.toFixed(2)}, Firewall: $${fwComponent.toFixed(2)}`, 20, y);
+        y += 6;
+        const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
+        const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
+        const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
+        doc.text(`   SQL Lic: $${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses)`, 20, y);
         y += 10;
       });
       doc.save("vmaas_estimate.pdf");
