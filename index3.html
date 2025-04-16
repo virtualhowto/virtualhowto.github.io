@@ -26,13 +26,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
-</script>);
 
-    document.getElementById("publicIPCount").addEventListener("change", function() {
-      updateCart();
-    });
-  });
-</script>
 <script>
 function exportCSV() {
   const rows = document.querySelectorAll(".vm-table tr.selected");
@@ -46,9 +40,18 @@ function exportCSV() {
   const publicIPs = parseInt(document.getElementById('publicIPCount')?.value || 0);
   const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps || 0);
   const publicIPCost = publicIPs * (FLAT_PRICING.public_ip || 15);
-  const vcspCost = FLAT_PRICING.vcsp || 0;
-  const fwCost = FLAT_PRICING.firewall?.hosting?.cost || 0;
-  const msLicCost = FLAT_PRICING.microsoft_license?.corporate || 0;
+  const vcspCost = selectedVMs.length > 0 ? (FLAT_PRICING.vcsp || 0) : 0;
+  let fwCost = 0;
+  if (fwType === 'hosting' && (publicIPs > 0 || bandwidth > 0)) {
+    fwCost = FLAT_PRICING.firewall?.hosting?.cost || 0;
+  } else if (fwType === 'aggregated' && (publicIPs > 0 || bandwidth > 0)) {
+    fwCost = (FLAT_PRICING.firewall?.aggregated?.cost || 0) + (FLAT_PRICING.firewall?.aggregated?.extra_bandwidth || 0);
+  } else if (fwType === 'sophos') {
+    fwCost = FLAT_PRICING.firewall?.sophos?.cost || 0;
+  } else if (fwType === 'ipsec') {
+    fwCost = FLAT_PRICING.firewall?.ipsec?.cost || 0;
+  }
+  const msLicCost = selectedVMs.length > 0 ? (FLAT_PRICING.microsoft_license?.corporate || 0) : 0;
 
   let csv = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Cost
 ";
@@ -309,6 +312,12 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
 </datalist>
         </div>
 
+        <!-- Firewall Type -->
+        <div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+          <label for="firewallType"><strong>Firewall Option:</strong></label>
+          <select id="firewallType" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></select>
+        </div>
+
         <!-- Public IPs dropdown -->
         <div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
           <label for="publicIPCount"><strong>Number of Public IPs:</strong></label>
@@ -358,9 +367,10 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     <h3>Summary</h3>
     <ul id="cart-list"></ul>
     <div class="cost-comparison">
-      <div>
-        <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
-      </div>
+  <div>
+    <p><strong>Total Estimated Cost:</strong> <span id="cart-total">$0.00</span></p>
+  </div>
+</div>
       <div>
         <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
       </div>
@@ -380,6 +390,16 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
         .then(data => {
           if (!data.cpu || !data.ram || !data.storage) throw new Error("Invalid flat pricing data format.");
           FLAT_PRICING = data;
+          const firewallSelect = document.getElementById("firewallType");
+          if (firewallSelect && data.firewall) {
+            firewallSelect.innerHTML = '';
+            const options = Object.entries(data.firewall).map(([key, obj]) => {
+              const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+              const price = obj.cost || 0;
+              return `<option value="${key}">${label} ($${price})</option>`;
+            });
+            firewallSelect.innerHTML = '<option value="none">None ($0)</option>' + options.join('');
+          }
           console.log("Flat pricing loaded:", FLAT_PRICING);
         })
         .catch(err => {
@@ -405,36 +425,54 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     }
 
     function updateCart() {
-      const cartList = document.getElementById("cart-list");
-      const cartTotal = document.getElementById("cart-total");
-      const azureTotal = document.getElementById("azure-total");
-      let totalCost = 0;
-      let totalAzureCost = 0;
-      let selectedVMs = [];
-      cartList.innerHTML = "";
+  const cartList = document.getElementById("cart-list");
+  const cartTotal = document.getElementById("cart-total");
+  let totalCost = 0;
+  let selectedVMs = [];
+  cartList.innerHTML = "";
 
-      document.querySelectorAll(".vm-table tr.selected").forEach(row => {
-        let cells = row.children;
-        let cpu = parseInt(cells[2].textContent);
-        let ram = parseFloat(cells[3].textContent);
-        let storage = parseFloat(cells[4].textContent);
-        const bandwidth = parseInt(document.getElementById('bandwidthRange')?.value || 0);
-        const publicIPs = parseInt(document.getElementById('publicIPCount')?.value || 0);
-        let cost = calculateCost(cpu, ram, storage, bandwidth, publicIPs); // Default: 1 public IP per VM
-        let azureCost = calculateAzureCost(cpu, ram, storage);
-        totalCost += cost;
-        totalAzureCost += azureCost;
-        selectedVMs.push({ name: cells[0].textContent, cost, azureCost, cpu, ram, storage });
+  const bandwidth = parseInt(document.getElementById('bandwidthRange')?.value || 0);
+  const publicIPs = parseInt(document.getElementById('publicIPCount')?.value || 0);
+  const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps || 0);
+  const publicIPCost = publicIPs * (FLAT_PRICING.public_ip || 15);
+  const fwType = document.getElementById('firewallType')?.value;
+  let fwCost = 0;
+  if (fwType === 'hosting') {
+    fwCost = publicIPs > 0 || bandwidth > 0 ? (FLAT_PRICING.firewall?.hosting?.cost || 0) : 0;
+  } else if (fwType === 'aggregated') {
+    fwCost = publicIPs > 0 || bandwidth > 0 ? ((FLAT_PRICING.firewall?.aggregated?.cost || 0) + (FLAT_PRICING.firewall?.aggregated?.extra_bandwidth || 0)) : 0;
+  } else if (fwType === 'sophos') {
+    fwCost = FLAT_PRICING.firewall?.sophos?.cost || 0;
+  } else if (fwType === 'ipsec') {
+    fwCost = FLAT_PRICING.firewall?.ipsec?.cost || 0;
+  } else if (fwType === 'aggregated') {
+    fwCost = (FLAT_PRICING.firewall?.aggregated?.cost || 0) + (FLAT_PRICING.firewall?.aggregated?.extra_bandwidth || 0);
+  }
+  const msLicCost = FLAT_PRICING.microsoft_license?.corporate || 0;
+  const vcspCost = FLAT_PRICING.vcsp || 0;
 
-        let li = document.createElement("li");
-        li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
-        cartList.appendChild(li);
-      });
+  document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+    let cells = row.children;
+    let cpu = parseInt(cells[2].textContent);
+    let ram = parseFloat(cells[3].textContent);
+    let storage = parseFloat(cells[4].textContent);
+    let cost = calculateCost(cpu, ram, storage, bandwidth, publicIPs);
+    totalCost += cost;
+    selectedVMs.push({ name: cells[0].textContent, cost, cpu, ram, storage });
+    let li = document.createElement("li");
+    li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)}`;
+    cartList.appendChild(li);
+  });
 
-      cartTotal.textContent = `$${totalCost.toFixed(2)}`;
-      azureTotal.textContent = `$${totalAzureCost.toFixed(2)}`;
+  if (selectedVMs.length === 0) {
+    totalCost = bandwidthCost + publicIPCost + fwCost + msLicCost + vcspCost;
+    const li = document.createElement("li");
+    li.textContent = `Bandwidth & Infra Cost - $${totalCost.toFixed(2)}`;
+    cartList.appendChild(li);
+  }
 
-      localStorage.setItem('selectedVMs', JSON.stringify(selectedVMs));
+  cartTotal.textContent = `$${totalCost.toFixed(2)}`;
+  localStorage.setItem('selectedVMs', JSON.stringify(selectedVMs));
     }
 
     async function exportPDF() {
@@ -477,9 +515,9 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
   doc.setFont(undefined, 'normal');
   doc.text(`Bandwidth (${bandwidth} Mbps × $${FLAT_PRICING.bandwidth_mbps || 0}) = $${bandwidthCost.toFixed(2)}`, 20, extraY + 8);
   doc.text(`Public IPs (${publicIPs} × $${FLAT_PRICING.public_ip || 15}) = $${publicIPCost.toFixed(2)}`, 20, extraY + 16);
-  doc.text(`VCSP = $${vcspCost.toFixed(2)}`, 20, extraY + 24);
-  doc.text(`Firewall Hosting = $${fwCost.toFixed(2)}`, 20, extraY + 32);
-  doc.text(`Microsoft License (corporate) = $${msLicCost.toFixed(2)}`, 20, extraY + 40);
+  if (vms.length > 0) doc.text(`VCSP = $${vcspCost.toFixed(2)}`, 20, extraY + 24);
+  if (vms.length > 0) doc.text(`Firewall Hosting = $${fwCost.toFixed(2)}`, 20, extraY + 32);
+  if (vms.length > 0) doc.text(`Microsoft License (corporate) = $${msLicCost.toFixed(2)}`, 20, extraY + 40);
   const totalEstimate = vms.reduce((sum, vm) => sum + vm.cost, 0) + bandwidthCost + publicIPCost + vcspCost + fwCost + msLicCost;
   doc.setFont(undefined, 'bold');
   doc.setFont(undefined, 'bold');
