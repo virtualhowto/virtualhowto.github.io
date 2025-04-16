@@ -1,198 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VMaaS - Virtual Machine as a Service</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
-    <style>
-        /* General Styling */
-        body { 
-            font-family: 'Poppins', sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background: #f4f4f4; 
-            display: flex;
-        }
-        .container { 
-            display: flex; 
-            width: 70%; 
-            max-width: 1200px; 
-            margin: 20px auto; 
-            gap: 20px; 
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VMaaS - Virtual Machine as a Service</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #ffffff; }
+    .container { width: 90%; max-width: 1200px; margin: auto; overflow: hidden; padding: 20px; }
+    header { background: linear-gradient(90deg, #1c3f94, #cc5500); color: #fff; padding: 20px 0; text-align: center; font-size: 1.5em; font-weight: bold; }
+    .hero { text-align: center; padding: 50px; background: #cc5500; color: white; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); }
+    .hero h1 { margin: 0; font-size: 2.8em; font-weight: bold; }
+    .hero p { font-size: 1.2em; margin-top: 10px; }
 
-        /* Header */
-        header { 
-            background: linear-gradient(90deg, #1c3f94, #cc5500); 
-            color: #fff; 
-            text-align: center; 
-            font-size: 1.8em; 
-            padding: 20px;
-            font-weight: bold;
-            width: 100%;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1000;
-        }
-        
-        /* Hero Section */
-        .hero { 
-            text-align: center; 
-            padding: 50px; 
-            background: #cc5500; 
-            color: white; 
-            border-radius: 10px; 
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); 
-            margin: 80px 20px 20px;
-        }
+    .pricing { text-align: center; padding: 40px; background: white; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border-radius: 10px; transition: all 0.3s ease; }
+    .pricing:hover { box-shadow: 0px 6px 20px rgba(0,0,0,0.15); }
+    .pricing h2 { margin-bottom: 20px; color: #cc5500; font-size: 2em; }
+    .pricing input[type="file"] { padding: 14px; width: 100%; max-width: 400px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; }
+    .pricing input[type="file"]:focus { border-color: #cc5500; outline: none; }
 
-        /* Content & Floating Cart */
-        .content { flex: 3; padding-bottom: 100px; }
-        .cart { 
-            flex: 1; 
-            background: white; 
-            padding: 20px; 
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.2); 
-            border-radius: 10px; 
-            position: fixed; 
-            right: 20px; 
-            top: 100px;
-            width: 280px;
-            z-index: 999;
-        }
+    .vm-table-container { width: 100%; overflow-x: auto; margin-top: 20px; }
+    .vm-table { width: 100%; border-collapse: collapse; }
+    .vm-table th, .vm-table td { padding: 10px; border: 1px solid #ddd; text-align: center; cursor: pointer; }
+    .vm-table th { background: #cc5500; color: white; }
+    .vm-table tr.selected { background: #ffcc80; }
 
-        /* Drop Zone */
-        .drop-zone { 
-            border: 2px dashed #cc5500; 
-            padding: 20px; 
-            text-align: center; 
-            margin: 20px 0; 
-            cursor: pointer; 
-            background: white; 
-            transition: background 0.3s ease;
-        }
-        .drop-zone:hover, .drop-zone.highlight { background: #ffe0b2; }
+    .manual-entry-form { margin-top: 10px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .manual-entry-form input { width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; }
+    .manual-entry-form button { padding: 8px 12px; font-size: 1.2em; background-color: #cc5500; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .manual-entry-form button:hover { background-color: #aa4400; }
 
-        /* Table Styling */
-        .vm-table-container { overflow-x: auto; margin-top: 20px; }
-        .vm-table { width: 100%; border-collapse: collapse; background: white; }
-        .vm-table th, .vm-table td { padding: 12px; border: 1px solid #ddd; text-align: center; }
-        .vm-table th { background: #cc5500; color: white; font-weight: bold; }
-        .vm-table tr:nth-child(even) { background: #f9f9f9; }
-        .vm-table tr:hover { background: #ffcc80; cursor: pointer; }
-        .vm-table tr.selected { background: #ffb74d; }
-    </style>
+    .cart { position: fixed; right: 20px; top: 120px; width: 350px; background: white; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); border-radius: 10px; }
+    .cart h3 { margin-top: 0; color: #cc5500; font-size: 1.5em; text-align: center; }
+    .cart ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
+    .cart p { text-align: center; font-size: 1.2em; font-weight: bold; }
+    .cost-comparison { display: flex; justify-content: space-between; margin-top: 20px; padding: 10px; background: #f4f4f4; border-radius: 8px; }
+    .cost-comparison div { width: 48%; text-align: center; }
+    footer { text-align: center; background: #1c3f94; color: white; padding: 15px; font-size: 1em; margin-top: 30px; }
+  </style>
 </head>
 <body>
+  <header>Virtual Machine as a Service (VMaaS)</header>
 
-    <header>Virtual Machine as a Service (VMaaS)</header>
+  <section class="hero">
+    <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
+    <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
+  </section>
 
-    <div class="container">
-        <div class="content">
-            <section class="hero">
-                <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
-                <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
-            </section>
+  <div class="container">
+    <section class="pricing">
+      <h2>VM Pricing Calculator</h2>
+      <input type="file" id="fileUpload" accept=".xlsx" />
 
-            <section class="pricing">
-                <h2>VM Pricing Calculator</h2>
-                <div class="drop-zone" id="drop-zone">Drag & Drop RVTools file here or Click to Upload</div>
-                <input type="file" id="fileUpload" accept=".xlsx" hidden>
-                
-                <div class="vm-table-container">
-                    <table id="vm-table" class="vm-table">
-                        <thead>
-                            <tr>
-                                <th>VM Name</th>
-                                <th>OS</th>
-                                <th>vCPU</th>
-                                <th>RAM (GB)</th>
-                                <th>Storage (GB)</th>
-                                <th>Price ($)</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
+      <div class="vm-table-container">
+        <table id="vm-table" class="vm-table">
+          <thead>
+            <tr>
+              <th>VM Name</th>
+              <th>OS</th>
+              <th>vCPU</th>
+              <th>RAM (GB)</th>
+              <th>Storage (GB)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <!-- Manual Entry Form -->
+        <div class="manual-entry-form">
+          <input type="text" id="vmName" placeholder="VM Name">
+          <input type="text" id="vmOS" placeholder="OS">
+          <input type="number" id="vmCPU" placeholder="vCPU">
+          <input type="number" step="0.01" id="vmRAM" placeholder="RAM GB">
+          <input type="number" step="0.01" id="vmStorage" placeholder="Storage GB">
+          <button onclick="addManualVM()">➕</button>
         </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="cart" id="cart">
+    <h3>Summary</h3>
+    <ul id="cart-list"></ul>
+    <div class="cost-comparison">
+      <div>
+        <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
+      </div>
+      <div>
+        <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
+      </div>
     </div>
+  </div>
 
-    <!-- Floating Cart -->
-    <div class="cart">
-        <h3>Summary</h3>
-        <ul id="cart-list"></ul>
-        <p><strong>Total Cost:</strong> <span id="cart-total">$0.00</span></p>
-    </div>
+  <script>
+    function calculateCost(cpu, ram, storage) {
+      return (cpu * 10) + (ram * 5) + (storage * 0.1);
+    }
 
-    <script src="upload.js"></script>
-    <script src="pricing.js"></script>
-    <script>
-        const cartList = document.getElementById("cart-list");
-        const cartTotal = document.getElementById("cart-total");
-        let selectedVMs = [];
+    function calculateAzureCost(cpu, ram, storage) {
+      return (cpu * 15) + (ram * 6) + (storage * 0.2);
+    }
 
-        function processVMData(vmData) {
-            const vmTableBody = document.querySelector("#vm-table tbody");
-            vmTableBody.innerHTML = "";
+    document.getElementById("fileUpload").addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.readAsBinaryString(file);
+      reader.onload = function (e) {
+        const data = e.target.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+        const vmTableBody = document.querySelector("#vm-table tbody");
+        vmTableBody.innerHTML = "";
 
-            vmData.forEach(vm => {
-                const vmName = vm["VM"] || vm["VM Name"] || "Unknown";
-                const os = vm["OS"] || vm["OS according to the configuration file"] || "Unknown";
-                
-                // Prioritize "CPUs" over "NumCpu"
-                const vCPU = vm["CPUs"] || vm["NumCpu"] || 0;
-
-                // Convert MemoryMB to GB
-                const ramGB = ((vm["MemoryMB"] || vm["Memory"] || 0) / 1024).toFixed(2);
-
-                // Convert StorageMB to GB
-                const storageGB = ((vm["ProvisionedGB"] || vm["Storage"] || vm["Provisioned MB"] || 0) / 1024).toFixed(2);
-
-                let price = calculateVMPrice(vCPU, ramGB);
-
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${vmName}</td>
-                    <td>${os}</td>
-                    <td>${vCPU}</td>
-                    <td>${ramGB}</td>
-                    <td>${storageGB}</td>
-                    <td>$${price.toFixed(2)}</td>
-                `;
-
-                row.dataset.price = price;
-                row.addEventListener("click", () => toggleVM(row, vm));
-                vmTableBody.appendChild(row);
-            });
-        }
-
-        function toggleVM(row, vm) {
+        vInfo.forEach(vm => {
+          const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${vm["VM"]}</td>
+                           <td>${vm["OS according to the configuration file"]}</td>
+                           <td>${vm["CPUs"]}</td>
+                           <td>${(vm["Memory"] / 1024).toFixed(2)}</td>
+                           <td>${(provisioned / 1024).toFixed(2)}</td>`;
+          row.addEventListener("click", function () {
             row.classList.toggle("selected");
-
-            if (row.classList.contains("selected")) {
-                selectedVMs.push(vm);
-            } else {
-                selectedVMs = selectedVMs.filter(v => v !== vm);
-            }
-
             updateCart();
-        }
+          });
+          vmTableBody.appendChild(row);
+        });
+      };
+    });
 
-        function updateCart() {
-            cartList.innerHTML = "";
-            let total = 0;
+    function updateCart() {
+      const cartList = document.getElementById("cart-list");
+      const cartTotal = document.getElementById("cart-total");
+      const azureTotal = document.getElementById("azure-total");
+      let totalCost = 0;
+      let totalAzureCost = 0;
+      cartList.innerHTML = "";
 
-            selectedVMs.forEach(vm => {
-                let price = calculateVMPrice(vm.CPUs || vm.NumCpu, (vm.MemoryMB || 0) / 1024);
-                total += price;
-                cartList.innerHTML += `<li>${vm["VM"] || "VM"} - $${price.toFixed(2)}</li>`;
-            });
+      document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+        let cells = row.children;
+        let cpu = parseInt(cells[2].textContent);
+        let ram = parseFloat(cells[3].textContent);
+        let storage = parseFloat(cells[4].textContent);
+        let cost = calculateCost(cpu, ram, storage);
+        let azureCost = calculateAzureCost(cpu, ram, storage);
+        totalCost += cost;
+        totalAzureCost += azureCost;
 
-            cartTotal.textContent = `$${total.toFixed(2)}`;
-        }
-    </script>
+        let li = document.createElement("li");
+        li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
+        cartList.appendChild(li);
+      });
+
+      cartTotal.textContent = `$${totalCost.toFixed(2)}`;
+      azureTotal.textContent = `$${totalAzureCost.toFixed(2)}`;
+    }
+
+    function addManualVM() {
+      const name = document.getElementById("vmName").value;
+      const os = document.getElementById("vmOS").value;
+      const cpu = parseInt(document.getElementById("vmCPU").value);
+      const ram = parseFloat(document.getElementById("vmRAM").value);
+      const storage = parseFloat(document.getElementById("vmStorage").value);
+
+      if (!name || !os || isNaN(cpu) || isNaN(ram) || isNaN(storage)) {
+        alert("Please fill in all fields correctly.");
+        return;
+      }
+
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram.toFixed(2)}</td><td>${storage.toFixed(2)}</td>`;
+      row.addEventListener("click", function () {
+        row.classList.toggle("selected");
+        updateCart();
+      });
+      document.querySelector("#vm-table tbody").appendChild(row);
+      updateCart();
+
+      // Clear inputs
+      document.getElementById("vmName").value = "";
+      document.getElementById("vmOS").value = "";
+      document.getElementById("vmCPU").value = "";
+      document.getElementById("vmRAM").value = "";
+      document.getElementById("vmStorage").value = "";
+    }
+  </script>
 </body>
 </html>
