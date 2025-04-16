@@ -41,7 +41,13 @@ function exportCSV() {
   const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps || 0);
   const publicIPCost = publicIPs * (FLAT_PRICING.public_ip || 15);
   const vcspCost = FLAT_PRICING.vcsp || 0;
-  const fwCost = FLAT_PRICING.firewall?.hosting?.cost || 0;
+  let fwCost = 0;
+  const fwType = document.getElementById('firewallType')?.value || 'hosting';
+  if (fwType === 'hosting') {
+    fwCost = FLAT_PRICING.firewall?.hosting?.cost || 0;
+  } else if (fwType === 'aggregated') {
+    fwCost = (FLAT_PRICING.firewall?.aggregated?.cost || 0) + (FLAT_PRICING.firewall?.aggregated?.extra_bandwidth || 0);
+  }
   const msLicCost = FLAT_PRICING.microsoft_license?.corporate || 0;
 
   let csv = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Cost
@@ -301,6 +307,15 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
   <option value="900" label="900"></option>
   <option value="1000" label="1000 Mbps"></option>
 </datalist>
+        </div>
+
+        <!-- Firewall Type -->
+        <div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+          <label for="firewallType"><strong>Firewall Option:</strong></label>
+          <select id="firewallType" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+            <option value="hosting">Hosting ($50)</option>
+            <option value="aggregated">Aggregated ($150 + extra bandwidth)</option>
+          </select>
         </div>
 
         <!-- Public IPs dropdown -->
