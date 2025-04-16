@@ -305,20 +305,29 @@ document.getElementById("fileUpload").addEventListener("change", function (event
 
       totalCost += bandwidthCost + ipCost + fwCost;
 
-      const infraSummary = document.createElement("li");
-      infraSummary.textContent = `Bandwidth: $${bandwidthCost.toFixed(2)}, IPs: $${ipCost.toFixed(2)}, Firewall: $${fwCost.toFixed(2)}`;
-      infraSummary.style.fontWeight = "bold";
-      cartList.appendChild(infraSummary);
+      const bandwidthItem = document.createElement("li");
+bandwidthItem.textContent = `Bandwidth: $${bandwidthCost.toFixed(2)}`;
+cartList.appendChild(bandwidthItem);
+
+const ipItem = document.createElement("li");
+ipItem.textContent = `Public IPs: $${ipCost.toFixed(2)}`;
+cartList.appendChild(ipItem);
+
+const firewallItem = document.createElement("li");
+firewallItem.textContent = `Firewall: $${fwCost.toFixed(2)}`;
+cartList.appendChild(firewallItem);
       document.querySelectorAll(".vm-table tr.selected").forEach(row => {
         const cells = row.children;
         const name = cells[0].textContent;
         const cpu = parseInt(cells[2].textContent);
         const ram = parseFloat(cells[3].textContent);
         const storage = parseFloat(cells[4].textContent);
-        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24;
+        const vcspCost = cpu * 27.13;
+        const msLicCost = cpu * 25;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost;
         totalCost += cost;
         const li = document.createElement("li");
-        li.textContent = `${name} - $${cost.toFixed(2)}`;
+        li.textContent = `${name} - $${cost.toFixed(2)} (incl. VCSP: $${vcspCost.toFixed(2)}, MS Lic: $${msLicCost.toFixed(2)})`;
         cartList.appendChild(li);
       });
       cartTotal.textContent = `$${totalCost.toFixed(2)}`;
