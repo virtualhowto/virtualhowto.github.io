@@ -37,13 +37,21 @@ document.addEventListener("DOMContentLoaded", function () {
         const storage = (storageRaw / 1024).toFixed(2);
 
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td>`;
+        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="false">❌</td>`;
         row.addEventListener("click", function () {
           row.classList.toggle("selected");
           updateCart();
         });
         console.log('Appending row:', name, os, cpu, ram, storage);
-        tbody.appendChild(row);
+        $1
+      row.addEventListener("contextmenu", function(e) {
+        e.preventDefault();
+        const sqlCell = row.querySelector('.sql-tag');
+        const hasSQL = sqlCell.getAttribute('data-sql') === 'true';
+        sqlCell.textContent = hasSQL ? '❌' : '✅';
+        sqlCell.setAttribute('data-sql', hasSQL ? 'false' : 'true');
+        updateCart();
+      });
       });
       updateCart();
     };
@@ -244,9 +252,8 @@ document.addEventListener("DOMContentLoaded", function () {
       <input type="file" id="fileUpload" accept=".xlsx" />
       <div class="vm-table-container">
         <table class="vm-table" id="vm-table">
-          <thead>
-            <tr>
-              <th>VM Name</th>
+          $1
+              <th>SQL</th>
               <th>OS</th>
               <th>vCPU</th>
               <th>RAM (GB)</th>
@@ -339,39 +346,24 @@ const firewallItem = document.createElement("li");
 firewallItem.textContent = `Firewall: $${fwCost.toFixed(2)}`;
 cartList.appendChild(firewallItem);
 
-const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
-let sqlLicSummaryTotal = 0;
-document.querySelectorAll(".vm-table tr.selected").forEach(row => {
-  const cpu = parseInt(row.children[2].textContent);
-  const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
-  if (sqlLicensingEnabled) sqlLicSummaryTotal += sqlLicUnits * 390.07;
-});
-if (sqlLicensingEnabled) {
-  const sqlSummary = document.createElement("li");
-  sqlSummary.textContent = `SQL Licensing: $${sqlLicSummaryTotal.toFixed(2)}`;
-  cartList.appendChild(sqlSummary);
-}
-      document.querySelectorAll(".vm-table tr.selected").forEach(row => {
-        const cells = row.children;
-        const name = cells[0].textContent;
-        const cpu = parseInt(cells[2].textContent);
-        const ram = parseFloat(cells[3].textContent);
-        const storage = parseFloat(cells[4].textContent);
-        const vcspCost = cpu * 27.13;
-        const msLicCost = /Microsoft Windows Server/i.test(cells[1].textContent) ? cpu * 25 : 0;
-        const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
-        const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
-        const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
+const sqlCell = row.querySelector('.sql-tag');
+const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
+const sqlLicCost = sqlLicUnits * 390.07;
         const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + sqlLicCost;
         totalCost += cost;
         const li = document.createElement("li");
-        li.innerHTML = `<strong>${name}</strong><br>
-  CPU: ${cpu} @ $${(cpu * 16.61).toFixed(2)}<br>
-  RAM: ${ram} GB @ $${(ram * 10.51).toFixed(2)}<br>
-  Storage: ${storage} GB @ $${(storage * 0.24).toFixed(2)}<br>
-  VCSP: $${vcspCost.toFixed(2)}<br>
-  MS Lic: $${msLicCost.toFixed(2)}<br>
-  SQL Lic: $${sqlLicCost.toFixed(
+        li.innerHTML = `
+  <strong>${name}</strong><br>
+  <ul style='padding-left: 18px;'>
+    <li>CPU: ${cpu} @ $${(cpu * 16.61).toFixed(2)}</li>
+    <li>RAM: ${ram} GB @ $${(ram * 10.51).toFixed(2)}</li>
+    <li>Storage: ${storage} GB @ $${(storage * 0.24).toFixed(2)}</li>
+    <li>VCSP: $${vcspCost.toFixed(2)}</li>
+    <li>MS Licensing: $${msLicCost.toFixed(2)}</li>
+    <li>SQL Licensing: $${sqlLicCost.toFixed(2)}</li>
+    <li><strong>Total: $${cost.toFixed(2)}</strong></li>
+  </ul>`;
       });
       cartTotal.textContent = `$${totalCost.toFixed(2)}`;
     }
@@ -382,7 +374,7 @@ if (sqlLicensingEnabled) {
         alert("Please select at least one VM to export.");
         return;
       }
-      let csv = 'VM Name,OS,vCPU,RAM (GB),Storage (GB),Estimated Cost,VCSP,MS Lic,SQL Lic
+      let csv = 'VM Name,OS,vCPU,RAM (GB),Storage (GB),Estimated Cost,VCSP,MS Lic,SQL Lic,Exported At
 ';
       rows.forEach(row => {
         const cells = row.children;
@@ -400,10 +392,12 @@ if (sqlLicensingEnabled) {
         const ipAddrCost = publicIPs * 15;
         const fwComponent = fwType === 'sophos' ? 350 : 0;
         const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
-        const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
-const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
-const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
-csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)},$${vcspCost.toFixed(2)},$${msLicCost.toFixed(2)},$${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses)
+        const sqlCell = row.querySelector('.sql-tag');
+const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
+const sqlLicCost = sqlLicUnits * 390.07;
+const dateStr = new Date().toLocaleString();
+csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)},$${vcspCost.toFixed(2)},$${msLicCost.toFixed(2)},$${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses),${dateStr}
 `;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -418,7 +412,8 @@ csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)},$${vcspCost.t
       const doc = new jsPDF();
       const rows = document.querySelectorAll(".vm-table tr.selected");
       doc.setFontSize(16);
-      doc.text("VMaaS Estimate Summary", 20, 20);
+      const exportTime = new Date().toLocaleString();
+doc.text(`VMaaS Estimate Summary (${exportTime})`, 20, 20);
       let y = 30;
       rows.forEach((row, index) => {
         const cells = row.children;
