@@ -15,7 +15,7 @@ function showTab(id) {
 }
 document.addEventListener("DOMContentLoaded", function () {
   const savedTab = localStorage.getItem('activeTab');
-  if (savedTab) showTab(savedTab);
+  showTab(savedTab || 'connect-tab');
   if (savedTab) showTab(savedTab);
   document.querySelector('.baas-header').addEventListener('click', function () {
     document.querySelectorAll('.vm-table tr.selected .baas-tag').forEach(cell => {
