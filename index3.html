@@ -27,9 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 </script>
-  }
-
-  if (ipDropdown) {
+if (ipDropdown) {
     ipDropdown.addEventListener("change", function() {
       updateCart();
     });
@@ -407,7 +405,7 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     const price = obj.cost || 0;
     return `<option value="${key}">${label} ($${price})</option>`;
   });
-            firewallSelect.innerHTML = '<option value="none">None ($0)</option>' + options.join('');
+            firewallSelect.innerHTML = options.map(opt => opt.replace('value="ipsec"', 'value="ipsec" selected')).join('');
           }
           console.log("Flat pricing loaded:", FLAT_PRICING);
         })
