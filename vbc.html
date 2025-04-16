@@ -1,4 +1,4 @@
-<!-- Veeam-style Visualization with Export and Tooltips -->
+<!-- Veeam-style Visualization with Export and Tooltips + PDF + Object Tier Breakdown + Dark Mode -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +11,8 @@
       padding: 1rem;
       max-width: 960px;
       margin: auto;
+      background-color: #121212;
+      color: #f0f0f0;
     }
     h1 {
       font-size: 1.5rem;
@@ -31,23 +33,30 @@
       padding: 0.5rem;
       box-sizing: border-box;
       border-radius: 4px;
+      background: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
     }
-    input#dailyRetention { background-color: #e8f5e9; border: 2px solid #4caf50; }
-    input#weeklyRetention { background-color: #e3f2fd; border: 2px solid #2196f3; }
-    input#monthlyRetention { background-color: #fff3e0; border: 2px solid #ff9800; }
-    input#yearlyRetention { background-color: #f3e5f5; border: 2px solid #9c27b0; }
+    input#dailyRetention { border: 2px solid #4caf50; }
+    input#weeklyRetention { border: 2px solid #2196f3; }
+    input#monthlyRetention { border: 2px solid #ff9800; }
+    input#yearlyRetention { border: 2px solid #9c27b0; }
     button {
       margin-top: 1rem;
       padding: 0.75rem 1.5rem;
       font-size: 1rem;
       cursor: pointer;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
     }
     .card {
       margin-top: 2rem;
       padding: 1rem;
-      border: 1px solid #ccc;
+      border: 1px solid #444;
       border-radius: 0.5rem;
-      background: #f9f9f9;
+      background: #1e1e1e;
     }
     .result-item {
       display: flex;
@@ -55,8 +64,8 @@
       margin: 0.5rem 0;
     }
     .stack-bar-container {
-      margin-top: 2rem;
-      background: #eee;
+      margin-top: 1rem;
+      background: #333;
       height: 40px;
       border-radius: 5px;
       display: flex;
@@ -78,7 +87,7 @@
       top: -28px;
       left: 50%;
       transform: translateX(-50%);
-      background: #333;
+      background: #222;
       color: #fff;
       padding: 4px 8px;
       border-radius: 4px;
@@ -106,53 +115,28 @@
 <body>
   <h1>Veeam Backup Storage Calculator</h1>
   <div class="grid">
-    <div>
-      <label>Source Data (TB)</label>
-      <input type="number" id="sourceData" value="10" />
-    </div>
-    <div>
-      <label>Daily Change Rate (%)</label>
-      <input type="number" id="dailyChange" value="5" />
-    </div>
-    <div>
-      <label>Yearly Growth Rate (%)</label>
-      <input type="number" id="yearlyGrowth" value="10" />
-    </div>
-    <div>
-      <label>Compression Ratio</label>
-      <input type="number" id="compression" value="2" />
-    </div>
-    <div>
-      <label style="color: #4caf50">Daily Retention (Days)</label>
-      <input type="number" id="dailyRetention" value="30" />
-    </div>
-    <div>
-      <label style="color: #2196f3">Weekly Retention (Weeks)</label>
-      <input type="number" id="weeklyRetention" value="4" />
-    </div>
-    <div>
-      <label style="color: #ff9800">Monthly Retention (Months)</label>
-      <input type="number" id="monthlyRetention" value="12" />
-    </div>
-    <div>
-      <label style="color: #9c27b0">Yearly Retention (Years)</label>
-      <input type="number" id="yearlyRetention" value="1" />
-    </div>
-    <div style="grid-column: span 2;">
-      <label style="color: #795548"><input type="checkbox" id="capacityTier" checked> Enable Capacity Tier (offload older backups)</label>
-    </div>
-    <div style="grid-column: span 2;">
-      <label style="color: #c2185b"><input type="checkbox" id="immutableFlag"> Enable Immutability for GFS (adds storage overhead)</label>
-    </div>
+    <div><label>Source Data (TB)</label><input type="number" id="sourceData" value="10" /></div>
+    <div><label>Daily Change Rate (%)</label><input type="number" id="dailyChange" value="5" /></div>
+    <div><label>Yearly Growth Rate (%)</label><input type="number" id="yearlyGrowth" value="10" /></div>
+    <div><label>Compression Ratio</label><input type="number" id="compression" value="2" /></div>
+    <div><label style="color: #4caf50">Daily Retention (Days)</label><input type="number" id="dailyRetention" value="30" /></div>
+    <div><label style="color: #2196f3">Weekly Retention (Weeks)</label><input type="number" id="weeklyRetention" value="4" /></div>
+    <div><label style="color: #ff9800">Monthly Retention (Months)</label><input type="number" id="monthlyRetention" value="12" /></div>
+    <div><label style="color: #9c27b0">Yearly Retention (Years)</label><input type="number" id="yearlyRetention" value="1" /></div>
+    <div style="grid-column: span 2;"><label style="color: #795548"><input type="checkbox" id="capacityTier" checked> Enable Capacity Tier</label></div>
+    <div style="grid-column: span 2;"><label style="color: #c2185b"><input type="checkbox" id="immutableFlag"> Enable Immutability</label></div>
   </div>
   <button onclick="calculateStorage()">Calculate</button>
   <button onclick="exportAsImage()">Export as Image</button>
+  <button onclick="exportAsPDF()">Export as PDF</button>
 
   <div id="results" class="card" style="display:none;">
     <h2>Results (in TB)</h2>
     <div id="output"></div>
-    <h3>Storage Composition</h3>
+    <h3>Local Storage Breakdown</h3>
     <div id="stackBar" class="stack-bar-container"></div>
+    <h3>Object Storage Breakdown</h3>
+    <div id="objectBar" class="stack-bar-container"></div>
     <div class="legend">
       <div class="legend-item"><div class="legend-color" style="background:#4caf50"></div> Daily</div>
       <div class="legend-item"><div class="legend-color" style="background:#2196f3"></div> Weekly</div>
@@ -164,6 +148,8 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     function calculateStorage() {
       const getVal = id => parseFloat(document.getElementById(id).value)
@@ -178,25 +164,21 @@
       const capacityTierEnabled = document.getElementById("capacityTier").checked
       const immutableFlag = document.getElementById("immutableFlag").checked
 
-      const veeamOverheadFactor = 1.1
       const fullBackup = sourceData / compression
       const dailyIncremental = (sourceData * dailyChange / 100) / compression
-      const dailyTotal = ((dailyRetention - 1) * dailyIncremental + fullBackup) * veeamOverheadFactor
-
+      const dailyTotal = ((dailyRetention - 1) * dailyIncremental + fullBackup) * 1.1
       let weeklyGFS = fullBackup * weeklyRetention
       let monthlyGFS = fullBackup * monthlyRetention
       let yearlyGFS = fullBackup * yearlyRetention
-
       if (immutableFlag) {
         weeklyGFS *= 1.1
         monthlyGFS *= 1.1
         yearlyGFS *= 1.1
       }
-
       const workspace = fullBackup * 1.1
-      const totalGFSCount = weeklyRetention + monthlyRetention + yearlyRetention
-      const deduplicationFactor = 0.32
-      const capacityTierStorage = capacityTierEnabled ? (fullBackup * totalGFSCount * deduplicationFactor) : 0
+      const totalGFS = weeklyRetention + monthlyRetention + yearlyRetention
+      const dedup = 0.55
+      const capacityTierStorage = capacityTierEnabled ? (fullBackup * totalGFS * dedup) : 0
       const total = fullBackup + dailyTotal + weeklyGFS + monthlyGFS + yearlyGFS + workspace
 
       const resultData = {
@@ -206,34 +188,27 @@
         "Total Storage Required": total
       }
 
-      const outputDiv = document.getElementById("output")
-      outputDiv.innerHTML = ""
-      for (const [key, val] of Object.entries(resultData)) {
-        const div = document.createElement("div")
-        div.className = "result-item"
-        div.innerHTML = `<span>${key}</span><span>${val.toFixed(2)} TB</span>`
-        outputDiv.appendChild(div)
-      }
+      document.getElementById("output").innerHTML = Object.entries(resultData).map(([k,v]) => `<div class='result-item'><span>${k}</span><span>${v.toFixed(2)} TB</span></div>`).join('')
+      document.getElementById("stackBar").innerHTML = ""
+      document.getElementById("objectBar").innerHTML = ""
 
-      const stack = document.getElementById("stackBar")
-      stack.innerHTML = ""
-      const addSeg = (label, value, color, tooltip) => {
+      const addSeg = (bar, label, value, color, tooltip) => {
         const percent = (value / total) * 100
-        const seg = document.createElement("div")
-        seg.className = "stack-segment"
-        seg.style = `width:${percent}%; background:${color}`
-        seg.setAttribute("data-tooltip", `${label}: ${value.toFixed(2)} TB`)
-        seg.textContent = value.toFixed(1) + "TB"
-        stack.appendChild(seg)
+        const div = document.createElement("div")
+        div.className = "stack-segment"
+        div.style = `width:${percent}%;background:${color}`
+        div.setAttribute("data-tooltip", `${tooltip}: ${value.toFixed(2)} TB`)
+        div.textContent = value.toFixed(1) + 'TB'
+        bar.appendChild(div)
       }
 
-      addSeg("Daily", dailyTotal, "#4caf50", `${dailyRetention} daily points`)
-      addSeg("Weekly", weeklyGFS, "#2196f3", `${weeklyRetention} weekly points`)
-      addSeg("Monthly", monthlyGFS, "#ff9800", `${monthlyRetention} monthly points`)
-      addSeg("Yearly", yearlyGFS, "#9c27b0", `${yearlyRetention} yearly points`)
-      addSeg("Workspace", workspace, "#607d8b", `Backup job workspace`)
-      if (capacityTierEnabled) addSeg("Object", capacityTierStorage, "#795548", `Copied GFS to object tier`)
-      if (immutableFlag) addSeg("IMMUT", (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1, "#c2185b", `GFS Immutability Overhead`)
+      addSeg(stackBar, "Daily", dailyTotal, "#4caf50", `${dailyRetention} daily points`)
+      addSeg(stackBar, "Weekly", weeklyGFS, "#2196f3", `${weeklyRetention} weekly points`)
+      addSeg(stackBar, "Monthly", monthlyGFS, "#ff9800", `${monthlyRetention} monthly points`)
+      addSeg(stackBar, "Yearly", yearlyGFS, "#9c27b0", `${yearlyRetention} yearly points`)
+      addSeg(stackBar, "Workspace", workspace, "#607d8b", `Backup job workspace`)
+      if (capacityTierEnabled) addSeg(objectBar, "Object", capacityTierStorage, "#795548", `Copied GFS to object tier`)
+      if (immutableFlag) addSeg(objectBar, "IMMUT", (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1, "#c2185b", `GFS Immutability Overhead`)
 
       document.getElementById("results").style.display = "block"
     }
@@ -246,7 +221,17 @@
         link.click()
       })
     }
+
+    function exportAsPDF() {
+      html2canvas(document.getElementById("results")).then(canvas => {
+        const pdf = new jspdf.jsPDF()
+        const img = canvas.toDataURL("image/png")
+        const width = pdf.internal.pageSize.getWidth()
+        const height = (canvas.height * width) / canvas.width
+        pdf.addImage(img, 'PNG', 0, 0, width, height)
+        pdf.save("veeam-storage-calculator.pdf")
+      })
+    }
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </body>
 </html>
