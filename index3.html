@@ -4,7 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VMaaS - Virtual Machine as a Service</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"><script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js">function exportCSV() {
+  const rows = document.querySelectorAll(".vm-table tr.selected");
+  if (rows.length === 0) {
+    alert("Please select at least one VM to export.");
+    return;
+  }
+  let csv = "VM Name,OS,vCPU,RAM (GB),Storage (GB)
+";
+  rows.forEach(row => {
+    const cells = row.children;
+    csv += `${cells[0].textContent},${cells[1].textContent},${cells[2].textContent},${cells[3].textContent},${cells[4].textContent}
+`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "vmaas_selected_vms.csv";
+  link.click();
+}
+</script>
   document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("bandwidthRange").addEventListener("input", function(e) {
       document.getElementById("bandwidthValue").textContent = e.target.value;
@@ -220,7 +239,10 @@
           </select>
         </div>
       <input type="file" id="fileUpload" accept=".xlsx" />
-      <div class="vm-table-container">
+      <div id="loadingSpinner" style="display:none; text-align:center; margin: 20px; font-weight: bold; color: #1c3f94;">
+  Loading VMs from Excel file...
+</div>
+<div class="vm-table-container">
         <table id="vm-table" class="vm-table">
           <thead>
             <tr>
@@ -244,6 +266,8 @@
       </div>
       <div class="actions">
         <button onclick="exportPDF()">Export as PDF</button>
+      <div class="actions">
+        <button onclick="exportCSV()">Export as CSV</button>
       </div>
     </section>
   </div>
@@ -385,6 +409,7 @@
     }
 
     document.getElementById("fileUpload").addEventListener("change", function (event) {
+  document.getElementById("loadingSpinner").style.display = "block";
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
@@ -401,6 +426,7 @@
         const vInfo = XLSX.utils.sheet_to_json(vInfoSheet);
         const vmTableBody = document.querySelector("#vm-table tbody");
         vmTableBody.innerHTML = "";
+        document.getElementById("loadingSpinner").style.display = "none";
 
         vInfo.forEach(vm => {
           const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
