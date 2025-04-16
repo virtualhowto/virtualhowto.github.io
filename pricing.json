@@ -11,7 +11,7 @@
     "cost": 0.24,
     "unit": "per GB"
   },
- "vcsp": {
+  "vcsp": {
     "cost": 27.13,
     "unit": "per cpu"
   },
@@ -32,6 +32,5 @@
   "firewall": {
     "ipsec": { "cost": 0, "unit": "flat" },
     "sophos up to 2 vCPU / 4GB RAM": { "cost": 350, "unit": "flat" }
-   },
   }
 }
