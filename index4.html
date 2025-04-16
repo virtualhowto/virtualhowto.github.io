@@ -6,47 +6,49 @@
   <title>VMaaS - Virtual Machine as a Service</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
 <script>
-document.getElementById("bandwidthRange").addEventListener("input", function(e) {
-  const locked = Math.round(e.target.value / 100) * 100;
-  e.target.value = locked;
-  document.getElementById("bandwidthValue").textContent = locked;
-});
+document.addEventListener("DOMContentLoaded", function () {
+  document.getElementById("bandwidthRange").addEventListener("input", function(e) {
+    const locked = Math.round(e.target.value / 100) * 100;
+    e.target.value = locked;
+    document.getElementById("bandwidthValue").textContent = locked;
+  });
 
-document.getElementById("fileUpload").addEventListener("change", function (event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const data = e.target.result;
-    const workbook = XLSX.read(data, { type: "binary" });
-    const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === "vinfo") || workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const vms = XLSX.utils.sheet_to_json(sheet);
-    console.log('Loaded sheet:', sheetName);
-    console.log('Parsed VMs:', vms);
-    const tbody = document.querySelector("#vm-table tbody");
-    tbody.innerHTML = "";
-    vms.forEach(vm => {
-      const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
-      const name = vm["VM"] || vm["Name"] || "Unknown VM";
-      const os = vm["OS according to the configuration file"] || vm["Guest OS"] || vm["OS"] || "";
-      const cpu = vm["CPUs"] || vm["Num CPU"] || 1;
-      const ram = vm["Memory"] ? (vm["Memory"] / 1024).toFixed(2) : "0.00";
-      const storageRaw = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? vm["Used MB"] ?? 0;
-      const storage = (storageRaw / 1024).toFixed(2);
+  document.getElementById("fileUpload").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const data = e.target.result;
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === "vinfo") || workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const vms = XLSX.utils.sheet_to_json(sheet);
+      console.log('Loaded sheet:', sheetName);
+      console.log('Parsed VMs:', vms);
+      const tbody = document.querySelector("#vm-table tbody");
+      tbody.innerHTML = "";
+      vms.forEach(vm => {
+        const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
+        const name = vm["VM"] || vm["Name"] || "Unknown VM";
+        const os = vm["OS according to the configuration file"] || vm["Guest OS"] || vm["OS"] || "";
+        const cpu = vm["CPUs"] || vm["Num CPU"] || 1;
+        const ram = vm["Memory"] ? (vm["Memory"] / 1024).toFixed(2) : "0.00";
+        const storageRaw = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? vm["Used MB"] ?? 0;
+        const storage = (storageRaw / 1024).toFixed(2);
 
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td>`;
-      row.addEventListener("click", function () {
-        row.classList.toggle("selected");
-        updateCart();
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td>`;
+        row.addEventListener("click", function () {
+          row.classList.toggle("selected");
+          updateCart();
+        });
+        console.log('Appending row:', name, os, cpu, ram, storage);
+        tbody.appendChild(row);
       });
-      console.log('Appending row:', name, os, cpu, ram, storage);
-      tbody.appendChild(row);
-    });
-    updateCart();
-  };
-  reader.readAsBinaryString(file);
+      updateCart();
+    };
+    reader.readAsBinaryString(file);
+  });
 });
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
