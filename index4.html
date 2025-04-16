@@ -43,15 +43,15 @@ document.addEventListener("DOMContentLoaded", function () {
           updateCart();
         });
         console.log('Appending row:', name, os, cpu, ram, storage);
-        $1
-      row.addEventListener("contextmenu", function(e) {
-        e.preventDefault();
-        const sqlCell = row.querySelector('.sql-tag');
-        const hasSQL = sqlCell.getAttribute('data-sql') === 'true';
-        sqlCell.textContent = hasSQL ? '❌' : '✅';
-        sqlCell.setAttribute('data-sql', hasSQL ? 'false' : 'true');
-        updateCart();
-      });
+        tbody.appendChild(row);
+        row.addEventListener("contextmenu", function(e) {
+          e.preventDefault();
+          const sqlCell = row.querySelector('.sql-tag');
+          const hasSQL = sqlCell.getAttribute('data-sql') === 'true';
+          sqlCell.textContent = hasSQL ? '❌' : '✅';
+          sqlCell.setAttribute('data-sql', hasSQL ? 'false' : 'true');
+          updateCart();
+        });
       });
       updateCart();
     };
@@ -252,9 +252,16 @@ document.addEventListener("DOMContentLoaded", function () {
       <input type="file" id="fileUpload" accept=".xlsx" />
       <div class="vm-table-container">
         <table class="vm-table" id="vm-table">
-          $1
-              <th>SQL</th>
+          <thead>
+            <tr>
+              <th>VM Name</th>
               <th>OS</th>
+              <th>vCPU</th>
+              <th>RAM (GB)</th>
+              <th>Storage (GB)</th>
+              <th>SQL</th>
+            </tr>
+          </thead>
               <th>vCPU</th>
               <th>RAM (GB)</th>
               <th>Storage (GB)</th>
