@@ -23,10 +23,14 @@ document.getElementById("fileUpload").addEventListener("change", function (event
     tbody.innerHTML = "";
     vms.forEach(vm => {
       const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${vm["VM"]}</td><td>${vm["OS according to the configuration file"] || ""}</td><td>${vm["CPUs"]}</td><td>${(vm["Memory"] / 1024).toFixed(2)}</td><td>${(provisioned / 1024).toFixed(2)}</td>`;
-      row.addEventListener("click", function () {
-        row.classList.toggle("selected");
+      const name = vm["VM"] || vm["Name"] || "Unknown VM";
+const os = vm["OS according to the configuration file"] || vm["Guest OS"] || vm["OS"] || "";
+const cpu = vm["CPUs"] || vm["Num CPU"] || 1;
+const ram = vm["Memory"] ? (vm["Memory"] / 1024).toFixed(2) : "0.00";
+const storageRaw = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? vm["Used MB"] ?? 0;
+const storage = (storageRaw / 1024).toFixed(2);
+const row = document.createElement("tr");
+row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td>`;
         updateCart();
       });
       tbody.appendChild(row);
