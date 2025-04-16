@@ -1,1 +1,215 @@
-hello
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VMaaS - Virtual Machine as a Service</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.tab-header li').forEach(li => li.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`.tab-header li[data-tab="${id}"]`).classList.add('active');
+  localStorage.setItem('activeTab', id);
+}
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll('.tab-header li').forEach(tab => {
+    tab.addEventListener('click', () => showTab(tab.dataset.tab));
+  });
+  const savedTab = localStorage.getItem('activeTab');
+  showTab(savedTab || 'connect-tab');
+  // Removed duplicate showTab call
+  document.querySelector('.baas-header').addEventListener('click', function () {
+    document.querySelectorAll('.vm-table tr.selected .baas-tag').forEach(cell => {
+      cell.textContent = '✅';
+      cell.setAttribute('data-baas', 'true');
+    });
+    updateCart();
+  });
+  document.getElementById("bandwidthRange").addEventListener("input", function(e) {
+    const locked = Math.round(e.target.value / 100) * 100;
+    e.target.value = locked;
+    document.getElementById("bandwidthValue").textContent = locked;
+  });
+
+  document.getElementById("fileUpload").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const data = e.target.result;
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === "vinfo") || workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const vms = XLSX.utils.sheet_to_json(sheet);
+      console.log('Loaded sheet:', sheetName);
+      console.log('Parsed VMs:', vms);
+      const tbody = document.querySelector("#vm-table tbody");
+      tbody.innerHTML = "";
+      vms.forEach(vm => {
+        const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
+        const name = vm["VM"] || vm["Name"] || "Unknown VM";
+        const autoSQL = /sql/i.test(name);
+        const autoMS = /microsoft windows server/i.test(os);
+        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="${autoSQL}">${autoSQL ? '✅' : '❌'}</td><td class='ms-tag' data-ms="${autoMS}">${autoMS ? '✅' : '❌'}</td>`; data-sql="${autoSQL}">${autoSQL ? '✅' : '❌'}</td><td class='ms-tag' data-ms="${autoMS}">${autoMS ? '✅' : '❌'}</td>`;
+      row.addEventListener("click", function () {
+        row.classList.toggle("selected");
+        updateCart();
+      });
+      document.querySelector("#vm-table tbody").appendChild(row);
+      updateCart();
+
+      document.getElementById("vmName").value = "";
+      document.getElementById("vmOS").value = "";
+      document.getElementById("vmCPU").value = "";
+      document.getElementById("vmRAM").value = "";
+      document.getElementById("vmStorage").value = "";
+    }
+
+    function updateCart() {
+      const cartList = document.getElementById("cart-list");
+      const cartTotal = document.getElementById("cart-total");
+      let totalCost = 0;
+      cartList.innerHTML = "";
+
+      const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+      const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+      const fwType = document.getElementById("firewallType").value;
+
+      const bandwidthCost = bandwidth * 2.30;
+      const ipCost = publicIPs * 15;
+      const fwCost = fwType === 'sophos' ? 350 : 0;
+
+      totalCost += bandwidthCost + ipCost + fwCost;
+
+      const bandwidthItem = document.createElement("li");
+bandwidthItem.textContent = `Bandwidth: $${bandwidthCost.toFixed(2)}`;
+cartList.appendChild(bandwidthItem);
+
+const ipItem = document.createElement("li");
+ipItem.textContent = `Public IPs: $${ipCost.toFixed(2)}`;
+cartList.appendChild(ipItem);
+
+const firewallItem = document.createElement("li");
+firewallItem.textContent = `Firewall: $${fwCost.toFixed(2)}`;
+cartList.appendChild(firewallItem);
+
+document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+        const name = row.children[0].textContent;
+        const os = row.children[1].textContent;
+        const cpu = parseInt(row.children[2].textContent);
+        const ram = parseFloat(row.children[3].textContent);
+        const storage = parseFloat(row.children[4].textContent);
+        const vcspCost = cpu * 27.13;
+        const msCell = row.querySelector('.ms-tag');
+        const msLicensingEnabled = msCell?.getAttribute('data-ms') === 'true';
+        const msLicCost = msLicensingEnabled ? cpu * 25 : 0;
+        const sqlCell = row.querySelector('.sql-tag');
+        const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+        const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
+        const sqlLicCost = sqlLicUnits * 390.07;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + sqlLicCost;
+        totalCost += cost;
+        const li = document.createElement("li");
+        li.innerHTML = `
+  <strong>${name}</strong><br>
+  <ul style='padding-left: 18px;'>
+    <li>CPU: ${cpu} @ $${(cpu * 16.61).toFixed(2)}</li>
+    <li>RAM: ${ram} GB @ $${(ram * 10.51).toFixed(2)}</li>
+    <li>Storage: ${storage} GB @ $${(storage * 0.24).toFixed(2)}</li>
+    <li>VCSP: $${vcspCost.toFixed(2)}</li>
+    <li>MS Licensing: $${msLicCost.toFixed(2)}</li>
+    <li>SQL Licensing: $${sqlLicCost.toFixed(2)}</li>
+    <li><strong>Total: $${cost.toFixed(2)}</strong></li>
+  </ul>`;
+      });
+      cartTotal.textContent = `$${totalCost.toFixed(2)}`;
+    }
+
+    function exportCSV() {
+      const rows = document.querySelectorAll(".vm-table tr.selected");
+      if (rows.length === 0) {
+        alert("Please select at least one VM to export.");
+        return;
+      }
+      let csv = 'VM Name,OS,vCPU,RAM (GB),Storage (GB),Estimated Cost,VCSP,MS Lic,SQL Lic,Exported At
+';
+      rows.forEach(row => {
+        const cells = row.children;
+        const name = cells[0].textContent;
+        const os = cells[1].textContent;
+        const cpu = parseInt(cells[2].textContent);
+        const ram = parseFloat(cells[3].textContent);
+        const storage = parseFloat(cells[4].textContent);
+        const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+        const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+        const fwType = document.getElementById("firewallType").value;
+        const vcspCost = cpu * 27.13;
+        const msLicCost = cpu * 25;
+        const bwCost = bandwidth * 2.30;
+        const ipAddrCost = publicIPs * 15;
+        const fwComponent = fwType === 'sophos' ? 350 : 0;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
+        const sqlCell = row.querySelector('.sql-tag');
+const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
+const sqlLicCost = sqlLicUnits * 390.07;
+const dateStr = new Date().toLocaleString();
+csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)},$${vcspCost.toFixed(2)},$${msLicCost.toFixed(2)},$${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses),${dateStr}
+`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "vmaas_estimate.csv";
+      link.click();
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const rows = document.querySelectorAll(".vm-table tr.selected");
+      doc.setFontSize(16);
+      const exportTime = new Date().toLocaleString();
+doc.text(`VMaaS Estimate Summary (${exportTime})`, 20, 20);
+      let y = 30;
+      rows.forEach((row, index) => {
+        const cells = row.children;
+        const name = cells[0].textContent;
+        const cpu = parseInt(cells[2].textContent);
+        const ram = parseFloat(cells[3].textContent);
+        const storage = parseFloat(cells[4].textContent);
+        const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+        const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+        const fwType = document.getElementById("firewallType").value;
+        const vcspCost = cpu * 27.13;
+        const msLicCost = cpu * 25;
+        const bwCost = bandwidth * 2.30;
+        const ipAddrCost = publicIPs * 15;
+        const fwComponent = fwType === 'sophos' ? 350 : 0;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
+        doc.setFontSize(12);
+        doc.text(`${index + 1}. ${name}`, 20, y);
+        y += 6;
+        doc.text(`   vCPU: ${cpu}, RAM: ${ram} GB, Storage: ${storage} GB`, 20, y);
+        y += 6;
+        // Cost already calculated above — prevent duplicate declarations
+doc.text(`   Estimated Cost: $${cost.toFixed(2)}`, 20, y);
+y += 6;
+doc.text(`   VCSP: $${vcspCost.toFixed(2)}, MS Lic: $${msLicCost.toFixed(2)}`, 20, y);
+y += 6;
+doc.text(`   Bandwidth: $${bwCost.toFixed(2)}, IPs: $${ipAddrCost.toFixed(2)}, Firewall: $${fwComponent.toFixed(2)}`, 20, y);
+        y += 6;
+        const sqlCell = row.querySelector('.sql-tag');
+        const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+        const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
+        const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
+        doc.text(`   SQL Lic: $${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses)`, 20, y);
+        y += 10;
+      });
+      doc.save("vmaas_estimate.pdf");
+    }
+  </script>
+</body>
+</html>
