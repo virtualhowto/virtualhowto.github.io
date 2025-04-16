@@ -119,11 +119,10 @@
     </footer>
 
     <script>
-        const repoOwner = "virtualhowto";
-        const repoName = "virtualhowto.github.io";
+        const baseURL = "https://virtualhowto.github.io/";
 
         async function fetchHTMLFiles() {
-            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents`;
+            const apiUrl = `https://api.github.com/repos/virtualhowto/virtualhowto.github.io/contents`;
             const response = await fetch(apiUrl);
             const files = await response.json();
 
@@ -132,9 +131,9 @@
                 if (file.name.endsWith('.html')) {
                     const listItem = document.createElement('li');
                     const link = document.createElement('a');
-                    link.href = file.download_url;
+                    link.href = `${baseURL}${file.name}`; // Link to hosted file
                     link.textContent = file.name;
-                    link.target = "_blank"; // Opens in new tab
+                    link.target = "_blank"; // Open in a new tab
                     link.rel = "noopener noreferrer";
                     listItem.appendChild(link);
                     bookmarksList.appendChild(listItem);
