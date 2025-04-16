@@ -10,10 +10,13 @@ function showTab(id) {
   document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
   document.querySelectorAll('.tab-header li').forEach(li => li.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.querySelector(`.tab-header li[onclick*="${id}"]`).classList.add('active');
+  document.querySelector(`.tab-header li[data-tab="${id}"]`).classList.add('active');
   localStorage.setItem('activeTab', id);
 }
 document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll('.tab-header li').forEach(tab => {
+    tab.addEventListener('click', () => showTab(tab.dataset.tab));
+  });
   const savedTab = localStorage.getItem('activeTab');
   showTab(savedTab || 'connect-tab');
   if (savedTab) showTab(savedTab);
@@ -249,10 +252,10 @@ const msCell = row.querySelector('.ms-tag');
   <div class="container">
     <div class="tabs">
   <ul class="tab-header">
-    <li class="active" onclick="showTab('connect-tab')">Connect</li>
-    <li onclick="showTab('pricing-tab')">VM Pricing</li>
-    <li onclick="showTab('backup-tab')">Backup</li>
-  </ul>
+  <li class="active" data-tab="connect-tab">Connect</li>
+  <li data-tab="pricing-tab">VM Pricing</li>
+  <li data-tab="backup-tab">Backup</li>
+</ul>
   </ul>
   $1
 <div id="connect-tab" class="tab-pane active">
