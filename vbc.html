@@ -25,11 +25,16 @@
       display: block;
       margin-bottom: 0.25rem;
     }
-    input[type="number"], input[type="checkbox"] {
+    input[type="number"] {
       width: 100%;
       padding: 0.5rem;
       box-sizing: border-box;
+      border-radius: 4px;
     }
+    input#dailyRetention { background-color: #e8f5e9; border: 2px solid #4caf50; }
+    input#weeklyRetention { background-color: #e3f2fd; border: 2px solid #2196f3; }
+    input#monthlyRetention { background-color: #fff3e0; border: 2px solid #ff9800; }
+    input#yearlyRetention { background-color: #f3e5f5; border: 2px solid #9c27b0; }
     button {
       margin-top: 1rem;
       padding: 0.75rem 1.5rem;
@@ -73,11 +78,23 @@
       font-size: 0.75rem;
       padding-right: 4px;
       line-height: 20px;
+      transition: width 0.5s ease;
     }
-    @media (max-width: 600px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+      gap: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
     }
   </style>
 </head>
@@ -101,26 +118,26 @@
       <input type="number" id="compression" value="2" />
     </div>
     <div>
-      <label>Daily Retention (Days)</label>
+      <label style="color: #4caf50">Daily Retention (Days)</label>
       <input type="number" id="dailyRetention" value="30" />
     </div>
     <div>
-      <label>Weekly Retention (Weeks)</label>
+      <label style="color: #2196f3">Weekly Retention (Weeks)</label>
       <input type="number" id="weeklyRetention" value="4" />
     </div>
     <div>
-      <label>Monthly Retention (Months)</label>
+      <label style="color: #ff9800">Monthly Retention (Months)</label>
       <input type="number" id="monthlyRetention" value="12" />
     </div>
     <div>
-      <label>Yearly Retention (Years)</label>
+      <label style="color: #9c27b0">Yearly Retention (Years)</label>
       <input type="number" id="yearlyRetention" value="1" />
     </div>
     <div style="grid-column: span 2;">
-      <label><input type="checkbox" id="capacityTier" checked /> Enable Capacity Tier (offload older backups)</label>
+      <label style="color: #795548"><input type="checkbox" id="capacityTier" checked> Enable Capacity Tier (offload older backups)</label>
     </div>
     <div style="grid-column: span 2;">
-      <label><input type="checkbox" id="immutableFlag" /> Enable Immutability for GFS (adds storage overhead)</label>
+      <label style="color: #c2185b"><input type="checkbox" id="immutableFlag"> Enable Immutability for GFS (adds storage overhead)</label>
     </div>
   </div>
   <button onclick="calculateStorage()">Calculate</button>
@@ -130,6 +147,16 @@
     <div id="output"></div>
     <h3>Restore Points Visualization</h3>
     <div id="bar-visuals"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:#4caf50"></div> Daily</div>
+      <div class="legend-item"><div class="legend-color" style="background:#2196f3"></div> Weekly</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ff9800"></div> Monthly</div>
+      <div class="legend-item"><div class="legend-color" style="background:#9c27b0"></div> Yearly</div>
+      <div class="legend-item"><div class="legend-color" style="background:#607d8b"></div> Workspace</div>
+      <div class="legend-item"><div class="legend-color" style="background:#795548"></div> Object Tier</div>
+      <div class="legend-item"><div class="legend-color" style="background:#c2185b"></div> Immutability</div>
+      <div class="legend-item"><div class="legend-color" style="background:#000"></div> Total</div>
+    </div>
   </div>
 
   <script>
@@ -167,8 +194,8 @@
 
       const resultData = {
         "Backup Repository": total - capacityTierStorage,
-        ...(capacityTierEnabled && {"Object Storage (Capacity Tier)": capacityTierStorage}),
-        ...(immutableFlag && {"Immutability Overhead": (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1}),
+        ...(capacityTierEnabled && { "Object Storage (Capacity Tier)": capacityTierStorage }),
+        ...(immutableFlag && { "Immutability Overhead": (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1 }),
         "Total Storage Required": total
       }
 
@@ -187,7 +214,7 @@
       const pushBar = (label, value, color) => {
         const bar = document.createElement("div")
         bar.className = "visual-bar"
-        const innerWidth = Math.min(100, value * 10) + "%" // scale width
+        const innerWidth = Math.min(100, value * 10) + "%"
         bar.innerHTML = `
           <span class="label">${label}</span>
           <div class="bar" style="width: 300px;">
