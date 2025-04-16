@@ -38,8 +38,8 @@ function exportCSV() {
   let totalCPU = 0, totalRAM = 0, totalStorage = 0, totalBandwidth = 0, totalIPs = 0, totalCost = 0;
   const bandwidth = parseInt(document.getElementById('bandwidthRange')?.value || 0);
   const publicIPs = parseInt(document.getElementById('publicIPCount')?.value || 0);
-  const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps || 0);
-  const publicIPCost = publicIPs * (FLAT_PRICING.public_ip || 15);
+  const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps?.cost || 0);
+  const publicIPCost = publicIPs * (FLAT_PRICING.public_ip?.cost || 15);
   const vcspCost = selectedVMs.length > 0 ? (FLAT_PRICING.vcsp || 0) : 0;
   let fwCost = 0;
   if (fwType === 'hosting' && (publicIPs > 0 || bandwidth > 0)) {
@@ -414,7 +414,7 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     // getTier no longer needed with flat pricing
 
     function calculateCost(cpu, ram, storage, bandwidth = 0, publicIPs = 0) {
-  const base = (cpu * FLAT_PRICING.cpu) + (ram * FLAT_PRICING.ram) + (storage * FLAT_PRICING.storage);
+  const base = (cpu * FLAT_PRICING.cpu.cost) + (ram * FLAT_PRICING.ram.cost) + (storage * FLAT_PRICING.storage.cost);
   const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps || 0);
   const ipCost = publicIPs * (FLAT_PRICING.public_ip || 15);
   return base + bandwidthCost + ipCost;
@@ -448,8 +448,8 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
   } else if (fwType === 'aggregated') {
     fwCost = (FLAT_PRICING.firewall?.aggregated?.cost || 0) + (FLAT_PRICING.firewall?.aggregated?.extra_bandwidth || 0);
   }
-  const msLicCost = FLAT_PRICING.microsoft_license?.corporate || 0;
-  const vcspCost = FLAT_PRICING.vcsp || 0;
+  const msLicCost = FLAT_PRICING.microsoft_license?.corporate?.cost || 0;
+  const vcspCost = FLAT_PRICING.vcsp?.cost || 0;
 
   document.querySelectorAll(".vm-table tr.selected").forEach(row => {
     let cells = row.children;
