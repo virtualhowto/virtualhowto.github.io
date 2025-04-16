@@ -44,7 +44,6 @@ function calculateBackupSizing() {
 document.addEventListener("DOMContentLoaded", function () {
   const savedTab = localStorage.getItem('activeTab');
   if (savedTab) showTab(savedTab);
-  const savedTab = localStorage.getItem('activeTab');
   if (savedTab) showTab(savedTab);
   document.querySelector('.baas-header').addEventListener('click', function () {
     document.querySelectorAll('.vm-table tr.selected .baas-tag').forEach(cell => {
@@ -277,11 +276,38 @@ const msCell = row.querySelector('.ms-tag');
   </section>
   <div class="container">
     <div class="tabs">
-  <ul class="tab-header">
-    <li class="active" onclick="showTab('pricing-tab')">VM Pricing</li>
-    <li onclick="showTab('backup-tab')">Backup</li>
+  $1
+<li onclick="showTab('connect-tab')">Connect</li>
   </ul>
-  <div class="tab-content">
+  $1
+<div id="connect-tab" class="tab-pane">
+  <section class="connect">
+    <h2>Connectivity Options</h2>
+    <p>Configure bandwidth, public IPs, and firewall settings.</p>
+    <div style="margin-bottom: 20px;">
+      <label for="bandwidthRange"><strong>Bandwidth (Mbps):</strong></label><br>
+      <input type="range" id="bandwidthRange" min="0" max="1000" step="100" value="0" style="width: 100%;">
+      <span id="bandwidthValue">0</span> Mbps
+    </div>
+    <div style="margin-bottom: 20px;">
+      <label for="publicIPCount"><strong>Public IPs:</strong></label>
+      <select id="publicIPCount">
+  <option value="1" selected>1</option>
+  <option value="2">2</option>
+  <option value="3">3</option>
+  <option value="4">4</option>
+  <option value="5">5</option>
+</select>
+    </div>
+    <div style="margin-bottom: 20px;">
+      <label for="firewallType"><strong>Firewall Type:</strong></label>
+      <select id="firewallType">
+        <option value="none">None</option>
+        <option value="sophos">Sophos</option>
+      </select>
+    </div>
+  </section>
+</div>
     <div id="pricing-tab" class="tab-pane active">
       <section class="pricing">
         <div class="vm-table-container">
@@ -492,7 +518,8 @@ doc.text(`   VCSP: $${vcspCost.toFixed(2)}, MS Lic: $${msLicCost.toFixed(2)}`, 2
 y += 6;
 doc.text(`   Bandwidth: $${bwCost.toFixed(2)}, IPs: $${ipAddrCost.toFixed(2)}, Firewall: $${fwComponent.toFixed(2)}`, 20, y);
         y += 6;
-        const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
+        const sqlCell = row.querySelector('.sql-tag');
+        const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
         const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
         const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
         doc.text(`   SQL Lic: $${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses)`, 20, y);
