@@ -19,6 +19,8 @@ document.getElementById("fileUpload").addEventListener("change", function (event
     const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === "vinfo") || workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const vms = XLSX.utils.sheet_to_json(sheet);
+    console.log('Loaded sheet:', sheetName);
+    console.log('Parsed VMs:', vms);
     const tbody = document.querySelector("#vm-table tbody");
     tbody.innerHTML = "";
     vms.forEach(vm => {
@@ -36,6 +38,7 @@ document.getElementById("fileUpload").addEventListener("change", function (event
         row.classList.toggle("selected");
         updateCart();
       });
+      console.log('Appending row:', name, os, cpu, ram, storage);
       tbody.appendChild(row);
     });
     updateCart();
