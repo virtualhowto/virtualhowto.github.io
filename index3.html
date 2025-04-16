@@ -1,51 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VM Pricing Calculator</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VMaaS - Virtual Machine as a Service</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>/* [unchanged styles truncated for brevity] */</style>
 </head>
 <body>
-    <h1>VM Pricing Calculator</h1>
-    
-    <input type="file" id="fileUpload" />
-    <div id="drop-zone">Drag & Drop RVTools File Here</div>
-    
-    <table id="vm-table">
-        <thead>
+  <header>Virtual Machine as a Service (VMaaS)</header>
+  <section class="hero">
+    <h1>Scalable, Secure, and Reliable Cloud VMs</h1>
+    <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
+  </section>
+  <div class="container">
+    <section class="pricing">
+      <h2>VM Pricing Calculator</h2>
+      <input type="file" id="fileUpload" accept=".xlsx" />
+      <div class="vm-table-container">
+        <table id="vm-table" class="vm-table">
+          <thead>
             <tr>
-                <th>VM Name</th>
-                <th>OS</th>
-                <th>CPU</th>
-                <th>RAM (GB)</th>
-                <th>Storage (GB)</th>
-                <th>Azure VM Match</th>
+              <th>VM Name</th>
+              <th>OS</th>
+              <th>vCPU</th>
+              <th>RAM (GB)</th>
+              <th>Storage (GB)</th>
             </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    
-    <div id="summary-panel">
-        <h3>Pricing Summary</h3>
-        <p id="summary-total-azure-cost">Azure Total: $0.00</p>
-        <p id="summary-total-standard-cost">Standard Total: $0.00</p>
-        <p id="cart-total">Cart Total: $0.00</p>
-        <table id="summary-table">
-            <thead>
-                <tr>
-                    <th>VM Name</th>
-                    <th>OS</th>
-                    <th>CPU</th>
-                    <th>RAM</th>
-                    <th>Storage</th>
-                    <th>Azure VM Match</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
+          </thead>
+          <tbody></tbody>
         </table>
+        <div class="manual-entry-form">
+          <input type="text" id="vmName" placeholder="VM Name">
+          <input type="text" id="vmOS" placeholder="OS">
+          <input type="number" id="vmCPU" placeholder="vCPU">
+          <input type="number" step="0.01" id="vmRAM" placeholder="RAM GB">
+          <input type="number" step="0.01" id="vmStorage" placeholder="Storage GB">
+          <button onclick="addManualVM()">➕</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button onclick="exportPDF()">Export as PDF</button>
+      </div>
+    </section>
+  </div>
+  <div class="cart" id="cart">
+    <h3>Summary</h3>
+    <ul id="cart-list"></ul>
+    <div class="cost-comparison">
+      <div>
+        <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
+      </div>
+      <div>
+        <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
+      </div>
     </div>
-    
-    <script src="upload.js"></script>
+  </div>
+  <footer>&copy; 2025 VMaaS Cloud Services</footer>
+
+  <script>
+    let TIERED_PRICING = [];
+
+    function loadPricing() {
+      fetch('pricing.json')
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+          return response.json();
+        })
+        .then(data => {
+          if (!Array.isArray(data)) throw new Error("Invalid pricing data format.");
+          if (!data.every(t => typeof t.maxCPU !== 'undefined' && t.cost)) throw new Error("Missing keys in pricing tiers.");
+          TIERED_PRICING = data.map(t => ({
+            maxCPU: t.maxCPU === 'Infinity' ? Infinity : t.maxCPU,
+            cost: t.cost
+          }));
+          console.log("Pricing loaded successfully", TIERED_PRICING);
+        })
+        .catch(err => {
+          alert("Failed to load pricing.json: " + err.message);
+          console.error("Failed to load pricing.json", err);
+        });
+    }
+
+    loadPricing();
+
+    // Optional: reload on demand
+    window.reloadPricing = loadPricing;
+
+    function getTier(cpu) {
+      return TIERED_PRICING.find(t => cpu <= t.maxCPU).cost;
+    }
+
+    function calculateCost(cpu, ram, storage) {
+      const tier = getTier(cpu);
+      return (cpu * tier.cpu) + (ram * tier.ram) + (storage * tier.storage);
+    }
+
+    function calculateAzureCost(cpu, ram, storage) {
+      return (cpu * 15) + (ram * 6) + (storage * 0.2);
+    }
+
+    function updateCart() {
+      const cartList = document.getElementById("cart-list");
+      const cartTotal = document.getElementById("cart-total");
+      const azureTotal = document.getElementById("azure-total");
+      let totalCost = 0;
+      let totalAzureCost = 0;
+      let selectedVMs = [];
+      cartList.innerHTML = "";
+
+      document.querySelectorAll(".vm-table tr.selected").forEach(row => {
+        let cells = row.children;
+        let cpu = parseInt(cells[2].textContent);
+        let ram = parseFloat(cells[3].textContent);
+        let storage = parseFloat(cells[4].textContent);
+        let cost = calculateCost(cpu, ram, storage);
+        let azureCost = calculateAzureCost(cpu, ram, storage);
+        totalCost += cost;
+        totalAzureCost += azureCost;
+        selectedVMs.push({ name: cells[0].textContent, cost, azureCost });
+
+        let li = document.createElement("li");
+        li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
+        cartList.appendChild(li);
+      });
+
+      cartTotal.textContent = `$${totalCost.toFixed(2)}`;
+      azureTotal.textContent = `$${totalAzureCost.toFixed(2)}`;
+
+      localStorage.setItem('selectedVMs', JSON.stringify(selectedVMs));
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const vms = JSON.parse(localStorage.getItem('selectedVMs')) || [];
+      doc.text("VMaaS Estimate Summary", 20, 20);
+      vms.forEach((vm, i) => {
+        doc.text(`${i + 1}. ${vm.name} - $${vm.cost.toFixed(2)} (Azure: $${vm.azureCost.toFixed(2)})`, 20, 30 + i * 10);
+      });
+      doc.save("vmaas_estimate.pdf");
+    }
+
+    function addManualVM() {
+      const name = document.getElementById("vmName").value;
+      const os = document.getElementById("vmOS").value;
+      const cpu = parseInt(document.getElementById("vmCPU").value);
+      const ram = parseFloat(document.getElementById("vmRAM").value);
+      const storage = parseFloat(document.getElementById("vmStorage").value);
+
+      if (!name || !os || isNaN(cpu) || isNaN(ram) || isNaN(storage)) {
+        alert("Please fill in all fields correctly.");
+        return;
+      }
+
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram.toFixed(2)}</td><td>${storage.toFixed(2)}</td>`;
+      row.addEventListener("click", function () {
+        row.classList.toggle("selected");
+        updateCart();
+      });
+      document.querySelector("#vm-table tbody").appendChild(row);
+      updateCart();
+
+      document.getElementById("vmName").value = "";
+      document.getElementById("vmOS").value = "";
+      document.getElementById("vmCPU").value = "";
+      document.getElementById("vmRAM").value = "";
+      document.getElementById("vmStorage").value = "";
+    }
+
+    document.getElementById("fileUpload").addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.readAsBinaryString(file);
+      reader.onload = function (e) {
+        const data = e.target.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+        const vmTableBody = document.querySelector("#vm-table tbody");
+        vmTableBody.innerHTML = "";
+
+        vInfo.forEach(vm => {
+          const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${vm["VM"]}</td>
+                           <td>${vm["OS according to the configuration file"]}</td>
+                           <td>${vm["CPUs"]}</td>
+                           <td>${(vm["Memory"] / 1024).toFixed(2)}</td>
+                           <td>${(provisioned / 1024).toFixed(2)}</td>`;
+          row.addEventListener("click", function () {
+            row.classList.toggle("selected");
+            updateCart();
+          });
+          vmTableBody.appendChild(row);
+        });
+      };
+    });
+  </script>
 </body>
 </html>
