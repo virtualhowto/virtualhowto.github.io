@@ -54,7 +54,7 @@
       margin: 4px 0;
     }
     .visual-bar span.label {
-      width: 50px;
+      width: 70px;
       font-weight: bold;
       font-size: 0.85rem;
     }
@@ -68,18 +68,11 @@
     }
     .bar-inner {
       height: 100%;
-      background-color: #4caf50;
       text-align: right;
       color: white;
       font-size: 0.75rem;
       padding-right: 4px;
       line-height: 20px;
-    }
-    .immutable {
-      color: #c2185b;
-      font-weight: bold;
-      font-size: 0.8rem;
-      margin-top: 1rem;
     }
     @media (max-width: 600px) {
       .grid {
@@ -121,10 +114,10 @@
     </div>
     <div>
       <label>Yearly Retention (Years)</label>
-      <input type="number" id="yearlyRetention" value="3" />
+      <input type="number" id="yearlyRetention" value="1" />
     </div>
     <div style="grid-column: span 2;">
-      <label><input type="checkbox" id="capacityTier" /> Enable Capacity Tier (offload older backups)</label>
+      <label><input type="checkbox" id="capacityTier" checked /> Enable Capacity Tier (offload older backups)</label>
     </div>
     <div style="grid-column: span 2;">
       <label><input type="checkbox" id="immutableFlag" /> Enable Immutability for GFS (adds storage overhead)</label>
@@ -153,12 +146,11 @@
       const capacityTierEnabled = document.getElementById("capacityTier").checked
       const immutableFlag = document.getElementById("immutableFlag").checked
 
-      const adjustedSource = sourceData * (1 + yearlyGrowth / 100)
-      const fullBackup = adjustedSource / compression
+      const veeamOverheadFactor = 1.1
+      const fullBackup = sourceData / compression
       const dailyIncremental = (sourceData * dailyChange / 100) / compression
-      const fullsInRetention = Math.floor(dailyRetention / 7)
-      const incrementalsInRetention = dailyRetention - fullsInRetention
-      const dailyTotal = (dailyIncremental * incrementalsInRetention) + (fullBackup * fullsInRetention)
+      const dailyTotal = ((dailyRetention - 1) * dailyIncremental + fullBackup) * veeamOverheadFactor
+
       let weeklyGFS = fullBackup * weeklyRetention
       let monthlyGFS = fullBackup * monthlyRetention
       let yearlyGFS = fullBackup * yearlyRetention
@@ -169,18 +161,13 @@
         yearlyGFS *= 1.1
       }
 
-      const workspace = fullBackup * 1.25
-      const capacityTierStorage = capacityTierEnabled ? (monthlyGFS + yearlyGFS) : 0
+      const workspace = fullBackup * 1.1
+      const capacityTierStorage = capacityTierEnabled ? (monthlyGFS + yearlyGFS + (weeklyGFS * 0.5)) : 0
       const total = fullBackup + dailyTotal + weeklyGFS + monthlyGFS + yearlyGFS + workspace
 
       const resultData = {
-        "Full Backup": fullBackup,
-        "Daily Incrementals": dailyTotal,
-        "Weekly GFS": weeklyGFS,
-        "Monthly GFS": monthlyGFS,
-        "Yearly GFS": yearlyGFS,
-        "Workspace": workspace,
-        ...(capacityTierEnabled && {"Capacity Tier (Object Storage)": capacityTierStorage}),
+        "Backup Repository": total - capacityTierStorage,
+        ...(capacityTierEnabled && {"Object Storage (Capacity Tier)": capacityTierStorage}),
         ...(immutableFlag && {"Immutability Overhead": (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1}),
         "Total Storage Required": total
       }
@@ -210,12 +197,12 @@
         barContainer.appendChild(bar)
       }
 
-      pushBar("D-Inc", dailyTotal, "#4caf50")
-      pushBar("W-GFS", weeklyGFS, "#2196f3")
-      pushBar("M-GFS", monthlyGFS, "#ff9800")
-      pushBar("Y-GFS", yearlyGFS, "#9c27b0")
-      pushBar("Work", workspace, "#607d8b")
-      if (capacityTierEnabled) pushBar("Obj", capacityTierStorage, "#795548")
+      pushBar("Daily", dailyTotal, "#4caf50")
+      pushBar("Weekly", weeklyGFS, "#2196f3")
+      pushBar("Monthly", monthlyGFS, "#ff9800")
+      pushBar("Yearly", yearlyGFS, "#9c27b0")
+      pushBar("Workspace", workspace, "#607d8b")
+      if (capacityTierEnabled) pushBar("Object Tier", capacityTierStorage, "#795548")
       if (immutableFlag) pushBar("IMMUT", (weeklyGFS + monthlyGFS + yearlyGFS) * 0.1, "#c2185b")
       pushBar("TOTAL", total, "#000")
 
