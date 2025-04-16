@@ -42,23 +42,22 @@ function exportCSV() {
     return;
   }
 
-  let totalCPU = 0, totalRAM = 0, totalStorage = 0, totalBandwidth = 0, totalIPs = 0, totalCost = 0;
+  let csv = '';
+  const selectedVMs = [];
   const bandwidth = parseInt(document.getElementById('bandwidthRange')?.value || 0);
   const publicIPs = parseInt(document.getElementById('publicIPCount')?.value || 0);
+  const fwType = document.getElementById('firewallType')?.value || 'ipsec';
   const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps?.cost || 0);
   const publicIPCost = publicIPs * (FLAT_PRICING.public_ip?.cost || 15);
-  const vcspCost = selectedVMs.length > 0 ? (FLAT_PRICING.vcsp || 0) : 0;
+  const vcspCost = FLAT_PRICING.vcsp?.cost || 0;
+  const msLicCost = FLAT_PRICING.microsoft_license?.corporate?.cost || 0;
   let fwCost = 0;
-  if (fwType === 'hosting' && (publicIPs > 0 || bandwidth > 0)) {
-    fwCost = FLAT_PRICING.firewall?.hosting?.cost || 0;
-  } else if (fwType === 'aggregated' && (publicIPs > 0 || bandwidth > 0)) {
-    fwCost = (FLAT_PRICING.firewall?.aggregated?.cost || 0) + (FLAT_PRICING.firewall?.aggregated?.extra_bandwidth || 0);
-  } else if (fwType === 'sophos') {
+
+  if (fwType === 'sophos') {
     fwCost = FLAT_PRICING.firewall?.sophos?.cost || 0;
   } else if (fwType === 'ipsec') {
     fwCost = FLAT_PRICING.firewall?.ipsec?.cost || 0;
   }
-  const msLicCost = selectedVMs.length > 0 ? (FLAT_PRICING.microsoft_license?.corporate || 0) : 0;
 
   rows.forEach(row => {
     const cells = row.children;
@@ -69,8 +68,9 @@ function exportCSV() {
     const storage = parseFloat(cells[4].textContent);
     const cost = calculateCost(cpu, ram, storage, bandwidth, publicIPs);
 
-    csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)}
-`;
+    csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)}\n`;
+    selectedVMs.push({ name, cost, cpu, ram, storage });
+  });
 
     totalCPU += cpu;
     totalRAM += ram;
