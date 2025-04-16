@@ -6,6 +6,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VMaaS - Virtual Machine as a Service</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.getElementById("bandwidthRange").addEventListener("input", function(e) {
+    const locked = Math.round(e.target.value / 100) * 100;
+    e.target.value = locked;
+    document.getElementById("bandwidthValue").textContent = locked;
+  });
+
+  document.getElementById("fileUpload").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const data = e.target.result;
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === "vinfo") || workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const vms = XLSX.utils.sheet_to_json(sheet);
+      console.log('Loaded sheet:', sheetName);
+      console.log('Parsed VMs:', vms);
+      const tbody = document.querySelector("#vm-table tbody");
+      tbody.innerHTML = "";
+      vms.forEach(vm => {
+        const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
+        const name = vm["VM"] || vm["Name"] || "Unknown VM";
+        const os = vm["OS according to the configuration file"] || vm["Guest OS"] || vm["OS"] || "";
+        const cpu = vm["CPUs"] || vm["Num CPU"] || 1;
+        const ram = vm["Memory"] ? (vm["Memory"] / 1024).toFixed(2) : "0.00";
+        const storageRaw = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? vm["Used MB"] ?? 0;
+        const storage = (storageRaw / 1024).toFixed(2);
+
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="false">❌</td><td class='ms-tag' data-ms="false">❌</td>`;
+        row.addEventListener("click", function () {
+          row.classList.toggle("selected");
+          updateCart();
+        });
+        console.log('Appending row:', name, os, cpu, ram, storage);
+        tbody.appendChild(row);
+        row.addEventListener("contextmenu", function(e) {
+          e.preventDefault();
+
+          const menu = document.createElement('div');
+          menu.style.position = 'absolute';
+          menu.style.left = e.pageX + 'px';
+          menu.style.top = e.pageY + 'px';
+          menu.style.background = '#fff';
+          menu.style.border = '1px solid #ccc';
+          menu.style.padding = '6px';
+          menu.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+          menu.style.zIndex = 1000;
+
+          const sqlOption = document.createElement('div');
+          const sqlCell = row.querySelector('.sql-tag');
+          sqlOption.textContent = sqlCell.getAttribute('data-sql') === 'true' ? 'Remove SQL License' : 'Add SQL License';
+          sqlOption.style.cursor = 'pointer';
+          sqlOption.onclick = () => {
+            const hasSQL = sqlCell.getAttribute('data-sql') === 'true';
+            sqlCell.textContent = hasSQL ? '❌' : '✅';
+            sqlCell.setAttribute('data-sql', hasSQL ? 'false' : 'true');
+            menu.remove();
+            updateCart();
+          };
+
+          const msOption = document.createElement('div');
+          const msCell = row.querySelector('.ms-tag');
+          msOption.textContent = msCell.getAttribute('data-ms') === 'true' ? 'Remove MS License' : 'Add MS License';
+          msOption.style.cursor = 'pointer';
+          msOption.onclick = () => {
+            const hasMS = msCell.getAttribute('data-ms') === 'true';
+            msCell.textContent = hasMS ? '❌' : '✅';
+            msCell.setAttribute('data-ms', hasMS ? 'false' : 'true');
+            menu.remove();
+            updateCart();
+          };
+
+          menu.appendChild(sqlOption);
+          menu.appendChild(msOption);
+
+          document.body.appendChild(menu);
+
+          document.addEventListener('click', function handler() {
+            menu.remove();
+            document.removeEventListener('click', handler);
+          });
+        });
+      });
+      updateCart();
+    };
+    reader.readAsBinaryString(file);
+  });
+});
+</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
@@ -25,39 +118,10 @@
       letter-spacing: 1px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .hero {
-      background: white;
-      padding: 60px 30px;
-      text-align: center;
-      border-radius: 12px;
-      margin: 30px auto;
-      max-width: 900px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    }
-    .hero h1 {
-      font-size: 3em;
-      color: #1c3f94;
-    }
-    .hero p {
-      font-size: 1.2em;
-      color: #555;
-    }
     .container {
       max-width: 1200px;
       margin: auto;
       padding: 20px;
-    }
-    .pricing {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    .pricing h2 {
-      font-size: 2em;
-      color: #cc5500;
-      margin-bottom: 20px;
     }
     .pricing input[type="file"] {
       padding: 12px;
@@ -66,9 +130,6 @@
       font-size: 1em;
       margin-bottom: 20px;
       transition: border-color 0.3s;
-    }
-    .pricing input[type="file"]:focus {
-      border-color: #1c3f94;
     }
     .vm-table-container {
       overflow-x: auto;
@@ -118,11 +179,9 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    .manual-entry-form button:hover {
-      background: #163577;
-    }
     .actions {
       margin-top: 20px;
+      text-align: center;
     }
     .actions button {
       background: #cc5500;
@@ -159,11 +218,6 @@
       overflow-y: auto;
       margin-bottom: 10px;
     }
-    .cart ul li {
-      padding: 6px 0;
-      border-bottom: 1px dashed #ddd;
-      font-size: 0.95em;
-    }
     .cost-comparison {
       background: #f9f9f9;
       padding: 12px;
@@ -190,13 +244,61 @@
   <div class="container">
     <section class="pricing">
       <h2>VM Pricing Calculator</h2>
+<!-- Bandwidth slider -->
+<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+  <label for="bandwidthRange"><strong>Total Bandwidth (Mbps):</strong> <span id="bandwidthValue">0</span></label>
+  <input type="range" id="bandwidthRange" min="0" max="1000" value="0" step="100" style="width: 100%;" list="bandwidthTicks">
+<datalist id="bandwidthTicks">
+  <option value="0" label="0 Mbps"></option>
+  <option value="100" label="100"></option>
+  <option value="200" label="200"></option>
+  <option value="300" label="300"></option>
+  <option value="400" label="400"></option>
+  <option value="500" label="500"></option>
+  <option value="600" label="600"></option>
+  <option value="700" label="700"></option>
+  <option value="800" label="800"></option>
+  <option value="900" label="900"></option>
+  <option value="1000" label="1000 Mbps"></option>
+</datalist>
+</div>
+
+<!-- Firewall Type -->
+<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+  <label for="firewallType"><strong>Firewall Option:</strong></label>
+  <select id="firewallType" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    <option value="ipsec">IPSec (Free)</option>
+    <option value="sophos">Sophos ($350)</option>
+  </select>
+</div>
+
+<!-- Public IPs dropdown -->
+<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+  <label for="publicIPCount"><strong>Number of Public IPs:</strong></label>
+  <select id="publicIPCount" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    <option value="0">0 (Private Only)</option>
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="4">4</option>
+    <option value="8">8</option>
+    <option value="16">16</option>
+  </select>
+</div>
       <input type="file" id="fileUpload" accept=".xlsx" />
       <div class="vm-table-container">
-        <table id="vm-table" class="vm-table">
+        <table class="vm-table" id="vm-table">
           <thead>
             <tr>
               <th>VM Name</th>
               <th>OS</th>
+              <th>vCPU</th>
+              <th>RAM (GB)</th>
+              <th>Storage (GB)</th>
+              <th>SQL</th>
+              <th>MS</th>
+              <th>SQL</th>
+            </tr>
+          </thead>
               <th>vCPU</th>
               <th>RAM (GB)</th>
               <th>Storage (GB)</th>
@@ -212,104 +314,26 @@
           <input type="number" step="0.01" id="vmStorage" placeholder="Storage GB">
           <button onclick="addManualVM()">➕</button>
         </div>
-      </div>
-      <div class="actions">
-        <button onclick="exportPDF()">Export as PDF</button>
+        <div class="actions">
+          <button onclick="exportCSV()">Export as CSV</button>
+          <button onclick="exportPDF()">Export as PDF</button>
+        </div>
       </div>
     </section>
   </div>
   <div class="cart" id="cart">
     <h3>Summary</h3>
-    <ul id="cart-list"></ul>
+    <ul id="cart-list">
+  <li style="font-weight:bold; color:#1c3f94; margin-bottom: 6px;">VMs</li>
+</ul>
     <div class="cost-comparison">
       <div>
-        <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
-      </div>
-      <div>
-        <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
+        <p><strong>Total Estimated Cost:</strong> <span id="cart-total">$0.00</span></p>
       </div>
     </div>
   </div>
   <footer>&copy; 2025 VMaaS Cloud Services</footer>
-
   <script>
-    let FLAT_PRICING = {};
-
-    function loadPricing() {
-      fetch('pricing.json')
-        .then(response => {
-          if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-          return response.json();
-        })
-        .then(data => {
-          if (!data.cpu || !data.ram || !data.storage) throw new Error("Invalid flat pricing data format.");
-          FLAT_PRICING = data;
-          console.log("Flat pricing loaded:", FLAT_PRICING);
-        })
-        .catch(err => {
-          alert("Failed to load pricing.json: " + err.message);
-          console.error("Failed to load pricing.json", err);
-        });
-    }
-
-    loadPricing();
-    window.reloadPricing = loadPricing;
-
-    // getTier no longer needed with flat pricing
-
-    function calculateCost(cpu, ram, storage, bandwidth = 0, publicIPs = 0) {
-  const base = (cpu * FLAT_PRICING.cpu) + (ram * FLAT_PRICING.ram) + (storage * FLAT_PRICING.storage);
-  const bandwidthCost = bandwidth * (FLAT_PRICING.bandwidth_mbps || 0);
-  const ipCost = publicIPs * (FLAT_PRICING.public_ip || 15); // Fixed $15 per public IP
-  return base + bandwidthCost + ipCost;
-}
-
-    function calculateAzureCost(cpu, ram, storage) {
-      return (cpu * 15) + (ram * 6) + (storage * 0.2);
-    }
-
-    function updateCart() {
-      const cartList = document.getElementById("cart-list");
-      const cartTotal = document.getElementById("cart-total");
-      const azureTotal = document.getElementById("azure-total");
-      let totalCost = 0;
-      let totalAzureCost = 0;
-      let selectedVMs = [];
-      cartList.innerHTML = "";
-
-      document.querySelectorAll(".vm-table tr.selected").forEach(row => {
-        let cells = row.children;
-        let cpu = parseInt(cells[2].textContent);
-        let ram = parseFloat(cells[3].textContent);
-        let storage = parseFloat(cells[4].textContent);
-        let cost = calculateCost(cpu, ram, storage, 0, 1); // Default: 1 public IP per VM
-        let azureCost = calculateAzureCost(cpu, ram, storage);
-        totalCost += cost;
-        totalAzureCost += azureCost;
-        selectedVMs.push({ name: cells[0].textContent, cost, azureCost });
-
-        let li = document.createElement("li");
-        li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
-        cartList.appendChild(li);
-      });
-
-      cartTotal.textContent = `$${totalCost.toFixed(2)}`;
-      azureTotal.textContent = `$${totalAzureCost.toFixed(2)}`;
-
-      localStorage.setItem('selectedVMs', JSON.stringify(selectedVMs));
-    }
-
-    async function exportPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const vms = JSON.parse(localStorage.getItem('selectedVMs')) || [];
-      doc.text("VMaaS Estimate Summary", 20, 20);
-      vms.forEach((vm, i) => {
-        doc.text(`${i + 1}. ${vm.name} - $${vm.cost.toFixed(2)} (Azure: $${vm.azureCost.toFixed(2)})`, 20, 30 + i * 10);
-      });
-      doc.save("vmaas_estimate.pdf");
-    }
-
     function addManualVM() {
       const name = document.getElementById("vmName").value;
       const os = document.getElementById("vmOS").value;
@@ -338,34 +362,138 @@
       document.getElementById("vmStorage").value = "";
     }
 
-    document.getElementById("fileUpload").addEventListener("change", function (event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.readAsBinaryString(file);
-      reader.onload = function (e) {
-        const data = e.target.result;
-        const workbook = XLSX.read(data, { type: "binary" });
-        const vInfo = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
-        const vmTableBody = document.querySelector("#vm-table tbody");
-        vmTableBody.innerHTML = "";
+    function updateCart() {
+      const cartList = document.getElementById("cart-list");
+      const cartTotal = document.getElementById("cart-total");
+      let totalCost = 0;
+      cartList.innerHTML = "";
 
-        vInfo.forEach(vm => {
-          const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
-          const row = document.createElement("tr");
-          row.innerHTML = `<td>${vm["VM"]}</td>
-                           <td>${vm["OS according to the configuration file"]}</td>
-                           <td>${vm["CPUs"]}</td>
-                           <td>${(vm["Memory"] / 1024).toFixed(2)}</td>
-                           <td>${(provisioned / 1024).toFixed(2)}</td>`;
-          row.addEventListener("click", function () {
-            row.classList.toggle("selected");
-            updateCart();
-          });
-          vmTableBody.appendChild(row);
-        });
-      };
-    });
+      const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+      const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+      const fwType = document.getElementById("firewallType").value;
+
+      const bandwidthCost = bandwidth * 2.30;
+      const ipCost = publicIPs * 15;
+      const fwCost = fwType === 'sophos' ? 350 : 0;
+
+      totalCost += bandwidthCost + ipCost + fwCost;
+
+      const bandwidthItem = document.createElement("li");
+bandwidthItem.textContent = `Bandwidth: $${bandwidthCost.toFixed(2)}`;
+cartList.appendChild(bandwidthItem);
+
+const ipItem = document.createElement("li");
+ipItem.textContent = `Public IPs: $${ipCost.toFixed(2)}`;
+cartList.appendChild(ipItem);
+
+const firewallItem = document.createElement("li");
+firewallItem.textContent = `Firewall: $${fwCost.toFixed(2)}`;
+cartList.appendChild(firewallItem);
+
+const sqlCell = row.querySelector('.sql-tag');
+const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
+const sqlLicCost = sqlLicUnits * 390.07;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + sqlLicCost;
+        totalCost += cost;
+        const li = document.createElement("li");
+        li.innerHTML = `
+  <strong>${name}</strong><br>
+  <ul style='padding-left: 18px;'>
+    <li>CPU: ${cpu} @ $${(cpu * 16.61).toFixed(2)}</li>
+    <li>RAM: ${ram} GB @ $${(ram * 10.51).toFixed(2)}</li>
+    <li>Storage: ${storage} GB @ $${(storage * 0.24).toFixed(2)}</li>
+    <li>VCSP: $${vcspCost.toFixed(2)}</li>
+    <li>MS Licensing: $${msLicCost.toFixed(2)}</li>
+    <li>SQL Licensing: $${sqlLicCost.toFixed(2)}</li>
+    <li><strong>Total: $${cost.toFixed(2)}</strong></li>
+  </ul>`;
+      });
+      cartTotal.textContent = `$${totalCost.toFixed(2)}`;
+    }
+
+    function exportCSV() {
+      const rows = document.querySelectorAll(".vm-table tr.selected");
+      if (rows.length === 0) {
+        alert("Please select at least one VM to export.");
+        return;
+      }
+      let csv = 'VM Name,OS,vCPU,RAM (GB),Storage (GB),Estimated Cost,VCSP,MS Lic,SQL Lic,Exported At
+';
+      rows.forEach(row => {
+        const cells = row.children;
+        const name = cells[0].textContent;
+        const os = cells[1].textContent;
+        const cpu = parseInt(cells[2].textContent);
+        const ram = parseFloat(cells[3].textContent);
+        const storage = parseFloat(cells[4].textContent);
+        const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+        const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+        const fwType = document.getElementById("firewallType").value;
+        const vcspCost = cpu * 27.13;
+        const msLicCost = cpu * 25;
+        const bwCost = bandwidth * 2.30;
+        const ipAddrCost = publicIPs * 15;
+        const fwComponent = fwType === 'sophos' ? 350 : 0;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
+        const sqlCell = row.querySelector('.sql-tag');
+const sqlLicensingEnabled = sqlCell?.getAttribute('data-sql') === 'true';
+const sqlLicUnits = sqlLicensingEnabled ? Math.max(2, Math.ceil(cpu / 2)) : 0;
+const sqlLicCost = sqlLicUnits * 390.07;
+const dateStr = new Date().toLocaleString();
+csv += `${name},${os},${cpu},${ram},${storage},$${cost.toFixed(2)},$${vcspCost.toFixed(2)},$${msLicCost.toFixed(2)},$${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses),${dateStr}
+`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "vmaas_estimate.csv";
+      link.click();
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const rows = document.querySelectorAll(".vm-table tr.selected");
+      doc.setFontSize(16);
+      const exportTime = new Date().toLocaleString();
+doc.text(`VMaaS Estimate Summary (${exportTime})`, 20, 20);
+      let y = 30;
+      rows.forEach((row, index) => {
+        const cells = row.children;
+        const name = cells[0].textContent;
+        const cpu = parseInt(cells[2].textContent);
+        const ram = parseFloat(cells[3].textContent);
+        const storage = parseFloat(cells[4].textContent);
+        const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+        const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+        const fwType = document.getElementById("firewallType").value;
+        const vcspCost = cpu * 27.13;
+        const msLicCost = cpu * 25;
+        const bwCost = bandwidth * 2.30;
+        const ipAddrCost = publicIPs * 15;
+        const fwComponent = fwType === 'sophos' ? 350 : 0;
+        const cost = cpu * 16.61 + ram * 10.51 + storage * 0.24 + vcspCost + msLicCost + bwCost + ipAddrCost + fwComponent;
+        doc.setFontSize(12);
+        doc.text(`${index + 1}. ${name}`, 20, y);
+        y += 6;
+        doc.text(`   vCPU: ${cpu}, RAM: ${ram} GB, Storage: ${storage} GB`, 20, y);
+        y += 6;
+        // Cost already calculated above — prevent duplicate declarations
+doc.text(`   Estimated Cost: $${cost.toFixed(2)}`, 20, y);
+y += 6;
+doc.text(`   VCSP: $${vcspCost.toFixed(2)}, MS Lic: $${msLicCost.toFixed(2)}`, 20, y);
+y += 6;
+doc.text(`   Bandwidth: $${bwCost.toFixed(2)}, IPs: $${ipAddrCost.toFixed(2)}, Firewall: $${fwComponent.toFixed(2)}`, 20, y);
+        y += 6;
+        const sqlLicensingEnabled = document.getElementById("sqlLicenseToggle")?.checked;
+        const sqlLicUnits = Math.max(2, Math.ceil(cpu / 2));
+        const sqlLicCost = sqlLicensingEnabled ? sqlLicUnits * 390.07 : 0;
+        doc.text(`   SQL Lic: $${sqlLicCost.toFixed(2)} (${sqlLicUnits} licenses)`, 20, y);
+        y += 10;
+      });
+      doc.save("vmaas_estimate.pdf");
+    }
   </script>
 </body>
 </html>
