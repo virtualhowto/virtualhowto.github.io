@@ -4,43 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VMaaS - Virtual Machine as a Service</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js">function showTab(id) {
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+<script>
+function showTab(id) {
   document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
   document.querySelectorAll('.tab-header li').forEach(li => li.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelector(`.tab-header li[onclick*="${id}"]`).classList.add('active');
   localStorage.setItem('activeTab', id);
 }
-  localStorage.setItem('activeTab', id);
-}"]`).classList.add('active');
-}
-function calculateBackupSizing() {
-  const retention = parseInt(document.getElementById("backupRetention").value);
-  const changeRate = parseFloat(document.getElementById("dailyChange").value) / 100;
-  const rows = document.querySelectorAll(".vm-table tr.selected");
-  let totalBackupStorage = 0;
-  let html = "<h3>Backup Summary</h3><ul>";
-
-  rows.forEach(row => {
-    const name = row.children[0].textContent;
-    const storage = parseFloat(row.children[4].textContent);
-    const isBaaS = row.querySelector('.baas-tag')?.getAttribute('data-baas') === 'true';
-
-    if (isBaaS) {
-      let backupSize = storage; // base full backup
-      for (let i = 1; i < retention; i++) {
-        backupSize += storage * changeRate;
-      }
-      totalBackupStorage += backupSize;
-      html += `<li>${name}: ${backupSize.toFixed(2)} GB</li>`;
-    }
-  });
-
-  html += `</ul><strong>Total Backup Required:</strong> ${totalBackupStorage.toFixed(2)} GB`;
-  document.getElementById("backupSummary").innerHTML = html;
-}
-</script>
-<script>
 document.addEventListener("DOMContentLoaded", function () {
   const savedTab = localStorage.getItem('activeTab');
   if (savedTab) showTab(savedTab);
@@ -276,11 +248,14 @@ const msCell = row.querySelector('.ms-tag');
   </section>
   <div class="container">
     <div class="tabs">
-  $1
-<li onclick="showTab('connect-tab')">Connect</li>
+  <ul class="tab-header">
+    <li class="active" onclick="showTab('connect-tab')">Connect</li>
+    <li onclick="showTab('pricing-tab')">VM Pricing</li>
+    <li onclick="showTab('backup-tab')">Backup</li>
+  </ul>
   </ul>
   $1
-<div id="connect-tab" class="tab-pane">
+<div id="connect-tab" class="tab-pane active">
   <section class="connect">
     <h2>Connectivity Options</h2>
     <p>Configure bandwidth, public IPs, and firewall settings.</p>
@@ -308,7 +283,7 @@ const msCell = row.querySelector('.ms-tag');
     </div>
   </section>
 </div>
-    <div id="pricing-tab" class="tab-pane active">
+    <div id="pricing-tab" class="tab-pane">
       <section class="pricing">
         <div class="vm-table-container">
           <input type="file" id="fileUpload" accept=".xlsx,.xls" />
