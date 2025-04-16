@@ -4,7 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VMaaS - Virtual Machine as a Service</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js">  document.getElementById("bandwidthRange").addEventListener("input", function(e) {
+    const locked = Math.round(e.target.value / 100) * 100;
+    e.target.value = locked;
+    document.getElementById("bandwidthValue").textContent = locked;
+  });
+document.getElementById("fileUpload").addEventListener("change", function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const data = e.target.result;
+    const workbook = XLSX.read(data, { type: "binary" });
+    const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === "vinfo") || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const vms = XLSX.utils.sheet_to_json(sheet);
+    const tbody = document.querySelector("#vm-table tbody");
+    tbody.innerHTML = "";
+    vms.forEach(vm => {
+      const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${vm["VM"]}</td><td>${vm["OS according to the configuration file"] || ""}</td><td>${vm["CPUs"]}</td><td>${(vm["Memory"] / 1024).toFixed(2)}</td><td>${(provisioned / 1024).toFixed(2)}</td>`;
+      row.addEventListener("click", function () {
+        row.classList.toggle("selected");
+        updateCart();
+      });
+      tbody.appendChild(row);
+    });
+  };
+  reader.readAsBinaryString(file);
+});
+</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
@@ -150,6 +180,47 @@
   <div class="container">
     <section class="pricing">
       <h2>VM Pricing Calculator</h2>
+
+<!-- Bandwidth slider -->
+<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+  <label for="bandwidthRange"><strong>Total Bandwidth (Mbps):</strong> <span id="bandwidthValue">0</span></label>
+  <input type="range" id="bandwidthRange" min="0" max="1000" value="0" step="100" style="width: 100%;" list="bandwidthTicks">
+<datalist id="bandwidthTicks">
+  <option value="0" label="0 Mbps"></option>
+  <option value="100" label="100"></option>
+  <option value="200" label="200"></option>
+  <option value="300" label="300"></option>
+  <option value="400" label="400"></option>
+  <option value="500" label="500"></option>
+  <option value="600" label="600"></option>
+  <option value="700" label="700"></option>
+  <option value="800" label="800"></option>
+  <option value="900" label="900"></option>
+  <option value="1000" label="1000 Mbps"></option>
+</datalist>
+</div>
+
+<!-- Firewall Type -->
+<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+  <label for="firewallType"><strong>Firewall Option:</strong></label>
+  <select id="firewallType" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    <option value="ipsec">IPSec (Free)</option>
+    <option value="sophos">Sophos ($350)</option>
+  </select>
+</div>
+
+<!-- Public IPs dropdown -->
+<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
+  <label for="publicIPCount"><strong>Number of Public IPs:</strong></label>
+  <select id="publicIPCount" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    <option value="0">0 (Private Only)</option>
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="4">4</option>
+    <option value="8">8</option>
+    <option value="16">16</option>
+  </select>
+</div>
       <input type="file" id="fileUpload" accept=".xlsx" />
       <div class="vm-table-container">
         <table class="vm-table" id="vm-table">
@@ -223,6 +294,21 @@
       const cartTotal = document.getElementById("cart-total");
       let totalCost = 0;
       cartList.innerHTML = "";
+
+      const bandwidth = parseInt(document.getElementById("bandwidthRange").value) || 0;
+      const publicIPs = parseInt(document.getElementById("publicIPCount").value) || 0;
+      const fwType = document.getElementById("firewallType").value;
+
+      const bandwidthCost = bandwidth * 2.30;
+      const ipCost = publicIPs * 15;
+      const fwCost = fwType === 'sophos' ? 350 : 0;
+
+      totalCost += bandwidthCost + ipCost + fwCost;
+
+      const infraSummary = document.createElement("li");
+      infraSummary.textContent = `Bandwidth: $${bandwidthCost.toFixed(2)}, IPs: $${ipCost.toFixed(2)}, Firewall: $${fwCost.toFixed(2)}`;
+      infraSummary.style.fontWeight = "bold";
+      cartList.appendChild(infraSummary);
       document.querySelectorAll(".vm-table tr.selected").forEach(row => {
         const cells = row.children;
         const name = cells[0].textContent;
