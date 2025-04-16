@@ -273,7 +273,26 @@ const msCell = row.querySelector('.ms-tag');
   </ul>
   <div class="tab-content">
     <div id="pricing-tab" class="tab-pane active">
-      <section class="pricing">$1</section>
+      <section class="pricing">
+        <div class="vm-table-container">
+          <input type="file" id="fileUpload" accept=".xlsx,.xls" />
+          <table class="vm-table" id="vm-table">
+            <thead>
+              <tr>
+                <th>VM Name</th>
+                <th>OS</th>
+                <th>vCPU</th>
+                <th>RAM (GB)</th>
+                <th>Storage (GB)</th>
+                <th class="sql-header">SQL</th>
+                <th class="ms-header">MS</th>
+                <th class="baas-header" style="cursor: pointer;">BaaS</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
     </div>
     <div id="backup-tab" class="tab-pane">
       <section class="backup">
