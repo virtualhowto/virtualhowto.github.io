@@ -7,6 +7,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  document.querySelector('.baas-header').addEventListener('click', function () {
+    document.querySelectorAll('.vm-table tr.selected .baas-tag').forEach(cell => {
+      cell.textContent = '✅';
+      cell.setAttribute('data-baas', 'true');
+    });
+    updateCart();
+  });
   document.getElementById("bandwidthRange").addEventListener("input", function(e) {
     const locked = Math.round(e.target.value / 100) * 100;
     e.target.value = locked;
@@ -37,59 +44,40 @@ document.addEventListener("DOMContentLoaded", function () {
         const storage = (storageRaw / 1024).toFixed(2);
 
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="false">❌</td><td class='ms-tag' data-ms="false">❌</td>`;
+        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="false">❌</td><td class='ms-tag' data-ms="false">❌</td><td class='baas-tag' data-baas="false">❌</td>`;
         row.addEventListener("click", function () {
           row.classList.toggle("selected");
           updateCart();
         });
         console.log('Appending row:', name, os, cpu, ram, storage);
         tbody.appendChild(row);
-        row.addEventListener("contextmenu", function(e) {
-          e.preventDefault();
+        const sqlCell = row.querySelector('.sql-tag');
+sqlCell.style.cursor = 'pointer';
+sqlCell.addEventListener('click', function () {
+  const hasSQL = sqlCell.getAttribute('data-sql') === 'true';
+  sqlCell.textContent = hasSQL ? '❌' : '✅';
+  sqlCell.setAttribute('data-sql', hasSQL ? 'false' : 'true');
+  updateCart();
+});
 
-          const menu = document.createElement('div');
-          menu.style.position = 'absolute';
-          menu.style.left = e.pageX + 'px';
-          menu.style.top = e.pageY + 'px';
-          menu.style.background = '#fff';
-          menu.style.border = '1px solid #ccc';
-          menu.style.padding = '6px';
-          menu.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
-          menu.style.zIndex = 1000;
+const msCell = row.querySelector('.ms-tag');
+        msCell.style.cursor = 'pointer';
+        msCell.addEventListener('click', function () {
+          const hasMS = msCell.getAttribute('data-ms') === 'true';
+          msCell.textContent = hasMS ? '❌' : '✅';
+          msCell.setAttribute('data-ms', hasMS ? 'false' : 'true');
+          updateCart();
+        });
 
-          const sqlOption = document.createElement('div');
-          const sqlCell = row.querySelector('.sql-tag');
-          sqlOption.textContent = sqlCell.getAttribute('data-sql') === 'true' ? 'Remove SQL License' : 'Add SQL License';
-          sqlOption.style.cursor = 'pointer';
-          sqlOption.onclick = () => {
-            const hasSQL = sqlCell.getAttribute('data-sql') === 'true';
-            sqlCell.textContent = hasSQL ? '❌' : '✅';
-            sqlCell.setAttribute('data-sql', hasSQL ? 'false' : 'true');
-            menu.remove();
-            updateCart();
-          };
-
-          const msOption = document.createElement('div');
-          const msCell = row.querySelector('.ms-tag');
-          msOption.textContent = msCell.getAttribute('data-ms') === 'true' ? 'Remove MS License' : 'Add MS License';
-          msOption.style.cursor = 'pointer';
-          msOption.onclick = () => {
-            const hasMS = msCell.getAttribute('data-ms') === 'true';
-            msCell.textContent = hasMS ? '❌' : '✅';
-            msCell.setAttribute('data-ms', hasMS ? 'false' : 'true');
-            menu.remove();
-            updateCart();
-          };
-
-          menu.appendChild(sqlOption);
-          menu.appendChild(msOption);
-
-          document.body.appendChild(menu);
-
-          document.addEventListener('click', function handler() {
-            menu.remove();
-            document.removeEventListener('click', handler);
-          });
+        const baasCell = row.querySelector('.baas-tag');
+        baasCell.style.cursor = 'pointer';
+        baasCell.addEventListener('click', function () {
+          const hasBaaS = baasCell.getAttribute('data-baas') === 'true';
+          baasCell.textContent = hasBaaS ? '❌' : '✅';
+          baasCell.setAttribute('data-baas', hasBaaS ? 'false' : 'true');
+          updateCart();
+        });
+});
         });
       });
       updateCart();
@@ -294,8 +282,8 @@ document.addEventListener("DOMContentLoaded", function () {
               <th>RAM (GB)</th>
               <th>Storage (GB)</th>
               <th>SQL</th>
+              <th class="baas-header" style="cursor: pointer;">BaaS</th>
               <th>MS</th>
-              <th>SQL</th>
             </tr>
           </thead>
               <th>vCPU</th>
