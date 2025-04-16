@@ -7,9 +7,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
   document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("bandwidthRange").addEventListener("input", function(e) {
-      document.getElementById("bandwidthValue").textContent = e.target.value;
+      const locked = Math.round(e.target.value / 100) * 100;
+      e.target.value = locked;
+      document.getElementById("bandwidthValue").textContent = locked;
       updateCart();
-    });
+    }););
 
     document.getElementById("publicIPCount").addEventListener("change", function() {
       updateCart();
@@ -276,7 +278,20 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
         <!-- Bandwidth slider -->
         <div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
           <label for="bandwidthRange"><strong>Total Bandwidth (Mbps):</strong> <span id="bandwidthValue">0</span></label>
-          <input type="range" id="bandwidthRange" min="0" max="1000" value="0" step="10" style="width: 100%;">
+          <input type="range" id="bandwidthRange" min="0" max="1000" value="0" step="100" list="bandwidthTicks" style="width: 100%;">
+<datalist id="bandwidthTicks">
+  <option value="0" label="0 Mbps"></option>
+  <option value="100" label="100"></option>
+  <option value="200" label="200"></option>
+  <option value="300" label="300"></option>
+  <option value="400" label="400"></option>
+  <option value="500" label="500"></option>
+  <option value="600" label="600"></option>
+  <option value="700" label="700"></option>
+  <option value="800" label="800"></option>
+  <option value="900" label="900"></option>
+  <option value="1000" label="1000 Mbps"></option>
+</datalist>
         </div>
 
         <!-- Public IPs dropdown -->
