@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const storage = (storageRaw / 1024).toFixed(2);
 
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="false">❌</td><td class='ms-tag' data-ms="false">❌</td><td class='baas-tag' data-baas="false">❌</td>`;
+        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="false">❌</td><td class='ms-tag' data-ms="false">❌</td>`;
         row.addEventListener("click", function () {
           row.classList.toggle("selected");
           updateCart();
@@ -286,7 +286,7 @@ const msCell = row.querySelector('.ms-tag');
                 <th>Storage (GB)</th>
                 <th class="sql-header">SQL</th>
                 <th class="ms-header">MS</th>
-                <th class="baas-header" style="cursor: pointer;">BaaS</th>
+                
               </tr>
             </thead>
             <tbody></tbody>
