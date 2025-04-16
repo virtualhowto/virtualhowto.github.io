@@ -60,9 +60,6 @@ function exportCSV() {
   }
   const msLicCost = selectedVMs.length > 0 ? (FLAT_PRICING.microsoft_license?.corporate || 0) : 0;
 
-  let csv = "VM Name,OS,vCPU,RAM (GB),Storage (GB),Cost
-";
-
   rows.forEach(row => {
     const cells = row.children;
     const name = cells[0].textContent;
