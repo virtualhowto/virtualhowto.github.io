@@ -6,37 +6,69 @@
     <title>Dynamic Bookmarks</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #ff7eb3, #ff758c);
-            color: #fff;
-            text-align: center;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
         }
-        h1 {
-            font-size: 3em;
-            margin-bottom: 20px;
+        header {
+            background-color: #00539f;
+            color: #fff;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5em;
         }
         ul {
             list-style: none;
             padding: 0;
+            margin: 20px auto;
+            max-width: 800px;
         }
         li {
             margin: 10px 0;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        li:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         a {
-            color: #fff;
+            display: block;
+            padding: 15px 20px;
+            color: #00539f;
             text-decoration: none;
             font-size: 1.2em;
-            transition: color 0.3s;
+            font-weight: bold;
         }
         a:hover {
-            color: #ffeb3b;
+            color: #003f7d;
+        }
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #00539f;
+            color: #fff;
+            margin-top: 40px;
         }
     </style>
 </head>
 <body>
-    <h1>Dynamic Bookmarks</h1>
+    <header>
+        <h1>Dynamic Bookmarks</h1>
+    </header>
     <ul id="bookmarks"></ul>
+    <footer>
+        <p>&copy; 2025 Dynamic Bookmarks. All rights reserved.</p>
+    </footer>
 
     <script>
         const repoOwner = "virtualhowto";
