@@ -5,13 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VMaaS - Virtual Machine as a Service</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
-  document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById("bandwidthRange").addEventListener("input", function(e) {
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const range = document.getElementById("bandwidthRange");
+  const label = document.getElementById("bandwidthValue");
+  const ipDropdown = document.getElementById("publicIPCount");
+
+  if (range && label) {
+    range.addEventListener("input", function(e) {
       const locked = Math.round(e.target.value / 100) * 100;
       e.target.value = locked;
-      document.getElementById("bandwidthValue").textContent = locked;
+      label.textContent = locked;
       updateCart();
-    }););
+    });
+  }
+
+  if (ipDropdown) {
+    ipDropdown.addEventListener("change", function() {
+      updateCart();
+    });
+  }
+});
+</script>);
 
     document.getElementById("publicIPCount").addEventListener("change", function() {
       updateCart();
@@ -474,7 +489,6 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
 
   doc.save("vmaas_estimate.pdf");
 }
-    }
 
     function addManualVM() {
       const name = document.getElementById("vmName").value;
