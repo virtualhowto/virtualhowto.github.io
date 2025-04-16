@@ -30,7 +30,13 @@
     "unit": "per IP"
   },
   "firewall": {
-    "ipsec": { "cost": 0, "unit": "flat" },
-    "sophos 2 vCPU / 4GB RAM": { "cost": 350, "unit": "flat" }
+    "ipsec": {
+      "cost": 0,
+      "unit": "flat"
+    },
+    "sophos_up_to_2_vCPU_4GB_RAM": {
+      "cost": 350,
+      "unit": "flat"
+    }
   }
 }
