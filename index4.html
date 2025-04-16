@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VMaaS - Virtual Machine as a Service</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js">function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.tab-header li').forEach(li => li.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`.tab-header li[onclick*="${id}"]`).classList.add('active');
+}
+</script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelector('.baas-header').addEventListener('click', function () {
@@ -220,7 +226,13 @@ const msCell = row.querySelector('.ms-tag');
       background: #1c3f94;
       color: white;
     }
-  </style>
+  .tabs { margin-top: 20px; }
+.tab-header { display: flex; list-style: none; padding-left: 0; border-bottom: 2px solid #ccc; }
+.tab-header li { padding: 10px 20px; cursor: pointer; background: #eee; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 5px; }
+.tab-header li.active { background: #1c3f94; color: white; font-weight: bold; }
+.tab-pane { display: none; padding-top: 20px; }
+.tab-pane.active { display: block; }
+</style>
 </head>
 <body>
   <header>Virtual Machine as a Service (VMaaS)</header>
@@ -229,84 +241,24 @@ const msCell = row.querySelector('.ms-tag');
     <p>Deploy your virtual machines in minutes with flexible pricing and high performance.</p>
   </section>
   <div class="container">
-    <section class="pricing">
-      <h2>VM Pricing Calculator</h2>
-<!-- Bandwidth slider -->
-<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
-  <label for="bandwidthRange"><strong>Total Bandwidth (Mbps):</strong> <span id="bandwidthValue">0</span></label>
-  <input type="range" id="bandwidthRange" min="0" max="1000" value="0" step="100" style="width: 100%;" list="bandwidthTicks">
-<datalist id="bandwidthTicks">
-  <option value="0" label="0 Mbps"></option>
-  <option value="100" label="100"></option>
-  <option value="200" label="200"></option>
-  <option value="300" label="300"></option>
-  <option value="400" label="400"></option>
-  <option value="500" label="500"></option>
-  <option value="600" label="600"></option>
-  <option value="700" label="700"></option>
-  <option value="800" label="800"></option>
-  <option value="900" label="900"></option>
-  <option value="1000" label="1000 Mbps"></option>
-</datalist>
+    <div class="tabs">
+  <ul class="tab-header">
+    <li class="active" onclick="showTab('pricing-tab')">VM Pricing</li>
+    <li onclick="showTab('backup-tab')">Backup</li>
+  </ul>
+  <div class="tab-content">
+    <div id="pricing-tab" class="tab-pane active">
+      <section class="pricing">$1</section>
+    </div>
+    <div id="backup-tab" class="tab-pane">
+      <section class="backup">
+        <h2>Backup Sizing &amp; Estimation</h2>
+        <p>This section will allow backup-related cost estimations for selected VMs marked with BaaS ✅.</p>
+        <!-- Additional backup UI will go here -->
+      </section>
+    </div>
+  </div>
 </div>
-
-<!-- Firewall Type -->
-<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
-  <label for="firewallType"><strong>Firewall Option:</strong></label>
-  <select id="firewallType" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-    <option value="ipsec">IPSec (Free)</option>
-    <option value="sophos">Sophos ($350)</option>
-  </select>
-</div>
-
-<!-- Public IPs dropdown -->
-<div style="margin-bottom: 20px; text-align: left; max-width: 600px; margin-inline: auto;">
-  <label for="publicIPCount"><strong>Number of Public IPs:</strong></label>
-  <select id="publicIPCount" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-    <option value="0">0 (Private Only)</option>
-    <option value="1">1</option>
-    <option value="2">2</option>
-    <option value="4">4</option>
-    <option value="8">8</option>
-    <option value="16">16</option>
-  </select>
-</div>
-      <input type="file" id="fileUpload" accept=".xlsx" />
-      <div class="vm-table-container">
-        <table class="vm-table" id="vm-table">
-          <thead>
-            <tr>
-              <th>VM Name</th>
-              <th>OS</th>
-              <th>vCPU</th>
-              <th>RAM (GB)</th>
-              <th>Storage (GB)</th>
-              <th>SQL</th>
-              <th class="baas-header" style="cursor: pointer;">BaaS</th>
-              <th>MS</th>
-            </tr>
-          </thead>
-              <th>vCPU</th>
-              <th>RAM (GB)</th>
-              <th>Storage (GB)</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="manual-entry-form">
-          <input type="text" id="vmName" placeholder="VM Name">
-          <input type="text" id="vmOS" placeholder="OS">
-          <input type="number" id="vmCPU" placeholder="vCPU">
-          <input type="number" step="0.01" id="vmRAM" placeholder="RAM GB">
-          <input type="number" step="0.01" id="vmStorage" placeholder="Storage GB">
-          <button onclick="addManualVM()">➕</button>
-        </div>
-        <div class="actions">
-          <button onclick="exportCSV()">Export as CSV</button>
-          <button onclick="exportPDF()">Export as PDF</button>
-        </div>
-      </div>
-    </section>
   </div>
   <div class="cart" id="cart">
     <h3>Summary</h3>
