@@ -367,9 +367,10 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     <h3>Summary</h3>
     <ul id="cart-list"></ul>
     <div class="cost-comparison">
-      <div>
-        <p><strong>Your Cost:</strong> <span id="cart-total">$0.00</span></p>
-      </div>
+  <div>
+    <p><strong>Total Estimated Cost:</strong> <span id="cart-total">$0.00</span></p>
+  </div>
+</div>
       <div>
         <p><strong>Azure Cost Estimate:</strong> <span id="azure-total">$0.00</span></p>
       </div>
@@ -416,9 +417,9 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     function updateCart() {
       const cartList = document.getElementById("cart-list");
       const cartTotal = document.getElementById("cart-total");
-      const azureTotal = document.getElementById("azure-total");
+      
       let totalCost = 0;
-      let totalAzureCost = 0;
+      
       let selectedVMs = [];
       cartList.innerHTML = "";
 
@@ -430,18 +431,18 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
         const bandwidth = parseInt(document.getElementById('bandwidthRange')?.value || 0);
         const publicIPs = parseInt(document.getElementById('publicIPCount')?.value || 0);
         let cost = calculateCost(cpu, ram, storage, bandwidth, publicIPs); // Default: 1 public IP per VM
-        let azureCost = calculateAzureCost(cpu, ram, storage);
+        let azureCost = 0;
         totalCost += cost;
-        totalAzureCost += azureCost;
+        
         selectedVMs.push({ name: cells[0].textContent, cost, azureCost, cpu, ram, storage });
 
         let li = document.createElement("li");
-        li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)} (Azure: $${azureCost.toFixed(2)})`;
+        li.textContent = `${cells[0].textContent} - $${cost.toFixed(2)}`;
         cartList.appendChild(li);
       });
 
       cartTotal.textContent = `$${totalCost.toFixed(2)}`;
-      azureTotal.textContent = `$${totalAzureCost.toFixed(2)}`;
+      
 
       localStorage.setItem('selectedVMs', JSON.stringify(selectedVMs));
     }
