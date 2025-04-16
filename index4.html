@@ -9,6 +9,10 @@
   document.querySelectorAll('.tab-header li').forEach(li => li.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelector(`.tab-header li[onclick*="${id}"]`).classList.add('active');
+  localStorage.setItem('activeTab', id);
+}
+  localStorage.setItem('activeTab', id);
+}"]`).classList.add('active');
 }
 function calculateBackupSizing() {
   const retention = parseInt(document.getElementById("backupRetention").value);
@@ -38,6 +42,10 @@ function calculateBackupSizing() {
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  const savedTab = localStorage.getItem('activeTab');
+  if (savedTab) showTab(savedTab);
+  const savedTab = localStorage.getItem('activeTab');
+  if (savedTab) showTab(savedTab);
   document.querySelector('.baas-header').addEventListener('click', function () {
     document.querySelectorAll('.vm-table tr.selected .baas-tag').forEach(cell => {
       cell.textContent = '✅';
@@ -67,7 +75,9 @@ document.addEventListener("DOMContentLoaded", function () {
       tbody.innerHTML = "";
       vms.forEach(vm => {
         const provisioned = vm["Provisioned MiB"] ?? vm["Provisioned MB"] ?? 0;
-        const name = vm["VM"] || vm["Name"] || "Unknown VM";
+        $1
+        const autoSQL = /sql/i.test(name);
+
         const os = vm["OS according to the configuration file"] || vm["Guest OS"] || vm["OS"] || "";
         const cpu = vm["CPUs"] || vm["Num CPU"] || 1;
         const ram = vm["Memory"] ? (vm["Memory"] / 1024).toFixed(2) : "0.00";
@@ -75,7 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const storage = (storageRaw / 1024).toFixed(2);
 
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td><td class='sql-tag' data-sql="false">❌</td><td class='ms-tag' data-ms="false">❌</td>`;
+        row.innerHTML = `<td>${name}</td><td>${os}</td><td>${cpu}</td><td>${ram}</td><td>${storage}</td>$1${autoSQL ? 'true' : 'false'}$2${autoSQL ? '✅' : '❌'}❌</td><td class='ms-tag' data-ms="false">❌</td>`;
         row.addEventListener("click", function () {
           row.classList.toggle("selected");
           updateCart();
