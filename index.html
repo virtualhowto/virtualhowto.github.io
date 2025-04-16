@@ -96,7 +96,8 @@
                                      <td>${vm["OS according to the configuration file"]}</td>
                                      <td>${vm["CPUs"]}</td>
                                      <td>${(vm["Memory"] / 1024).toFixed(2)}</td>
-                                     <td>${(vm["Provisioned MB"] / 1024).toFixed(2)}</td>`;
+                                     <td>${(((vm["Provisioned MiB"] ?? vm["Provisioned MB"]) || 0) / 1024).toFixed(2)}</td>`;
+
                     row.addEventListener("click", function() {
                         row.classList.toggle("selected");
                         updateCart();
