@@ -1,22 +1,37 @@
 {
-  "cpu": 10,
-  "ram": 18,
-  "storage": 0.10,
-  "bandwidth_mbps": 1.50,
-  "public_ip": 15,
-  "vcsp": 47.00,
-  "firewall": {
-    "hosting": { "cost": 50 },
-    "aggregated": { "cost": 150, "extra_bandwidth": 100 }
+  "cpu": {
+    "cost": 16.61,
+    "unit": "per core"
+  },
+  "ram": {
+    "cost": 10.51,
+    "unit": "per GB"
+  },
+  "storage": {
+    "cost": 0.24,
+    "unit": "per GB"
+  },
+ "vcsp": {
+    "cost": 27.13,
+    "unit": "per cpu"
   },
   "microsoft_license": {
-    "education": 15,
-    "corporate": 25
+    "corporate": {
+      "cost": 25,
+      "unit": "per cpu"
+    }
   },
-  "vmwareStandard": { "cost": 50, "unit": "per core per month" },
-  "vmwareEnterprise": { "cost": 4780, "unit": "# CPU" },
-  "azure": { "cost": 33.30, "unit": "per core per month" },
-  "hpe": { "cost": 3350.00, "unit": "# CPU" },
-  "openshift": { "cost": "Awaiting Quote", "unit": "TBD" },
-  "openvirt": { "cost": "Awaiting Quote", "unit": "TBD" }
+  "bandwidth_mbps": {
+    "cost": 2.30,
+    "unit": "per Mbps"
+  },
+  "public_ip": {
+    "cost": 15,
+    "unit": "per IP"
+  },
+  "firewall": {
+    "ipsec": { "cost": 0, "unit": "flat" },
+    "sophos up to 2 vCPU / 4GB RAM": { "cost": 350, "unit": "flat" }
+   },
+  }
 }
