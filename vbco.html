@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Veeam Backup Storage Calculator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    input[type="number"], input[type="checkbox"] {
+      width: 100%;
+      padding: 0.5rem;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .card {
+      margin-top: 2rem;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      background: #f9f9f9;
+    }
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 0.5rem 0;
+    }
+    @media (max-width: 600px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Veeam Backup Storage Calculator</h1>
+  <div class="grid">
+    <div>
+      <label>Source Data (TB)</label>
+      <input type="number" id="sourceData" value="100" />
+    </div>
+    <div>
+      <label>Daily Change Rate (%)</label>
+      <input type="number" id="dailyChange" value="5" />
+    </div>
+    <div>
+      <label>Yearly Growth Rate (%)</label>
+      <input type="number" id="yearlyGrowth" value="10" />
+    </div>
+    <div>
+      <label>Compression Ratio</label>
+      <input type="number" id="compression" value="2" />
+    </div>
+    <div>
+      <label>Daily Retention (Days)</label>
+      <input type="number" id="dailyRetention" value="30" />
+    </div>
+    <div>
+      <label>Weekly Retention (Weeks)</label>
+      <input type="number" id="weeklyRetention" value="4" />
+    </div>
+    <div>
+      <label>Monthly Retention (Months)</label>
+      <input type="number" id="monthlyRetention" value="12" />
+    </div>
+    <div>
+      <label>Yearly Retention (Years)</label>
+      <input type="number" id="yearlyRetention" value="3" />
+    </div>
+    <div style="grid-column: span 2;">
+      <label><input type="checkbox" id="capacityTier" /> Enable Capacity Tier (offload older backups)</label>
+    </div>
+  </div>
+  <button onclick="calculateStorage()">Calculate</button>
+
+  <div id="results" class="card" style="display:none;">
+    <h2>Results (in TB)</h2>
+    <div id="output"></div>
+  </div>
+
+  <script>
+    function calculateStorage() {
+      const getVal = id => parseFloat(document.getElementById(id).value)
+      const sourceData = getVal("sourceData")
+      const dailyChange = getVal("dailyChange")
+      const yearlyGrowth = getVal("yearlyGrowth")
+      const compression = getVal("compression")
+      const dailyRetention = getVal("dailyRetention")
+      const weeklyRetention = getVal("weeklyRetention")
+      const monthlyRetention = getVal("monthlyRetention")
+      const yearlyRetention = getVal("yearlyRetention")
+      const capacityTierEnabled = document.getElementById("capacityTier").checked
+
+      const adjustedSource = sourceData * (1 + yearlyGrowth / 100)
+      const fullBackup = adjustedSource / compression
+      const dailyIncremental = adjustedSource * (dailyChange / 100) / compression
+      const dailyTotal = dailyIncremental * dailyRetention
+      const weeklyGFS = fullBackup * weeklyRetention
+      const monthlyGFS = fullBackup * monthlyRetention
+      const yearlyGFS = fullBackup * yearlyRetention
+      const workspace = fullBackup * 1.25
+
+      const capacityTierStorage = capacityTierEnabled ? (monthlyGFS + yearlyGFS) : 0
+      const total = fullBackup + dailyTotal + weeklyGFS + monthlyGFS + yearlyGFS + workspace
+
+      const resultData = {
+        "Full Backup": fullBackup,
+        "Daily Incrementals": dailyTotal,
+        "Weekly GFS": weeklyGFS,
+        "Monthly GFS": monthlyGFS,
+        "Yearly GFS": yearlyGFS,
+        "Workspace": workspace,
+        ...(capacityTierEnabled && {"Capacity Tier (Object Storage)": capacityTierStorage}),
+        "Total Storage Required": total
+      }
+
+      const outputDiv = document.getElementById("output")
+      outputDiv.innerHTML = ""
+      for (const [key, val] of Object.entries(resultData)) {
+        const div = document.createElement("div")
+        div.className = "result-item"
+        div.innerHTML = `<span>${key}</span><span>${val.toFixed(2)} TB</span>`
+        outputDiv.appendChild(div)
+      }
+
+      document.getElementById("results").style.display = "block"
+    }
+  </script>
+</body>
+</html>
