@@ -405,7 +405,12 @@ Total Estimated Cost,$${finalTotal.toFixed(2)}
     const price = obj.cost || 0;
     return `<option value="${key}">${label} ($${price})</option>`;
   });
-            firewallSelect.innerHTML = options.map(opt => opt.replace('value="ipsec"', 'value="ipsec" selected')).join('');
+            firewallSelect.innerHTML = options.map(opt => {
+  if (opt.includes('value="ipsec"')) {
+    return opt.replace('value="ipsec"', 'value="ipsec" selected');
+  }
+  return opt;
+}).join('');
           }
           console.log("Flat pricing loaded:", FLAT_PRICING);
         })
