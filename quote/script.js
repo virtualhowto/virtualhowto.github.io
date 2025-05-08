@@ -1,3 +1,7 @@
+let rawData = [];
+let selectedRows = [];
+let bundles = [];
+
 document.getElementById("uploadExcel").addEventListener("change", handleFile);
 
 function handleFile(event) {
@@ -14,54 +18,32 @@ function handleFile(event) {
         rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
         console.log("Raw Data:", rawData);
-        displayHeaderSelection();
+        displayTable();
     };
     reader.readAsArrayBuffer(file);
 }
 
-function displayHeaderSelection() {
-    let headerDiv = document.getElementById("headerSelection");
-    headerDiv.innerHTML = "<h3>Select Header Row</h3>";
-
-    if (!rawData.length) {
-        headerDiv.innerHTML += "<p>No data found in the file.</p>";
-        return;
-    }
-
-    rawData.forEach((row, index) => {
-        let button = document.createElement("button");
-        button.className = "btn";
-        button.innerText = `Row ${index + 1}`;
-        button.onclick = () => setHeader(index);
-        headerDiv.appendChild(button);
-    });
-}
-
-function setHeader(index) {
-    headerRowIndex = index;
-    setHeaderRow();
-}
-
-function setHeaderRow() {
-    selectedRows = [];
-    let headers = rawData[headerRowIndex];
+function displayTable() {
     let tableHeaders = document.getElementById("tableHeaders");
     let tableBody = document.getElementById("tableBody");
     tableHeaders.innerHTML = "";
     tableBody.innerHTML = "";
 
-    if (!headers || headers.length === 0) {
-        alert("Invalid header row selection.");
+    if (!rawData.length) {
+        alert("No data found in the file.");
         return;
     }
 
+    // Set headers
+    let headers = rawData[0];
     headers.forEach(header => {
         let th = document.createElement("th");
         th.innerText = header;
         tableHeaders.appendChild(th);
     });
 
-    rawData.slice(headerRowIndex + 1).forEach((row, rowIndex) => {
+    // Populate table rows
+    rawData.slice(1).forEach((row, rowIndex) => {
         let tr = document.createElement("tr");
         tr.setAttribute("data-index", rowIndex);
         tr.onclick = () => toggleSelection(rowIndex, tr);
@@ -89,10 +71,10 @@ function toggleSelection(index, rowElement) {
 function createBundle() {
     if (selectedRows.length === 0) return alert("Select items to bundle!");
 
-    let costColumnIndex = rawData[headerRowIndex].indexOf("Cost");
+    let costColumnIndex = rawData[0].indexOf("Cost"); // Adjust based on header name
     if (costColumnIndex === -1) return alert("Cost column not found!");
 
-    let bundle = selectedRows.map(index => rawData[headerRowIndex + 1 + index]);
+    let bundle = selectedRows.map(index => rawData[index + 1]); // Adjust for header row
     let totalCost = bundle.reduce((sum, row) => sum + parseFloat(row[costColumnIndex] || 0), 0);
 
     let bundleDiv = document.createElement("div");
