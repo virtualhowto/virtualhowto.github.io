@@ -31,7 +31,8 @@ h1, h2 {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    margin: 5px;
+    margin: 10px auto;
+    display: block;
     transition: 0.3s;
 }
 
