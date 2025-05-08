@@ -8,14 +8,13 @@ function handleFile(event) {
     const file = event.target.files[0];
     if (!file) return alert("Please select a valid Excel file.");
 
-    // Show loading spinner
     document.getElementById("loading").classList.remove("hidden");
     document.getElementById("tableContainer").classList.add("hidden");
     document.getElementById("bundleBtn").classList.add("hidden");
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        setTimeout(() => { // Simulate loading delay
+        setTimeout(() => {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: "array" });
             const sheetName = workbook.SheetNames[0];
@@ -23,19 +22,16 @@ function handleFile(event) {
 
             rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-            console.log("Raw Data:", rawData); // Debugging step
+            console.log("Raw Data:", rawData);
             displayTable();
 
-            // Hide loading spinner and show table
             document.getElementById("loading").classList.add("hidden");
             document.getElementById("tableContainer").classList.remove("hidden");
-            document.getElementById("tableContainer").style.opacity = "1";
             document.getElementById("bundleBtn").classList.remove("hidden");
-        }, 1500); // Simulated delay for better UX
+        }, 1500);
     };
     reader.readAsArrayBuffer(file);
 }
-
 
 function displayTable() {
     let tableHeaders = document.getElementById("tableHeaders");
@@ -48,15 +44,13 @@ function displayTable() {
         return;
     }
 
-    // Set headers
-    let headers = Object.keys(rawData[0]); // Extract column names dynamically
+    let headers = Object.keys(rawData[0]);
     headers.forEach(header => {
         let th = document.createElement("th");
         th.innerText = header;
         tableHeaders.appendChild(th);
     });
 
-    // Populate table rows
     rawData.forEach((row, rowIndex) => {
         let tr = document.createElement("tr");
         tr.setAttribute("data-index", rowIndex);
@@ -64,12 +58,28 @@ function displayTable() {
 
         headers.forEach(header => {
             let td = document.createElement("td");
-            td.innerText = row[header] || ""; // Ensure empty cells are handled
+            td.innerText = row[header] || "";
             tr.appendChild(td);
         });
 
         tableBody.appendChild(tr);
     });
+}
 
-    console.log("Table Rendered Successfully!");
+function toggleSelection(index, rowElement) {
+    rowElement.classList.toggle("selected");
+    selectedRows.includes(index) ? selectedRows.splice(selectedRows.indexOf(index), 1) : selectedRows.push(index);
+}
+
+function createBundle() {
+    if (selectedRows.length === 0) return alert("Select items to bundle!");
+    let bundleName = prompt("Enter a name for this bundle:");
+    if (!bundleName) return;
+
+    let bundleDiv = document.createElement("div");
+    bundleDiv.innerHTML = `<strong>${bundleName}</strong> - ${selectedRows.length} items selected`;
+    document.getElementById("bundles").appendChild(bundleDiv);
+
+    selectedRows = [];
+    document.querySelectorAll(".selected").forEach(row => row.classList.remove("selected"));
 }
