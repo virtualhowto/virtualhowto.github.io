@@ -33,39 +33,6 @@ function handleFile(event) {
     reader.readAsArrayBuffer(file);
 }
 
-function displayTable() {
-    let tableHeaders = document.getElementById("tableHeaders");
-    let tableBody = document.getElementById("tableBody");
-    tableHeaders.innerHTML = "";
-    tableBody.innerHTML = "";
-
-    if (!rawData.length) {
-        alert("No data found in the file.");
-        return;
-    }
-
-    let headers = Object.keys(rawData[0]);
-    headers.forEach(header => {
-        let th = document.createElement("th");
-        th.innerText = header;
-        tableHeaders.appendChild(th);
-    });
-
-    rawData.forEach((row, rowIndex) => {
-        let tr = document.createElement("tr");
-        tr.setAttribute("data-index", rowIndex);
-        tr.onclick = () => toggleSelection(rowIndex, tr);
-
-        headers.forEach(header => {
-            let td = document.createElement("td");
-            td.innerText = row[header] || "";
-            tr.appendChild(td);
-        });
-
-        tableBody.appendChild(tr);
-    });
-}
-
 function toggleSelection(index, rowElement) {
     rowElement.classList.toggle("selected");
     selectedRows.includes(index) ? selectedRows.splice(selectedRows.indexOf(index), 1) : selectedRows.push(index);
@@ -76,8 +43,12 @@ function createBundle() {
     let bundleName = prompt("Enter a name for this bundle:");
     if (!bundleName) return;
 
+    let bundleType = confirm("Click OK for MRR (Monthly Recurring Revenue), Cancel for CapEx (Capital Expenditure)")
+        ? "MRR"
+        : "CapEx";
+
     let bundleDiv = document.createElement("div");
-    bundleDiv.innerHTML = `<strong>${bundleName}</strong> - ${selectedRows.length} items selected`;
+    bundleDiv.innerHTML = `<strong>${bundleName} (${bundleType})</strong> - ${selectedRows.length} items selected`;
     document.getElementById("bundles").appendChild(bundleDiv);
 
     selectedRows = [];
