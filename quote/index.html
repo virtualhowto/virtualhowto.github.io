@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,11 +11,11 @@
 
     <div class="container">
         <h1>Finance Calculator</h1>
-        <p>Upload an Excel file, map columns, and create bundles for finance calculations.</p>
+        <p>Upload an Excel file, select a header row, and create bundles.</p>
 
         <input type="file" id="uploadExcel" accept=".xlsx, .xls">
-        <div id="columnMapping"></div>
-        <button class="btn" onclick="importData()">Import Data</button>
+        <div id="headerSelection"></div>
+        <button class="btn" onclick="setHeaderRow()">Set Header Row</button>
 
         <h2>Items Table</h2>
         <div class="table-container">
