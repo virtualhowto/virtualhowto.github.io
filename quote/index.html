@@ -22,6 +22,10 @@
             <p>Loading data...</p>
         </div>
 
+        <h2>Set Header Row</h2>
+        <p>Select a row to be the header. All rows above it will be discarded.</p>
+        <div id="headerSelection"></div>
+
         <h2>Items Table</h2>
         <input type="text" id="searchBar" placeholder="Search items..." onkeyup="filterTable()">
         <div class="table-container" id="tableContainer">
@@ -41,6 +45,8 @@
 
         <button class="btn hidden" id="exportExcelBtn" onclick="exportToExcel()">Export to Excel</button>
         <button class="btn hidden" id="exportPdfBtn" onclick="exportToPDF()">Export to PDF</button>
+
+        <button class="btn" onclick="toggleDarkMode()">Toggle Dark Mode</button>
     </div>
 
     <script src="script.js"></script>
