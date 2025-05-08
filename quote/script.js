@@ -1,8 +1,3 @@
-let rawData = [];
-let selectedRows = [];
-let bundles = [];
-let headerRowIndex = 0;
-
 document.getElementById("uploadExcel").addEventListener("change", handleFile);
 
 function handleFile(event) {
@@ -16,10 +11,9 @@ function handleFile(event) {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
-        // Convert sheet to JSON, ensuring empty cells are handled
         rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-        console.log("Raw Data:", rawData); // Debugging step
+        console.log("Raw Data:", rawData);
         displayHeaderSelection();
     };
     reader.readAsArrayBuffer(file);
@@ -49,7 +43,7 @@ function setHeader(index) {
 }
 
 function setHeaderRow() {
-    selectedRows = []; // Reset selection
+    selectedRows = [];
     let headers = rawData[headerRowIndex];
     let tableHeaders = document.getElementById("tableHeaders");
     let tableBody = document.getElementById("tableBody");
@@ -95,7 +89,7 @@ function toggleSelection(index, rowElement) {
 function createBundle() {
     if (selectedRows.length === 0) return alert("Select items to bundle!");
 
-    let costColumnIndex = rawData[headerRowIndex].indexOf("Cost"); // Adjust based on header name
+    let costColumnIndex = rawData[headerRowIndex].indexOf("Cost");
     if (costColumnIndex === -1) return alert("Cost column not found!");
 
     let bundle = selectedRows.map(index => rawData[headerRowIndex + 1 + index]);
