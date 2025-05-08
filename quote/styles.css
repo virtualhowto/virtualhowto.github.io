@@ -50,6 +50,17 @@ h2 {
     transform: scale(1.05);
 }
 
+/* Floating Button */
+.floating-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
 /* File Upload */
 input[type="file"] {
     display: block;
@@ -65,8 +76,6 @@ input[type="file"] {
 .table-container {
     overflow-x: auto;
     margin-top: 20px;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
 }
 
 table {
