@@ -23,7 +23,7 @@ function handleFile(event) {
 
             rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-            console.log("Raw Data:", rawData);
+            console.log("Raw Data:", rawData); // Debugging step
             displayTable();
 
             // Hide loading spinner and show table
@@ -35,6 +35,7 @@ function handleFile(event) {
     };
     reader.readAsArrayBuffer(file);
 }
+
 
 function displayTable() {
     let tableHeaders = document.getElementById("tableHeaders");
@@ -48,7 +49,7 @@ function displayTable() {
     }
 
     // Set headers
-    let headers = rawData[0];
+    let headers = Object.keys(rawData[0]); // Extract column names dynamically
     headers.forEach(header => {
         let th = document.createElement("th");
         th.innerText = header;
@@ -56,17 +57,19 @@ function displayTable() {
     });
 
     // Populate table rows
-    rawData.slice(1).forEach((row, rowIndex) => {
+    rawData.forEach((row, rowIndex) => {
         let tr = document.createElement("tr");
         tr.setAttribute("data-index", rowIndex);
         tr.onclick = () => toggleSelection(rowIndex, tr);
 
-        row.forEach(cell => {
+        headers.forEach(header => {
             let td = document.createElement("td");
-            td.innerText = cell || "";
+            td.innerText = row[header] || ""; // Ensure empty cells are handled
             tr.appendChild(td);
         });
 
         tableBody.appendChild(tr);
     });
+
+    console.log("Table Rendered Successfully!");
 }
