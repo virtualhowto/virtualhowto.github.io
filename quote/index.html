@@ -15,8 +15,14 @@
 
         <input type="file" id="uploadExcel" accept=".xlsx, .xls">
 
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Loading data...</p>
+        </div>
+
         <h2>Items Table</h2>
-        <div class="table-container">
+        <div class="table-container hidden" id="tableContainer">
             <table id="dataTable">
                 <thead>
                     <tr id="tableHeaders"></tr>
@@ -25,7 +31,7 @@
             </table>
         </div>
 
-        <button class="btn" onclick="createBundle()">Create Bundle</button>
+        <button class="btn hidden" id="bundleBtn" onclick="createBundle()">Create Bundle</button>
 
         <h2>Bundles</h2>
         <div id="bundles"></div>
