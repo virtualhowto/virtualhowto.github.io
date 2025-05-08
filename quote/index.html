@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance Calculator with Bundles</title>
+    <title>Finance Calculator</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -11,11 +11,9 @@
 
     <div class="container">
         <h1>Finance Calculator</h1>
-        <p>Upload an Excel file, select a header row, and create bundles.</p>
+        <p>Upload an Excel file and select rows to group them into bundles.</p>
 
         <input type="file" id="uploadExcel" accept=".xlsx, .xls">
-        <div id="headerSelection"></div>
-        <button class="btn" onclick="setHeaderRow()">Set Header Row</button>
 
         <h2>Items Table</h2>
         <div class="table-container">
