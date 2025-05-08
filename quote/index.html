@@ -6,6 +6,7 @@
     <title>Finance Calculator</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -22,6 +23,7 @@
         </div>
 
         <h2>Items Table</h2>
+        <input type="text" id="searchBar" placeholder="Search items..." onkeyup="filterTable()">
         <div class="table-container" id="tableContainer">
             <table id="dataTable">
                 <thead>
@@ -36,6 +38,9 @@
 
         <h2>Bundles</h2>
         <div id="bundles"></div>
+
+        <button class="btn hidden" id="exportExcelBtn" onclick="exportToExcel()">Export to Excel</button>
+        <button class="btn hidden" id="exportPdfBtn" onclick="exportToPDF()">Export to PDF</button>
     </div>
 
     <script src="script.js"></script>
