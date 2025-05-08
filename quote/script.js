@@ -1,6 +1,7 @@
 let rawData = [];
 let selectedRows = [];
 let bundles = [];
+let headerRowIndex = 0;
 
 document.getElementById("uploadExcel").addEventListener("change", handleFile);
 
@@ -14,53 +15,45 @@ function handleFile(event) {
         const sheet = workbook.Sheets[sheetName];
         rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        displayColumnMapping(rawData[0]);
+        displayHeaderSelection();
     };
     reader.readAsArrayBuffer(file);
 }
 
-function displayColumnMapping(headers) {
-    let mappingDiv = document.getElementById("columnMapping");
-    mappingDiv.innerHTML = "<h3>Map Columns</h3>";
-    headers.forEach((header, index) => {
-        mappingDiv.innerHTML += `
-            <label>${header}: 
-                <select id="col_${index}">
-                    <option value="">Ignore</option>
-                    <option value="description">Description</option>
-                    <option value="cost">Cost</option>
-                    <option value="quantity">Quantity</option>
-                </select>
-            </label><br>`;
+function displayHeaderSelection() {
+    let headerDiv = document.getElementById("headerSelection");
+    headerDiv.innerHTML = "<h3>Select Header Row</h3>";
+    rawData.forEach((row, index) => {
+        headerDiv.innerHTML += `<button class="btn" onclick="setHeader(${index})">Row ${index + 1}</button>`;
     });
 }
 
-function importData() {
-    let mappings = {};
-    rawData[0].forEach((header, index) => {
-        let selectedValue = document.getElementById(`col_${index}`).value;
-        if (selectedValue) mappings[selectedValue] = index;
-    });
+function setHeader(index) {
+    headerRowIndex = index;
+    setHeaderRow();
+}
 
+function setHeaderRow() {
+    let headers = rawData[headerRowIndex];
     let tableHeaders = document.getElementById("tableHeaders");
     let tableBody = document.getElementById("tableBody");
     tableHeaders.innerHTML = "";
     tableBody.innerHTML = "";
 
-    Object.keys(mappings).forEach(key => {
+    headers.forEach(header => {
         let th = document.createElement("th");
-        th.innerText = key.charAt(0).toUpperCase() + key.slice(1);
+        th.innerText = header;
         tableHeaders.appendChild(th);
     });
 
-    rawData.slice(1).forEach((row, rowIndex) => {
+    rawData.slice(headerRowIndex + 1).forEach((row, rowIndex) => {
         let tr = document.createElement("tr");
         tr.setAttribute("data-index", rowIndex);
         tr.onclick = () => toggleSelection(rowIndex, tr);
 
-        Object.values(mappings).forEach(index => {
+        row.forEach(cell => {
             let td = document.createElement("td");
-            td.innerText = row[index] || "";
+            td.innerText = cell || "";
             tr.appendChild(td);
         });
 
@@ -81,7 +74,7 @@ function toggleSelection(index, rowElement) {
 function createBundle() {
     if (selectedRows.length === 0) return alert("Select items to bundle!");
 
-    let bundle = selectedRows.map(index => rawData[index + 1]); // Adjust for header row
+    let bundle = selectedRows.map(index => rawData[headerRowIndex + 1 + index]); // Adjust for header row
     let totalCost = bundle.reduce((sum, row) => sum + parseFloat(row[1] || 0), 0); // Assuming cost is column index 1
 
     let bundleDiv = document.createElement("div");
