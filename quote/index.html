@@ -1,1 +1,40 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Calculator with Bundles</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Finance Calculator</h1>
+        <p>Upload an Excel file, map columns, and create bundles for finance calculations.</p>
+
+        <input type="file" id="uploadExcel" accept=".xlsx, .xls">
+        <div id="columnMapping"></div>
+        <button class="btn" onclick="importData()">Import Data</button>
+
+        <h2>Items Table</h2>
+        <div class="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr id="tableHeaders"></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <button class="btn" onclick="createBundle()">Create Bundle</button>
+
+        <h2>Bundles</h2>
+        <div id="bundles"></div>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
