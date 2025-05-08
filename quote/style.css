@@ -1,37 +1,49 @@
-/* Global Styles */
+/* General Styles */
 body {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Arial', sans-serif;
     background-color: #f4f4f4;
     color: #333;
-    text-align: center;
     margin: 0;
-    padding: 20px;
+    padding: 0;
 }
 
 /* Container */
 .container {
-    max-width: 800px;
-    margin: auto;
-    background: white;
+    max-width: 900px;
+    margin: 40px auto;
+    background: #ffffff;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Headings */
+h1, h2 {
+    color: #0056b3;
+    text-align: center;
+}
+
 /* Buttons */
 .btn {
-    background: linear-gradient(45deg, #007bff, #00c6ff);
+    background-color: #0056b3;
     color: white;
+    padding: 10px 15px;
     border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
     border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
     transition: 0.3s;
 }
 
 .btn:hover {
-    background: linear-gradient(45deg, #0056b3, #0096c7);
+    background-color: #003d82;
+}
+
+/* File Upload */
+input[type="file"] {
+    display: block;
+    margin: 20px auto;
+    padding: 10px;
 }
 
 /* Table */
@@ -46,17 +58,19 @@ table {
 }
 
 th, td {
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #ddd;
+    text-align: left;
 }
 
 th {
-    background: #007bff;
+    background-color: #0056b3;
     color: white;
 }
 
+/* Selected Row */
 .selected {
-    background-color: #d3f9d8;
+    background-color: #f0c674;
 }
 
 /* Bundles */
