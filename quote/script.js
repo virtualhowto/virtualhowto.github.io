@@ -8,17 +8,30 @@ function handleFile(event) {
     const file = event.target.files[0];
     if (!file) return alert("Please select a valid Excel file.");
 
+    // Show loading spinner
+    document.getElementById("loading").classList.remove("hidden");
+    document.getElementById("tableContainer").classList.add("hidden");
+    document.getElementById("bundleBtn").classList.add("hidden");
+
     const reader = new FileReader();
     reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
+        setTimeout(() => { // Simulate loading delay
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
 
-        rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+            rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-        console.log("Raw Data:", rawData);
-        displayTable();
+            console.log("Raw Data:", rawData);
+            displayTable();
+
+            // Hide loading spinner and show table
+            document.getElementById("loading").classList.add("hidden");
+            document.getElementById("tableContainer").classList.remove("hidden");
+            document.getElementById("tableContainer").style.opacity = "1";
+            document.getElementById("bundleBtn").classList.remove("hidden");
+        }, 1500); // Simulated delay for better UX
     };
     reader.readAsArrayBuffer(file);
 }
@@ -56,32 +69,4 @@ function displayTable() {
 
         tableBody.appendChild(tr);
     });
-}
-
-function toggleSelection(index, rowElement) {
-    if (selectedRows.includes(index)) {
-        selectedRows = selectedRows.filter(i => i !== index);
-        rowElement.classList.remove("selected");
-    } else {
-        selectedRows.push(index);
-        rowElement.classList.add("selected");
-    }
-}
-
-function createBundle() {
-    if (selectedRows.length === 0) return alert("Select items to bundle!");
-
-    let costColumnIndex = rawData[0].indexOf("Cost"); // Adjust based on header name
-    if (costColumnIndex === -1) return alert("Cost column not found!");
-
-    let bundle = selectedRows.map(index => rawData[index + 1]); // Adjust for header row
-    let totalCost = bundle.reduce((sum, row) => sum + parseFloat(row[costColumnIndex] || 0), 0);
-
-    let bundleDiv = document.createElement("div");
-    bundleDiv.innerHTML = `<strong>Bundle ${bundles.length + 1}</strong> - Total Cost: $${totalCost.toFixed(2)}`;
-    document.getElementById("bundles").appendChild(bundleDiv);
-
-    bundles.push({ items: bundle, totalCost });
-    selectedRows = [];
-    document.querySelectorAll(".selected").forEach(row => row.classList.remove("selected"));
 }
