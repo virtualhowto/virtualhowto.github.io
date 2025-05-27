@@ -5,91 +5,199 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Service Builder</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .page { display: none; }
-    .page.active { display: block; }
-    button { margin-top: 20px; }
-    label { display: block; margin: 10px 0; }
+    :root {
+      --primary: #1c3f94;
+      --accent: #cc5500;
+      --bg: #f4f4f4;
+      --text: #333;
+      --card-bg: #fff;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 8px 20px var(--shadow);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: var(--primary);
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      padding: 15px;
+      transition: all 0.3s;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .option:hover {
+      border-color: var(--primary);
+      background: #f0f6ff;
+    }
+
+    .option input {
+      margin-right: 15px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 30px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #e06500;
+    }
+
+    .page {
+      display: none;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        margin: 20px;
+        padding: 15px;
+      }
+    }
+
+    #summaryText {
+      margin: 20px 0;
+      line-height: 1.6;
+    }
+
+    #totalPrice {
+      text-align: center;
+      font-size: 1.5em;
+      color: var(--primary);
+    }
   </style>
 </head>
 <body>
 
+<div class="container">
   <div class="page active" id="connectivityPage">
     <h2>Select Connectivity</h2>
-    <label><input type="radio" name="connectivity" value="NBN" /> NBN ($50)</label>
-    <label><input type="radio" name="connectivity" value="Fibre" /> Fibre ($100)</label>
-    <label><input type="radio" name="connectivity" value="Wireless" /> Wireless ($70)</label>
+    <div class="options">
+      <label class="option"><input type="radio" name="connectivity" value="NBN"> NBN ($50)</label>
+      <label class="option"><input type="radio" name="connectivity" value="Fibre"> Fibre ($100)</label>
+      <label class="option"><input type="radio" name="connectivity" value="Wireless"> Wireless ($70)</label>
+    </div>
     <button onclick="nextPage('computePage')">Next</button>
   </div>
 
   <div class="page" id="computePage">
     <h2>Select Compute</h2>
-    <label><input type="radio" name="compute" value="2vCPU/4GB" /> 2 vCPU / 4 GB RAM ($60)</label>
-    <label><input type="radio" name="compute" value="4vCPU/8GB" /> 4 vCPU / 8 GB RAM ($120)</label>
-    <label><input type="radio" name="compute" value="8vCPU/16GB" /> 8 vCPU / 16 GB RAM ($200)</label>
+    <div class="options">
+      <label class="option"><input type="radio" name="compute" value="2vCPU/4GB"> 2 vCPU / 4 GB RAM ($60)</label>
+      <label class="option"><input type="radio" name="compute" value="4vCPU/8GB"> 4 vCPU / 8 GB RAM ($120)</label>
+      <label class="option"><input type="radio" name="compute" value="8vCPU/16GB"> 8 vCPU / 16 GB RAM ($200)</label>
+    </div>
     <button onclick="nextPage('storagePage')">Next</button>
   </div>
 
   <div class="page" id="storagePage">
     <h2>Select Storage</h2>
-    <label><input type="radio" name="storage" value="SSD_500GB" /> SSD 500GB ($80)</label>
-    <label><input type="radio" name="storage" value="HDD_1TB" /> HDD 1TB ($60)</label>
-    <label><input type="radio" name="storage" value="SSD_1TB" /> SSD 1TB ($150)</label>
+    <div class="options">
+      <label class="option"><input type="radio" name="storage" value="SSD_500GB"> SSD 500GB ($80)</label>
+      <label class="option"><input type="radio" name="storage" value="HDD_1TB"> HDD 1TB ($60)</label>
+      <label class="option"><input type="radio" name="storage" value="SSD_1TB"> SSD 1TB ($150)</label>
+    </div>
     <button onclick="showSummary()">Finish</button>
   </div>
 
   <div class="page" id="summaryPage">
     <h2>Summary</h2>
-    <p id="summaryText"></p>
-    <h3 id="totalPrice"></h3>
+    <div id="summaryText"></div>
+    <div id="totalPrice"></div>
   </div>
+</div>
 
-  <script>
-    const prices = {
-      connectivity: { NBN: 50, Fibre: 100, Wireless: 70 },
-      compute: { "2vCPU/4GB": 60, "4vCPU/8GB": 120, "8vCPU/16GB": 200 },
-      storage: { SSD_500GB: 80, HDD_1TB: 60, SSD_1TB: 150 }
-    };
+<script>
+  const prices = {
+    connectivity: { NBN: 50, Fibre: 100, Wireless: 70 },
+    compute: { "2vCPU/4GB": 60, "4vCPU/8GB": 120, "8vCPU/16GB": 200 },
+    storage: { SSD_500GB: 80, HDD_1TB: 60, SSD_1TB: 150 }
+  };
 
-    const selections = {};
+  const selections = {};
 
-    function nextPage(nextId) {
-      const currentPage = document.querySelector('.page.active');
-      if (!saveSelection(currentPage)) return alert("Please select an option to continue.");
-      currentPage.classList.remove('active');
-      document.getElementById(nextId).classList.add('active');
+  function nextPage(nextId) {
+    const currentPage = document.querySelector('.page.active');
+    if (!saveSelection(currentPage)) return alert("Please select an option to continue.");
+    currentPage.classList.remove('active');
+    document.getElementById(nextId).classList.add('active');
+  }
+
+  function saveSelection(page) {
+    const input = page.querySelector('input[type="radio"]:checked');
+    if (!input) return false;
+    const group = input.name;
+    selections[group] = input.value;
+    return true;
+  }
+
+  function showSummary() {
+    if (!saveSelection(document.getElementById("storagePage"))) {
+      return alert("Please select a storage option.");
     }
 
-    function saveSelection(page) {
-      const input = page.querySelector('input[type="radio"]:checked');
-      if (!input) return false;
-      const group = input.name;
-      selections[group] = input.value;
-      return true;
-    }
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('summaryPage').classList.add('active');
 
-    function showSummary() {
-      if (!saveSelection(document.getElementById("storagePage"))) {
-        return alert("Please select a storage option.");
-      }
+    const summary = `
+      <strong>Connectivity:</strong> ${selections.connectivity}<br>
+      <strong>Compute:</strong> ${selections.compute}<br>
+      <strong>Storage:</strong> ${selections.storage}
+    `;
+    document.getElementById('summaryText').innerHTML = summary;
 
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById('summaryPage').classList.add('active');
+    const total = prices.connectivity[selections.connectivity]
+                + prices.compute[selections.compute]
+                + prices.storage[selections.storage];
 
-      const summary = `
-        <strong>Connectivity:</strong> ${selections.connectivity}<br>
-        <strong>Compute:</strong> ${selections.compute}<br>
-        <strong>Storage:</strong> ${selections.storage}
-      `;
-      document.getElementById('summaryText').innerHTML = summary;
-
-      const total = prices.connectivity[selections.connectivity]
-                  + prices.compute[selections.compute]
-                  + prices.storage[selections.storage];
-
-      document.getElementById('totalPrice').innerText = `Total Price: $${total}`;
-    }
-  </script>
+    document.getElementById('totalPrice').innerText = `Total Price: $${total}`;
+  }
+</script>
 
 </body>
 </html>
