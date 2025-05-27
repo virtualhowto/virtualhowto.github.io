@@ -118,9 +118,9 @@
   <div class="page active" id="connectivityPage">
     <h2>Select Connectivity</h2>
     <div class="options">
-      <label class="option"><input type="radio" name="connectivity" value="NBN"> NBN ($50)</label>
-      <label class="option"><input type="radio" name="connectivity" value="Fibre"> Fibre ($100)</label>
-      <label class="option"><input type="radio" name="connectivity" value="Wireless"> Wireless ($70)</label>
+      <label class="option"><input type="radio" name="connectivity" value="NBN"> 1Gbps/1Gbps NBN ($1000)</label>
+      <label class="option"><input type="radio" name="connectivity" value="1000Fibre"> 1Gbps/1Gbps EA Fibre ($1250)</label>
+      <label class="option"><input type="radio" name="connectivity" value="100Fibre"> 100Mbps/100Mbps EA Fibre ($500)</label>
     </div>
     <button onclick="nextPage('computePage')">Next</button>
   </div>
@@ -128,9 +128,9 @@
   <div class="page" id="computePage">
     <h2>Select Compute</h2>
     <div class="options">
-      <label class="option"><input type="radio" name="compute" value="2vCPU/4GB"> 2 vCPU / 4 GB RAM ($60)</label>
-      <label class="option"><input type="radio" name="compute" value="4vCPU/8GB"> 4 vCPU / 8 GB RAM ($120)</label>
-      <label class="option"><input type="radio" name="compute" value="8vCPU/16GB"> 8 vCPU / 16 GB RAM ($200)</label>
+      <label class="option"><input type="radio" name="compute" value="2vCPU/4GB"> 2 vCPU / 4 GB RAM ($160)</label>
+      <label class="option"><input type="radio" name="compute" value="4vCPU/8GB"> 4 vCPU / 8 GB RAM ($220)</label>
+      <label class="option"><input type="radio" name="compute" value="8vCPU/16GB"> 8 vCPU / 16 GB RAM ($260)</label>
     </div>
     <button onclick="nextPage('storagePage')">Next</button>
   </div>
@@ -138,9 +138,9 @@
   <div class="page" id="storagePage">
     <h2>Select Storage</h2>
     <div class="options">
-      <label class="option"><input type="radio" name="storage" value="SSD_500GB"> SSD 500GB ($80)</label>
-      <label class="option"><input type="radio" name="storage" value="HDD_1TB"> HDD 1TB ($60)</label>
-      <label class="option"><input type="radio" name="storage" value="SSD_1TB"> SSD 1TB ($150)</label>
+      <label class="option"><input type="radio" name="storage" value="SSD_100GB"> SSD 100GB ($27.00)</label>
+      <label class="option"><input type="radio" name="storage" value="SSD_1TB"> SDD 1TB ($270)</label>
+      <label class="option"><input type="radio" name="storage" value="S3_1TB"> S3 Object 1TB ($39.00)</label>
     </div>
     <button onclick="showSummary()">Finish</button>
   </div>
@@ -154,9 +154,9 @@
 
 <script>
   const prices = {
-    connectivity: { NBN: 50, Fibre: 100, Wireless: 70 },
-    compute: { "2vCPU/4GB": 60, "4vCPU/8GB": 120, "8vCPU/16GB": 200 },
-    storage: { SSD_500GB: 80, HDD_1TB: 60, SSD_1TB: 150 }
+    connectivity: { NBN: 1000, 1000Fibre: 1250, 100Fibre: 500 },
+    compute: { "2vCPU/4GB": 160, "4vCPU/8GB": 220, "8vCPU/16GB": 260 },
+    storage: { SSD_100GB: 27, SDD_1TB: 270, S3_1TB: 39 }
   };
 
   const selections = {};
