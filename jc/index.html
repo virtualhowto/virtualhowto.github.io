@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Service Builder</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    button { margin-top: 20px; }
+    label { display: block; margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+  <div class="page active" id="connectivityPage">
+    <h2>Select Connectivity</h2>
+    <label><input type="radio" name="connectivity" value="NBN" /> NBN ($50)</label>
+    <label><input type="radio" name="connectivity" value="Fibre" /> Fibre ($100)</label>
+    <label><input type="radio" name="connectivity" value="Wireless" /> Wireless ($70)</label>
+    <button onclick="nextPage('computePage')">Next</button>
+  </div>
+
+  <div class="page" id="computePage">
+    <h2>Select Compute</h2>
+    <label><input type="radio" name="compute" value="2vCPU/4GB" /> 2 vCPU / 4 GB RAM ($60)</label>
+    <label><input type="radio" name="compute" value="4vCPU/8GB" /> 4 vCPU / 8 GB RAM ($120)</label>
+    <label><input type="radio" name="compute" value="8vCPU/16GB" /> 8 vCPU / 16 GB RAM ($200)</label>
+    <button onclick="nextPage('storagePage')">Next</button>
+  </div>
+
+  <div class="page" id="storagePage">
+    <h2>Select Storage</h2>
+    <label><input type="radio" name="storage" value="SSD_500GB" /> SSD 500GB ($80)</label>
+    <label><input type="radio" name="storage" value="HDD_1TB" /> HDD 1TB ($60)</label>
+    <label><input type="radio" name="storage" value="SSD_1TB" /> SSD 1TB ($150)</label>
+    <button onclick="showSummary()">Finish</button>
+  </div>
+
+  <div class="page" id="summaryPage">
+    <h2>Summary</h2>
+    <p id="summaryText"></p>
+    <h3 id="totalPrice"></h3>
+  </div>
+
+  <script>
+    const prices = {
+      connectivity: { NBN: 50, Fibre: 100, Wireless: 70 },
+      compute: { "2vCPU/4GB": 60, "4vCPU/8GB": 120, "8vCPU/16GB": 200 },
+      storage: { SSD_500GB: 80, HDD_1TB: 60, SSD_1TB: 150 }
+    };
+
+    const selections = {};
+
+    function nextPage(nextId) {
+      const currentPage = document.querySelector('.page.active');
+      if (!saveSelection(currentPage)) return alert("Please select an option to continue.");
+      currentPage.classList.remove('active');
+      document.getElementById(nextId).classList.add('active');
+    }
+
+    function saveSelection(page) {
+      const input = page.querySelector('input[type="radio"]:checked');
+      if (!input) return false;
+      const group = input.name;
+      selections[group] = input.value;
+      return true;
+    }
+
+    function showSummary() {
+      if (!saveSelection(document.getElementById("storagePage"))) {
+        return alert("Please select a storage option.");
+      }
+
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('summaryPage').classList.add('active');
+
+      const summary = `
+        <strong>Connectivity:</strong> ${selections.connectivity}<br>
+        <strong>Compute:</strong> ${selections.compute}<br>
+        <strong>Storage:</strong> ${selections.storage}
+      `;
+      document.getElementById('summaryText').innerHTML = summary;
+
+      const total = prices.connectivity[selections.connectivity]
+                  + prices.compute[selections.compute]
+                  + prices.storage[selections.storage];
+
+      document.getElementById('totalPrice').innerText = `Total Price: $${total}`;
+    }
+  </script>
+
+</body>
+</html>
