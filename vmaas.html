@@ -6,18 +6,62 @@
   <title>VM Pricing Processor</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
   <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(to bottom right, #f0f4f8, #d9e4f5);
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #1c3f94;
+    }
+    #excelFile {
+      display: block;
+      margin: 20px auto;
+      padding: 10px;
+      font-size: 1em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #1c3f94;
+      color: white;
+    }
+    tr:hover {
+      background-color: #f1f9ff;
+    }
+    tr.selected {
+      background-color: #ffeeba !important;
+    }
     #cart-summary {
       position: fixed;
-      top: 80px;
+      top: 100px;
       right: 20px;
-      width: 300px;
-      background: #f8f9fa;
-      border: 1px solid #ccc;
-      padding: 15px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 320px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
     }
-    .selected {
-      background-color: #ffeeba;
+    #cart-summary h3 {
+      margin-top: 0;
+      color: #1c3f94;
+    }
+    #cart-summary p {
+      margin: 10px 0;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -25,7 +69,7 @@
   <h1>VM Pricing Calculator</h1>
 
   <input type="file" id="excelFile" accept=".xlsx" />
-  <table id="vm-table" border="1">
+  <table id="vm-table">
     <thead>
       <tr>
         <th>VM Name</th>
@@ -57,12 +101,12 @@
 
     function matchAzureVM(cpu, ramGB, osType) {
       const isWindows = osType.toLowerCase().includes("windows");
-      const matched = azurePricing.find(vm =>
-        vm.numberOfCores == cpu && (vm.memoryInMB / 1024).toFixed(2) == ramGB
+      const candidates = azurePricing.filter(vm =>
+        Math.abs(vm.numberOfCores - cpu) <= 1 && Math.abs((vm.memoryInMB / 1024) - ramGB) <= 1
       );
+      if (!candidates.length) return { name: "No Match", cost: 0 };
 
-      if (!matched) return { name: "No Match", cost: 0 };
-
+      const matched = candidates[0];
       const price = parseFloat(isWindows ? matched.windowsPrice : matched.linuxPrice) * 720;
       return { name: matched.name, cost: price };
     }
@@ -107,7 +151,7 @@
           let storageGB = (storageMiB / 1024).toFixed(2);
           let usedStorageGB = (usedStorageMiB / 1024).toFixed(2);
 
-          let matched = matchAzureVM(cpu, ramGB, osType);
+          let matched = matchAzureVM(cpu, parseFloat(ramGB), osType);
 
           let row = document.createElement("tr");
           row.innerHTML = `
@@ -121,7 +165,7 @@
           `;
 
           row.dataset.azureCost = matched.cost;
-          row.dataset.standardCost = (cpu * 15).toFixed(2); // Example standard pricing
+          row.dataset.standardCost = (cpu * 15).toFixed(2);
 
           row.addEventListener("click", () => {
             row.classList.toggle("selected");
