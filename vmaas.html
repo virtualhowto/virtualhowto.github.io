@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VM Pricing 5 Processor</title>
+  <title>VM Pricing Processor</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
   <style>
     body {
@@ -99,16 +99,19 @@
       azurePricing = await res.json();
     }
 
-    function matchAzureVM(cpu, ramGB, osType) {
+    function getMatchingAzureVMs(cpu, ramGB, osType) {
       const isWindows = osType.toLowerCase().includes("windows");
-      const candidates = azurePricing.filter(vm =>
-        Math.abs(vm.numberOfCores - cpu) <= 1 && Math.abs((vm.memoryInMB / 1024) - ramGB) <= 1
-      );
-      if (!candidates.length) return { name: "No Match", cost: 0 };
-
-      const matched = candidates[0];
-      const price = parseFloat(isWindows ? matched.windowsPrice : matched.linuxPrice) * 720;
-      return { name: matched.name, cost: price };
+      return azurePricing
+        .map(vm => {
+          const vmCpu = vm.numberOfCores;
+          const vmRam = vm.memoryInMB / 1024;
+          const cpuDiff = Math.abs(vmCpu - cpu);
+          const ramDiff = Math.abs(vmRam - ramGB);
+          const price = parseFloat(isWindows ? vm.windowsPrice : vm.linuxPrice) * 720;
+          return { ...vm, cpuDiff, ramDiff, price };
+        })
+        .filter(vm => vm.cpuDiff <= 2 && vm.ramDiff <= 2)
+        .sort((a, b) => (a.cpuDiff + a.ramDiff) - (b.cpuDiff + b.ramDiff));
     }
 
     function updateSummary() {
@@ -151,9 +154,11 @@
           let storageGB = (storageMiB / 1024).toFixed(2);
           let usedStorageGB = (usedStorageMiB / 1024).toFixed(2);
 
-          let matched = matchAzureVM(cpu, parseFloat(ramGB), osType);
+          let matches = getMatchingAzureVMs(cpu, parseFloat(ramGB), osType);
+          let defaultMatch = matches[0] || { name: "No Match", price: 0 };
 
           let row = document.createElement("tr");
+          let options = matches.map(vm => `<option value="${vm.name}" data-cost="${vm.price}">${vm.name} ($${vm.price.toFixed(2)})</option>`).join('');
           row.innerHTML = `
             <td>${vmName}</td>
             <td>${osType}</td>
@@ -161,14 +166,20 @@
             <td>${ramGB}</td>
             <td>${storageGB}</td>
             <td>${usedStorageGB}</td>
-            <td><select class="azure-vm-select"><option>${matched.name}</option></select></td>
+            <td><select class="azure-vm-select">${options}</select></td>
           `;
 
-          row.dataset.azureCost = matched.cost;
+          row.dataset.azureCost = defaultMatch.price;
           row.dataset.standardCost = (cpu * 15).toFixed(2);
 
           row.addEventListener("click", () => {
             row.classList.toggle("selected");
+            updateSummary();
+          });
+
+          row.querySelector(".azure-vm-select").addEventListener("change", function () {
+            const selectedOption = this.options[this.selectedIndex];
+            row.dataset.azureCost = selectedOption.getAttribute("data-cost") || "0";
             updateSummary();
           });
 
