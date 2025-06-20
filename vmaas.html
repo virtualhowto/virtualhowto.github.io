@@ -107,11 +107,12 @@
           const vmRam = vm.memoryInMB / 1024;
           const cpuDiff = Math.abs(vmCpu - cpu);
           const ramDiff = Math.abs(vmRam - ramGB);
+          const score = cpuDiff + ramDiff;
           const price = parseFloat(isWindows ? vm.windowsPrice : vm.linuxPrice) * 720;
-          return { ...vm, cpuDiff, ramDiff, price };
+          return { ...vm, cpuDiff, ramDiff, score, price };
         })
-        .filter(vm => vm.cpuDiff <= 2 && vm.ramDiff <= 2)
-        .sort((a, b) => (a.cpuDiff + a.ramDiff) - (b.cpuDiff + b.ramDiff));
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 10);
     }
 
     function updateSummary() {
@@ -158,7 +159,11 @@
           let defaultMatch = matches[0] || { name: "No Match", price: 0 };
 
           let row = document.createElement("tr");
-          let options = matches.map(vm => `<option value="${vm.name}" data-cost="${vm.price}">${vm.name} ($${vm.price.toFixed(2)})</option>`).join('');
+          let options = matches.map(vm => 
+            `<option value="${vm.name}" data-cost="${vm.price}" title="CPU: ${vm.numberOfCores}, RAM: ${(vm.memoryInMB / 1024).toFixed(1)} GB, $${vm.price.toFixed(2)}">
+              ${vm.name} ($${vm.price.toFixed(2)})
+            </option>`).join('');
+
           row.innerHTML = `
             <td>${vmName}</td>
             <td>${osType}</td>
