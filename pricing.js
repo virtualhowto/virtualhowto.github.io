@@ -1,6 +1,6 @@
 async function fetchAzurePricing() {
     try {
-        const response = await fetch("az-pricing.json"); // Load local JSON file
+        const response = await fetch("azure-pricing.json");
         const pricingData = await response.json();
         console.log("Azure pricing data loaded successfully:", pricingData);
         return pricingData;
@@ -13,7 +13,7 @@ async function fetchAzurePricing() {
 
 async function fetchStandardPricing() {
     try {
-        const response = await fetch("pricing.json"); // Load standard pricing JSON file
+        const response = await fetch("pricing.json");
         const pricingData = await response.json();
         console.log("Standard pricing data loaded successfully:", pricingData);
         return pricingData;
@@ -25,29 +25,39 @@ async function fetchStandardPricing() {
 }
 
 async function matchAzureVM(cpu, ramGB, osType) {
-    let pricingData = await fetchAzurePricing();
-    if (!pricingData) return { vmSize: "Unknown", cost: `$${(0.00 * 720).toFixed(2)}` };
+    const pricingData = await fetchAzurePricing();
+    if (!pricingData) return { vmSize: "Unknown", cost: `$0.00` };
 
-    let filteredPricing = pricingData.filter(vm => vm.name.startsWith("Standard_D")); // Focus only on Standard_D models
+    const filteredPricing = pricingData.filter(vm =>
+        vm.name.startsWith("Standard_D")
+    );
 
-    let bestMatch = filteredPricing.reduce((best, vm) => {
-        let vmCpu = vm.numberOfCores;
-        let vmRam = vm.memoryInMB / 1024; // Convert MB to GB
-        let linuxPrice = parseFloat(vm.linuxPrice) || Infinity;
-        let windowsPrice = parseFloat(vm.windowsPrice) || Infinity;
-        let bestPrice = osType.toLowerCase().includes("windows") ? windowsPrice : linuxPrice;
+    const bestMatch = filteredPricing.reduce((best, vm) => {
+        const vmCpu = vm.numberOfCores;
+        const vmRamGB = vm.memoryInMB / 1024;
+        const price = osType.toLowerCase().includes("windows") ? parseFloat(vm.windowsPrice) : parseFloat(vm.linuxPrice);
 
-        if (Math.abs(cpu - vmCpu) <= 2 && Math.abs(ramGB - vmRam) <= 4) {
-            return (!best || bestPrice < parseFloat(best.linuxPrice || best.windowsPrice)) ? vm : best;
+        if (!price || isNaN(price)) return best;
+
+        const withinTolerance = Math.abs(cpu - vmCpu) <= 2 && Math.abs(ramGB - vmRamGB) <= 4;
+
+        if (withinTolerance && (!best || price < (osType.toLowerCase().includes("windows") ? parseFloat(best.windowsPrice) : parseFloat(best.linuxPrice)))) {
+            return vm;
         }
+
         return best;
     }, null);
 
-    if (!bestMatch) return { vmSize: "Unknown", cost: `$${(0.00 * 720).toFixed(2)}` };
-    
-    let pricePerHour = osType.toLowerCase().includes("windows") ? bestMatch.windowsPrice : bestMatch.linuxPrice;
-    let monthlyCost = parseFloat(pricePerHour) * 720; // Convert hourly to monthly pricing
-    return { vmSize: bestMatch.name, cost: `$${monthlyCost.toFixed(2)}` };
+    if (!bestMatch) return { vmSize: "Unknown", cost: `$0.00` };
+
+    const matchedPrice = osType.toLowerCase().includes("windows") ? parseFloat(bestMatch.windowsPrice) : parseFloat(bestMatch.linuxPrice);
+    const monthlyCost = matchedPrice * 720;
+
+    return {
+        vmSize: bestMatch.name,
+        cost: `$${monthlyCost.toFixed(2)}`,
+        bestRegion: bestMatch.bestPriceRegion
+    };
 }
 
 async function processVMData(vmData) {
@@ -55,7 +65,7 @@ async function processVMData(vmData) {
     tableBody.innerHTML = "";
     let azurePricingData = await fetchAzurePricing();
     let standardPricingData = await fetchStandardPricing();
-    
+
     for (let vm of vmData) {
         let cpu = parseInt(vm["CPUs"] || vm["NumCpu"] || 0);
         let ramMB = parseInt(vm["Memory"] || vm["MemoryMB"] || 0);
@@ -63,10 +73,10 @@ async function processVMData(vmData) {
         let storageMB = parseFloat(vm["Provisioned MB"] || vm["ProvisionedGB"] || 0);
         let storageGB = (storageMB / 1024).toFixed(2);
         let osType = vm["OS according to the configuration file"] || "Unknown";
-        
+
         let match = await matchAzureVM(cpu, ramGB, osType);
-        let standardCost = standardPricingData ? standardPricingData.defaultPrice * cpu : 0; // Example pricing logic
-        
+        let standardCost = standardPricingData ? standardPricingData.defaultPrice * cpu : 0;
+
         let row = document.createElement("tr");
         row.innerHTML = `
             <td>${vm["VM Name"] || "Unknown"}</td>
@@ -80,15 +90,15 @@ async function processVMData(vmData) {
                 </select>
             </td>
         `;
-        
+
         row.dataset.azureCost = match.cost;
         row.dataset.standardCost = `$${standardCost.toFixed(2)}`;
-        
+
         row.addEventListener("click", () => {
             row.classList.toggle("selected");
             updateSummary();
         });
-        
+
         row.querySelector(".azure-vm-select").addEventListener("change", function() {
             let selectedVm = azurePricingData.find(vm => vm.name === this.value);
             if (selectedVm) {
@@ -98,7 +108,7 @@ async function processVMData(vmData) {
             }
             updateSummary();
         });
-        
+
         tableBody.appendChild(row);
     }
 }
@@ -108,7 +118,7 @@ function updateSummary() {
     summaryTableBody.innerHTML = "";
     let totalAzureCost = 0;
     let totalStandardCost = 0;
-    
+
     document.querySelectorAll("#vm-table tbody tr.selected").forEach(row => {
         let clone = row.cloneNode(true);
         summaryTableBody.appendChild(clone);
@@ -117,8 +127,8 @@ function updateSummary() {
         totalAzureCost += azureCost;
         totalStandardCost += standardCost;
     });
-    
+
     document.getElementById("summary-total-azure-cost").textContent = `Azure Total: $${totalAzureCost.toFixed(2)}`;
     document.getElementById("summary-total-standard-cost").textContent = `Standard Total: $${totalStandardCost.toFixed(2)}`;
-document.getElementById("cart-total").textContent = `Cart Total: $${totalStandardCost.toFixed(2)}`;
+    document.getElementById("cart-total").textContent = `Cart Total: $${totalStandardCost.toFixed(2)}`;
 }
