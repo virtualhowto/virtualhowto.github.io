@@ -70,20 +70,24 @@ async function processVMData(vmData) {
         let cpu = parseInt(vm["CPUs"] || vm["NumCpu"] || 0);
         let ramMB = parseInt(vm["Memory"] || vm["MemoryMB"] || 0);
         let ramGB = (ramMB / 1024).toFixed(2);
-        let storageMB = parseFloat(vm["Provisioned MB"] || vm["ProvisionedGB"] || 0);
-        let storageGB = (storageMB / 1024).toFixed(2);
+        let provisionedMiB = parseFloat(vm["Provisioned MiB"] || 0);
+        let usedMiB = parseFloat(vm["In Use MiB"] || 0);
+        let storageGB = (provisionedMiB / 1024).toFixed(2);
+        let usedStorageGB = (usedMiB / 1024).toFixed(2);
         let osType = vm["OS according to the configuration file"] || "Unknown";
+        let vmName = vm["VM"] || vm["VM Name"] || "Unknown";
 
         let match = await matchAzureVM(cpu, ramGB, osType);
         let standardCost = standardPricingData ? standardPricingData.defaultPrice * cpu : 0;
 
         let row = document.createElement("tr");
         row.innerHTML = `
-            <td>${vm["VM Name"] || "Unknown"}</td>
+            <td>${vmName}</td>
             <td>${osType}</td>
             <td>${cpu}</td>
             <td>${ramGB}</td>
             <td>${storageGB}</td>
+            <td>${usedStorageGB}</td>
             <td>
                 <select class="azure-vm-select">
                     ${azurePricingData.map(vm => `<option value="${vm.name}" ${vm.name === match.vmSize ? "selected" : ""}>${vm.name}</option>`).join('')}
@@ -111,6 +115,11 @@ async function processVMData(vmData) {
 
         tableBody.appendChild(row);
     }
+
+    const exportBtn = document.createElement("button");
+    exportBtn.textContent = "Export Selected to CSV";
+    exportBtn.onclick = exportCSV;
+    document.querySelector(".summary").appendChild(exportBtn);
 }
 
 function updateSummary() {
@@ -131,4 +140,29 @@ function updateSummary() {
     document.getElementById("summary-total-azure-cost").textContent = `Azure Total: $${totalAzureCost.toFixed(2)}`;
     document.getElementById("summary-total-standard-cost").textContent = `Standard Total: $${totalStandardCost.toFixed(2)}`;
     document.getElementById("cart-total").textContent = `Cart Total: $${totalStandardCost.toFixed(2)}`;
+}
+
+function exportCSV() {
+    const selectedRows = document.querySelectorAll("#vm-table tbody tr.selected");
+    if (!selectedRows.length) return alert("No VMs selected.");
+
+    let csv = "VM Name,OS,CPU,RAM (GB),Storage (GB),Used Storage (GB),Azure VM,Azure Cost\n";
+    selectedRows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        const vmName = cells[0].textContent;
+        const os = cells[1].textContent;
+        const cpu = cells[2].textContent;
+        const ram = cells[3].textContent;
+        const storage = cells[4].textContent;
+        const usedStorage = cells[5].textContent;
+        const azureVM = row.querySelector(".azure-vm-select").value;
+        const cost = row.dataset.azureCost;
+        csv += `${vmName},${os},${cpu},${ram},${storage},${usedStorage},${azureVM},${cost}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "selected_vms.csv";
+    link.click();
 }
