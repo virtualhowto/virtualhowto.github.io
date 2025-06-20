@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VMaaS Costing Tool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="pricing.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f4f4f4; }
+    h1 { color: #1c3f94; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    th { background: #1c3f94; color: white; }
+    tr.selected { background: #ffebcd; }
+    .summary { margin-top: 30px; padding: 1em; background: white; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <h1>VMaaS Pricing Estimator</h1>
+
+  <input type="file" id="fileUpload" accept=".xlsx" />
+  <table id="vm-table">
+    <thead>
+      <tr>
+        <th>VM Name</th>
+        <th>OS</th>
+        <th>CPU</th>
+        <th>RAM (GB)</th>
+        <th>Storage (GB)</th>
+        <th>Azure VM Match</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="summary">
+    <h3>Selected VM Summary</h3>
+    <div id="summary-total-azure-cost">Azure Total: $0.00</div>
+    <div id="summary-total-standard-cost">Standard Total: $0.00</div>
+    <div id="cart-total">Cart Total: $0.00</div>
+    <table id="summary-table">
+      <thead>
+        <tr>
+          <th>VM Name</th>
+          <th>OS</th>
+          <th>CPU</th>
+          <th>RAM</th>
+          <th>Storage</th>
+          <th>Azure Match</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    document.getElementById('fileUpload').addEventListener('change', handleFile, false);
+
+    function handleFile(e) {
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames.find(name => name.toLowerCase().includes('vminfo') || name.toLowerCase().includes('vm'));
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet);
+        processVMData(json);
+      };
+      reader.readAsArrayBuffer(e.target.files[0]);
+    }
+  </script>
+</body>
+</html>
