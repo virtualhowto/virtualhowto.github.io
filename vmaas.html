@@ -2,23 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>VMaaS Costing Tool</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="pricing.js"></script>
+  <title>VM Cost Estimator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 2em; background: #f4f4f4; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
     h1 { color: #1c3f94; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
-    th { background: #1c3f94; color: white; }
-    tr.selected { background: #ffebcd; }
-    .summary { margin-top: 30px; padding: 1em; background: white; border: 1px solid #ddd; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #1c3f94; color: white; }
+    tr.selected { background-color: #ffe0b2; }
+    #key-preview { background: #fff; padding: 10px; margin-top: 10px; border-radius: 6px; font-family: monospace; }
+    #exportBtn { margin-top: 20px; padding: 10px 15px; background: #cc5500; color: white; border: none; border-radius: 6px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>VMaaS Pricing Estimator</h1>
 
+  <h1>VM Cost Estimator</h1>
   <input type="file" id="fileUpload" accept=".xlsx" />
+  <div id="key-preview"></div>
+
   <table id="vm-table">
     <thead>
       <tr>
@@ -33,41 +35,128 @@
     <tbody></tbody>
   </table>
 
-  <div class="summary">
-    <h3>Selected VM Summary</h3>
-    <div id="summary-total-azure-cost">Azure Total: $0.00</div>
-    <div id="summary-total-standard-cost">Standard Total: $0.00</div>
-    <div id="cart-total">Cart Total: $0.00</div>
-    <table id="summary-table">
-      <thead>
-        <tr>
-          <th>VM Name</th>
-          <th>OS</th>
-          <th>CPU</th>
-          <th>RAM</th>
-          <th>Storage</th>
-          <th>Azure Match</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+  <button id="exportBtn" style="display:none;">Export Selected to CSV</button>
 
   <script>
-    document.getElementById('fileUpload').addEventListener('change', handleFile, false);
-
-    function handleFile(e) {
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames.find(name => name.toLowerCase().includes('vminfo') || name.toLowerCase().includes('vm'));
-        const sheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(sheet);
-        processVMData(json);
-      };
-      reader.readAsArrayBuffer(e.target.files[0]);
+    async function fetchAzurePricing() {
+      try {
+        const response = await fetch("azure-pricing.json");
+        return await response.json();
+      } catch (error) {
+        alert("Failed to load Azure pricing JSON.");
+        return [];
+      }
     }
+
+    function previewKeysFromRVTools(data) {
+      if (!data.length) return;
+      const keys = Object.keys(data[0]);
+      console.log("🧩 Detected column headers:", keys);
+      const previewBox = document.getElementById("key-preview");
+      previewBox.innerHTML = "<strong>Detected Keys:</strong><br>" + keys.map(k => `🔹 ${k}`).join("<br>");
+    }
+
+    async function matchAzureVM(cpu, ramGB, osType, pricingData) {
+      const filtered = pricingData.filter(vm => vm.name.startsWith("Standard_D"));
+      let bestMatch = filtered.reduce((best, vm) => {
+        const vmCpu = vm.numberOfCores;
+        const vmRam = vm.memoryInMB / 1024;
+        const price = osType.toLowerCase().includes("windows") ? parseFloat(vm.windowsPrice) : parseFloat(vm.linuxPrice);
+        const match = Math.abs(cpu - vmCpu) <= 2 && Math.abs(ramGB - vmRam) <= 4;
+        if (match && (!best || price < parseFloat(best.windowsPrice || best.linuxPrice))) return vm;
+        return best;
+      }, null);
+      if (!bestMatch) return { name: "Unknown", cost: "$0.00" };
+      const price = osType.toLowerCase().includes("windows") ? bestMatch.windowsPrice : bestMatch.linuxPrice;
+      return { name: bestMatch.name, cost: `$${(parseFloat(price) * 720).toFixed(2)}` };
+    }
+
+    async function processVMData(vmData) {
+      const tableBody = document.querySelector("#vm-table tbody");
+      tableBody.innerHTML = "";
+      const azurePricing = await fetchAzurePricing();
+
+      for (let vm of vmData) {
+        const name = vm["VM Name"] || "Unknown";
+        const os = vm["OS according to the configuration file"] || "Unknown";
+        const cpu = parseInt(vm["CPUs"] || vm["NumCpu"] || 0);
+        const ram = +(parseInt(vm["Memory"] || vm["MemoryMB"] || 0) / 1024).toFixed(2);
+        const storage = +(parseFloat(vm["Provisioned MB"] || vm["ProvisionedGB"] || 0) / 1024).toFixed(2);
+
+        const match = await matchAzureVM(cpu, ram, os, azurePricing);
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${name}</td>
+          <td>${os}</td>
+          <td>${cpu}</td>
+          <td>${ram}</td>
+          <td>${storage}</td>
+          <td>
+            <select class="azure-vm-select">
+              ${azurePricing.map(vm => `<option value="${vm.name}" ${vm.name === match.name ? "selected" : ""}>${vm.name}</option>`).join("")}
+            </select>
+          </td>
+        `;
+        row.dataset.azureCost = match.cost;
+
+        row.addEventListener("click", () => {
+          row.classList.toggle("selected");
+        });
+
+        row.querySelector(".azure-vm-select").addEventListener("change", function () {
+          const selectedVm = azurePricing.find(v => v.name === this.value);
+          if (selectedVm) {
+            const p = os.toLowerCase().includes("windows") ? selectedVm.windowsPrice : selectedVm.linuxPrice;
+            row.dataset.azureCost = `$${(parseFloat(p) * 720).toFixed(2)}`;
+          }
+        });
+
+        tableBody.appendChild(row);
+      }
+
+      document.getElementById("exportBtn").style.display = "inline-block";
+    }
+
+    function exportCSV() {
+      const selected = document.querySelectorAll("#vm-table tbody tr.selected");
+      if (!selected.length) return alert("No VMs selected.");
+      let csv = "VM Name,OS,CPU,RAM,Storage,Azure VM,Azure Cost\n";
+      selected.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        const vmName = cells[0].textContent;
+        const os = cells[1].textContent;
+        const cpu = cells[2].textContent;
+        const ram = cells[3].textContent;
+        const storage = cells[4].textContent;
+        const azureVM = row.querySelector("select").value;
+        const cost = row.dataset.azureCost;
+        csv += `${vmName},${os},${cpu},${ram},${storage},${azureVM},${cost}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "selected_vms.csv";
+      link.click();
+    }
+
+    document.getElementById("exportBtn").addEventListener("click", exportCSV);
+
+    document.getElementById("fileUpload").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const vmData = XLSX.utils.sheet_to_json(firstSheet);
+        previewKeysFromRVTools(vmData);
+        processVMData(vmData);
+      };
+      reader.readAsArrayBuffer(file);
+    });
   </script>
+
 </body>
 </html>
