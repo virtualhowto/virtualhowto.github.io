@@ -63,6 +63,14 @@
       margin: 10px 0;
       font-weight: bold;
     }
+    .best-fit-badge {
+      background: #28a745;
+      color: white;
+      font-size: 0.75em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
@@ -111,6 +119,7 @@
           const price = parseFloat(isWindows ? vm.windowsPrice : vm.linuxPrice) * 720;
           return { ...vm, cpuDiff, ramDiff, score, price };
         })
+        .filter(vm => vm.cpuDiff <= 2 && vm.ramDiff <= 4)
         .sort((a, b) => a.score - b.score)
         .slice(0, 10);
     }
@@ -159,9 +168,9 @@
           let defaultMatch = matches[0] || { name: "No Match", price: 0 };
 
           let row = document.createElement("tr");
-          let options = matches.map(vm => 
+          let options = matches.map((vm, index) => 
             `<option value="${vm.name}" data-cost="${vm.price}" title="CPU: ${vm.numberOfCores}, RAM: ${(vm.memoryInMB / 1024).toFixed(1)} GB, $${vm.price.toFixed(2)}">
-              ${vm.name} ($${vm.price.toFixed(2)})
+              ${vm.name} ($${vm.price.toFixed(2)})${index === 0 ? ' 🔹' : ''}
             </option>`).join('');
 
           row.innerHTML = `
@@ -171,7 +180,7 @@
             <td>${ramGB}</td>
             <td>${storageGB}</td>
             <td>${usedStorageGB}</td>
-            <td><select class="azure-vm-select">${options}</select></td>
+            <td><select class="azure-vm-select">${options}</select> <span class="best-fit-badge">Best Fit</span></td>
           `;
 
           row.dataset.azureCost = defaultMatch.price;
