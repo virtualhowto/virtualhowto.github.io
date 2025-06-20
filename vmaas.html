@@ -63,14 +63,6 @@
       margin: 10px 0;
       font-weight: bold;
     }
-    .best-fit-badge {
-      background: #28a745;
-      color: white;
-      font-size: 0.75em;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-left: 4px;
-    }
   </style>
 </head>
 <body>
@@ -109,19 +101,30 @@
 
     function getMatchingAzureVMs(cpu, ramGB, osType) {
       const isWindows = osType.toLowerCase().includes("windows");
-      return azurePricing
-        .map(vm => {
-          const vmCpu = vm.numberOfCores;
-          const vmRam = vm.memoryInMB / 1024;
-          const cpuDiff = Math.abs(vmCpu - cpu);
-          const ramDiff = Math.abs(vmRam - ramGB);
-          const score = cpuDiff + ramDiff;
-          const price = parseFloat(isWindows ? vm.windowsPrice : vm.linuxPrice) * 720;
-          return { ...vm, cpuDiff, ramDiff, score, price };
-        })
-        .filter(vm => vm.cpuDiff <= 2 && vm.ramDiff <= 4)
+
+      const scoredVMs = azurePricing.map(vm => {
+        const vmCpu = vm.numberOfCores;
+        const vmRam = vm.memoryInMB / 1024;
+        const cpuDiff = Math.abs(vmCpu - cpu);
+        const ramDiff = Math.abs(vmRam - ramGB);
+        const score = cpuDiff + ramDiff;
+        const price = parseFloat(isWindows ? vm.windowsPrice : vm.linuxPrice) * 720;
+        return { ...vm, cpuDiff, ramDiff, score, price };
+      });
+
+      let matches = scoredVMs
+        .filter(vm => vm.cpuDiff <= 1 && vm.ramDiff <= 2)
         .sort((a, b) => a.score - b.score)
         .slice(0, 10);
+
+      if (matches.length === 0) {
+        matches = scoredVMs
+          .filter(vm => vm.name.toLowerCase().includes("standard"))
+          .sort((a, b) => a.price - b.price)
+          .slice(0, 10);
+      }
+
+      return matches;
     }
 
     function updateSummary() {
@@ -180,7 +183,7 @@
             <td>${ramGB}</td>
             <td>${storageGB}</td>
             <td>${usedStorageGB}</td>
-            <td><select class="azure-vm-select">${options}</select> <span class="best-fit-badge">Best Fit</span></td>
+            <td><select class="azure-vm-select">${options}</select></td>
           `;
 
           row.dataset.azureCost = defaultMatch.price;
