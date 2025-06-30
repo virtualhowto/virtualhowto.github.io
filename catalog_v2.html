@@ -1,0 +1,190 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TaskFlow – Product Catalog Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.0/dist/chartjs-adapter-luxon.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-timeline@4.0.0"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card-bg: #fff;
+      --primary-text: #003366;
+      --secondary-bg: #f9fcff;
+      --border: #ccc;
+      --button-bg: #005baa;
+      --button-hover: #004080;
+    }
+    body.dark {
+      --bg: #1e1e1e;
+      --card-bg: #2a2a2a;
+      --primary-text: #ffffff;
+      --secondary-bg: #333;
+      --border: #555;
+      --button-bg: #347fc4;
+      --button-hover: #255a8e;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--primary-text);
+      padding: 2rem;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    header img { height: 60px; }
+    h1 { margin: 0; flex: 1; color: var(--primary-text); }
+    .card {
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 1200px;
+      margin: 0 auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    button {
+      background-color: var(--button-bg);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background-color: var(--button-hover); }
+    input[type="file"] { display: none; }
+    table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+    th, td { padding: 0.5rem; text-align: left; }
+    thead { background-color: var(--secondary-bg); }
+    input, select { width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border); }
+    .milestone { margin-top: 2rem; border-left: 4px solid var(--button-bg); padding-left: 1rem; }
+    #quoteSummary { margin-top: 2rem; }
+    canvas { margin-top: 2rem; max-width: 100%; }
+    .ai-controls { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+    .ai-key-box { margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="TaskFlowLogo.png" alt="TaskFlow Logo">
+    <h1>TaskFlow – Product Catalog Builder</h1>
+    <div style="margin-left:auto;">
+      <label for="darkToggle">🌙 Dark Mode</label>
+      <input type="checkbox" id="darkToggle" onchange="toggleDarkMode()" />
+    </div>
+  </header>  <div class="card">
+    <div class="ai-key-box">
+      <label for="openaiKey">🔑 OpenAI API Key:</label>
+      <input id="openaiKey" type="password" placeholder="Enter your API key..." style="width: 300px;">
+    </div><div class="btn-group">
+  <button onclick="addMilestone()">+ Add Milestone</button>
+  <button onclick="saveTemplate()">💾 Save Template</button>
+  <button onclick="loadTemplate()">📂 Load Template</button>
+  <button onclick="exportTemplate()">⬇️ Export as JSON</button>
+  <input type="file" id="importInput" onchange="importTemplate(this)" />
+  <button onclick="document.getElementById('importInput').click()">⬆️ Import Template</button>
+  <button onclick="generateQuoteAndChart()">📊 Generate Quote + Gantt</button>
+</div>
+
+<div id="milestones-container"></div>
+<div id="quoteSummary"></div>
+<canvas id="ganttChart" width="1000" height="400"></canvas>
+
+  </div>  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+    }
+
+    function addMilestone() {
+      const container = document.getElementById("milestones-container");
+      const milestone = document.createElement("div");
+      milestone.className = "milestone";
+      milestone.innerHTML = `
+        <h3><input placeholder="Milestone Name" /></h3>
+        <div class="ai-controls">
+          <button onclick="addTask(this)">+ Add Task</button>
+          <button onclick="aiGenerateTasks(this)">🧠 AI Generate Tasks</button>
+        </div>
+        <table>
+          <thead><tr><th>Description</th><th>Effort</th><th>Resource</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      `;
+      container.appendChild(milestone);
+    }
+
+    function addTask(button) {
+      const tbody = button.closest(".milestone").querySelector("tbody");
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input placeholder="Task description"></td>
+        <td><input placeholder="e.g. 8h or 2d" onblur="convertEffortToMinutes(this)"></td>
+        <td><select><option>Junior</option><option>Mid</option><option>Senior</option></select></td>
+        <td><button onclick="this.closest('tr').remove()">Remove</button></td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    async function aiGenerateTasks(button) {
+      const apiKey = document.getElementById("openaiKey").value.trim();
+      if (!apiKey) return alert("Please enter your OpenAI API key first.");
+      const milestone = button.closest(".milestone");
+      const name = milestone.querySelector("h3 input").value;
+      if (!name) return alert("Please enter a milestone name first.");
+
+      const prompt = `Generate a task breakdown for the milestone titled '${name}'. Return JSON like: [{ "desc": "Task name", "effort": 240, "role": "Mid" }]`;
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.4
+        })
+      });
+
+      const result = await response.json();
+      let content = result.choices?.[0]?.message?.content || "[]";
+      try {
+        const tasks = JSON.parse(content);
+        const tbody = milestone.querySelector("tbody");
+        tbody.innerHTML = '';
+        tasks.forEach(t => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td><input value="${t.desc || ''}"></td>
+            <td><input value="${t.effort || ''}" onblur="convertEffortToMinutes(this)"></td>
+            <td><select>
+              <option ${t.role === 'Junior' ? 'selected' : ''}>Junior</option>
+              <option ${t.role === 'Mid' ? 'selected' : ''}>Mid</option>
+              <option ${t.role === 'Senior' ? 'selected' : ''}>Senior</option>
+            </select></td>
+            <td><button onclick="this.closest('tr').remove()">Remove</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (e) {
+        alert("Could not parse tasks from AI response. Check format or try again.");
+        console.error("AI Parse Error", content);
+      }
+    }
+  </script></body>
+</html>
