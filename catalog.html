@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-timeline"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
       --bg: #f5f7fa;
@@ -72,6 +73,7 @@
     .milestone { margin-top: 2rem; border-left: 4px solid var(--button-bg); padding-left: 1rem; }
     #quoteSummary { margin-top: 2rem; }
     canvas { margin-top: 2rem; }
+    .toggle-options { margin-top: 1rem; display: flex; gap: 1rem; align-items: center; }
   </style>
 </head>
 <body>
@@ -91,6 +93,11 @@
       <input type="file" id="importInput" onchange="importTemplate(this)" />
       <button onclick="document.getElementById('importInput').click()">⬆️ Import Template</button>
       <button onclick="generateQuoteAndChart()">📊 Generate Quote + Gantt</button>
+      <button onclick="exportQuoteAsPDF()">🧾 Export Quote as PDF</button>
+    </div>
+    <div class="toggle-options">
+      <label><input type="checkbox" id="togglePM" checked> Include Project Management (25%)</label>
+      <label><input type="checkbox" id="toggleContingency" checked> Include Contingency (20%)</label>
     </div>
     <div id="milestones-container"></div>
     <div id="quoteSummary"></div>
@@ -181,13 +188,16 @@
         totalCost += milestoneCost;
       });
 
-      const contingency = totalCost * 0.2;
-      const pmFee = totalCost * 0.25;
+      const includePM = document.getElementById("togglePM").checked;
+      const includeContingency = document.getElementById("toggleContingency").checked;
+      const contingency = includeContingency ? totalCost * 0.2 : 0;
+      const pmFee = includePM ? totalCost * 0.25 : 0;
       const finalTotal = totalCost + contingency + pmFee;
+
       quoteHTML += `
         <tr><td>Subtotal</td><td></td><td>$${totalCost.toFixed(2)}</td></tr>
-        <tr><td>Contingency (20%)</td><td></td><td>$${contingency.toFixed(2)}</td></tr>
-        <tr><td>Project Management (25%)</td><td></td><td>$${pmFee.toFixed(2)}</td></tr>
+        ${includeContingency ? `<tr><td>Contingency (20%)</td><td></td><td>$${contingency.toFixed(2)}</td></tr>` : ''}
+        ${includePM ? `<tr><td>Project Management (25%)</td><td></td><td>$${pmFee.toFixed(2)}</td></tr>` : ''}
         <tr style="font-weight:bold"><td>Total</td><td></td><td>$${finalTotal.toFixed(2)}</td></tr>
       </table>`;
 
@@ -217,6 +227,19 @@
           }
         }
       });
+    }
+
+    async function exportQuoteAsPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const quote = document.getElementById("quoteSummary").innerText;
+      const lines = quote.split("\n");
+      let y = 10;
+      lines.forEach(line => {
+        doc.text(line, 10, y);
+        y += 7;
+      });
+      doc.save("TaskFlow-Quote.pdf");
     }
 
     function applyTemplate(data) {
