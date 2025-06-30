@@ -3,6 +3,8 @@
   <meta charset="UTF-8" />
   <title>TaskFlow – Product Catalog Builder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-timeline"></script>
   <style>
     :root {
       --bg: #f5f7fa;
@@ -12,76 +14,64 @@
       --border: #ccc;
       --button-bg: #005baa;
       --button-hover: #004080;
-    }body.dark {
-  --bg: #1e1e1e;
-  --card-bg: #2a2a2a;
-  --primary-text: #ffffff;
-  --secondary-bg: #333;
-  --border: #555;
-  --button-bg: #347fc4;
-  --button-hover: #255a8e;
-}
-
-body {
-  margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--bg);
-  color: var(--primary-text);
-  padding: 2rem;
-}
-
-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-header img {
-  height: 60px;
-}
-
-h1 {
-  margin: 0;
-  flex: 1;
-  color: var(--primary-text);
-}
-
-.card {
-  background: var(--card-bg);
-  padding: 2rem;
-  border-radius: 12px;
-  max-width: 1200px;
-  margin: 0 auto;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-}
-
-.btn-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-button {
-  background-color: var(--button-bg);
-  color: white;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-button:hover {
-  background-color: var(--button-hover);
-}
-
-input[type="file"] {
-  display: none;
-}
-
+    }
+    body.dark {
+      --bg: #1e1e1e;
+      --card-bg: #2a2a2a;
+      --primary-text: #ffffff;
+      --secondary-bg: #333;
+      --border: #555;
+      --button-bg: #347fc4;
+      --button-hover: #255a8e;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--primary-text);
+      padding: 2rem;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    header img { height: 60px; }
+    h1 { margin: 0; flex: 1; color: var(--primary-text); }
+    .card {
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 1200px;
+      margin: 0 auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    button {
+      background-color: var(--button-bg);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background-color: var(--button-hover); }
+    input[type="file"] { display: none; }
+    table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+    th, td { padding: 0.5rem; text-align: left; }
+    thead { background-color: var(--secondary-bg); }
+    input, select { width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border); }
+    .milestone { margin-top: 2rem; border-left: 4px solid var(--button-bg); padding-left: 1rem; }
+    #quoteSummary { margin-top: 2rem; }
+    canvas { margin-top: 2rem; }
   </style>
 </head>
 <body>
@@ -94,26 +84,156 @@ input[type="file"] {
     </div>
   </header>  <div class="card">
     <div class="btn-group">
+      <button onclick="addMilestone()">+ Add Milestone</button>
       <button onclick="saveTemplate()">💾 Save Template</button>
       <button onclick="loadTemplate()">📂 Load Template</button>
       <button onclick="exportTemplate()">⬇️ Export as JSON</button>
       <input type="file" id="importInput" onchange="importTemplate(this)" />
       <button onclick="document.getElementById('importInput').click()">⬆️ Import Template</button>
+      <button onclick="generateQuoteAndChart()">📊 Generate Quote + Gantt</button>
     </div>
-    <!-- Add your milestone/task UI and logic here -->
-    <p>TaskFlow UI and full builder functionality here...</p>
+    <div id="milestones-container"></div>
+    <div id="quoteSummary"></div>
+    <canvas id="ganttChart" width="1000" height="400"></canvas>
   </div>  <script>
     function toggleDarkMode() {
       document.body.classList.toggle('dark');
     }
 
+    function addMilestone() {
+      const container = document.getElementById("milestones-container");
+      const milestone = document.createElement("div");
+      milestone.className = "milestone";
+      milestone.innerHTML = `
+        <h3><input placeholder="Milestone Name" /></h3>
+        <table>
+          <thead><tr><th>Description</th><th>Effort</th><th>Resource</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button onclick="addTask(this)">+ Add Task</button>
+      `;
+      container.appendChild(milestone);
+    }
+
+    function addTask(button) {
+      const tbody = button.parentElement.querySelector("tbody");
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input placeholder="Task description"></td>
+        <td><input placeholder="e.g. 8h or 2d" onblur="convertEffortToMinutes(this)"></td>
+        <td><select><option>Junior</option><option>Mid</option><option>Senior</option></select></td>
+        <td><button onclick="this.closest('tr').remove()">Remove</button></td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    function convertEffortToMinutes(inputEl) {
+      const value = inputEl.value.trim().toLowerCase();
+      const match = value.match(/^(\d+(\.\d+)?)([a-z]*)$/);
+      if (!match) return;
+      let num = parseFloat(match[1]);
+      let unit = match[3];
+      if (unit === 'd') num *= 8 * 60;
+      else if (unit === 'h') num *= 60;
+      else if (unit === 'm' || unit === '') num = num;
+      inputEl.value = Math.round(num);
+    }
+
     function collectData() {
-      // Example placeholder for real data collection
-      return { example: 'template data structure' };
+      const milestones = [...document.querySelectorAll(".milestone")];
+      return { milestones: milestones.map(m => ({
+        name: m.querySelector("h3 input").value,
+        tasks: [...m.querySelectorAll("tbody tr")].map(r => ({
+          desc: r.cells[0].querySelector("input").value,
+          effort: parseInt(r.cells[1].querySelector("input").value),
+          role: r.cells[2].querySelector("select").value
+        }))
+      })) };
+    }
+
+    function generateQuoteAndChart() {
+      const data = collectData();
+      const rates = { Junior: 165, Mid: 195, Senior: 210 };
+      let quoteHTML = `<h3>Quote Summary</h3><table><tr><th>Milestone</th><th>Total Hours</th><th>Cost</th></tr>`;
+      let totalCost = 0;
+      let timelineData = [];
+      let startOffset = new Date();
+      startOffset.setMonth(startOffset.getMonth() + 1);
+      let currentTime = startOffset.getTime();
+
+      data.milestones.forEach(ms => {
+        let milestoneEffort = 0;
+        let milestoneCost = 0;
+        ms.tasks.forEach(task => {
+          const hours = task.effort / 60;
+          const cost = hours * rates[task.role];
+          milestoneEffort += hours;
+          milestoneCost += cost;
+          const taskStart = new Date(currentTime);
+          const taskEnd = new Date(currentTime + task.effort * 60000);
+          timelineData.push({
+            x: [taskStart, taskEnd],
+            y: `${ms.name}: ${task.desc}`
+          });
+          currentTime = taskEnd.getTime();
+        });
+        quoteHTML += `<tr><td>${ms.name}</td><td>${milestoneEffort.toFixed(2)}</td><td>$${milestoneCost.toFixed(2)}</td></tr>`;
+        totalCost += milestoneCost;
+      });
+
+      const contingency = totalCost * 0.2;
+      const pmFee = totalCost * 0.25;
+      const finalTotal = totalCost + contingency + pmFee;
+      quoteHTML += `
+        <tr><td>Subtotal</td><td></td><td>$${totalCost.toFixed(2)}</td></tr>
+        <tr><td>Contingency (20%)</td><td></td><td>$${contingency.toFixed(2)}</td></tr>
+        <tr><td>Project Management (25%)</td><td></td><td>$${pmFee.toFixed(2)}</td></tr>
+        <tr style="font-weight:bold"><td>Total</td><td></td><td>$${finalTotal.toFixed(2)}</td></tr>
+      </table>`;
+
+      document.getElementById("quoteSummary").innerHTML = quoteHTML;
+
+      const ctx = document.getElementById("ganttChart").getContext("2d");
+      if (window.ganttChart) window.ganttChart.destroy();
+      window.ganttChart = new Chart(ctx, {
+        type: 'timeline',
+        data: {
+          datasets: [{
+            label: 'Project Timeline',
+            data: timelineData,
+            backgroundColor: '#005baa'
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          scales: {
+            x: {
+              type: 'time',
+              title: { display: true, text: 'Date' }
+            },
+            y: {
+              title: { display: true, text: 'Tasks' }
+            }
+          }
+        }
+      });
     }
 
     function applyTemplate(data) {
-      alert("Template loaded: " + JSON.stringify(data));
+      const container = document.getElementById("milestones-container");
+      container.innerHTML = '';
+      data.milestones.forEach(ms => {
+        addMilestone();
+        const milestone = container.lastElementChild;
+        milestone.querySelector("h3 input").value = ms.name;
+        ms.tasks.forEach(task => {
+          addTask(milestone.querySelector("button"));
+          const row = milestone.querySelector("tbody").lastElementChild;
+          row.cells[0].querySelector("input").value = task.desc;
+          row.cells[1].querySelector("input").value = task.effort;
+          row.cells[2].querySelector("select").value = task.role;
+        });
+      });
     }
 
     function saveTemplate() {
