@@ -1,0 +1,156 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TaskFlow – Product Catalog Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card-bg: #fff;
+      --primary-text: #003366;
+      --secondary-bg: #f9fcff;
+      --border: #ccc;
+      --button-bg: #005baa;
+      --button-hover: #004080;
+    }body.dark {
+  --bg: #1e1e1e;
+  --card-bg: #2a2a2a;
+  --primary-text: #ffffff;
+  --secondary-bg: #333;
+  --border: #555;
+  --button-bg: #347fc4;
+  --button-hover: #255a8e;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg);
+  color: var(--primary-text);
+  padding: 2rem;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+header img {
+  height: 60px;
+}
+
+h1 {
+  margin: 0;
+  flex: 1;
+  color: var(--primary-text);
+}
+
+.card {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+button {
+  background-color: var(--button-bg);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background-color: var(--button-hover);
+}
+
+input[type="file"] {
+  display: none;
+}
+
+  </style>
+</head>
+<body>
+  <header>
+    <img src="TaskFlowLogo.png" alt="TaskFlow Logo">
+    <h1>TaskFlow – Product Catalog Builder</h1>
+    <div style="margin-left:auto;">
+      <label for="darkToggle">🌙 Dark Mode</label>
+      <input type="checkbox" id="darkToggle" onchange="toggleDarkMode()" />
+    </div>
+  </header>  <div class="card">
+    <div class="btn-group">
+      <button onclick="saveTemplate()">💾 Save Template</button>
+      <button onclick="loadTemplate()">📂 Load Template</button>
+      <button onclick="exportTemplate()">⬇️ Export as JSON</button>
+      <input type="file" id="importInput" onchange="importTemplate(this)" />
+      <button onclick="document.getElementById('importInput').click()">⬆️ Import Template</button>
+    </div>
+    <!-- Add your milestone/task UI and logic here -->
+    <p>TaskFlow UI and full builder functionality here...</p>
+  </div>  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+    }
+
+    function collectData() {
+      // Example placeholder for real data collection
+      return { example: 'template data structure' };
+    }
+
+    function applyTemplate(data) {
+      alert("Template loaded: " + JSON.stringify(data));
+    }
+
+    function saveTemplate() {
+      const name = prompt("Enter a name for this template:");
+      if (!name) return;
+      const template = collectData();
+      localStorage.setItem(`taskflow-template-${name}`, JSON.stringify(template));
+      alert(`Template '${name}' saved.`);
+    }
+
+    function loadTemplate() {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('taskflow-template-'));
+      const names = keys.map(k => k.replace('taskflow-template-', ''));
+      const choice = prompt("Available templates:\n" + names.join('\n') + "\n\nEnter one to load:");
+      if (!choice || !names.includes(choice)) return;
+      const json = localStorage.getItem(`taskflow-template-${choice}`);
+      if (json) applyTemplate(JSON.parse(json));
+    }
+
+    function exportTemplate() {
+      const json = JSON.stringify(collectData(), null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "TaskFlowTemplate.json";
+      a.click();
+    }
+
+    function importTemplate(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const template = JSON.parse(e.target.result);
+        applyTemplate(template);
+      };
+      reader.readAsText(file);
+    }
+  </script></body>
+</html>
