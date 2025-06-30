@@ -140,6 +140,19 @@
       tbody.appendChild(row);
     }
 
+    function estimateApiCost(inputTokens, outputTokens, model) {
+      const rates = {
+        'gpt-4-turbo': { input: 0.01, output: 0.03 },
+        'gpt-4': { input: 0.03, output: 0.06 },
+        'gpt-3.5-turbo': { input: 0.0015, output: 0.002 },
+      };
+      const exchangeRate = 1.50; // USD to AUD
+      const modelRates = rates[model];
+      const costUSD = (inputTokens * modelRates.input + outputTokens * modelRates.output) / 1000;
+      const costAUD = costUSD * exchangeRate;
+      return costAUD.toFixed(4);
+    }
+
     async function aiGenerateTasks(button) {
       const apiKey = document.getElementById("openaiKey").value.trim();
       if (!apiKey) return alert("Please enter your OpenAI API key first.");
@@ -147,7 +160,15 @@
       const name = milestone.querySelector("h3 input").value;
       if (!name) return alert("Please enter a milestone name first.");
 
+      const model = "gpt-4";
       const prompt = `Generate a task breakdown for the milestone titled '${name}'. Return JSON like: [{ "desc": "Task name", "effort": 240, "role": "Mid" }]`;
+
+      const inputTokens = Math.ceil(prompt.length / 4); // Approx 4 chars per token
+      const expectedOutputTokens = 500;
+      const estimatedCost = estimateApiCost(inputTokens, expectedOutputTokens, model);
+
+      if (!confirm(`Estimated API cost: ~A$${estimatedCost}. Proceed?`)) return;
+
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -155,7 +176,7 @@
           "Authorization": `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4",
+          model: model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.4
         })
