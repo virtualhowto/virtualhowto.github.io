@@ -1,17 +1,62 @@
 [
-  "Microsoft AppLocker",
-  "Air Locker Digital",
-  "SCCM",
-  "Intune",
-  "CyberArk",
-  "Veeam",
-  "Entra ID",
-  "Sophos MDR",
-  "Sophos NDR",
-  "Rapid7 SIEM",
-  "Vuln Management",
-  "Conditional Access Policy",
-  "Mimecast",
-  "Commvault",
-  "Object Storage"
+  {
+    "name": "Microsoft AppLocker",
+    "description": "Application whitelisting tool that helps control which apps and files users can run."
+  },
+  {
+    "name": "Air Locker Digital",
+    "description": "Data protection and ransomware defense solution offering immutable storage for backups."
+  },
+  {
+    "name": "SCCM",
+    "description": "System Center Configuration Manager – Microsoft's endpoint management for software deployment and patching."
+  },
+  {
+    "name": "Intune",
+    "description": "Cloud-based endpoint management tool for enforcing device compliance and app deployment."
+  },
+  {
+    "name": "CyberArk",
+    "description": "Privileged access management platform that secures and monitors admin credentials."
+  },
+  {
+    "name": "Veeam",
+    "description": "Backup and disaster recovery solution for virtual, physical, and cloud-based workloads."
+  },
+  {
+    "name": "Entra ID",
+    "description": "Microsoft's cloud identity solution formerly Azure AD, supporting secure authentication and access control."
+  },
+  {
+    "name": "Sophos MDR",
+    "description": "Managed Detection and Response service offering 24/7 threat hunting and incident response."
+  },
+  {
+    "name": "Sophos NDR",
+    "description": "Network Detection and Response system that identifies threats via traffic analysis and behavioral monitoring."
+  },
+  {
+    "name": "Rapid7 SIEM",
+    "description": "Security Information and Event Management platform for threat detection and log correlation."
+  },
+  {
+    "name": "Vuln Management",
+    "description": "A general term for solutions identifying, classifying, and prioritizing vulnerabilities in systems."
+  },
+  {
+    "name": "Conditional Access Policy",
+    "description": "Azure AD feature for enforcing access controls based on conditions like user location, device, or risk level."
+  },
+  {
+    "name": "Mimecast",
+    "description": "Email security and archiving platform offering spam filtering, DLP, and phishing protection."
+  },
+  {
+    "name": "Commvault",
+    "description": "Enterprise backup, recovery, and data management software supporting multiple environments."
+  },
+  {
+    "name": "Object Storage",
+    "description": "Storage architecture that manages data as objects, ideal for unstructured data and cloud backups."
+  }
 ]
