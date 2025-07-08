@@ -101,7 +101,18 @@
     .chart th {
       background: #eee;
     }
-  </style>
+      .dropdown-menu {
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 5px;
+      display: none;
+      z-index: 10;
+    }
+    .dropdown-menu select {
+      width: 100%;
+    }
+</style>
 </head>
 <body>
   <header>
@@ -110,349 +121,94 @@
   </header>
 
   <div class="grid-container">
+  <div style="grid
   <div class="column">
     <h4>Application Control</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
   <div class="column">
     <h4>Patch Applications</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
   <div class="column">
     <h4>Microsoft Office Macros</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
   <div class="column">
     <h4>User Application Hardening</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
   <div class="column">
     <h4>Restrict Admin Privileges</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
   <div class="column">
     <h4>Patch Operating Systems</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
   <div class="column">
     <h4>Multi-Factor Authentication (MFA)</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
   <div class="column">
     <h4>Regular Backups</h4>
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
     
-      <select onchange="addFromDropdown(event, this)" style="margin-top: 5px;">
-        <option value="">+ Add tool here...</option>
-        <option value="Firewall Service">Firewall Service</option>
-        <option value="Patch Management">Patch Management</option>
-        <option value="Zero Trust Gateway">Zero Trust Gateway</option>
-        <option value="CrowdStrike Falcon">CrowdStrike Falcon</option>
-        <option value="Microsoft Defender">Microsoft Defender</option>
-        <option value="Veeam Backup">Veeam Backup</option>
-      </select>
+      
   </div>
 </div>
 
@@ -540,20 +296,60 @@
 
       // Add event listeners to all drop zones
       document.querySelectorAll(".drop-level").forEach(el => {
+        el.addEventListener("click", function(e) {
+          e.stopPropagation();
+          closeAllDropdowns();
+          const menu = createDropdownMenu(el);
+          document.body.appendChild(menu);
+          const rect = el.getBoundingClientRect();
+          menu.style.left = `${rect.left + window.scrollX}px`;
+          menu.style.top = `${rect.top + window.scrollY + el.offsetHeight}px`;
+          menu.style.display = 'block';
+        });
         el.addEventListener("dragover", allowDrop);
         el.addEventListener("drop", drop);
         el.addEventListener("dragleave", dragLeave);
       });
     });
   
-    function addFromDropdown(event, selectEl) {
-      const value = selectEl.value;
-      if (!value) return;
-      const dropZone = selectEl.closest('.drop-level');
-      const div = document.createElement("div");
-      div.className = "draggable";
-      div.textContent = value;
-      div.id = `dropdown-${Date.now()}`;
+    function createDropdownMenu(target) {
+  const menu = document.createElement("div");
+  menu.className = "dropdown-menu";
+  const select = document.createElement("select");
+  const options = ["", "Firewall Service", "Patch Management", "Zero Trust Gateway", "CrowdStrike Falcon", "Microsoft Defender", "Veeam Backup"];
+  options.forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt;
+    o.textContent = opt ? `+ Add: ${opt}` : "Select tool...";
+    select.appendChild(o);
+  });
+  select.onchange = function () {
+    if (!this.value) return;
+    const div = document.createElement("div");
+    div.className = "draggable";
+    div.textContent = this.value;
+    div.id = `dropdown-${Date.now()}`;
+    div.setAttribute("draggable", "true");
+    div.setAttribute("ondragstart", "drag(event)");
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "×";
+    removeBtn.className = "remove-btn";
+    removeBtn.onclick = function () {
+      div.remove();
+    };
+    div.appendChild(removeBtn);
+    target.appendChild(div);
+    menu.remove();
+  };
+  menu.appendChild(select);
+  return menu;
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll(".dropdown-menu").forEach(m => m.remove());
+}
+
+document.body.addEventListener("click", closeAllDropdowns);`;
       div.setAttribute("draggable", "true");
       div.setAttribute("ondragstart", "drag(event)");
 
