@@ -318,7 +318,7 @@ document.body.addEventListener("click", closeAllDropdowns);`;
       });
     });
 function calculateAverageMaturity() {
-  updateLiveAverage();
+  
   const table = document.querySelector(".chart table");
   const rows = table.querySelectorAll("tbody tr");
   let total = 0;
@@ -342,142 +342,7 @@ function calculateAverageMaturity() {
     result.textContent = "No cells selected.";
   }
 }
-document.querySelectorAll(".chart td").forEach(cell => {
-  let hoverTimeout;
-  cell.addEventListener("mouseover", () => {
-    hoverTimeout = setTimeout(() => {
-      const tooltip = document.createElement("div");
-      tooltip.className = "hover-tooltip";
-      tooltip.textContent = getCellDescription(cell.textContent);
-      document.body.appendChild(tooltip);
-      const rect = cell.getBoundingClientRect();
-      tooltip.style.left = `${rect.left + window.scrollX + 10}px`;
-      tooltip.style.top = `${rect.top + window.scrollY + 10}px`;
-    }, 3000);
-  });
-  cell.addEventListener("mouseout", () => {
-    clearTimeout(hoverTimeout);
-    const existing = document.querySelector(".hover-tooltip");
-    if (existing) existing.remove();
-  });
-});
-function getCellDescription(text) {
-  const descriptions = {
-    "No control": "No application control mechanisms are implemented.",
-    "Basic Allowlist": "Simple allowlist used to control application execution.",
-    "Scoped & Policy-based": "Allowlisting scoped to user groups with policy enforcement.",
-    "Enforced + Memory Protections": "Strict enforcement with added memory exploit protections.",
-    "Unpatched": "Applications are not regularly patched, increasing risk.",
-    "Ad hoc patching": "Patching is inconsistent and not scheduled.",
-    "Routine patching": "Patches are applied on a regular schedule.",
-    "Automated + Tested": "Automated patching with testing for impact before deployment.",
-    "Unrestricted macros": "Macros can run without restriction, high risk.",
-    "Warning-based": "Users are warned but can run macros.",
-    "Blocked by default": "Macros are blocked unless specifically allowed.",
-    "Signed only, with audit": "Only signed macros allowed, with logging and audit.",
-    "Open settings": "User devices have open and insecure configurations.",
-    "Baseline config": "Devices follow basic configuration standards.",
-    "Hardening templates": "Devices are hardened using approved templates.",
-    "Ongoing policy audit": "Configuration compliance is continuously audited.",
-    "Everyone is admin": "All users have administrative privileges.",
-    "Limited admin access": "Admin access is restricted to a few users.",
-    "Audited privilege use": "Admin activity is logged and reviewed.",
-    "Just-in-time admin": "Temporary admin rights are granted when needed.",
-    "Unpatched OS": "Operating systems are not up to date.",
-    "Manual patching": "Patching requires manual intervention.",
-    "Routine OS patching": "Operating systems patched on a schedule.",
-    "Automated + central control": "Centralized and automated OS patching.",
-    "No MFA": "Multi-factor authentication is not used.",
-    "MFA on external": "MFA is used only for external access.",
-    "MFA on critical apps": "MFA is enabled for key applications.",
-    "MFA enforced org-wide": "MFA is mandatory across all systems.",
-    "No backups": "No backup strategy in place.",
-    "Basic file backups": "Some important files are backed up manually.",
-    "Regular tested backups": "Backups are taken routinely and tested.",
-    "Immutable + offsite": "Backups are immutable and stored offsite."
-  };
-  return descriptions[text] || text;
-}
-// Update chart after maturity calculation
-let maturityChart;
-function updateChart(data) {
-  const ctx = document.getElementById('maturityChart').getContext('2d');
-  if (maturityChart) maturityChart.destroy();
-  maturityChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: data.map((_, i) => `Control ${i + 1}`),
-      datasets: [{
-        label: 'Maturity Level',
-        data: data,
-        borderColor: '#007acc',
-        backgroundColor: 'rgba(0,122,204,0.1)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 6,
-        pointBackgroundColor: '#007acc'
-      }]
-    },
-    options: {
-      scales: {
-        y: {
-          min: 0,
-          max: 3,
-          ticks: {
-            stepSize: 1
-          }
-        }
-      },
-      responsive: true,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => `Maturity: ${ctx.raw}`
-          }
-        }
-      }
-    }
-  });
-}
 
-function calculateAverageMaturity() {
-  const table = document.querySelector(".chart table");
-  const rows = table.querySelectorAll("tbody tr");
-  let total = 0;
-  let count = 0;
-  let maturityPerControl = [];
-
-  rows.forEach(row => {
-    const cells = row.querySelectorAll("td");
-    let selectedIndex = -1;
-    for (let i = 1; i < cells.length; i++) {
-      if (cells[i].classList.contains("selected-cell")) {
-        selectedIndex = i - 1; // maturity level 0 = index 1
-        total += selectedIndex;
-        count++;
-      }
-    }
-    maturityPerControl.push(selectedIndex >= 0 ? selectedIndex : 0);
-  });
-
-  const result = document.getElementById("maturity-result");
-  if (count > 0) {
-    const avg = (total / count).toFixed(2);
-    result.textContent = `Average Maturity Level: ${avg}`;
-  } else {
-    result.textContent = "No cells selected.";
-  }
-  updateChart(maturityPerControl);
-}
-document.querySelectorAll(".chart td").forEach(cell => {
-  cell.addEventListener("click", () => {
-    if (!cell.closest("tr").querySelector("td").isSameNode(cell)) {
-      calculateAverageMaturity();
-    }
-  });
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
