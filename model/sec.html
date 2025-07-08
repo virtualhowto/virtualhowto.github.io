@@ -120,11 +120,20 @@
     <p>Drag your security products/services to the correct control and maturity level</p>
   </header>
 
-  <div class="grid-container">
-  <div class="column"><strong>Maturity 0</strong></div>
-  <div class="column"><strong>Maturity 1</strong></div>
-  <div class="column"><strong>Maturity 2</strong></div>
-  <div class="column"><strong>Maturity 3</strong></div>
+  <div class="grid-container" style="display: grid; grid-template-columns: 160px repeat(8, 1fr);">
+  <div class="column" style="background:#f0f0f0;"><strong>Control / Maturity</strong></div>
+  <div class="column"><strong>Application Control</strong></div>
+  <div class="column"><strong>Patch Applications</strong></div>
+  <div class="column"><strong>Microsoft Office Macros</strong></div>
+  <div class="column"><strong>User Application Hardening</strong></div>
+  <div class="column"><strong>Restrict Admin Privileges</strong></div>
+  <div class="column"><strong>Patch Operating Systems</strong></div>
+  <div class="column"><strong>MFA</strong></div>
+  <div class="column"><strong>Backups</strong></div>
+  <div class="column" title="No implementation or awareness of the control">🟥 Maturity 0</div><strong title="No implementation or awareness of the control" onmouseover="this.style.backgroundColor='#fee'" onmouseout="this.style.backgroundColor=''">Maturity 0</strong></div>
+  <div class="column"><strong title="Control is partially implemented and may lack consistency" onmouseover="this.style.backgroundColor='#fff5e6'" onmouseout="this.style.backgroundColor=''">Maturity 1</strong></div>
+  <div class="column"><strong title="Control is mostly implemented with reasonable coverage" onmouseover="this.style.backgroundColor='#f0fff0'" onmouseout="this.style.backgroundColor=''">Maturity 2</strong></div>
+  <div class="column"><strong title="Control is fully implemented, tested, and maintained" onmouseover="this.style.backgroundColor='#e6f7ff'" onmouseout="this.style.backgroundColor=''">Maturity 3</strong></div>
   <div class="column"><strong>Maturity 0</strong></div>
   <div class="column"><strong>Maturity 1</strong></div>
   <div class="column"><strong>Maturity 2</strong></div>
