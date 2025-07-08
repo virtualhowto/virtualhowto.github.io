@@ -164,10 +164,10 @@
         </tr>
       </thead>
       <tbody>
-        <tr><td>Control 1 – Application Control</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">No control</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Basic Allowlist</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Scoped & Policy-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Enforced + Memory Protections</td></tr>
+        $1<td"this.classList.toggle('selected-cell')" title="Click to mark this cell">No control</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Basic Allowlist</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Scoped & Policy-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Enforced + Memory Protections</td></tr>
         <tr><td>Control 2 – Patch Applications</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unpatched</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Ad hoc patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Routine patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Automated + Tested</td></tr>
-        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 3 – Office Macros</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unrestricted macros</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Warning-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Blocked by default</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Signed only, with audit</td></tr>
-        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 4 – User Hardening</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Open settings</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Baseline config</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Hardening templates</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Ongoing policy audit</td></tr>
+        <tr><td>$1<td"this.classList.toggle('selected-cell')" title="Click to mark this cell">Unrestricted macros</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Warning-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Blocked by default</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Signed only, with audit</td></tr>
+        <tr><td>$1</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Open settings</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Baseline config</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Hardening templates</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Ongoing policy audit</td></tr>
         <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 5 – Admin Privileges</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Everyone is admin</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Limited admin access</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Audited privilege use</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Just-in-time admin</td></tr>
         <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 6 – Patch OS</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unpatched OS</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Manual patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Routine OS patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Automated + central control</td></tr>
         <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 7 – MFA</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">No MFA</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA on external</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA on critical apps</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA enforced org-wide</td></tr>
@@ -401,10 +401,86 @@ function getCellDescription(text) {
   };
   return descriptions[text] || text;
 }
+// Update chart after maturity calculation
+let maturityChart;
+function updateChart(data) {
+  const ctx = document.getElementById('maturityChart').getContext('2d');
+  if (maturityChart) maturityChart.destroy();
+  maturityChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map((_, i) => `Control ${i + 1}`),
+      datasets: [{
+        label: 'Maturity Level',
+        data: data,
+        borderColor: '#007acc',
+        backgroundColor: 'rgba(0,122,204,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 6,
+        pointBackgroundColor: '#007acc'
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          min: 0,
+          max: 3,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      },
+      responsive: true,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `Maturity: ${ctx.raw}`
+          }
+        }
+      }
+    }
+  });
+}
+
+function calculateAverageMaturity() {
+  const table = document.querySelector(".chart table");
+  const rows = table.querySelectorAll("tbody tr");
+  let total = 0;
+  let count = 0;
+  let maturityPerControl = [];
+
+  rows.forEach(row => {
+    const cells = row.querySelectorAll("td");
+    let selectedIndex = -1;
+    for (let i = 1; i < cells.length; i++) {
+      if (cells[i].classList.contains("selected-cell")) {
+        selectedIndex = i - 1; // maturity level 0 = index 1
+        total += selectedIndex;
+        count++;
+      }
+    }
+    maturityPerControl.push(selectedIndex >= 0 ? selectedIndex : 0);
+  });
+
+  const result = document.getElementById("maturity-result");
+  if (count > 0) {
+    const avg = (total / count).toFixed(2);
+    result.textContent = `Average Maturity Level: ${avg}`;
+  } else {
+    result.textContent = "No cells selected.";
+  }
+  updateChart(maturityPerControl);
+}
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div style="padding: 20px; text-align: center;">
   <button onclick="calculateAverageMaturity()">Calculate Average Maturity</button>
   <p id="maturity-result" style="margin-top: 10px; font-weight: bold;"></p>
 </div>
+<canvas id="maturityChart" width="800" height="400" style="display: block; margin: 0 auto 40px;"></canvas>
 </body>
 </html>
