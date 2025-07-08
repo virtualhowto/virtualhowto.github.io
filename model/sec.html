@@ -41,6 +41,10 @@
       min-height: 60px;
       position: relative;
     }
+    .drop-level.drag-over {
+      border-color: #007acc;
+      background-color: #e6f7ff;
+    }
     .draggable {
       background-color: #007acc;
       color: white;
@@ -140,7 +144,64 @@
   </div>
 
   <script>
-// existing script unchanged
+    function allowDrop(ev) {
+      ev.preventDefault();
+      ev.target.classList.add("drag-over");
+    }
+
+    function drag(ev) {
+      ev.dataTransfer.setData("text", ev.target.id);
+    }
+
+    function drop(ev) {
+      ev.preventDefault();
+      ev.target.classList.remove("drag-over");
+      const data = ev.dataTransfer.getData("text");
+      const original = document.getElementById(data);
+      if (!original) return;
+      const node = original.cloneNode(true);
+      node.id = data + '-' + Date.now();
+      node.setAttribute("draggable", "true");
+      node.setAttribute("ondragstart", "drag(event)");
+
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "×";
+      removeBtn.className = "remove-btn";
+      removeBtn.onclick = function () {
+        node.remove();
+      };
+
+      node.appendChild(removeBtn);
+      ev.target.appendChild(node);
+    }
+
+    function dragLeave(ev) {
+      ev.target.classList.remove("drag-over");
+    }
+
+    // Ensure draggable items can be generated
+    document.addEventListener("DOMContentLoaded", () => {
+      const toolbox = document.getElementById("toolbox");
+      if (toolbox) {
+        const tools = ["Firewall Service", "Patch Management", "Zero Trust Gateway"];
+        tools.forEach((tool, index) => {
+          const div = document.createElement("div");
+          div.className = "draggable";
+          div.textContent = tool;
+          div.id = `tool-${index}`;
+          div.setAttribute("draggable", "true");
+          div.setAttribute("ondragstart", "drag(event)");
+          toolbox.appendChild(div);
+        });
+      }
+
+      // Add event listeners to all drop zones
+      document.querySelectorAll(".drop-level").forEach(el => {
+        el.addEventListener("dragover", allowDrop);
+        el.addEventListener("drop", drop);
+        el.addEventListener("dragleave", dragLeave);
+      });
+    });
   </script>
 </body>
 </html>
