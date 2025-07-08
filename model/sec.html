@@ -50,7 +50,19 @@
     .gradient-right {
       background: linear-gradient(to left, #cde5ff, transparent);
     }
-  </style>
+  .hover-tooltip {
+  position: absolute;
+  background: #333;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  z-index: 1000;
+  max-width: 200px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+</style>
 </head>
 <body>
   <header>
@@ -86,7 +98,71 @@
     <p id="maturity-result" style="margin-top: 10px; font-weight: bold;"></p>
   </div>
   <canvas id="maturityChart" width="800" height="400" style="display: block; margin: 0 auto 40px;"></canvas>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js">document.querySelectorAll(".chart td:not(:first-child)").forEach(cell => {
+  let tooltip;
+  cell.addEventListener("mouseover", () => {
+    tooltip = document.createElement("div");
+    tooltip.className = "hover-tooltip";
+    tooltip.textContent = getCellDescription(cell.textContent);
+    document.body.appendChild(tooltip);
+    const rect = cell.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + window.scrollX + 10}px`;
+    tooltip.style.top = `${rect.top + window.scrollY + 10}px`;
+  });
+  cell.addEventListener("mousemove", (e) => {
+    if (tooltip) {
+      tooltip.style.left = `${e.pageX + 10}px`;
+      tooltip.style.top = `${e.pageY + 10}px`;
+    }
+  });
+  cell.addEventListener("mouseout", () => {
+    if (tooltip) {
+      tooltip.remove();
+      tooltip = null;
+    }
+  });
+  });
+  cell.addEventListener("mouseout", () => {
+    clearTimeout(hoverTimeout);
+    const existing = document.querySelector(".hover-tooltip");
+    if (existing) existing.remove();
+  });
+});
+
+function getCellDescription(text) {
+  const descriptions = {
+    "None": "No control or process in place.",
+    "Allowlisting": "Only approved applications can run.",
+    "Policy-based": "Controls are applied based on defined policies.",
+    "Enforced + Memory Protections": "Strict controls with additional protection against memory exploits.",
+    "Unpatched": "Software is outdated and unpatched.",
+    "Ad hoc": "Patches are applied irregularly.",
+    "Routine": "Patches are applied on a regular schedule.",
+    "Automated + Tested": "Patches are deployed automatically and tested for safety.",
+    "Unrestricted": "Macros can run without restrictions.",
+    "Warning-based": "Users are warned before running macros.",
+    "Blocked": "Macros are blocked by default.",
+    "Signed + Audited": "Only signed macros are allowed with audit trails.",
+    "Open": "Applications run without restrictions.",
+    "Baseline": "Basic security settings are applied.",
+    "Hardened": "Applications are configured to minimize vulnerabilities.",
+    "Policy-audited": "Application settings are enforced and regularly reviewed.",
+    "Everyone Admin": "All users have administrator rights.",
+    "Limited": "Admin privileges are restricted to necessary personnel.",
+    "Audited": "Admin actions are logged and reviewed.",
+    "Just-in-Time": "Temporary admin rights granted as needed.",
+    "Manual": "Updates are applied manually.",
+    "Central + Automated": "Updates are deployed through centralized automation.",
+    "External Only": "MFA is used for external access only.",
+    "Critical Only": "MFA is required for critical systems.",
+    "Org-wide": "MFA is enforced across the entire organization.",
+    "Basic": "Basic backup routines in place.",
+    "Tested": "Backups are routinely tested for restoration.",
+    "Immutable": "Backups cannot be modified once written."
+  };
+  return descriptions[text.trim()] || `No description available for "${text.trim()}".`;
+}
+</script>
   <script>
     function calculateAverageMaturity() {
       const rows = document.querySelectorAll(".chart tbody tr");
@@ -144,15 +220,10 @@
       });
     }
 
-    document.querySelectorAll(".chart td").forEach(cell => {
-      cell.addEventListener("click", () => {
-        const row = cell.parentElement;
-        const index = Array.from(row.children).indexOf(cell);
-        if (index === 0) return; // skip first column
-        row.querySelectorAll("td").forEach((td, i) => {
-          if (i !== 0) td.classList.remove("selected-cell");
-        });
-        cell.classList.toggle("selected-cell");
+    document.querySelectorAll(".chart td:not(:first-child)").forEach(cell => {
+  cell.addEventListener("click", () => {
+    cell.classList.toggle("selected-cell");
+  });
       });
     });
   </script>
