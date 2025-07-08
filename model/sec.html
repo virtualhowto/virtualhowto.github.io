@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Essential Eight Capability Mapping</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    header {
+      background-color: #1e2a38;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border-top: 3px solid #333;
+      border-bottom: 3px solid #333;
+    }
+    .column {
+      border-left: 1px solid #ccc;
+      border-right: 1px solid #ccc;
+      min-height: 400px;
+      padding: 10px;
+      background-color: #fff;
+      text-align: center;
+    }
+    .column h4 {
+      margin: 5px 0;
+    }
+    .drop-level {
+      border: 1px dashed #aaa;
+      margin: 5px;
+      padding: 10px;
+      min-height: 60px;
+    }
+    .draggable {
+      background-color: #007acc;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 5px;
+      margin: 5px;
+      cursor: grab;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Essential Eight Maturity Capability Mapping</h1>
+    <p>Drag your security products/services to the correct Essential 8 control and maturity level</p>
+  </header>
+
+  <div class="grid-container">
+    <div class="column">
+      <h4>E1<br>App Control</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+    <div class="column">
+      <h4>E2<br>Patch Apps</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+    <div class="column">
+      <h4>E3<br>Macros</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+    <div class="column">
+      <h4>E4<br>Hardening</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+    <div class="column">
+      <h4>E5<br>Admin Rights</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+    <div class="column">
+      <h4>E6<br>Patch OS</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+    <div class="column">
+      <h4>E7<br>MFA</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+    <div class="column">
+      <h4>E8<br>Backups</h4>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 0</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 1</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 2</div>
+      <div class="drop-level" ondrop="drop(event)" ondragover="allowDrop(event)">Level 3</div>
+    </div>
+  </div>
+
+  <div style="padding: 10px;">
+    <h2>Available Products & Services</h2>
+    <div id="toolbox">
+      <div class="draggable" draggable="true" ondragstart="drag(event)" id="defender">Microsoft Defender</div>
+      <div class="draggable" draggable="true" ondragstart="drag(event)" id="intune">Microsoft Intune</div>
+      <div class="draggable" draggable="true" ondragstart="drag(event)" id="crowdstrike">CrowdStrike MDR</div>
+      <div class="draggable" draggable="true" ondragstart="drag(event)" id="backup">Managed Backup</div>
+    </div>
+  </div>
+
+  <script>
+    function allowDrop(ev) {
+      ev.preventDefault();
+    }
+
+    function drag(ev) {
+      ev.dataTransfer.setData("text", ev.target.id);
+    }
+
+    function drop(ev) {
+      ev.preventDefault();
+      var data = ev.dataTransfer.getData("text");
+      var node = document.getElementById(data).cloneNode(true);
+      node.id = data + '-' + Date.now(); // unique ID
+      node.setAttribute("draggable", "true");
+      node.setAttribute("ondragstart", "drag(event)");
+      ev.target.appendChild(node);
+    }
+  </script>
+</body>
+</html>
