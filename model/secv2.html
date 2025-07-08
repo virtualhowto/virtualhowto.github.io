@@ -16,11 +16,11 @@
       padding: 20px;
       text-align: center;
     }
-    .chart {
+    .chart, #tools, #summary {
       margin: 20px auto;
       max-width: 1000px;
       background: #fff;
-      padding: 10px;
+      padding: 20px;
       border: 1px solid #ccc;
     }
     table {
@@ -43,6 +43,14 @@
       background-color: #cde5ff;
       font-weight: bold;
     }
+    .tool {
+      padding: 8px 12px;
+      background: #e2f0ff;
+      border: 1px solid #007acc;
+      border-radius: 4px;
+      cursor: grab;
+      margin: 4px;
+    }
     .hover-tooltip {
       position: absolute;
       background: #333;
@@ -62,24 +70,6 @@
       font-size: 14px;
       line-height: 1.6;
     }
-    #tools {
-      max-width: 1000px;
-      margin: 20px auto;
-      padding: 20px;
-      background: #fff;
-      border: 1px solid #ccc;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .tool {
-      padding: 8px 12px;
-      background: #e2f0ff;
-      border: 1px solid #007acc;
-      border-radius: 4px;
-      cursor: grab;
-      user-select: none;
-    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -89,8 +79,7 @@
   <h1>Security Maturity Model Capability Mapping</h1>
 </header>
 <div id="export-area">
-  <div id="tools"></div>
-  <div class="chart">
+  <div id="tools" style="display: flex; flex-wrap: wrap;"></div>  <div class="chart">
     <h2>Security Maturity Reference</h2>
     <table id="maturity-table">
       <thead>
@@ -113,50 +102,200 @@
         <tr><td>Backups</td><td>None</td><td>Basic</td><td>Tested</td><td>Immutable</td></tr>
       </tbody>
     </table>
-  </div>
-  <div style="padding: 20px; text-align: center;">
-    <div id="summary" style="margin: 30px auto; max-width: 1000px; padding: 20px; background: #fff; border: 1px solid #ccc; display: flex; gap: 30px; align-items: flex-start; justify-content: space-between;">
-      <div style="flex: 1; overflow-y: auto; max-height: 600px;">
-        <h3>Summary of Selections</h3>
-        <ul id="summary-list" style="text-align: left;"></ul>
-      </div>
-      <div style="flex: 1; position: relative;">
-        <canvas id="summaryChart" style="width:100%; height:300px;"></canvas>
-      </div>
+  </div>  <div id="summary" style="display: flex; gap: 20px;">
+    <div style="flex: 1;">
+      <h3>Summary of Selections</h3>
+      <ul id="summary-list" style="text-align: left;"></ul>
     </div>
-  </div>
-  <div style="text-align:center; margin-top: 40px; margin-bottom: 30px;">
+    <div style="flex: 1;">
+      <canvas id="summaryChart" style="width:100%; height:300px;"></canvas>
+    </div>
+  </div>  <div style="text-align:center; margin-top: 40px;">
     <button onclick="exportToPDF()">Export to PDF</button>
   </div>
-</div>
-<script>
+</div><script>
+let toolDescriptions = {};
+
 fetch('tools.json')
   .then(res => res.json())
   .then(tools => {
     const toolsContainer = document.getElementById('tools');
-    tools.forEach(name => {
+    tools.forEach(tool => {
+      toolDescriptions[tool.name] = tool.description;
       const div = document.createElement('div');
       div.className = 'tool';
-      div.textContent = name;
+      div.textContent = tool.name;
       div.setAttribute('draggable', true);
       div.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', name);
+        e.dataTransfer.setData('text/plain', tool.name);
       });
       toolsContainer.appendChild(div);
     });
   });
-</script>
-<script>
+
+document.querySelectorAll('td:not(:first-child)').forEach(cell => {
+  cell.addEventListener('dragover', e => e.preventDefault());
+  cell.addEventListener('drop', e => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData('text/plain');
+
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.justifyContent = 'space-between';
+    wrapper.style.padding = '2px 6px';
+    wrapper.style.marginTop = '4px';
+    wrapper.style.border = '1px solid #007acc';
+    wrapper.style.borderRadius = '4px';
+    wrapper.style.backgroundColor = '#e2f0ff';
+
+    const label = document.createElement('span');
+    label.textContent = data;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '❌';
+    removeBtn.style.border = 'none';
+    removeBtn.style.background = 'transparent';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.addEventListener('click', () => {
+      wrapper.remove();
+      updateSummary();
+    });
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(removeBtn);
+    cell.appendChild(wrapper);
+    updateSummary();
+  });
+
+  cell.addEventListener('click', () => {
+    const row = cell.parentElement;
+    const cells = row.querySelectorAll('td:not(:first-child)');
+    const isSelected = cell.classList.contains('selected-cell');
+    cells.forEach(c => c.classList.remove('selected-cell'));
+    if (!isSelected) {
+      cell.classList.add('selected-cell');
+    }
+    updateSummary();
+  });
+});
+
+function updateSummary() {
+  const rows = document.querySelectorAll("#maturity-table tbody tr");
+  const list = document.getElementById("summary-list");
+  const chartData = [];
+  const labels = [];
+  list.innerHTML = "";
+
+  rows.forEach(row => {
+    const cells = row.querySelectorAll("td");
+    const control = cells[0].textContent;
+    let selected = "None";
+    let maturity = 0;
+
+    for (let i = 1; i < cells.length; i++) {
+      if (cells[i].classList.contains("selected-cell")) {
+        selected = cells[i].textContent;
+        maturity = i - 1;
+        break;
+      }
+    }
+
+    labels.push(control);
+    chartData.push(maturity);
+
+    const attachedTools = Array.from(row.querySelectorAll(".selected-cell div span")).map(span => {
+      const name = span.textContent;
+      const desc = toolDescriptions[name] || "";
+      return `<li><strong>${name}:</strong> <em>${desc}</em></li>`;
+    }).join("");
+
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${control}:</strong> ${selected}<small>${getCellDescription(selected)}</small><ul>${attachedTools}</ul>`;
+    list.appendChild(li);
+  });
+
+  renderSummaryChart(labels, chartData);
+}
+
+function renderSummaryChart(labels, data) {
+  const ctx = document.getElementById("summaryChart").getContext("2d");
+  if (window.summaryChart instanceof Chart) window.summaryChart.destroy();
+
+  window.summaryChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Maturity Level',
+        data: data,
+        borderColor: '#007acc',
+        backgroundColor: 'rgba(0,122,204,0.2)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 3,
+          ticks: { stepSize: 1 }
+        }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function getCellDescription(text) {
+  const descriptions = {
+    "None": "No control or process in place.",
+    "Allowlisting": "Only approved applications can run.",
+    "Policy-based": "Controls are applied based on defined policies.",
+    "Enforced + Memory Protections": "Strict controls with additional protection against memory exploits.",
+    "Unpatched": "Software is outdated and unpatched.",
+    "Ad hoc": "Patches are applied irregularly.",
+    "Routine": "Patches are applied on a regular schedule.",
+    "Automated + Tested": "Patches are deployed automatically and tested for safety.",
+    "Unrestricted": "Macros can run without restrictions.",
+    "Warning-based": "Users are warned before running macros.",
+    "Blocked": "Macros are blocked by default.",
+    "Signed + Audited": "Only signed macros are allowed with audit trails.",
+    "Open": "Applications run without restrictions.",
+    "Baseline": "Basic security settings are applied.",
+    "Hardened": "Applications are configured to minimize vulnerabilities.",
+    "Policy-audited": "Application settings are enforced and regularly reviewed.",
+    "Everyone Admin": "All users have administrator rights.",
+    "Limited": "Admin privileges are restricted to necessary personnel.",
+    "Audited": "Admin actions are logged and reviewed.",
+    "Just-in-Time": "Temporary admin rights granted as needed.",
+    "Manual": "Updates are applied manually.",
+    "Central + Automated": "Updates are deployed through centralized automation.",
+    "External Only": "MFA is used for external access only.",
+    "Critical Only": "MFA is required for critical systems.",
+    "Org-wide": "MFA is enforced across the entire organization.",
+    "Basic": "Basic backup routines in place.",
+    "Tested": "Backups are routinely tested for restoration.",
+    "Immutable": "Backups cannot be modified once written."
+  };
+  return descriptions[text.trim()] || `No description available for "${text.trim()}".`;
+}
+
 function exportToPDF() {
   const element = document.getElementById("export-area");
-  html2pdf().set({
+  const opt = {
     margin: 0,
     filename: 'Security-Maturity-Model.pdf',
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(element).save();
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all'] }
+  };
+  html2pdf().set(opt).from(element).save();
 }
-</script>
-</body>
+</script></body>
 </html>
