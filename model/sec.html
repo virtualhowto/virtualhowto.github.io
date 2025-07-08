@@ -1,86 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Security Maturity Model Capability Mapping</title>
   <style>
     body {
       font-family: sans-serif;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
     }
     header {
       background-color: #1e2a38;
       color: white;
       padding: 20px;
       text-align: center;
-    }
-    .grid-container {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      border-top: 3px solid #333;
-      border-bottom: 3px solid #333;
-    }
-    .column {
-      border-left: 1px solid #ccc;
-      border-right: 1px solid #ccc;
-      min-height: 400px;
-      padding: 10px;
-      background-color: #fff;
-      text-align: center;
-    }
-    .column h4 {
-      margin: 5px 0;
-    }
-    .drop-level {
-      border: 1px dashed #aaa;
-      margin: 5px;
-      padding: 10px;
-      min-height: 60px;
-      position: relative;
-    }
-    .drop-level.drag-over {
-      border-color: #007acc;
-      background-color: #e6f7ff;
-    }
-    .draggable {
-      background-color: #007acc;
-      color: white;
-      padding: 6px 10px;
-      border-radius: 5px;
-      margin: 5px;
-      cursor: grab;
-      position: relative;
-    }
-    .remove-btn {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background: red;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      font-size: 12px;
-      line-height: 16px;
-      cursor: pointer;
-    }
-    .toolbox-group {
-      margin-bottom: 20px;
-    }
-    .toolbox-title {
-      background-color: #ccc;
-      padding: 8px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .toolbox-content {
-      padding: 10px;
-      display: none;
-      background-color: #eee;
     }
     .chart {
       margin: 20px auto;
@@ -89,27 +24,20 @@
       padding: 10px;
       border: 1px solid #ccc;
     }
-    .chart table {
+    table {
       width: 100%;
       border-collapse: collapse;
     }
-    .chart th, $1
-  background: #fff;$2
-    $1#eee$2
-    }
-      .dropdown-menu {
-      position: absolute;
-      background: white;
+    th, td {
       border: 1px solid #ccc;
-      padding: 5px;
-      display: none;
-      z-index: 10;
+      padding: 10px;
+      text-align: center;
     }
-    .dropdown-menu select {
-      width: 100%;
+    th {
+      background: #eee;
     }
-    .selected-cell {
-      background-color: #cde5ff;
+    td:first-child {
+      background: #eee;
       font-weight: bold;
     }
     .selected-cell {
@@ -122,31 +50,13 @@
     .gradient-right {
       background: linear-gradient(to left, #cde5ff, transparent);
     }
-.hover-tooltip {
-  position: absolute;
-  background: #333;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  z-index: 1000;
-  max-width: 200px;
-  pointer-events: none;
-  opacity: 0.9;
-}
-</style>
+  </style>
 </head>
 <body>
   <header>
     <h1>Security Maturity Model Capability Mapping</h1>
-    <p>Drag your security products/services to the correct control and maturity level</p>
+    <p>Click cells to select maturity levels and visualize your security posture.</p>
   </header>
-
-  <div style="padding: 10px;">
-    <h2>Available Products & Services</h2>
-    <div id="toolbox"></div>
-  </div>
-
   <div class="chart">
     <h2>Security Maturity Reference</h2>
     <table>
@@ -160,196 +70,91 @@
         </tr>
       </thead>
       <tbody>
-        $1<td"this.classList.toggle('selected-cell')" title="Click to mark this cell">No control</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Basic Allowlist</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Scoped & Policy-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Enforced + Memory Protections</td></tr>
-        <tr><td>$1</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unpatched</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Ad hoc patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Routine patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Automated + Tested</td></tr>
-        <tr><td>$1<td"this.classList.toggle('selected-cell')" title="Click to mark this cell">Unrestricted macros</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Warning-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Blocked by default</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Signed only, with audit</td></tr>
-        <tr><td>$1</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Open settings</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Baseline config</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Hardening templates</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Ongoing policy audit</td></tr>
-        <tr><td>$1</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Everyone is admin</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Limited admin access</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Audited privilege use</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Just-in-time admin</td></tr>
-        <td style="background:#eee"><tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 6 – Patch OS</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unpatched OS</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Manual patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Routine OS patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Automated + central control</td></tr>
-        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 7 – MFA</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">No MFA</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA on external</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA on critical apps</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA enforced org-wide</td></tr>
-        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 8 – Backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">No backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Basic file backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Regular tested backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Immutable + offsite</td></tr>
+        <tr><td>Application Control</td><td>None</td><td>Allowlisting</td><td>Policy-based</td><td>Enforced + Memory Protections</td></tr>
+        <tr><td>Patch Applications</td><td>Unpatched</td><td>Ad hoc</td><td>Routine</td><td>Automated + Tested</td></tr>
+        <tr><td>Configure Macros</td><td>Unrestricted</td><td>Warning-based</td><td>Blocked</td><td>Signed + Audited</td></tr>
+        <tr><td>Application Hardening</td><td>Open</td><td>Baseline</td><td>Hardened</td><td>Policy-audited</td></tr>
+        <tr><td>Restrict Admin Privileges</td><td>Everyone Admin</td><td>Limited</td><td>Audited</td><td>Just-in-Time</td></tr>
+        <tr><td>Patch OS</td><td>Unpatched</td><td>Manual</td><td>Routine</td><td>Central + Automated</td></tr>
+        <tr><td>Multi-Factor Auth</td><td>None</td><td>External Only</td><td>Critical Only</td><td>Org-wide</td></tr>
+        <tr><td>Backups</td><td>None</td><td>Basic</td><td>Tested</td><td>Immutable</td></tr>
       </tbody>
     </table>
   </div>
-
+  <div style="padding: 20px; text-align: center;">
+    <button onclick="calculateAverageMaturity()">Calculate Average Maturity</button>
+    <p id="maturity-result" style="margin-top: 10px; font-weight: bold;"></p>
+  </div>
+  <canvas id="maturityChart" width="800" height="400" style="display: block; margin: 0 auto 40px;"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    function allowDrop(ev) {
-      ev.preventDefault();
-      ev.target.classList.add("drag-over");
-    }
-
-    function drag(ev) {
-      ev.dataTransfer.setData("text", ev.target.id);
-    }
-
-    function drop(ev) {
-      ev.preventDefault();
-      ev.target.classList.remove("drag-over");
-      const data = ev.dataTransfer.getData("text");
-      const original = document.getElementById(data);
-      if (!original) return;
-      const node = original.cloneNode(true);
-      node.id = data + '-' + Date.now();
-      node.setAttribute("draggable", "true");
-      node.setAttribute("ondragstart", "drag(event)");
-
-      const removeBtn = document.createElement("button");
-      removeBtn.textContent = "×";
-      removeBtn.className = "remove-btn";
-      removeBtn.onclick = function () {
-        node.remove();
-      };
-
-      node.appendChild(removeBtn);
-      ev.target.appendChild(node);
-    }
-
-    function dragLeave(ev) {
-      ev.target.classList.remove("drag-over");
-    }
-
-    // Ensure draggable items can be generated
-    document.addEventListener("DOMContentLoaded", () => {
-      const toolbox = document.getElementById("toolbox");
-      if (toolbox) {
-        const tools = ["Firewall Service", "Patch Management", "Zero Trust Gateway"];
-        tools.forEach((tool, index) => {
-          const div = document.createElement("div");
-          div.className = "draggable";
-          div.textContent = tool;
-          div.id = `tool-${index}`;
-          div.setAttribute("draggable", "true");
-          div.setAttribute("ondragstart", "drag(event)");
-          toolbox.appendChild(div);
-        });
-      }
-
-      // Add event listeners to all drop zones
-      document.querySelectorAll(".drop-level").forEach(el => {
-        el.addEventListener("click", function(e) {
-          e.stopPropagation();
-          closeAllDropdowns();
-          const menu = createDropdownMenu(el);
-          document.body.appendChild(menu);
-          const rect = el.getBoundingClientRect();
-          menu.style.left = `${rect.left + window.scrollX}px`;
-          menu.style.top = `${rect.top + window.scrollY + el.offsetHeight}px`;
-          menu.style.display = 'block';
-        });
-        el.addEventListener("dragover", allowDrop);
-        el.addEventListener("drop", drop);
-        el.addEventListener("dragleave", dragLeave);
+    function calculateAverageMaturity() {
+      const rows = document.querySelectorAll(".chart tbody tr");
+      let total = 0;
+      let count = 0;
+      let maturityData = [];
+      rows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        let selected = -1;
+        for (let i = 1; i < cells.length; i++) {
+          if (cells[i].classList.contains("selected-cell")) {
+            selected = i - 1;
+            total += selected;
+            count++;
+          }
+        }
+        maturityData.push(selected >= 0 ? selected : 0);
       });
-    });
-  
-    function createDropdownMenu(target) {
-  const menu = document.createElement("div");
-  menu.className = "dropdown-menu";
-  const select = document.createElement("select");
-  const options = ["", "Firewall Service", "Patch Management", "Zero Trust Gateway", "CrowdStrike Falcon", "Microsoft Defender", "Veeam Backup"];
-  options.forEach(opt => {
-    const o = document.createElement("option");
-    o.value = opt;
-    o.textContent = opt ? `+ Add: ${opt}` : "Select tool...";
-    select.appendChild(o);
-  });
-  select.onchange = function () {
-    if (!this.value) return;
-    const div = document.createElement("div");
-    div.className = "draggable";
-    div.textContent = this.value;
-    div.id = `dropdown-${Date.now()}`;
-    div.setAttribute("draggable", "true");
-    div.setAttribute("ondragstart", "drag(event)");
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "×";
-    removeBtn.className = "remove-btn";
-    removeBtn.onclick = function () {
-      div.remove();
-    };
-    div.appendChild(removeBtn);
-    target.appendChild(div);
-    menu.remove();
-  };
-  menu.appendChild(select);
-  return menu;
-}
-
-function closeAllDropdowns() {
-  document.querySelectorAll(".dropdown-menu").forEach(m => m.remove());
-}
-
-document.body.addEventListener("click", closeAllDropdowns);`;
-      div.setAttribute("draggable", "true");
-      div.setAttribute("ondragstart", "drag(event)");
-
-      const removeBtn = document.createElement("button");
-      removeBtn.textContent = "×";
-      removeBtn.className = "remove-btn";
-      removeBtn.onclick = function () {
-        div.remove();
-      };
-      div.appendChild(removeBtn);
-      dropZone.appendChild(div);
-      selectEl.value = "";
+      const avg = count > 0 ? (total / count).toFixed(2) : "0.00";
+      document.getElementById("maturity-result").textContent = `Average Maturity Level: ${avg}`;
+      updateChart(maturityData);
     }
-      document.querySelectorAll(".chart tbody tr").forEach(row => {
-      row.addEventListener("click", e => {
-  const cells = [...row.querySelectorAll("td")];
-  const clickedIndex = cells.findIndex(cell => cell.contains(e.target));
-  if (clickedIndex === 0) return;
-  if (clickedIndex > 0 && clickedIndex < cells.length - 1) {
-    const left = cells[clickedIndex - 1];
-    const right = cells[clickedIndex + 1];
 
-    const leftIsActive = left.classList.contains("gradient-right");
-    const rightIsActive = right.classList.contains("gradient-left");
-
-    if (leftIsActive && rightIsActive) {
-      left.classList.remove("gradient-right");
-      right.classList.remove("gradient-left");
-    } else {
-      left.classList.add("gradient-right");
-      right.classList.add("gradient-left");
-    }
-  }
-});
+    function updateChart(data) {
+      const ctx = document.getElementById("maturityChart").getContext("2d");
+      if (window.maturityChart) window.maturityChart.destroy();
+      window.maturityChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["App Control", "Patch Apps", "Macros", "Hardening", "Admin Rights", "Patch OS", "MFA", "Backups"],
+          datasets: [{
+            label: "Maturity Level",
+            data,
+            borderColor: "#007acc",
+            backgroundColor: "rgba(0,122,204,0.2)",
+            tension: 0.3,
+            fill: true,
+            pointRadius: 5
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              min: 0,
+              max: 3,
+              ticks: {
+                stepSize: 1
+              }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
         }
       });
-    });
-function calculateAverageMaturity() {
-  
-  const table = document.querySelector(".chart table");
-  const rows = table.querySelectorAll("tbody tr");
-  let total = 0;
-  let count = 0;
-
-  rows.forEach(row => {
-    const cells = row.querySelectorAll("td");
-    for (let i = 1; i < cells.length; i++) {
-      if (cells[i].classList.contains("selected-cell")) {
-        total += (i - 1); // Maturity level 0 = index 1
-        count++;
-      }
     }
-  });
 
-  const result = document.getElementById("maturity-result");
-  if (count > 0) {
-    const avg = (total / count).toFixed(2);
-    result.textContent = `Average Maturity Level: ${avg}`;
-  } else {
-    result.textContent = "No cells selected.";
-  }
-}
-
-});
-</script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<div style="padding: 20px; text-align: center;">
-  <button onclick="calculateAverageMaturity()">Calculate Average Maturity</button>
-  <p id="maturity-result" style="margin-top: 10px; font-weight: bold;"></p>
-</div>
-<canvas id="maturityChart" width="800" height="400" style="display: block; margin: 0 auto 40px;"></canvas>
+    document.querySelectorAll(".chart td").forEach(cell => {
+      cell.addEventListener("click", () => {
+        const row = cell.parentElement;
+        const index = Array.from(row.children).indexOf(cell);
+        if (index === 0) return; // skip first column
+        row.querySelectorAll("td").forEach((td, i) => {
+          if (i !== 0) td.classList.remove("selected-cell");
+        });
+        cell.classList.toggle("selected-cell");
+      });
+    });
+  </script>
 </body>
 </html>
