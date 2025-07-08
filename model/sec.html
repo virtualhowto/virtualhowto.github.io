@@ -112,6 +112,20 @@
     .dropdown-menu select {
       width: 100%;
     }
+    .selected-cell {
+      background-color: #cde5ff;
+      font-weight: bold;
+    }
+    .selected-cell {
+      background-color: #cde5ff;
+      font-weight: bold;
+    }
+    .gradient-left {
+      background: linear-gradient(to right, #cde5ff, transparent);
+    }
+    .gradient-right {
+      background: linear-gradient(to left, #cde5ff, transparent);
+    }
 </style>
 </head>
 <body>
@@ -119,118 +133,6 @@
     <h1>Security Maturity Model Capability Mapping</h1>
     <p>Drag your security products/services to the correct control and maturity level</p>
   </header>
-
-  <div class="grid-container" style="display: grid; grid-template-columns: 160px repeat(8, 1fr);">
-  <div class="column" style="background:#f0f0f0;"><strong>Control / Maturity</strong></div>
-  <div class="column"><strong>Application Control</strong></div>
-  <div class="column"><strong>Patch Applications</strong></div>
-  <div class="column"><strong>Microsoft Office Macros</strong></div>
-  <div class="column"><strong>User Application Hardening</strong></div>
-  <div class="column"><strong>Restrict Admin Privileges</strong></div>
-  <div class="column"><strong>Patch Operating Systems</strong></div>
-  <div class="column"><strong>MFA</strong></div>
-  <div class="column"><strong>Backups</strong></div>
-  <div class="column" title="No implementation or awareness of the control">🟥 Maturity 0</div><strong title="No implementation or awareness of the control" onmouseover="this.style.backgroundColor='#fee'" onmouseout="this.style.backgroundColor=''">Maturity 0</strong></div>
-  <div class="column"><strong title="Control is partially implemented and may lack consistency" onmouseover="this.style.backgroundColor='#fff5e6'" onmouseout="this.style.backgroundColor=''">Maturity 1</strong></div>
-  <div class="column"><strong title="Control is mostly implemented with reasonable coverage" onmouseover="this.style.backgroundColor='#f0fff0'" onmouseout="this.style.backgroundColor=''">Maturity 2</strong></div>
-  <div class="column"><strong title="Control is fully implemented, tested, and maintained" onmouseover="this.style.backgroundColor='#e6f7ff'" onmouseout="this.style.backgroundColor=''">Maturity 3</strong></div>
-  <div class="column"><strong>Maturity 0</strong></div>
-  <div class="column"><strong>Maturity 1</strong></div>
-  <div class="column"><strong>Maturity 2</strong></div>
-  <div class="column"><strong>Maturity 3</strong></div>
-    <div>Maturity 1</div>
-    <div>Maturity 2</div>
-    <div>Maturity 3</div>
-  </div>
-  <div class="column">
-    <h4>Application Control</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-  <div class="column">
-    <h4>Patch Applications</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-  <div class="column">
-    <h4>Microsoft Office Macros</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-  <div class="column">
-    <h4>User Application Hardening</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-  <div class="column">
-    <h4>Restrict Admin Privileges</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-  <div class="column">
-    <h4>Patch Operating Systems</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-  <div class="column">
-    <h4>Multi-Factor Authentication (MFA)</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-  <div class="column">
-    <h4>Regular Backups</h4>
-    
-      
-    
-      
-    
-      
-    
-      
-  </div>
-</div>
 
   <div style="padding: 10px;">
     <h2>Available Products & Services</h2>
@@ -250,14 +152,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr><td>Control 1 – Application Control</td><td>No control</td><td>Basic Allowlist</td><td>Scoped & Policy-based</td><td>Enforced + Memory Protections</td></tr>
-        <tr><td>Control 2 – Patch Applications</td><td>Unpatched</td><td>Ad hoc patching</td><td>Routine patching</td><td>Automated + Tested</td></tr>
-        <tr><td>Control 3 – Office Macros</td><td>Unrestricted macros</td><td>Warning-based</td><td>Blocked by default</td><td>Signed only, with audit</td></tr>
-        <tr><td>Control 4 – User Hardening</td><td>Open settings</td><td>Baseline config</td><td>Hardening templates</td><td>Ongoing policy audit</td></tr>
-        <tr><td>Control 5 – Admin Privileges</td><td>Everyone is admin</td><td>Limited admin access</td><td>Audited privilege use</td><td>Just-in-time admin</td></tr>
-        <tr><td>Control 6 – Patch OS</td><td>Unpatched OS</td><td>Manual patching</td><td>Routine OS patching</td><td>Automated + central control</td></tr>
-        <tr><td>Control 7 – MFA</td><td>No MFA</td><td>MFA on external</td><td>MFA on critical apps</td><td>MFA enforced org-wide</td></tr>
-        <tr><td>Control 8 – Backups</td><td>No backups</td><td>Basic file backups</td><td>Regular tested backups</td><td>Immutable + offsite</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 1 – Application Control</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">No control</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Basic Allowlist</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Scoped & Policy-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Enforced + Memory Protections</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 2 – Patch Applications</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unpatched</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Ad hoc patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Routine patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Automated + Tested</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 3 – Office Macros</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unrestricted macros</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Warning-based</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Blocked by default</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Signed only, with audit</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 4 – User Hardening</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Open settings</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Baseline config</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Hardening templates</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Ongoing policy audit</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 5 – Admin Privileges</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Everyone is admin</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Limited admin access</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Audited privilege use</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Just-in-time admin</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 6 – Patch OS</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Unpatched OS</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Manual patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Routine OS patching</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Automated + central control</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 7 – MFA</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">No MFA</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA on external</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA on critical apps</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">MFA enforced org-wide</td></tr>
+        <tr><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Control 8 – Backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">No backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Basic file backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Regular tested backups</td><td onclick="this.classList.toggle('selected-cell')" title="Click to mark this cell">Immutable + offsite</td></tr>
       </tbody>
     </table>
   </div>
@@ -383,6 +285,29 @@ document.body.addEventListener("click", closeAllDropdowns);`;
       dropZone.appendChild(div);
       selectEl.value = "";
     }
-  </script>
+      document.querySelectorAll(".chart tbody tr").forEach(row => {
+      row.addEventListener("click", e => {
+  const cells = [...row.querySelectorAll("td")];
+  const clickedIndex = cells.findIndex(cell => cell.contains(e.target));
+  if (clickedIndex > 0 && clickedIndex < cells.length - 1) {
+    const left = cells[clickedIndex - 1];
+    const right = cells[clickedIndex + 1];
+
+    const leftIsActive = left.classList.contains("gradient-right");
+    const rightIsActive = right.classList.contains("gradient-left");
+
+    if (leftIsActive && rightIsActive) {
+      left.classList.remove("gradient-right");
+      right.classList.remove("gradient-left");
+    } else {
+      left.classList.add("gradient-right");
+      right.classList.add("gradient-left");
+    }
+  }
+});
+        }
+      });
+    });
+</script>
 </body>
 </html>
