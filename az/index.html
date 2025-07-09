@@ -47,6 +47,10 @@
 
     <div class="row mt-3">
       <div class="col-md-6">
+        <label class="form-label">Filter by Region</label>
+        <input type="text" class="form-control" id="filterRegion" placeholder="e.g., australia" />
+      </div>
+      <div class="col-md-6">
         <label class="form-label">Filter by Series</label>
         <input type="text" class="form-control" id="filterSeries" placeholder="e.g., D, B, E" />
       </div>
@@ -58,7 +62,7 @@
   <div id="summaryArea" class="mt-4 p-3 bg-white border rounded" style="display:none">
     <h4>Summary</h4>
     <p><strong>Total Matched VMs:</strong> <span id="matchedCount">0</span></p>
-    <p><strong>Total Estimated Price/hr:</strong> $<span id="summaryPrice">0.0000</span></p>
+    <p><strong>Total Estimated Price/mo (720 hrs):</strong> $<span id="summaryPrice">0.00</span></p>
   </div>
 
   <div id="resultArea" class="mt-4"></div>
@@ -79,8 +83,8 @@ fetch("./az_data-export.json")
         series: p.name.split('_')[1] || '',
         cpu: p.numberOfCores,
         ram: Math.round(memoryMB / 1024),
-      priceLinux: parseFloat(p.linuxPrice),
-      priceWindows: parseFloat(p.windowsPrice) || 0,
+      priceLinux: parseFloat(p.linuxPrice) * 720,
+      priceWindows: parseFloat(p.windowsPrice || 0) * 720,
       description: p.bestPriceRegion || "Azure VM"
     }));
     productCatalog = fullCatalog;
@@ -132,7 +136,12 @@ function populateMappingDropdowns(headers) {
 
 function matchVMs() {
   const filterSeries = document.getElementById("filterSeries").value.trim().toUpperCase();
-  productCatalog = fullCatalog.filter(p => !filterSeries || p.series.startsWith(filterSeries));
+  const filterRegion = document.getElementById("filterRegion").value.trim().toLowerCase();
+  productCatalog = fullCatalog.filter(p => {
+    const matchesSeries = !filterSeries || p.series.toUpperCase().startsWith(filterSeries);
+    const matchesRegion = !filterRegion || (p.description && p.description.toLowerCase().includes(filterRegion));
+    return matchesSeries && matchesRegion;
+  });
 
   const nameKey = document.getElementById("mapName").value;
   const cpuKey = document.getElementById("mapCPU").value;
@@ -179,7 +188,7 @@ function matchVMs() {
 
 function renderResults(results) {
   let html = `<table class="table table-bordered table-striped"><thead><tr>
-    <th>VM Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Description</th><th>Price/hr</th><th>Override</th></tr></thead><tbody>`;
+    <th>VM Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Description</th><th>Price/mo</th><th>Override</th></tr></thead><tbody>`;
 
   let total = 0;
   let matchedCount = 0;
