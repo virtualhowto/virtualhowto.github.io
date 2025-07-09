@@ -83,12 +83,11 @@ fetch("./az_data-export.json")
         series: p.name.split('_')[1] || '',
         cpu: p.numberOfCores,
         ram: Math.round(memoryMB / 1024),
-      priceLinux: parseFloat(p.linuxPrice) * 720,
-      priceWindows: parseFloat(p.windowsPrice || 0) * 720,
-      description: p.bestPriceRegion || "Azure VM"
-    }));
-    productCatalog = fullCatalog;
-  });
+        priceLinux: parseFloat(p.linuxPrice) * 720,
+        priceWindows: parseFloat(p.windowsPrice || 0) * 720,
+        description: p.bestPriceRegion || "Azure VM"
+      };
+    });
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
