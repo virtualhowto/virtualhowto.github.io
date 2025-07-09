@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
+ <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-80LXX650HV"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -59,9 +59,18 @@
       });
 
     fetch('./cld-pricing.json')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) {
+          throw new Error(`Failed to load cld-pricing.json (${r.status})`);
+        }
+        return r.json();
+      })
       .then(data => {
         ataPricing = data;
+      })
+      .catch(err => {
+        console.error('❌ Error loading cld-pricing.json:', err.message);
+      });
       });
 
     function updateSummary() {
