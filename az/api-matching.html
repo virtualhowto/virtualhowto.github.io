@@ -4,6 +4,49 @@
   <meta charset="UTF-8" />
   <title>Azure VM Matcher</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    h2 {
+      color: #0066cc;
+    }
+
+    select, input, button {
+      margin: 5px;
+      padding: 5px;
+      font-size: 14px;
+    }
+
+    table {
+      margin-top: 20px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .match-found {
+      background-color: #e8f9e9;
+    }
+
+    .no-match {
+      background-color: #fbeaea;
+    }
+  </style>
 </head>
 <body>
   <h2>Azure VM Matcher (Excel + az_data-export.json)</h2>
@@ -19,7 +62,7 @@
   <br><br>
 
   <button onclick="processFile()">Match Azure VMs</button>
-  <pre id="output">Upload a file and select columns to begin...</pre>
+  <div id="output">Upload a file and select columns to begin...</div>
 
   <script>
     let azureVMs = [];
@@ -98,38 +141,65 @@
         return;
       }
 
-      outputEl.textContent = "Loading Azure pricing...";
+      outputEl.innerHTML = "Loading Azure pricing...";
 
       if (azureVMs.length === 0) {
         azureVMs = await loadAzureVMs();
       }
 
-      const results = [];
-      for (const row of detectedRows) {
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Requested vCPU</th>
+              <th>Requested RAM (GiB)</th>
+              <th>Matched VM</th>
+              <th>Match vCPU</th>
+              <th>Match RAM</th>
+              <th>Linux Price (AUD)</th>
+              <th>Premium Disk?</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      detectedRows.forEach((row, index) => {
         const vcpu = parseFloat(row[vcpuKey]);
-        const ram = parseFloat(row[ramKey]); // GiB
+        const ram = parseFloat(row[ramKey]);
+        let match = null;
 
-        if (isNaN(vcpu) || isNaN(ram)) {
-          results.push({ input: row, match: "Invalid vCPU or RAM" });
-          continue;
+        if (!isNaN(vcpu) && !isNaN(ram)) {
+          match = findBestMatch(azureVMs, vcpu, ram);
         }
 
-        const match = findBestMatch(azureVMs, vcpu, ram);
         if (match) {
-          results.push({
-            input: row,
-            matchedSKU: match.name,
-            match_vCPU: match.matchCores,
-            match_RAM: `${match.matchRam} GiB`,
-            linuxPriceAUD: `$${match.linuxPrice}`,
-            premiumDisk: match.supportPremiumDisk || "unknown"
-          });
+          html += `
+            <tr class="match-found">
+              <td>${index + 1}</td>
+              <td>${vcpu}</td>
+              <td>${ram}</td>
+              <td>${match.name}</td>
+              <td>${match.matchCores}</td>
+              <td>${match.matchRam}</td>
+              <td>$${match.linuxPrice}</td>
+              <td>${match.supportPremiumDisk}</td>
+            </tr>
+          `;
         } else {
-          results.push({ input: row, match: "No suitable match found" });
+          html += `
+            <tr class="no-match">
+              <td>${index + 1}</td>
+              <td>${vcpu || "?"}</td>
+              <td>${ram || "?"}</td>
+              <td colspan="5">No suitable match found</td>
+            </tr>
+          `;
         }
-      }
+      });
 
-      outputEl.textContent = JSON.stringify(results, null, 2);
+      html += "</tbody></table>";
+      outputEl.innerHTML = html;
     }
   </script>
 </body>
