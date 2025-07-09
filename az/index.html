@@ -36,6 +36,10 @@
         <label class="form-label">Provisioned Storage (GB)</label>
         <select class="form-select" id="mapStorage"></select>
       </div>
+      <div class="col-md-4">
+        <label class="form-label">OS</label>
+        <select class="form-select" id="mapOS"></select>
+      </div>
     </div>
 
     <div class="row mt-3">
@@ -62,7 +66,7 @@ let sheetData = [];
 let fullCatalog = [];
 let productCatalog = [];
 
-fetch("/az/az_data-export.json")
+fetch("./az/az_data-export.json")
   .then(res => res.json())
   .then(data => {
     fullCatalog = data.map(p => ({
@@ -89,12 +93,33 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     sheetData = sheet.slice(1).map(row => Object.fromEntries(headers.map((h, i) => [h, row[i]])));
     populateMappingDropdowns(headers);
     document.getElementById('mappingArea').style.display = 'block';
+
+    // Auto-map fields based on known header names
+    const defaultMap = {
+      mapName: "VM",
+      mapCPU: "CPUs",
+      mapRAM: "Memory",
+      mapStorage: "GiB",
+      mapOS: "OS according to the configuration file"
+    };
+    for (let key in defaultMap) {
+      const select = document.getElementById(key);
+      if (headers.includes(defaultMap[key])) {
+        select.value = defaultMap[key];
+      }
+    };
+    for (let key in defaultMap) {
+      const select = document.getElementById(key);
+      if (headers.includes(defaultMap[key])) {
+        select.value = defaultMap[key];
+      }
+    }
   };
   reader.readAsArrayBuffer(file);
 });
 
 function populateMappingDropdowns(headers) {
-  ["mapName", "mapCPU", "mapRAM", "mapStorage"].forEach(id => {
+  ["mapName", "mapCPU", "mapRAM", "mapStorage", "mapOS"].forEach(id => {
     const select = document.getElementById(id);
     select.innerHTML = headers.map(h => `<option value="${h}">${h}</option>`).join('');
   });
@@ -110,6 +135,8 @@ function matchVMs() {
   const storageKey = document.getElementById("mapStorage").value;
 
   const results = sheetData.map((vm, index) => {
+    const osKey = document.getElementById("mapOS").value;
+    const osValue = (vm[osKey] || '').toString().toLowerCase();
     const cpu = parseInt(vm[cpuKey]);
     const ram = parseInt(vm[ramKey]);
     const storage = parseFloat(vm[storageKey]);
@@ -117,6 +144,8 @@ function matchVMs() {
     const match = productCatalog.find(p => (
       p.cpu === cpu && Math.abs(p.ram - ram) <= 2
     ));
+
+    const inferredOS = osValue.includes("win") ? "Windows" : "Linux";
 
     return {
       id: index,
