@@ -209,6 +209,11 @@ function renderResults(results) {
   document.getElementById('summaryArea').style.display = 'block';
 
   window._currentResults = results;
+
+  // Add modal filter triggers
+  results.forEach((r, idx) => {
+    document.getElementById(`sku-${idx}`).addEventListener('focus', () => openSkuSelector(idx, r));
+  });
   document.getElementById('resultArea').innerHTML = html;
 
   // Enable jQuery UI Autocomplete for SKU inputs
@@ -220,8 +225,9 @@ function renderResults(results) {
         const seriesFilter = document.getElementById("filterSeries").value.trim().toUpperCase();
         const filtered = fullCatalog.filter(p => {
           const matchesText = `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`.toLowerCase().includes(request.term.toLowerCase());
+          const matchesMemory = Math.abs(p.ram - r.ram) <= 2;
           const matchesSeries = !seriesFilter || p.series.toUpperCase().startsWith(seriesFilter);
-          return matchesText && matchesSeries;
+          return matchesText && matchesSeries && matchesMemory;
         }).map(p => ({
           label: `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`,
           value: `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`
@@ -265,6 +271,74 @@ function applyOverride(idx) {
   window._currentResults[idx].os = os;
 
   renderResults(window._currentResults);
+}
+</script>
+<!-- SKU Selector Modal -->
+<div class="modal fade" id="skuSelectorModal" tabindex="-1" aria-labelledby="skuSelectorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="skuSelectorModalLabel">Select SKU</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Filter by CPU</label>
+            <input type="number" class="form-control" id="filterCpuInput" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Filter by RAM</label>
+            <input type="number" class="form-control" id="filterRamInput" />
+          </div>
+        </div>
+        <div id="skuSelectorResults" class="table-responsive"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentSkuIndex = null;
+
+function openSkuSelector(idx, vm) {
+  currentSkuIndex = idx;
+  document.getElementById('filterCpuInput').value = vm.cpu;
+  document.getElementById('filterRamInput').value = vm.ram;
+  filterSkuTable();
+  const modal = new bootstrap.Modal(document.getElementById('skuSelectorModal'));
+  modal.show();
+}
+
+function filterSkuTable() {
+  const cpu = parseInt(document.getElementById('filterCpuInput').value);
+  const ram = parseInt(document.getElementById('filterRamInput').value);
+  const results = fullCatalog
+    .filter(p => Math.abs(p.cpu - cpu) <= 2 && Math.abs(p.ram - ram) <= 4)
+    .map(p => `
+      <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
+        <td>${p.name}</td>
+        <td>${p.cpu}</td>
+        <td>${p.ram}</td>
+        <td>${p.description}</td>
+        <td>$${p.priceLinux.toFixed(4)} (Linux)</td>
+        <td>$${p.priceWindows.toFixed(4)} (Windows)</td>
+      </tr>
+    `).join('');
+  document.getElementById('skuSelectorResults').innerHTML = `
+    <table class="table table-hover">
+      <thead><tr><th>Name</th><th>CPU</th><th>RAM</th><th>Description</th><th>Linux Price</th><th>Windows Price</th></tr></thead>
+      <tbody>${results}</tbody>
+    </table>
+  `;
+}
+
+function selectSku(name, cpu, ram, desc, priceLinux, priceWindows) {
+  const os = document.getElementById(`os-${currentSkuIndex}`).value;
+  document.getElementById(`sku-${currentSkuIndex}`).value = `${name} (${cpu} vCPU, ${ram}GB RAM)`;
+  document.getElementById(`desc-${currentSkuIndex}`).value = desc;
+  document.getElementById(`price-${currentSkuIndex}`).value = (os === 'Windows' ? priceWindows : priceLinux).toFixed(4);
+  bootstrap.Modal.getInstance(document.getElementById('skuSelectorModal')).hide();
 }
 </script>
 </body>
