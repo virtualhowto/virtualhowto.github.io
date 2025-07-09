@@ -2,35 +2,114 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RVTools Matcher</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    .highlight { background-color: #d1e7dd; }
+  </style>
 </head>
 <body class="bg-light">
-  <div class="container py-5">
-    <!-- Upload, filter, and table UI would go here -->
-    <h2>Match Azure SKUs</h2>
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <label class="form-label">CPU Filter</label>
-        <input type="number" class="form-control" id="filterCpuInput" placeholder="e.g., 2">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">RAM Filter (GB)</label>
-        <input type="number" class="form-control" id="filterRamInput" placeholder="e.g., 16">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Region Filter</label>
-        <input type="text" class="form-control" id="filterRegion" placeholder="e.g., australiaeast">
-      </div>
+<div class="container py-5">
+  <h2>Upload RVTools Export</h2>
+  <input type="file" id="fileInput" class="form-control mb-4" accept=".xlsx" />
+
+  <h3>Matched VMs</h3>
+  <table class="table table-bordered" id="vmTable">
+    <thead>
+      <tr><th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Price (Monthly)</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h4>Filter Azure SKUs</h4>
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label>CPU</label>
+      <input type="number" class="form-control" id="filterCpuInput">
     </div>
-
-    <button class="btn btn-primary mb-3" onclick="filterSkuTable()">Apply Filters</button>
-    
-    <div id="skuSelectorResults"></div>
+    <div class="col-md-4">
+      <label>RAM (GB)</label>
+      <input type="number" class="form-control" id="filterRamInput">
+    </div>
+    <div class="col-md-4">
+      <label>Region</label>
+      <input type="text" class="form-control" id="filterRegion" placeholder="e.g., australiaeast">
+    </div>
   </div>
+  <button class="btn btn-primary mb-4" onclick="filterSkuTable()">Filter</button>
+  <div id="skuSelectorResults"></div>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-let fullCatalog = []; // should be populated with JSON on page load or via upload
+let fullCatalog = [];
+
+fetch('./az_data-export.json')
+  .then(r => r.json())
+  .then(data => {
+    fullCatalog = data.map(d => ({
+      name: d.name,
+      cpu: d.numberOfCores,
+      ram: d.memoryInMB / 1024,
+      priceLinux: d.linuxPrice,
+      priceWindows: d.windowsPrice,
+      description: d.description || '',
+      region: d.bestPriceRegion || ''
+    }));
+    console.log('📦 Azure SKU catalog loaded:', fullCatalog.length);
+  });
+
+function readXlsx(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const vmData = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+    renderVMTable(vmData);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.getElementById("fileInput").addEventListener("change", e => {
+  if (e.target.files.length) readXlsx(e.target.files[0]);
+});
+
+function renderVMTable(vmData) {
+  const tbody = document.querySelector("#vmTable tbody");
+  tbody.innerHTML = "";
+  vmData.forEach(vm => {
+    const cpu = parseFloat(vm["CPUs"]);
+    const ram = parseFloat(vm["Memory"]);
+    const os = (vm["OS according to the configuration file"] || '').toLowerCase();
+    const region = "australiaeast";
+
+    const matches = fullCatalog.filter(sku =>
+      Math.abs(sku.cpu - cpu) <= 1 &&
+      Math.abs(sku.ram - ram) <= 2 &&
+      sku.region.toLowerCase().includes(region)
+    );
+
+    const best = matches.sort((a, b) => {
+      const scoreA = Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram);
+      const scoreB = Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram);
+      return scoreA - scoreB;
+    })[0];
+
+    const price = os.includes("win") ? best?.priceWindows : best?.priceLinux;
+    const row = `<tr>
+      <td>${vm["VM"]}</td>
+      <td>${cpu}</td>
+      <td>${ram}</td>
+      <td>${vm["Provisioned Storage (GB)"]}</td>
+      <td>${os}</td>
+      <td>${best?.name || 'No match'}</td>
+      <td>${price ? `$${(price * 720).toFixed(2)}` : '-'}</td>
+    </tr>`;
+
+    tbody.innerHTML += row;
+  });
+}
 
 function filterSkuTable() {
   console.log('🔍 Running filterSkuTable');
