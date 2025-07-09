@@ -6,37 +6,40 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h2>Upload Excel & Match Azure VMs</h2>
+  <h2>Upload Excel & Match Azure VMs (Australia East)</h2>
 
   <input type="file" id="excelFile" accept=".xlsx" />
   <br><br>
 
-  <label for="vcpuCol">vCPU Column:</label>
-  <input type="text" id="vcpuCol" placeholder="e.g., CPU Count" />
+  <label for="vcpuCol">Select vCPU Column:</label>
+  <select id="vcpuCol"></select>
 
-  <label for="ramCol">RAM Column:</label>
-  <input type="text" id="ramCol" placeholder="e.g., Memory (GB)" />
+  <label for="ramCol">Select RAM Column:</label>
+  <select id="ramCol"></select>
+
   <br><br>
-
-  <button onclick="processFile()">Upload & Match</button>
-  <pre id="output">Waiting for file...</pre>
+  <button onclick="processFile()">Match Azure VMs</button>
+  <pre id="output">Upload a file and select columns to begin...</pre>
 
   <script>
     let azureVMs = [];
+    let detectedRows = [];
 
+    // Fetch Azure pricing with CORS proxy (for GitHub Pages demo)
     async function fetchAzureVMs() {
+      const corsProxy = "https://corsproxy.io/?";
       const baseUrl = "https://prices.azure.com/api/retail/prices";
       const filter = encodeURIComponent(
         "serviceFamily eq 'Compute' and armRegionName eq 'australiaeast' and productName contains 'Virtual Machines' and priceType eq 'Consumption'"
       );
-      let nextLink = `${baseUrl}?$filter=${filter}`;
+      let nextLink = `${corsProxy}${encodeURIComponent(`${baseUrl}?$filter=${filter}`)}`;
       const results = [];
 
       while (nextLink && results.length < 500) {
         const res = await fetch(nextLink);
         const data = await res.json();
         results.push(...data.Items);
-        nextLink = data.NextPageLink;
+        nextLink = data.NextPageLink ? corsProxy + encodeURIComponent(data.NextPageLink) : null;
       }
 
       return results.filter(vm =>
@@ -73,30 +76,53 @@
       return best;
     }
 
-    async function processFile() {
-      const file = document.getElementById("excelFile").files[0];
-      const vcpuKey = document.getElementById("vcpuCol").value.trim();
-      const ramKey = document.getElementById("ramCol").value.trim();
-
-      if (!file || !vcpuKey || !ramKey) {
-        alert("Please upload a file and set both column names.");
-        return;
-      }
-
+    // Handle file upload and extract column headers
+    document.getElementById("excelFile").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet);
+      detectedRows = XLSX.utils.sheet_to_json(sheet);
 
-      document.getElementById("output").textContent = "Fetching Azure VMs...";
+      if (detectedRows.length > 0) {
+        const columns = Object.keys(detectedRows[0]);
+        const vcpuSelect = document.getElementById("vcpuCol");
+        const ramSelect = document.getElementById("ramCol");
+        vcpuSelect.innerHTML = "";
+        ramSelect.innerHTML = "";
+        columns.forEach(col => {
+          const opt1 = document.createElement("option");
+          opt1.value = col;
+          opt1.text = col;
+          vcpuSelect.appendChild(opt1);
+
+          const opt2 = document.createElement("option");
+          opt2.value = col;
+          opt2.text = col;
+          ramSelect.appendChild(opt2);
+        });
+      }
+    });
+
+    async function processFile() {
+      const vcpuKey = document.getElementById("vcpuCol").value.trim();
+      const ramKey = document.getElementById("ramCol").value.trim();
+      const outputEl = document.getElementById("output");
+
+      if (!vcpuKey || !ramKey || detectedRows.length === 0) {
+        alert("Please upload a file and select columns first.");
+        return;
+      }
+
+      outputEl.textContent = "Fetching Azure pricing...";
 
       if (azureVMs.length === 0) {
         azureVMs = await fetchAzureVMs();
       }
 
       const results = [];
-      for (const row of rows) {
+      for (const row of detectedRows) {
         const vcpu = parseFloat(row[vcpuKey]);
         const ram = parseFloat(row[ramKey]);
 
@@ -119,7 +145,7 @@
         }
       }
 
-      document.getElementById("output").textContent = JSON.stringify(results, null, 2);
+      outputEl.textContent = JSON.stringify(results, null, 2);
     }
   </script>
 </body>
