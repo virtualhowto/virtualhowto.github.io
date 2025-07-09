@@ -87,7 +87,7 @@ fetch('./az_data-export.json')
     fullCatalog = data.map(d => ({
       name: d.name,
       cpu: d.numberOfCores,
-      ram: d.memoryInMB / 1024,
+      ram: d.memoryInMB,
       priceLinux: d.linuxPrice,
       priceWindows: d.windowsPrice,
       description: d.description || '',
