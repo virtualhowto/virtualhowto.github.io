@@ -65,8 +65,20 @@ function readXlsx(file) {
   reader.onload = e => {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: 'array' });
-    const vmData = XLSX.utils.sheet_to_json(workbook.Sheets["vInfo"]);
+
+    const sheetName = workbook.SheetNames.includes("vInfo") ? "vInfo" : workbook.SheetNames[0];
+    const vmData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    console.log(`📄 Loaded sheet: ${sheetName}, Rows: ${vmData.length}`);
+
+    if (!vmData.length) {
+      alert("No rows found in the selected sheet.");
+      return;
+    }
+
     renderVMTable(vmData);
+  };
+  reader.readAsArrayBuffer(file);
+}
   };
   reader.readAsArrayBuffer(file);
 }
