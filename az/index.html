@@ -141,11 +141,25 @@
     vmData.forEach((vm, i) => {
       const cpuRaw = vm['CPUs'];
       const ramRaw = vm['Memory'];
-      const storageRaw = vm['Provisioned Storage (GB)'];
 
       const cpu = !isNaN(cpuRaw) ? +cpuRaw : NaN;
       const ram = !isNaN(ramRaw) ? +ramRaw : NaN;
-      const storage = !isNaN(storageRaw) ? +storageRaw : NaN;
+
+      // Storage field mapping
+      let storageRaw = vm['Provisioned Storage (GB)']
+                    || vm['Provisioned MB']
+                    || vm['Storage']
+                    || vm['Used Storage (GB)']
+                    || null;
+
+      let storage = parseFloat(storageRaw);
+      if (!isNaN(storage)) {
+        if (vm['Provisioned MB'] && !vm['Provisioned Storage (GB)']) {
+          storage = storage / 1024; // Convert MB to GB
+        }
+      } else {
+        storage = NaN;
+      }
 
       const os = (vm['OS according to the configuration file'] || '').toLowerCase();
 
@@ -184,68 +198,8 @@ ${best.name ? `${best.name} <span class='badge bg-success'>Auto</span>` : 'Selec
   }
 
   function updateSummary() {
-    const total = matchedSkus.reduce((sum, sku, idx) => {
-      const os = (lastVmData[idx]['OS according to the configuration file'] || '').toLowerCase();
-      const price = os.includes('win') ? sku.priceWindows : sku.priceLinux;
-      return sum + (price || 0);
-    }, 0);
+    const total = matchedSkus.reduce((sum, sku,
 
-    document.getElementById('totalPrice').innerText = `$${total.toFixed(2)}`;
-
-    const storageCharge = lastVmData.reduce((sum, vm) => {
-      const gb = +vm['Provisioned Storage (GB)'] || 0;
-      const tbChunks = Math.ceil(gb / 1024) || 1;
-      return sum + tbChunks * 1024 * 0.30;
-    }, 0);
-    document.getElementById('storageCharge').innerText = `$${storageCharge.toFixed(2)}`;
-
-    const grandTotal = total + storageCharge;
-    document.getElementById('grandTotal').innerText = `$${grandTotal.toFixed(2)}`;
-  }
-
-  function openSkuPopup(idx) {
-    selectedRow = idx;
-    const cpu = +lastVmData[idx]['CPUs'];
-    const ram = +lastVmData[idx]['Memory'];
-    const sorted = [...fullCatalog].sort((a, b) => (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) - (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram)));
-    document.getElementById('skuTableBody').innerHTML = sorted.map((s, i) => `
-      <tr>
-        <td>${s.name}</td>
-        <td>${s.cpu}</td>
-        <td>${s.ram}</td>
-        <td>${s.storage}</td>
-        <td>$${(s.priceLinux).toFixed(2)} / $${(s.priceWindows).toFixed(2)}</td>
-        <td><button class="btn btn-sm btn-success" onclick="selectSku(${i})">✔</button></td>
-      </tr>
-    `).join('');
-    new bootstrap.Modal(document.getElementById('skuModal')).show();
-  }
-
-  function selectSku(idx) {
-    const sku = fullCatalog[idx];
-    matchedSkus[selectedRow] = sku;
-    renderVMTable(lastVmData);
-    bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
-  }
-
-  ['filterName', 'filterCPU', 'filterRAM'].forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      const nameV = document.getElementById('filterName').value.toLowerCase();
-      const cpuV = document.getElementById('filterCPU').value;
-      const ramV = document.getElementById('filterRAM').value;
-      const filtered = fullCatalog.filter(s =>
-        (!nameV || s.name.toLowerCase().includes(nameV)) &&
-        (!cpuV || s.cpu.toString().includes(cpuV)) &&
-        (!ramV || s.ram.toString().includes(ramV))
-      );
-      document.getElementById('skuTableBody').innerHTML = filtered.map(s => `
-        <tr>
-          <td>${s.name}</td><td>${s.cpu}</td><td>${s.ram}</td><td>${s.storage}</td><td>$${s.priceLinux.toFixed(2)} / $${s.priceWindows.toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(s)})">✔</button></td>
-        </tr>
-      `).join('');
-    });
-  });
-</script>
 
 </body>
 </html>
