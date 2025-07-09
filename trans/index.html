@@ -2,71 +2,74 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Peer-to-Peer File Transfer</title>
+  <title>Simple P2P File Transfer</title>
 </head>
 <body>
-  <h2>Peer-to-Peer File Transfer (WebRTC)</h2>
+  <h2>Simple File Transfer</h2>
   <input type="file" id="fileInput"><br><br>
-  <button onclick="startConnection()">Start Connection</button>
-  <button onclick="sendFile()">Send File</button><br><br>
 
-  <textarea id="offer" placeholder="Paste offer here" cols="80" rows="6"></textarea><br>
-  <button onclick="createAnswer()">Create Answer</button><br>
-  <textarea id="answer" placeholder="Paste answer here" cols="80" rows="6"></textarea><br>
-  <button onclick="setAnswer()">Set Answer</button>
+  <button onclick="createLink()">Create Link</button>
+  <textarea id="connectionPhrase" placeholder="Share this phrase..." rows="4" cols="80"></textarea><br><br>
+
+  <button onclick="joinLink()">Join Link</button>
+  <textarea id="joinInput" placeholder="Paste phrase to join..." rows="4" cols="80"></textarea><br><br>
+
+  <button onclick="sendFile()">Send File</button>
 
   <script>
     let pc = new RTCPeerConnection();
     let dc;
-    let fileReader;
-    let file;
     let fileInput = document.getElementById('fileInput');
 
+    // Receiving side
     pc.ondatachannel = event => {
       dc = event.channel;
-      let receivedBuffers = [];
-
+      const receivedChunks = [];
       dc.onmessage = event => {
         if (event.data !== 'EOF') {
-          receivedBuffers.push(event.data);
+          receivedChunks.push(event.data);
         } else {
-          const received = new Blob(receivedBuffers);
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(received);
-          a.download = 'received_file';
-          a.click();
+          const blob = new Blob(receivedChunks);
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'received_file';
+          link.click();
         }
       };
     };
 
-    async function startConnection() {
+    // Create Link - initiator
+    async function createLink() {
       dc = pc.createDataChannel('file');
-      dc.onopen = () => console.log('Connection open');
-      dc.onclose = () => console.log('Connection closed');
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      document.getElementById('offer').value = JSON.stringify(offer);
+      await pc.setLocalDescription(await pc.createOffer());
+      await waitForICEGathering();
+      document.getElementById('connectionPhrase').value = btoa(JSON.stringify({ offer: pc.localDescription }));
     }
 
-    async function createAnswer() {
-      const offer = JSON.parse(document.getElementById('offer').value);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      document.getElementById('answer').value = JSON.stringify(answer);
+    // Join Link - responder
+    async function joinLink() {
+      const data = JSON.parse(atob(document.getElementById('joinInput').value));
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      await pc.setLocalDescription(await pc.createAnswer());
+      await waitForICEGathering();
+      const phrase = btoa(JSON.stringify({ answer: pc.localDescription }));
+      alert("Paste this back to the other person:\n\n" + phrase);
     }
 
-    async function setAnswer() {
-      const answer = JSON.parse(document.getElementById('answer').value);
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    }
+    // Set answer (for initiator)
+    window.addEventListener('paste', async (e) => {
+      try {
+        const text = e.clipboardData.getData('text');
+        const { answer } = JSON.parse(atob(text));
+        if (answer) await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (e) {}
+    });
 
     function sendFile() {
-      file = fileInput.files[0];
+      const file = fileInput.files[0];
       const chunkSize = 16384;
-      const reader = new FileReader();
       let offset = 0;
+      const reader = new FileReader();
 
       reader.onload = e => {
         dc.send(e.target.result);
@@ -79,11 +82,25 @@
       };
 
       const readSlice = o => {
-        const slice = file.slice(offset, o + chunkSize);
+        const slice = file.slice(o, o + chunkSize);
         reader.readAsArrayBuffer(slice);
       };
 
       readSlice(0);
+    }
+
+    function waitForICEGathering() {
+      return new Promise(resolve => {
+        if (pc.iceGatheringState === 'complete') {
+          resolve();
+        } else {
+          pc.onicegatheringstatechange = () => {
+            if (pc.iceGatheringState === 'complete') {
+              resolve();
+            }
+          };
+        }
+      });
     }
   </script>
 </body>
