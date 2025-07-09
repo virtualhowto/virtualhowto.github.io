@@ -144,7 +144,7 @@ function matchVMs() {
 
     console.log(`Trying to match VM '${vm[nameKey]}' with CPU: ${cpu}, RAM: ${ram}GB`);
     const match = productCatalog.find(p => (
-      p.cpu === cpu && Math.abs(p.ram - ram) <= 2
+      Math.abs(p.cpu - cpu) <= 1 && Math.abs(p.ram - ram) <= 2
     ));
     console.log(`Matched SKU for VM '${vm[nameKey]}': ${match ? match.name : 'No match'}`);
 
