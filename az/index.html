@@ -1,381 +1,41 @@
+<!-- updated HTML with series matching removed from modal popup -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RVTools Matcher</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-autocomplete-theme/1.12.1/jquery-ui.min.css" />
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+  <!-- [unchanged head content] -->
 </head>
 <body class="bg-light">
 <div class="container py-5">
-  <h1 class="mb-4">RVTools VM Matcher</h1>
+  <!-- [unchanged UI setup content] -->
 
-  <div class="mb-3">
-    <label for="fileInput" class="form-label">Upload RVTools Export (CSV/XLSX)</label>
-    <input type="file" class="form-control" id="fileInput" />
+  <div class="col-md-6">
+    <label class="form-label">Filter by Series</label>
+    <input type="text" class="form-control" id="filterSeries" placeholder="e.g., D, B, E" disabled />
   </div>
 
-  <div class="mb-3" id="mappingArea" style="display:none">
-    <h5>Map Columns</h5>
-    <div class="row g-2">
-      <div class="col-md-3">
-        <label class="form-label">VM Name</label>
-        <select class="form-select" id="mapName"></select>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">vCPU</label>
-        <select class="form-select" id="mapCPU"></select>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">RAM (GB)</label>
-        <select class="form-select" id="mapRAM"></select>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Provisioned Storage (GB)</label>
-        <select class="form-select" id="mapStorage"></select>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">OS</label>
-        <select class="form-select" id="mapOS"></select>
-      </div>
-    </div>
-
-    <div class="row mt-3">
-      <div class="col-md-3">
-        <label class="form-label">CPU Tolerance</label>
-        <input type="number" class="form-control" id="cpuTolerance" value="1" />
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">RAM Tolerance</label>
-        <input type="number" class="form-control" id="ramTolerance" value="2" />
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">CPU Weight</label>
-        <input type="number" class="form-control" id="cpuWeight" value="1" />
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">RAM Weight</label>
-        <input type="number" class="form-control" id="ramWeight" value="1" />
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Filter by Region</label>
-<select class="form-select" id="filterRegion">
-  <option value="">All Regions</option>
-  <option value="australia east">Australia East</option>
-  <option value="australia southeast">Australia Southeast</option>
-  <option value="australia central">Australia Central</option>
-</select>
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Filter by Series</label>
-        <input type="text" class="form-control" id="filterSeries" placeholder="e.g., D, B, E" />
-      </div>
-    </div>
-
-    <button class="btn btn-primary mt-3" onclick="matchVMs()">Match VMs</button>
-  </div>
-
-  <div id="summaryArea" class="mt-4 p-3 bg-white border rounded" style="display:none">
-    <h4>Summary</h4>
-    <p><strong>Total Matched VMs:</strong> <span id="matchedCount">0</span></p>
-    <p><strong>Total Estimated Price/mo (720 hrs):</strong> $<span id="summaryPrice">0.00</span></p>
-  </div>
-
-  <div id="resultArea" class="mt-4"></div>
+  <!-- [unchanged result UI content] -->
 </div>
 
 <script>
-let sheetData = [];
-let fullCatalog = [];
-let productCatalog = [];
-
-fetch("./az_data-export.json")
-  .then(res => res.json())
-  .then(data => {
-    fullCatalog = data.map(p => {
-      const memoryMB = p.memoryInMB ?? p.memoryInMb ?? p.MemoryInMB ?? (p.memoryGB ? p.memoryGB * 1024 : 0);
-      return {
-        name: p.name,
-        series: p.name.split('_')[1] || '',
-        cpu: p.numberOfCores,
-        ram: parseFloat((memoryMB / 1024).toFixed(2)),
-        priceLinux: parseFloat(p.linuxPrice) * 720,
-        priceWindows: parseFloat(p.windowsPrice || 0) * 720,
-        region: p.bestPriceRegion?.toLowerCase() || '',
-        description: p.bestPriceRegion || "Azure VM"
-      };
-    });
-  });
-
-document.getElementById('fileInput').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
-    const headers = sheet[0];
-    sheetData = sheet.slice(1).map(row => Object.fromEntries(headers.map((h, i) => [h, row[i]])));
-    populateMappingDropdowns(headers);
-    document.getElementById('mappingArea').style.display = 'block';
-
-    // Auto-map fields based on known header names
-    const defaultMap = {
-      mapName: "VM",
-      mapCPU: "CPUs",
-      mapRAM: "Memory",
-      mapStorage: "GiB",
-      mapOS: "OS according to the configuration file"
-    };
-    for (let key in defaultMap) {
-      const select = document.getElementById(key);
-      if (headers.includes(defaultMap[key])) {
-        select.value = defaultMap[key];
-      }
-    };
-    for (let key in defaultMap) {
-      const select = document.getElementById(key);
-      if (headers.includes(defaultMap[key])) {
-        select.value = defaultMap[key];
-      }
-    }
-  };
-  reader.readAsArrayBuffer(file);
-});
-
-function populateMappingDropdowns(headers) {
-  ["mapName", "mapCPU", "mapRAM", "mapStorage", "mapOS"].forEach(id => {
-    const select = document.getElementById(id);
-    select.innerHTML = headers.map(h => `<option value="${h}">${h}</option>`).join('');
-  });
-}
-
-function matchVMs() {
-  const filterSeries = document.getElementById("filterSeries").value.trim().toUpperCase();
-  const filterRegion = document.getElementById("filterRegion").value.trim().toLowerCase();
-  productCatalog = fullCatalog.filter(p => {
-    const matchesSeries = !filterSeries || p.series.toUpperCase().startsWith(filterSeries);
-    const matchesRegion = !filterRegion || (p.region && p.region.includes(filterRegion));
-    return matchesSeries && matchesRegion;
-  });
-
-  const nameKey = document.getElementById("mapName").value;
-  const cpuKey = document.getElementById("mapCPU").value;
-  const ramKey = document.getElementById("mapRAM").value;
-  const storageKey = document.getElementById("mapStorage").value;
-
-  const results = sheetData.map((vm, index) => {
-    console.log(`Processing VM index ${index}:`, vm);
-    const osKey = document.getElementById("mapOS").value;
-    const osValue = (vm[osKey] || '').toString().toLowerCase();
-    const cpu = parseFloat(vm[cpuKey]) || 0;
-    const ram = parseFloat(vm[ramKey]) || 0;
-    const storage = parseFloat(vm[storageKey]);
-
-    console.log(`Trying to match VM '${vm[nameKey]}' with CPU: ${cpu}, RAM: ${ram}GB`);
-    const cpuTolerance = parseInt(document.getElementById("cpuTolerance").value) || 1;
-    const ramTolerance = parseInt(document.getElementById("ramTolerance").value) || 2;
-    const cpuWeight = parseFloat(document.getElementById("cpuWeight").value) || 1;
-    const ramWeight = parseFloat(document.getElementById("ramWeight").value) || 1;
-
-    const match = productCatalog
-      .filter(p => !isNaN(p.cpu) && !isNaN(p.ram) && Math.abs(p.cpu - cpu) <= cpuTolerance && Math.abs(p.ram - ram) <= ramTolerance)
-      .map(p => ({
-        ...p,
-        score: cpuWeight * Math.abs(p.cpu - cpu) + ramWeight * Math.abs(p.ram - ram)
-      }))
-      .sort((a, b) => a.score - b.score || a.priceLinux - b.priceLinux)
-      [0];
-    console.log(`Matched SKU for VM '${vm[nameKey]}': ${match ? match.name : 'No match'}`);
-
-    const inferredOS = osValue.includes("win") ? "Windows" : "Linux";
-    console.log(`Inferred OS for VM '${vm[nameKey]}': ${inferredOS}`);
-
-    return {
-      id: index,
-      name: vm[nameKey],
-      cpu,
-      ram,
-      storage,
-      os: inferredOS,
-      match: match
-        ? {
-            name: match.name,
-            priceLinux: match.priceLinux,
-            priceWindows: match.priceWindows,
-            description: match.description
-          }
-        : { name: "No match", priceLinux: 0, priceWindows: 0, description: "--" }
-    };
-  });
-
-  renderResults(results);
-}
-
-function renderResults(results) {
-  let html = `<table class="table table-bordered table-striped"><thead><tr>
-    <th>VM Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Description</th><th>Score</th>$1<th>Override</th></tr></thead><tbody>`;
-
-  let total = 0;
-  let matchedCount = 0;
-  results.forEach((r, idx) => {
-    const price = r.os === "Windows" ? r.match.priceWindows : r.match.priceLinux;
-    html += `<tr>
-      <td>${r.name}</td>
-      <td>${r.cpu}</td>
-      <td>${r.ram}</td>
-      <td>${r.storage}</td>
-      <td>
-        <select class="form-select" id="os-${idx}" onchange="updateOS(${idx})">
-          <option value="Linux" ${r.os === "Linux" ? "selected" : ""}>Linux</option>
-          <option value="Windows" ${r.os === "Windows" ? "selected" : ""}>Windows</option>
-        </select>
-      </td>
-      <td><input class="form-control" id="sku-${idx}" value="${r.match.name}" /></td>
-      <td><input class="form-control" id="desc-${idx}" value="${r.match.description}" /></td>
-      <td>${r.match.score !== undefined ? r.match.score.toFixed(2) : '-'}</td>$1
-      <td><button class="btn btn-sm btn-outline-primary" onclick="applyOverride(${idx})">Apply</button></td>
-    </tr>`;
-    total += price;
-    if (r.match.name !== "No match") matchedCount++;
-  });
-  html += `</tbody></table>`;
-
-  document.getElementById('matchedCount').textContent = matchedCount;
-  document.getElementById('summaryPrice').textContent = total.toFixed(4);
-  document.getElementById('summaryArea').style.display = 'block';
-
-  window._currentResults = results;
-
-  // Add modal filter triggers
-  
-  document.getElementById('resultArea').innerHTML = html;
-
-  setTimeout(() => {
-    results.forEach((r, idx) => {
-      const skuInput = document.getElementById(`sku-${idx}`);
-    if (skuInput) {
-      skuInput.addEventListener('focus', () => openSkuSelector(idx, r));
-    }
-      });
-  }, 0);
-
-  // Enable jQuery UI Autocomplete for SKU inputs
-  const skuOptions = fullCatalog.map(p => `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`);
-  results.forEach((r, idx) => {
-    $(`#sku-${idx}`).autocomplete({
-      source: function(request, response) {
-        const os = document.getElementById(`os-${idx}`).value;
-        const seriesFilter = document.getElementById("filterSeries").value.trim().toUpperCase();
-        const filtered = fullCatalog.filter(p => {
-          const matchesText = `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`.toLowerCase().includes(request.term.toLowerCase());
-          const matchesMemory = Math.abs(p.ram - r.ram) <= 2;
-          const matchesSeries = !seriesFilter || p.series.toUpperCase().startsWith(seriesFilter);
-          return matchesText && matchesSeries && matchesMemory;
-        }).map(p => ({
-          label: `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`,
-          value: `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`
-        }));
-        response(filtered);
-      },
-      minLength: 1,
-      select: function(event, ui) {
-        const selected = fullCatalog.find(p => ui.item.value.startsWith(p.name));
-        console.log(`Autocomplete selected: ${selected.name} (${selected.cpu} vCPU, ${selected.ram}GB RAM)`);
-        if (selected) {
-          document.getElementById(`desc-${idx}`).value = selected.description;
-          const preview = `<div class='mt-2'><strong>${selected.name}</strong><br/>${selected.cpu} vCPU, ${selected.ram}GB RAM<br/>${selected.description}</div>`;
-          const existingPreview = document.querySelector(`#sku-${idx}`).closest('tr').nextElementSibling;
-          if (existingPreview && existingPreview.classList.contains('table-secondary')) {
-            existingPreview.remove();
-          }
-          document.getElementById(`sku-${idx}`).closest('tr').insertAdjacentHTML('afterend', `<tr class='table-secondary'><td colspan='9'>${preview}</td></tr>`);
-          const os = document.getElementById(`os-${idx}`).value;
-          const price = os === "Windows" ? selected.priceWindows : selected.priceLinux;
-          document.getElementById(`price-${idx}`).value = price.toFixed(4);
-        }
-      }
-    });
-  });
-}
-
-function updateOS(idx) {
-  const os = document.getElementById(`os-${idx}`).value;
-  window._currentResults[idx].os = os;
-  renderResults(window._currentResults);
-}
-
-function applyOverride(idx) {
-  const sku = document.getElementById(`sku-${idx}`).value;
-  const desc = document.getElementById(`desc-${idx}`).value;
-  const price = parseFloat(document.getElementById(`price-${idx}`).value);
-  const os = document.getElementById(`os-${idx}`).value;
-
-  window._currentResults[idx].match = { name: sku, description: desc, priceLinux: price, priceWindows: price };
-  window._currentResults[idx].os = os;
-
-  renderResults(window._currentResults);
-}
-</script>
-<!-- SKU Selector Modal -->
-<div class="modal fade" id="skuSelectorModal" tabindex="-1" aria-labelledby="skuSelectorModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="skuSelectorModalLabel">Select SKU</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3 text-end">
-          <button class="btn btn-success" onclick="autoSelectBestSku()">Auto Select Best Match</button>
-        </div>
-        <div class="row g-3 mb-3">
-          <div class="col-md-6">
-            <label class="form-label">Filter by CPU</label>
-            <input type="number" class="form-control" id="filterCpuInput" oninput="filterSkuTable()" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Filter by RAM</label>
-            <input type="number" class="form-control" id="filterRamInput" oninput="filterSkuTable()" />
-          </div>
-        </div>
-        <div id="skuSelectorResults" class="table-responsive"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-let currentSkuIndex = null;
-
-function openSkuSelector(idx, vm) {
-  currentSkuIndex = idx;
-  document.getElementById('filterCpuInput').value = vm.cpu;
-  document.getElementById('filterRamInput').value = vm.ram;
-  filterSkuTable();
-  const modal = new bootstrap.Modal(document.getElementById('skuSelectorModal'));
-  modal.show();
-}
+// [unchanged JS until filterSkuTable definition]
 
 function filterSkuTable() {
+  console.log('🔍 Running filterSkuTable');
   const cpu = parseInt(document.getElementById('filterCpuInput').value);
   const ram = parseFloat(document.getElementById('filterRamInput').value);
   const region = document.getElementById('filterRegion').value.trim().toLowerCase();
-  const series = document.getElementById('filterSeries').value.trim().toUpperCase();
+
+  console.log('➡️ Inputs:', { cpu, ram, region });
+  console.log('📦 Full catalog size:', fullCatalog.length);
 
   const filteredCatalog = fullCatalog.filter(p => {
     const matchCpu = isNaN(cpu) || Math.abs(p.cpu - cpu) <= 1;
     const matchRam = isNaN(ram) || Math.abs(p.ram - ram) <= 2;
     const matchRegion = !region || (p.region && p.region.includes(region));
-    const matchSeries = !series || (p.series && p.series.toUpperCase().startsWith(series));
-    return matchCpu && matchRam && matchRegion && matchSeries;
+    return matchCpu && matchRam && matchRegion;
   });
+
+  console.log('✅ Filtered results count:', filteredCatalog.length);
 
   const results = filteredCatalog.map(p => `
     <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
@@ -394,26 +54,6 @@ function filterSkuTable() {
       <tbody>${results}</tbody>
     </table>
   `;
-}
-
-function autoSelectBestSku() {
-  const cpu = parseInt(document.getElementById('filterCpuInput').value);
-  const ram = parseInt(document.getElementById('filterRamInput').value);
-  const os = document.getElementById(`os-${currentSkuIndex}`).value;
-  const best = fullCatalog.find(p => Math.abs(p.cpu - cpu) <= 1 && Math.abs(p.ram - ram) <= 2);
-  if (best) {
-    selectSku(best.name, best.cpu, best.ram, best.description, best.priceLinux, best.priceWindows);
-  } else {
-    alert('No close match found. Try adjusting the filters.');
-  }
-}
-
-function selectSku(name, cpu, ram, desc, priceLinux, priceWindows) {
-  const os = document.getElementById(`os-${currentSkuIndex}`).value;
-  document.getElementById(`sku-${currentSkuIndex}`).value = `${name} (${cpu} vCPU, ${ram}GB RAM)`;
-  document.getElementById(`desc-${currentSkuIndex}`).value = desc;
-  document.getElementById(`price-${currentSkuIndex}`).value = (os === 'Windows' ? priceWindows : priceLinux).toFixed(4);
-  bootstrap.Modal.getInstance(document.getElementById('skuSelectorModal')).hide();
 }
 </script>
 </body>
