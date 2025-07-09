@@ -381,7 +381,7 @@ function filterSkuTable() {
     <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
       <td>${p.name}</td>
       <td>${p.cpu}</td>
-      <td>${p.ram}</td>
+      <td>${p.ram.toFixed(2)}</td>
       <td>${p.description}</td>
       <td>$${p.priceLinux.toFixed(4)} (Linux)</td>
       <td>$${p.priceWindows.toFixed(4)} (Windows)</td>
