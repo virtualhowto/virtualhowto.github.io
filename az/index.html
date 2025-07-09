@@ -37,6 +37,19 @@
         <select class="form-select" id="mapStorage"></select>
       </div>
     </div>
+
+    <div class="form-check form-switch mt-3">
+      <input class="form-check-input" type="checkbox" role="switch" id="osToggle">
+      <label class="form-check-label" for="osToggle">Use Windows Pricing</label>
+    </div>
+
+    <div class="row mt-3">
+      <div class="col-md-6">
+        <label class="form-label">Filter by Series</label>
+        <input type="text" class="form-control" id="filterSeries" placeholder="e.g., D, B, E" />
+      </div>
+    </div>
+
     <button class="btn btn-primary mt-3" onclick="matchVMs()">Match VMs</button>
   </div>
 
@@ -45,18 +58,22 @@
 
 <script>
 let sheetData = [];
+let fullCatalog = [];
 let productCatalog = [];
 
 fetch("/mnt/data/data-export (2).json")
   .then(res => res.json())
   .then(data => {
-    productCatalog = data.map(p => ({
+    fullCatalog = data.map(p => ({
       name: p.name,
+      series: p.name.split('_')[1] || '',
       cpu: p.numberOfCores,
       ram: Math.round(p.memoryInMB / 1024),
-      price: parseFloat(p.linuxPrice),
+      priceLinux: parseFloat(p.linuxPrice),
+      priceWindows: parseFloat(p.windowsPrice) || 0,
       description: p.bestPriceRegion || "Azure VM"
     }));
+    productCatalog = fullCatalog;
   });
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
@@ -83,6 +100,10 @@ function populateMappingDropdowns(headers) {
 }
 
 function matchVMs() {
+  const useWindows = document.getElementById("osToggle").checked;
+  const filterSeries = document.getElementById("filterSeries").value.trim().toUpperCase();
+  productCatalog = fullCatalog.filter(p => !filterSeries || p.series.startsWith(filterSeries));
+
   const nameKey = document.getElementById("mapName").value;
   const cpuKey = document.getElementById("mapCPU").value;
   const ramKey = document.getElementById("mapRAM").value;
@@ -103,7 +124,13 @@ function matchVMs() {
       cpu,
       ram,
       storage,
-      match: match || { name: "No match", price: 0, description: "--" }
+      match: match
+        ? {
+            name: match.name,
+            price: useWindows ? match.priceWindows : match.priceLinux,
+            description: match.description
+          }
+        : { name: "No match", price: 0, description: "--" }
     };
   });
 
@@ -112,7 +139,7 @@ function matchVMs() {
 
 function renderResults(results) {
   let html = `<table class="table table-bordered table-striped"><thead><tr>
-    <th>VM Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>Matched SKU</th><th>Description</th><th>Price/hr (Linux)</th><th>Override</th></tr></thead><tbody>`;
+    <th>VM Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>Matched SKU</th><th>Description</th><th>Price/hr</th><th>Override</th></tr></thead><tbody>`;
 
   let total = 0;
   results.forEach((r, idx) => {
