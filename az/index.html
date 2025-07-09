@@ -72,11 +72,13 @@ let productCatalog = [];
 fetch("./az_data-export.json")
   .then(res => res.json())
   .then(data => {
-    fullCatalog = data.map(p => ({
-      name: p.name,
-      series: p.name.split('_')[1] || '',
-      cpu: p.numberOfCores,
-      ram: Math.round(p.memoryInMB / 1024),
+    fullCatalog = data.map(p => {
+      const memoryMB = p.memoryInMB ?? p.memoryInMb ?? p.MemoryInMB ?? 0;
+      return {
+        name: p.name,
+        series: p.name.split('_')[1] || '',
+        cpu: p.numberOfCores,
+        ram: Math.round(memoryMB / 1024),
       priceLinux: parseFloat(p.linuxPrice),
       priceWindows: parseFloat(p.windowsPrice) || 0,
       description: p.bestPriceRegion || "Azure VM"
