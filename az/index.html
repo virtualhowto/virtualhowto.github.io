@@ -365,18 +365,29 @@ function openSkuSelector(idx, vm) {
 
 function filterSkuTable() {
   const cpu = parseInt(document.getElementById('filterCpuInput').value);
-  const ram = parseInt(document.getElementById('filterRamInput').value);
-  const results = fullCatalog
-    .map(p => `
-      <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
-        <td>${p.name}</td>
-        <td>${p.cpu}</td>
-        <td>${p.ram}</td>
-        <td>${p.description}</td>
-        <td>$${p.priceLinux.toFixed(4)} (Linux)</td>
-        <td>$${p.priceWindows.toFixed(4)} (Windows)</td>
-      </tr>
-    `).join('');
+  const ram = parseFloat(document.getElementById('filterRamInput').value);
+  const region = document.getElementById('filterRegion').value.trim().toLowerCase();
+  const series = document.getElementById('filterSeries').value.trim().toUpperCase();
+
+  const filteredCatalog = fullCatalog.filter(p => {
+    const matchCpu = isNaN(cpu) || Math.abs(p.cpu - cpu) <= 1;
+    const matchRam = isNaN(ram) || Math.abs(p.ram - ram) <= 2;
+    const matchRegion = !region || (p.region && p.region.includes(region));
+    const matchSeries = !series || (p.series && p.series.toUpperCase().startsWith(series));
+    return matchCpu && matchRam && matchRegion && matchSeries;
+  });
+
+  const results = filteredCatalog.map(p => `
+    <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
+      <td>${p.name}</td>
+      <td>${p.cpu}</td>
+      <td>${p.ram}</td>
+      <td>${p.description}</td>
+      <td>$${p.priceLinux.toFixed(4)} (Linux)</td>
+      <td>$${p.priceWindows.toFixed(4)} (Windows)</td>
+    </tr>
+  `).join('');
+
   document.getElementById('skuSelectorResults').innerHTML = `
     <table class="table table-hover">
       <thead><tr><th>Name</th><th>CPU</th><th>RAM</th><th>Description</th><th>Linux Price</th><th>Windows Price</th></tr></thead>
