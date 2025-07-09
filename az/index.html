@@ -142,7 +142,12 @@
         <td>${ram.toFixed(2)}</td>
         <td>${storage.toFixed(2)}</td>
         <td>${os}</td>
-        <td><span title="${JSON.stringify(best, null,2)}" class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${best.name||'Select SKU'}</span></td>
+        <td><span title="Name: ${best.name || 'N/A'}
+CPU: ${best.cpu} cores
+RAM: ${best.ram} GB
+Storage: ${best.storage} GB
+Linux Price: $${best.priceLinux.toFixed(2)}
+Windows Price: $${best.priceWindows.toFixed(2)}" class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${best.name||'Select SKU'}</span></td>
         <td>$${price?price.toFixed(2):'-'}</td>
       `;
       tbody.appendChild(row);
@@ -182,8 +187,8 @@
       const ramV=document.getElementById('filterRAM').value;
       const filtered=fullCatalog.filter(s=>
         (!nameV||s.name.toLowerCase().includes(nameV))&&
-        (!cpuV||s.cpu==cpuV)&&
-        (!ramV||s.ram==ramV)
+        (!cpuV||s.cpu.toString().includes(cpuV))&&
+        (!ramV||s.ram.toString().includes(ramV))
       );
       document.getElementById('skuTableBody').innerHTML=filtered.map(s=>`
         <tr>
@@ -196,7 +201,12 @@
   function updateSummary() {
     const total = matchedSkus.reduce((sum,sku)=>sum + (sku.priceLinux||0),0);
     document.getElementById('totalPrice').innerText = `$${total.toFixed(2)}`;
-    const storageSum = lastVmData.reduce((sum,vm)=> sum + (+vm['Provisioned Storage (GB)']||0),0);
+    const storageCharge = lastVmData.reduce((sum, vm) => {
+  const gb = +vm['Provisioned Storage (GB)'] || 0;
+  const tbChunks = Math.ceil(gb / 1024) || 1;
+  return sum + tbChunks * 1024 * 0.30;
+}, 0);
+document.getElementById('storageCharge').innerText = `$${storageCharge.toFixed(2)}`;
     document.getElementById('storageCharge').innerText = `$${(storageSum*0.30).toFixed(2)}`;
   }
   </script>
