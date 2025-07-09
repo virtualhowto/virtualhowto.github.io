@@ -11,11 +11,20 @@
     #spinner { display: none; }
     .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
     .filter-input { width: 100%; padding: 0.25rem; margin-bottom: 0.5rem; }
+    .sticky-header { position: sticky; top: 0; background: #fff; z-index: 1040; padding: 1rem 0; border-bottom: 1px solid #dee2e6; }
   </style>
 </head>
 <body class="bg-light">
 <div class="container py-4">
-  <h2>Upload RVTools Export</h2>
+  <!-- Sticky Header -->
+  <div class="sticky-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <h1 class="h4 mb-0">RVTools Matcher</h1>
+      <div>Total Azure Price (Monthly): <strong id="summaryPrice">$0.00</strong></div>
+    </div>
+  </div>
+
+  <h2 class="mt-4">Upload RVTools Export</h2>
   <input type="file" id="fileInput" class="form-control mb-4" accept=".xlsx" />
   <div id="spinner" class="text-center my-3">
     <div class="spinner-border text-primary" role="status"></div>
@@ -25,9 +34,10 @@
     <div id="toastSuccess" class="toast text-bg-success" role="alert"><div class="toast-body">✅ File loaded!</div></div>
     <div id="toastError" class="toast text-bg-danger" role="alert"><div class="toast-body">❌ No data found.</div></div>
   </div>
+
   <h3>Matched VMs</h3>
   <table class="table table-bordered" id="vmTable">
-    <thead><tr><th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Price (Monthly)</th></tr></thead>
+    <thead><tr><th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Azure Price (Monthly)</th></tr></thead>
     <tbody></tbody>
   </table>
 </div>
@@ -63,6 +73,15 @@ function getSkuPrice(sku, os) {
   return (typeof price === 'number' ? price : parseFloat(price || 0)).toFixed(2);
 }
 
+function updateSummary() {
+  const total = matchedSkus.reduce((sum, sku, i) => {
+    if (!sku) return sum;
+    const os = (lastVmData[i]["OS according to the configuration file"] || '').toLowerCase();
+    return sum + parseFloat(getSkuPrice(sku, os));
+  }, 0);
+  document.getElementById('summaryPrice').innerText = `$${total.toFixed(2)}`;
+}
+
 function showToast(id) {
   new bootstrap.Toast(document.getElementById(id)).show();
 }
@@ -75,8 +94,7 @@ fetch('./az_data-export.json').then(r => r.json()).then(data => {
     storage: d.osDiskSizeInMB || 0,
     description: d.description || '',
     priceWindows: parseFloat(d.windowsPrice),
-    priceLinux: parseFloat(d.linuxPrice),
-    region: (d.bestPriceRegion || '').toLowerCase()
+    priceLinux: parseFloat(d.linuxPrice)
   }));
 });
 
@@ -90,7 +108,7 @@ function readXlsx(file) {
   reader.onload = e => {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets["vInfo"] || workbook.Sheets[workbook.SheetNames[0]];
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const vmData = XLSX.utils.sheet_to_json(sheet);
     document.getElementById('spinner').style.display = 'none';
     if (!vmData.length) return showToast('toastError');
@@ -108,12 +126,13 @@ function renderVMTable(vmData) {
   vmData.forEach((vm, idx) => {
     const cpu = parseFloat(vm["CPUs"]);
     const ram = parseFloat(vm["Memory"]);
+    // pull storage directly from uploaded sheet
+    const storageVal = parseFloat(
+      vm["Provisioned Storage (GB)"] ?? vm["GiB"] ?? vm["Storage"] ?? 0
+    );
     const os = (vm["OS according to the configuration file"] || '').toLowerCase();
-    const region = 'australiaeast';
     const matches = fullCatalog.filter(s =>
-      Math.abs(s.cpu - cpu) <= 1 &&
-      Math.abs(s.ram - ram) <= 2 &&
-      s.region.includes(region)
+      Math.abs(s.cpu - cpu) <= 1 && Math.abs(s.ram - ram) <= 2
     );
     const best = matches.sort((a, b) =>
       (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
@@ -126,12 +145,13 @@ function renderVMTable(vmData) {
       <td>${vm["VM"]}</td>
       <td>${cpu}</td>
       <td>${ram.toFixed(2)}</td>
-      <td>${parseFloat(vm["Provisioned Storage (GB)"] || 0).toFixed(2)}</td>
+      <td>${storageVal.toFixed(2)}</td>
       <td>${os}</td>
       <td ${titleAttr}><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${idx})">${best?.name || 'Select SKU'}</span></td>
       <td>$${best ? getSkuPrice(best, os) : '-'}</td>`;
     tbody.appendChild(row);
   });
+  updateSummary();
 }
 
 function openSkuPopup(index) {
@@ -159,6 +179,7 @@ function selectSku(idx) {
   row.cells[6].innerText = `$${getSkuPrice(sku, os)}`;
   matchedSkus[selectedRow] = sku;
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+  updateSummary();
 }
 
 ["filterName", "filterCPU", "filterRAM"].forEach(id => {
