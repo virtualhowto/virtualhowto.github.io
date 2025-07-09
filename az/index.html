@@ -54,7 +54,7 @@
           <div class="col"><input class="form-control" id="filterRAM" placeholder="Filter by RAM"></div>
         </div>
         <table class="table table-sm table-striped">
-          <thead><tr><th>Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Price</th><th>Select</th></tr></thead>
+          <thead><tr><th>Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS Disk</th><th>Price</th><th>Select</th></tr></thead>
           <tbody id="skuTableBody"></tbody>
         </table>
       </div>
@@ -67,10 +67,16 @@
 <script>
 let fullCatalog = [], matchedSkus = [], selectedRow = 0, lastVmData = [];
 
+// Initialize Bootstrap tooltips
+function initTooltips() {
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el, {html: true}));
+}
+
 function getSkuPrice(sku, os) {
   const isWin = os.includes('win');
   const price = isWin ? sku.priceWindows : sku.priceLinux;
-  return (typeof price === 'number' ? price : parseFloat(price || 0)).toFixed(2);
+  return price.toFixed(2);
 }
 
 function updateSummary() {
@@ -91,8 +97,8 @@ fetch('./az_data-export.json').then(r => r.json()).then(data => {
     name: d.name,
     cpu: d.numberOfCores,
     ram: d.memoryInMB,
-    storage: d.osDiskSizeInMB || 0,
-    description: d.description || '',
+    storage: parseFloat(d.osDiskSizeInMB || 0) / 1024,
+    description: d.osDiskSizeInMB ? `${(d.osDiskSizeInMB/1024).toFixed(2)} GB` : '—',
     priceWindows: parseFloat(d.windowsPrice),
     priceLinux: parseFloat(d.linuxPrice)
   }));
@@ -126,20 +132,20 @@ function renderVMTable(vmData) {
   vmData.forEach((vm, idx) => {
     const cpu = parseFloat(vm["CPUs"]);
     const ram = parseFloat(vm["Memory"]);
-    // pull storage directly from uploaded sheet
-    const storageVal = parseFloat(
-      vm["Provisioned Storage (GB)"] ?? vm["GiB"] ?? vm["Storage"] ?? 0
-    );
+    const storageVal = parseFloat(vm["Provisioned Storage (GB)"] ?? vm["GiB"] ?? vm["Storage"] ?? 0);
     const os = (vm["OS according to the configuration file"] || '').toLowerCase();
     const matches = fullCatalog.filter(s =>
-      Math.abs(s.cpu - cpu) <= 1 && Math.abs(s.ram - ram) <= 2
+      Math.abs(s.cpu - cpu) <= 0 && Math.abs(s.ram - ram) <= 0
     );
-    const best = matches.sort((a, b) =>
-      (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
-      (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
-    )[0];
+    const best = matches[0] || null;
     matchedSkus[idx] = best;
-    const titleAttr = best ? `title='${JSON.stringify(best)}'` : '';
+    const tip = best ?
+      `<strong>Name:</strong> ${best.name}<br>` +
+      `<strong>CPU:</strong> ${best.cpu}<br>` +
+      `<strong>RAM:</strong> ${best.ram.toFixed(2)} GB<br>` +
+      `<strong>Storage:</strong> ${best.storage.toFixed(2)} GB<br>` +
+      `<strong>Price:</strong> $${getSkuPrice(best, os)}`
+      : 'Click to select';
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${vm["VM"]}</td>
@@ -147,10 +153,12 @@ function renderVMTable(vmData) {
       <td>${ram.toFixed(2)}</td>
       <td>${storageVal.toFixed(2)}</td>
       <td>${os}</td>
-      <td ${titleAttr}><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${idx})">${best?.name || 'Select SKU'}</span></td>
-      <td>$${best ? getSkuPrice(best, os) : '-'}</td>`;
+      <td><span class="text-primary" style="cursor:pointer" data-bs-toggle="tooltip" data-bs-html="true" title="${tip}" onclick="openSkuPopup(${idx})">${best?.name || 'Select SKU'}</span></td>
+      <td>$${best ? getSkuPrice(best, os) : '-'}</td>
+    `;
     tbody.appendChild(row);
   });
+  initTooltips();
   updateSummary();
 }
 
@@ -174,37 +182,18 @@ function selectSku(idx) {
   const sku = fullCatalog[idx];
   const row = document.querySelector(`#vmTable tbody`).children[selectedRow];
   const os = (lastVmData[selectedRow]["OS according to the configuration file"] || '').toLowerCase();
-  const titleAttr = `title='${JSON.stringify(sku)}'`;
-  row.cells[5].innerHTML = `<span ${titleAttr} class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${selectedRow})">${sku.name}</span>`;
+  const tip = `<strong>Name:</strong> ${sku.name}<br>` +
+              `<strong>CPU:</strong> ${sku.cpu}<br>` +
+              `<strong>RAM:</strong> ${sku.ram.toFixed(2)} GB<br>` +
+              `<strong>Storage:</strong> ${sku.storage.toFixed(2)} GB<br>` +
+              `<strong>Price:</strong> $${getSkuPrice(sku, os)}`;
+  row.cells[5].innerHTML = `<span class="text-primary" style="cursor:pointer" data-bs-toggle="tooltip" data-bs-html="true" title="${tip}" onclick="openSkuPopup(${selectedRow})">${sku.name}</span>`;
   row.cells[6].innerText = `$${getSkuPrice(sku, os)}`;
   matchedSkus[selectedRow] = sku;
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+  initTooltips();
   updateSummary();
 }
-
-["filterName", "filterCPU", "filterRAM"].forEach(id => {
-  document.getElementById(id).addEventListener("input", () => {
-    const nameVal = document.getElementById("filterName").value.toLowerCase();
-    const cpuVal = document.getElementById("filterCPU").value;
-    const ramVal = document.getElementById("filterRAM").value;
-    const os = (lastVmData[selectedRow]["OS according to the configuration file"] || '').toLowerCase();
-    const filtered = fullCatalog.filter(sku =>
-      (!nameVal || sku.name.toLowerCase().includes(nameVal)) &&
-      (!cpuVal || sku.cpu == parseInt(cpuVal)) &&
-      (!ramVal || sku.ram.toFixed(2) == parseFloat(ramVal).toFixed(2))
-    );
-    document.getElementById('skuTableBody').innerHTML = filtered.map((sku, idx) => `
-      <tr>
-        <td>${sku.name}</td>
-        <td>${sku.cpu}</td>
-        <td>${sku.ram.toFixed(2)}</td>
-        <td>${sku.storage.toFixed(2)}</td>
-        <td>${sku.description}</td>
-        <td>$${getSkuPrice(sku, os)}</td>
-        <td><button class="btn btn-sm btn-success" onclick="selectSku(${idx})">✔</button></td>
-      </tr>`).join('');
-  });
-});
 </script>
 </body>
 </html>
