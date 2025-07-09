@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Azure VM Matcher</title>
+</head>
+<body>
+  <h2>Azure VM Matcher (Australia East)</h2>
+  <button onclick="matchVMs()">Fetch & Match</button>
+  <pre id="output">Press button to start...</pre>
+
+  <script>
+    const requirements = [
+      { vcpu: 4, ram: 16 },
+      { vcpu: 4, ram: 32 },
+      { vcpu: 6, ram: 32 },
+      { vcpu: 6, ram: 64 },
+    ];
+
+    async function fetchAzureVMs() {
+      const baseUrl = "https://prices.azure.com/api/retail/prices";
+      const filter = encodeURIComponent(
+        "serviceFamily eq 'Compute' and armRegionName eq 'australiaeast' and productName contains 'Virtual Machines' and priceType eq 'Consumption'"
+      );
+
+      let nextLink = `${baseUrl}?$filter=${filter}`;
+      const results = [];
+
+      while (nextLink && results.length < 500) {
+        const res = await fetch(nextLink);
+        const data = await res.json();
+        results.push(...data.Items);
+        nextLink = data.NextPageLink;
+      }
+
+      return results.filter(vm =>
+        vm.unitOfMeasure === "1 Hour" &&
+        vm.skuName.toLowerCase().includes("linux")
+      );
+    }
+
+    function estimateSpecs(skuName) {
+      const match = skuName.match(/(\d+)[a-z]?_?v?\d*/i);
+      const vcpu = match ? parseInt(match[1]) : null;
+      let ram = vcpu ? vcpu * 4 : null;
+
+      if (skuName.toLowerCase().includes("e")) ram = vcpu * 8;
+      if (skuName.toLowerCase().includes("f")) ram = vcpu * 2;
+
+      return { vcpu, ram };
+    }
+
+    function findBestMatch(vmList, reqVcpu, reqRam) {
+      let best = null;
+      let minExcess = Infinity;
+
+      for (const vm of vmList) {
+        const specs = estimateSpecs(vm.armSkuName);
+        if (!specs.vcpu || !specs.ram) continue;
+
+        const extraCPU = specs.vcpu - reqVcpu;
+        const extraRAM = specs.ram - reqRam;
+
+        if (extraCPU >= 0 && extraRAM >= 0) {
+          const totalExcess = extraCPU + extraRAM;
+          if (totalExcess < minExcess) {
+            best = { ...vm, specs };
+            minExcess = totalExcess;
+          }
+        }
+      }
+
+      return best;
+    }
+
+    async function matchVMs() {
+      const vmList = await fetchAzureVMs();
+      const output = [];
+
+      for (const req of requirements) {
+        const match = findBestMatch(vmList, req.vcpu, req.ram);
+        if (match) {
+          output.push({
+            requested: req,
+            match: match.skuName,
+            vcpu: match.specs.vcpu,
+            ram: match.specs.ram,
+            price: `$${match.retailPrice.toFixed(3)} / hr`,
+          });
+        } else {
+          output.push({ requested: req, match: "No match found" });
+        }
+      }
+
+      document.getElementById("output").textContent = JSON.stringify(output, null, 2);
+    }
+  </script>
+</body>
+</html>
