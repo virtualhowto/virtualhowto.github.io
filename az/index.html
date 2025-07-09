@@ -62,7 +62,7 @@ let sheetData = [];
 let fullCatalog = [];
 let productCatalog = [];
 
-fetch("/az_data-export.json")
+fetch("/az/az_data-export.json")
   .then(res => res.json())
   .then(data => {
     fullCatalog = data.map(p => ({
