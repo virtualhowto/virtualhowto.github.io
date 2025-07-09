@@ -66,7 +66,7 @@
         </div>
         <table class="table table-sm table-striped">
           <thead>
-$1<th>Monthly Price</th><th>Select</th></tr>
+            <tr><th>Name</th><th>CPU</th><th>RAM (GB)</th><th>Storage (GB)</th><th>OS</th><th>Monthly Price</th><th>Select</th></tr>
           </thead>
           <tbody id="skuTableBody"></tbody>
         </table>
@@ -80,6 +80,7 @@ $1<th>Monthly Price</th><th>Select</th></tr>
 <script>
 let fullCatalog = [];
 let selectedRow = null;
+let matchedSkus = [];
 
 fetch('./az_data-export.json')
   .then(r => r.json())
@@ -89,8 +90,6 @@ fetch('./az_data-export.json')
       cpu: d.numberOfCores,
       ram: d.memoryInMB,
       storage: d.osDiskSizeInMB / 1024,
-      cpu: d.numberOfCores,
-      ram: d.memoryInMB,
       priceLinux: d.linuxPrice,
       priceWindows: d.windowsPrice,
       description: d.description || '',
@@ -131,6 +130,7 @@ document.getElementById("fileInput").addEventListener("change", e => {
 function renderVMTable(vmData) {
   const tbody = document.querySelector("#vmTable tbody");
   tbody.innerHTML = "";
+  matchedSkus = [];
   vmData.forEach((vm, index) => {
     try {
       const cpu = parseFloat(vm["CPUs"]);
@@ -141,16 +141,17 @@ function renderVMTable(vmData) {
       const best = matches.sort((a, b) => (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) - (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram)))[0];
       const price = os.includes("win") ? best?.priceWindows : best?.priceLinux;
       const rowClass = best ? 'highlight' : 'no-match';
+      matchedSkus.push(best || null);
       const row = document.createElement('tr');
       row.className = rowClass;
       row.innerHTML = `
         <td>${vm["VM"]}</td>
         <td>${cpu}</td>
         <td>${ram.toFixed(2)}</td>
-        <td>${vm["Provisioned Storage (GB)"]}</td>
+        <td>${vm["Provisioned Storage (GB)"] ? parseFloat(vm["Provisioned Storage (GB)"]).toFixed(2) : '-'}</td>
         <td>${os}</td>
         <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${index})">${best?.name || 'Select SKU'}</span></td>
-        <td>${price ? `$${(price).toFixed(2)}` : '-'}</td>
+        <td>${price ? `$${parseFloat(price).toFixed(2)}` : '-'}</td>
       `;
       tbody.appendChild(row);
     } catch (err) {
@@ -179,7 +180,7 @@ function openSkuPopup(rowIndex) {
       <td>${sku.ram.toFixed(2)}</td>
       <td>${sku.storage.toFixed(2)}</td>
       <td>${sku.description}</td>
-      <td>$${(sku.priceLinux).toFixed(2)}</td>
+      <td>$${parseFloat(sku.priceLinux).toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
     </tr>`).join('');
 
@@ -190,7 +191,8 @@ function selectSku(idx) {
   const sku = fullCatalog[idx];
   const row = document.querySelector(`#vmTable tbody`).children[selectedRow];
   row.cells[5].innerHTML = `<span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${selectedRow})">${sku.name}</span>`;
-  row.cells[6].innerText = `$${(sku.priceLinux).toFixed(2)}`;
+  row.cells[6].innerText = `$${parseFloat(sku.priceLinux).toFixed(2)}`;
+  matchedSkus[selectedRow] = sku;
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
 
@@ -211,7 +213,7 @@ function selectSku(idx) {
         <td>${sku.ram.toFixed(2)}</td>
         <td>${sku.storage.toFixed(2)}</td>
         <td>${sku.description}</td>
-        <td>$${(sku.priceLinux).toFixed(2)}</td>
+        <td>$${parseFloat(sku.priceLinux).toFixed(2)}</td>
         <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
       </tr>`).join('');
   });
