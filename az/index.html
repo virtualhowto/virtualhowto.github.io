@@ -206,7 +206,7 @@ Windows Price: $${best.priceWindows.toFixed(2)}" class="text-primary" style="cur
     });
   });
 
- function updateSummary() {
+  function updateSummary() {
   const total = matchedSkus.reduce((sum, sku) => sum + (sku.priceLinux || 0), 0);
   document.getElementById('totalPrice').innerText = `$${total.toFixed(2)}`;
 
@@ -219,7 +219,15 @@ Windows Price: $${best.priceWindows.toFixed(2)}" class="text-primary" style="cur
 
   const grandTotal = total + storageCharge;
   document.getElementById('grandTotal').innerText = `$${grandTotal.toFixed(2)}`;
-}
+}`;
+    const storageCharge = lastVmData.reduce((sum, vm) => {
+  const gb = +vm['Provisioned Storage (GB)'] || 0;
+  const tbChunks = Math.ceil(gb / 1024) || 1;
+  return sum + tbChunks * 1024 * 0.30;
+}, 0);
+document.getElementById('storageCharge').innerText = `$${storageCharge.toFixed(2)}`;
+    
+  }
   </script>
 </body>
 </html>
