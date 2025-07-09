@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>P2P File Transfer (Client-Only)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Secure P2P File Transfer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -23,7 +23,6 @@
     h2 {
       text-align: center;
       color: #2a4365;
-      margin-bottom: 20px;
     }
     .drop-zone {
       border: 2px dashed #90cdf4;
@@ -40,35 +39,25 @@
     input[type="file"] {
       display: none;
     }
-    button {
+    input, button, textarea {
       width: 100%;
-      padding: 14px;
+      padding: 12px;
+      margin-top: 10px;
       font-size: 16px;
+      border-radius: 6px;
+    }
+    button {
       background-color: #2b6cb0;
       color: white;
       border: none;
-      border-radius: 8px;
-      margin-top: 10px;
       cursor: pointer;
     }
     button:hover {
       background-color: #2c5282;
     }
     textarea {
-      width: 100%;
       height: 80px;
-      padding: 10px;
       font-family: monospace;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
-    }
-    .note {
-      background: #fefcbf;
-      border-left: 4px solid #d69e2e;
-      padding: 10px;
-      margin: 10px 0;
     }
     .progress-container {
       margin-top: 10px;
@@ -96,21 +85,20 @@
 </head>
 <body>
   <div class="container">
-    <h2>📁 P2P File Transfer</h2>
+    <h2>🔐 Secure P2P File Transfer</h2>
+    <label class="drop-zone" id="dropZone">Drag and drop a file here or tap to choose</label>
+    <input type="file" id="fileInput">
+    <input type="text" id="passphrase" placeholder="Enter shared passphrase">
 
-    <label for="fileInput" class="drop-zone" id="dropZone">
-      Drag and drop a file here or tap to choose
-    </label>
-    <input type="file" id="fileInput" />
+    <button onclick="createLink()">🔐 Generate Encrypted Offer</button>
+    <textarea id="encryptedOffer" placeholder="Copy & send this encrypted phrase"></textarea>
 
-    <div id="fileInfo" class="note" style="display:none;"></div>
+    <textarea id="receivedEncryptedOffer" placeholder="Paste received encrypted offer"></textarea>
+    <button onclick="respondToOffer()">🔓 Decrypt Offer & Respond</button>
+    <textarea id="encryptedAnswer" placeholder="Send this encrypted answer back"></textarea>
 
-    <button onclick="createLink()">📤 Create Link (Sender)</button>
-    <textarea id="connectionPhrase" placeholder="Share this phrase..."></textarea>
-
-    <div class="note">Paste a phrase below to join as receiver:</div>
-    <textarea id="joinInput" placeholder="Paste phrase to join..."></textarea>
-    <button onclick="joinLink()">🔗 Join Link (Receiver)</button>
+    <textarea id="receivedEncryptedAnswer" placeholder="Paste received encrypted answer"></textarea>
+    <button onclick="decryptAnswer()">✅ Finalize Connection</button>
 
     <button onclick="sendFile()">🚀 Send File</button>
 
@@ -121,51 +109,34 @@
   </div>
 
   <script>
-    let pc = new RTCPeerConnection();
+    const pc = new RTCPeerConnection();
     let dc;
     let file;
-    let chunkSize = 16384;
+    const chunkSize = 16384;
 
     const fileInput = document.getElementById("fileInput");
     const dropZone = document.getElementById("dropZone");
-    const fileInfo = document.getElementById("fileInfo");
     const progressBox = document.getElementById("progressBox");
     const progressFill = document.getElementById("progressFill");
     const progressText = document.getElementById("progressText");
 
     dropZone.addEventListener("click", () => fileInput.click());
-
     dropZone.addEventListener("dragover", e => {
       e.preventDefault();
       dropZone.classList.add("dragover");
     });
-
-    dropZone.addEventListener("dragleave", () => {
-      dropZone.classList.remove("dragover");
-    });
-
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
     dropZone.addEventListener("drop", e => {
       e.preventDefault();
       dropZone.classList.remove("dragover");
-      const files = e.dataTransfer.files;
-      if (files.length) handleFile(files[0]);
+      if (e.dataTransfer.files.length) file = e.dataTransfer.files[0];
     });
-
-    fileInput.addEventListener("change", () => {
-      if (fileInput.files.length) handleFile(fileInput.files[0]);
-    });
-
-    function handleFile(selectedFile) {
-      file = selectedFile;
-      fileInfo.style.display = 'block';
-      fileInfo.textContent = `File selected: ${file.name} (${Math.ceil(file.size / 1024)} KB)`;
-    }
+    fileInput.addEventListener("change", () => { if (fileInput.files.length) file = fileInput.files[0]; });
 
     pc.ondatachannel = event => {
       dc = event.channel;
       const receivedChunks = [];
       let receivedBytes = 0;
-
       dc.onmessage = e => {
         if (e.data !== "EOF") {
           receivedChunks.push(e.data);
@@ -177,67 +148,54 @@
           a.href = URL.createObjectURL(blob);
           a.download = "received_file";
           a.click();
-          progressText.textContent = "✅ File received successfully.";
         }
       };
     };
 
     async function createLink() {
+      const pass = document.getElementById("passphrase").value;
       dc = pc.createDataChannel("file");
       await pc.setLocalDescription(await pc.createOffer());
       await waitForICE();
-      document.getElementById("connectionPhrase").value = btoa(JSON.stringify({ offer: pc.localDescription }));
+      const encrypted = await encryptWithPass(pass, JSON.stringify(pc.localDescription));
+      document.getElementById("encryptedOffer").value = encrypted;
     }
 
-    async function joinLink() {
-      const input = document.getElementById("joinInput").value;
-      if (!input) return alert("Paste a phrase to join.");
-      const { offer } = JSON.parse(atob(input));
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    async function respondToOffer() {
+      const pass = document.getElementById("passphrase").value;
+      const encOffer = document.getElementById("receivedEncryptedOffer").value;
+      const offer = JSON.parse(await decryptWithPass(pass, encOffer));
+      await pc.setRemoteDescription(offer);
       await pc.setLocalDescription(await pc.createAnswer());
       await waitForICE();
-      const answerPhrase = btoa(JSON.stringify({ answer: pc.localDescription }));
-      navigator.clipboard.writeText(answerPhrase);
-      alert("✅ Phrase copied to clipboard. Paste it into the sender tab.");
+      const encrypted = await encryptWithPass(pass, JSON.stringify(pc.localDescription));
+      document.getElementById("encryptedAnswer").value = encrypted;
     }
 
-    window.addEventListener("paste", async e => {
-      try {
-        const text = e.clipboardData.getData("text");
-        const { answer } = JSON.parse(atob(text));
-        if (answer) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      } catch {}
-    });
+    async function decryptAnswer() {
+      const pass = document.getElementById("passphrase").value;
+      const encAnswer = document.getElementById("receivedEncryptedAnswer").value;
+      const answer = JSON.parse(await decryptWithPass(pass, encAnswer));
+      await pc.setRemoteDescription(answer);
+    }
 
-    function sendFile() {
-      if (!dc || dc.readyState !== "open") return alert("Connection not ready.");
-      if (!file) return alert("Select a file first.");
-
+    async function sendFile() {
+      if (!dc || !file) return alert("Missing file or connection.");
       let offset = 0;
-      const totalChunks = Math.ceil(file.size / chunkSize);
-      let sentChunks = 0;
+      const reader = new FileReader();
       progressBox.style.display = "block";
 
-      const reader = new FileReader();
       reader.onload = e => {
         dc.send(e.target.result);
         offset += e.target.result.byteLength;
-        sentChunks++;
         updateProgress(offset, file.size, false);
-
-        if (offset < file.size) {
-          readSlice(offset);
-        } else {
-          dc.send("EOF");
-          progressText.textContent = "✅ File sent successfully.";
-        }
+        if (offset < file.size) readSlice(offset);
+        else dc.send("EOF");
       };
-
       function readSlice(o) {
         const slice = file.slice(o, o + chunkSize);
         reader.readAsArrayBuffer(slice);
       }
-
       readSlice(0);
     }
 
@@ -245,8 +203,8 @@
       const percent = total ? Math.floor((current / total) * 100) : 0;
       progressFill.style.width = `${percent}%`;
       progressText.textContent = receiving
-        ? `Receiving... ${Math.ceil(current / 1024)} KB`
-        : `Sending... ${Math.ceil(current / 1024)} KB of ${Math.ceil(total / 1024)} KB`;
+        ? `Receiving: ${Math.ceil(current / 1024)} KB`
+        : `Sending: ${Math.ceil(current / 1024)} KB of ${Math.ceil(total / 1024)} KB`;
     }
 
     function waitForICE() {
@@ -256,6 +214,32 @@
           if (pc.iceGatheringState === "complete") resolve();
         };
       });
+    }
+
+    async function encryptWithPass(pass, data) {
+      const enc = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(pass, salt);
+      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(data));
+      const full = new Uint8Array([...salt, ...iv, ...new Uint8Array(encrypted)]);
+      return btoa(String.fromCharCode(...full));
+    }
+
+    async function decryptWithPass(pass, encryptedB64) {
+      const raw = Uint8Array.from(atob(encryptedB64), c => c.charCodeAt(0));
+      const salt = raw.slice(0, 16);
+      const iv = raw.slice(16, 28);
+      const data = raw.slice(28);
+      const key = await deriveKey(pass, salt);
+      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+      return new TextDecoder().decode(decrypted);
+    }
+
+    async function deriveKey(pass, salt) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pass), { name: "PBKDF2" }, false, ["deriveKey"]);
+      return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
     }
   </script>
 </body>
