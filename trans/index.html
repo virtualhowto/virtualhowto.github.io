@@ -1,105 +1,260 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Simple P2P File Transfer</title>
+  <title>P2P File Transfer (Client-Only)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #2a4365;
+      margin-bottom: 20px;
+    }
+    .drop-zone {
+      border: 2px dashed #90cdf4;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      background-color: #ebf8ff;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+    .drop-zone.dragover {
+      background-color: #bee3f8;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      background-color: #2b6cb0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2c5282;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+    .note {
+      background: #fefcbf;
+      border-left: 4px solid #d69e2e;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .progress-container {
+      margin-top: 10px;
+    }
+    .progress-bar {
+      width: 100%;
+      background-color: #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 20px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background-color: #68d391;
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+    .progress-info {
+      font-size: 13px;
+      text-align: center;
+      margin-top: 4px;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
-  <h2>Simple File Transfer</h2>
-  <input type="file" id="fileInput"><br><br>
+  <div class="container">
+    <h2>📁 P2P File Transfer</h2>
 
-  <button onclick="createLink()">Create Link</button>
-  <textarea id="connectionPhrase" placeholder="Share this phrase..." rows="4" cols="80"></textarea><br><br>
+    <label for="fileInput" class="drop-zone" id="dropZone">
+      Drag and drop a file here or tap to choose
+    </label>
+    <input type="file" id="fileInput" />
 
-  <button onclick="joinLink()">Join Link</button>
-  <textarea id="joinInput" placeholder="Paste phrase to join..." rows="4" cols="80"></textarea><br><br>
+    <div id="fileInfo" class="note" style="display:none;"></div>
 
-  <button onclick="sendFile()">Send File</button>
+    <button onclick="createLink()">📤 Create Link (Sender)</button>
+    <textarea id="connectionPhrase" placeholder="Share this phrase..."></textarea>
+
+    <div class="note">Paste a phrase below to join as receiver:</div>
+    <textarea id="joinInput" placeholder="Paste phrase to join..."></textarea>
+    <button onclick="joinLink()">🔗 Join Link (Receiver)</button>
+
+    <button onclick="sendFile()">🚀 Send File</button>
+
+    <div class="progress-container" id="progressBox" style="display:none;">
+      <div class="progress-bar"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-info" id="progressText"></div>
+    </div>
+  </div>
 
   <script>
     let pc = new RTCPeerConnection();
     let dc;
-    let fileInput = document.getElementById('fileInput');
+    let file;
+    let chunkSize = 16384;
 
-    // Receiving side
+    const fileInput = document.getElementById("fileInput");
+    const dropZone = document.getElementById("dropZone");
+    const fileInfo = document.getElementById("fileInfo");
+    const progressBox = document.getElementById("progressBox");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    dropZone.addEventListener("dragover", e => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      const files = e.dataTransfer.files;
+      if (files.length) handleFile(files[0]);
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(selectedFile) {
+      file = selectedFile;
+      fileInfo.style.display = 'block';
+      fileInfo.textContent = `File selected: ${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+    }
+
     pc.ondatachannel = event => {
       dc = event.channel;
       const receivedChunks = [];
-      dc.onmessage = event => {
-        if (event.data !== 'EOF') {
-          receivedChunks.push(event.data);
+      let receivedBytes = 0;
+
+      dc.onmessage = e => {
+        if (e.data !== "EOF") {
+          receivedChunks.push(e.data);
+          receivedBytes += e.data.byteLength;
+          updateProgress(receivedBytes, null, true);
         } else {
           const blob = new Blob(receivedChunks);
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = 'received_file';
-          link.click();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "received_file";
+          a.click();
+          progressText.textContent = "✅ File received successfully.";
         }
       };
     };
 
-    // Create Link - initiator
     async function createLink() {
-      dc = pc.createDataChannel('file');
+      dc = pc.createDataChannel("file");
       await pc.setLocalDescription(await pc.createOffer());
-      await waitForICEGathering();
-      document.getElementById('connectionPhrase').value = btoa(JSON.stringify({ offer: pc.localDescription }));
+      await waitForICE();
+      document.getElementById("connectionPhrase").value = btoa(JSON.stringify({ offer: pc.localDescription }));
     }
 
-    // Join Link - responder
     async function joinLink() {
-      const data = JSON.parse(atob(document.getElementById('joinInput').value));
-      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const input = document.getElementById("joinInput").value;
+      if (!input) return alert("Paste a phrase to join.");
+      const { offer } = JSON.parse(atob(input));
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
       await pc.setLocalDescription(await pc.createAnswer());
-      await waitForICEGathering();
-      const phrase = btoa(JSON.stringify({ answer: pc.localDescription }));
-      alert("Paste this back to the other person:\n\n" + phrase);
+      await waitForICE();
+      const answerPhrase = btoa(JSON.stringify({ answer: pc.localDescription }));
+      navigator.clipboard.writeText(answerPhrase);
+      alert("✅ Phrase copied to clipboard. Paste it into the sender tab.");
     }
 
-    // Set answer (for initiator)
-    window.addEventListener('paste', async (e) => {
+    window.addEventListener("paste", async e => {
       try {
-        const text = e.clipboardData.getData('text');
+        const text = e.clipboardData.getData("text");
         const { answer } = JSON.parse(atob(text));
         if (answer) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      } catch (e) {}
+      } catch {}
     });
 
     function sendFile() {
-      const file = fileInput.files[0];
-      const chunkSize = 16384;
-      let offset = 0;
-      const reader = new FileReader();
+      if (!dc || dc.readyState !== "open") return alert("Connection not ready.");
+      if (!file) return alert("Select a file first.");
 
+      let offset = 0;
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      let sentChunks = 0;
+      progressBox.style.display = "block";
+
+      const reader = new FileReader();
       reader.onload = e => {
         dc.send(e.target.result);
         offset += e.target.result.byteLength;
+        sentChunks++;
+        updateProgress(offset, file.size, false);
+
         if (offset < file.size) {
           readSlice(offset);
         } else {
-          dc.send('EOF');
+          dc.send("EOF");
+          progressText.textContent = "✅ File sent successfully.";
         }
       };
 
-      const readSlice = o => {
+      function readSlice(o) {
         const slice = file.slice(o, o + chunkSize);
         reader.readAsArrayBuffer(slice);
-      };
+      }
 
       readSlice(0);
     }
 
-    function waitForICEGathering() {
+    function updateProgress(current, total, receiving) {
+      const percent = total ? Math.floor((current / total) * 100) : 0;
+      progressFill.style.width = `${percent}%`;
+      progressText.textContent = receiving
+        ? `Receiving... ${Math.ceil(current / 1024)} KB`
+        : `Sending... ${Math.ceil(current / 1024)} KB of ${Math.ceil(total / 1024)} KB`;
+    }
+
+    function waitForICE() {
       return new Promise(resolve => {
-        if (pc.iceGatheringState === 'complete') {
-          resolve();
-        } else {
-          pc.onicegatheringstatechange = () => {
-            if (pc.iceGatheringState === 'complete') {
-              resolve();
-            }
-          };
-        }
+        if (pc.iceGatheringState === "complete") resolve();
+        else pc.onicegatheringstatechange = () => {
+          if (pc.iceGatheringState === "complete") resolve();
+        };
       });
     }
   </script>
