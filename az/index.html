@@ -99,7 +99,6 @@
       }
 
       function readXlsx(file) {
-        console.log('📥 File selected:', file.name);
         document.getElementById('spinner').style.display = 'block';
         const reader = new FileReader();
         reader.onload = e => {
@@ -110,7 +109,6 @@
           let vmData = [];
           try {
             vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
-            console.log('✅ Sheet loaded:', sheetName, 'Rows:', vmData.length);
           } catch (err) {
             document.getElementById('spinner').style.display = 'none';
             showToast('toastError');
@@ -172,6 +170,10 @@
 
           const price = best ? (os.includes('win') ? best.priceWindows : best.priceLinux) : null;
 
+          const tooltip = best
+            ? `Name: ${best.name}\nCPU: ${best.cpu} cores\nRAM: ${best.ram} GB\nStorage: ${best.storage} GB\nLinux: $${best.priceLinux.toFixed(2)}\nWindows: $${best.priceWindows.toFixed(2)}`
+            : 'Click to select a SKU';
+
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${vm['VM'] || 'Unnamed'}</td>
@@ -179,7 +181,7 @@
             <td>${isNaN(ram) ? 'N/A' : ram.toFixed(2)}</td>
             <td>${isNaN(storage) ? 'N/A' : storage.toFixed(2)}</td>
             <td>${os}</td>
-            <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">
+            <td><span class="text-primary" data-bs-toggle="tooltip" title="${tooltip}" style="cursor:pointer" onclick="openSkuPopup(${i})">
               ${best?.name ? `${best.name} <span class='badge bg-success'>Auto</span>` : 'Select SKU'}
             </span></td>
             <td>${price ? `$${price.toFixed(2)}` : '-'}</td>
@@ -191,6 +193,10 @@
 
           tbody.appendChild(row);
         });
+
+        // Enable Bootstrap tooltips
+        const tooltipList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipList.map(el => new bootstrap.Tooltip(el));
 
         updateSummary();
       }
@@ -240,6 +246,7 @@
         `).join('');
         new bootstrap.Modal(document.getElementById('skuModal')).show();
       }
+      window.openSkuPopup = openSkuPopup;
 
       function selectSku(idx) {
         const sku = fullCatalog[idx];
@@ -247,6 +254,7 @@
         renderVMTable(lastVmData);
         bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
       }
+      window.selectSku = selectSku;
 
       ['filterName', 'filterCPU', 'filterRAM'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
