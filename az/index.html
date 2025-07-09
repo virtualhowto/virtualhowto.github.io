@@ -82,14 +82,15 @@ fetch("./az_data-export.json")
   .then(res => res.json())
   .then(data => {
     fullCatalog = data.map(p => {
-      const memoryMB = p.memoryInMB ?? p.memoryInMb ?? p.MemoryInMB ?? 0;
+      const memoryMB = p.memoryInMB ?? p.memoryInMb ?? p.MemoryInMB ?? (p.memoryGB ? p.memoryGB * 1024 : 0);
       return {
         name: p.name,
         series: p.name.split('_')[1] || '',
         cpu: p.numberOfCores,
-        ram: Math.round(memoryMB / 1024),
+        ram: parseFloat((memoryMB / 1024).toFixed(2)),
         priceLinux: parseFloat(p.linuxPrice) * 720,
         priceWindows: parseFloat(p.windowsPrice || 0) * 720,
+        region: p.bestPriceRegion?.toLowerCase() || '',
         description: p.bestPriceRegion || "Azure VM"
       };
     });
@@ -144,7 +145,7 @@ function matchVMs() {
   const filterRegion = document.getElementById("filterRegion").value.trim().toLowerCase();
   productCatalog = fullCatalog.filter(p => {
     const matchesSeries = !filterSeries || p.series.toUpperCase().startsWith(filterSeries);
-    const matchesRegion = !filterRegion || (p.description && p.description.toLowerCase().includes(filterRegion));
+    const matchesRegion = !filterRegion || (p.region && p.region.includes(filterRegion));
     return matchesSeries && matchesRegion;
   });
 
