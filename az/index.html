@@ -128,14 +128,13 @@
     function renderVMTable(vmData) {
       const tbody = document.querySelector('#vmTable tbody');
       tbody.innerHTML = '';
-      matchedSkus = [];
       vmData.forEach((vm, i) => {
         const cpu = +vm['CPUs'];
         const ram = +vm['Memory'];
         const storage = +vm['Provisioned Storage (GB)'] || 0;
         const os = (vm['OS according to the configuration file'] || '').toLowerCase();
         const matches = fullCatalog.filter(s => Math.abs(s.cpu - cpu) <= 1 && Math.abs(s.ram - ram) <= 2);
-        const best = matches.sort((a,b) => (Math.abs(a.cpu-cpu)+Math.abs(a.ram-ram)) - (Math.abs(b.cpu-cpu)+Math.abs(b.ram-ram)))[0] || null;
+        const best = matchedSkus[i] || matches.sort((a,b) => (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) - (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram)))[0] || null;
         matchedSkus[i] = best;
         const price = best ? (os.includes('win') ? best.priceWindows : best.priceLinux) : null;
         const tooltip = best ? `Name: ${best.name}\nCPU: ${best.cpu}\nRAM: ${best.ram}\nPrice: $${best.priceLinux}/$${best.priceWindows}` : 'Click to select SKU';
