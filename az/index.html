@@ -7,6 +7,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-autocomplete-theme/1.12.1/jquery-ui.min.css" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 </head>
 <body class="bg-light">
 <div class="container py-5">
@@ -66,7 +69,7 @@ let sheetData = [];
 let fullCatalog = [];
 let productCatalog = [];
 
-fetch("./az_data-export.json")
+fetch("./az/az_data-export.json")
   .then(res => res.json())
   .then(data => {
     fullCatalog = data.map(p => ({
@@ -207,6 +210,23 @@ function renderResults(results) {
 
   window._currentResults = results;
   document.getElementById('resultArea').innerHTML = html;
+
+  // Enable jQuery UI Autocomplete for SKU inputs
+  const skuOptions = fullCatalog.map(p => p.name);
+  results.forEach((r, idx) => {
+    $(`#sku-${idx}`).autocomplete({
+      source: skuOptions,
+      select: function(event, ui) {
+        const selected = fullCatalog.find(p => p.name === ui.item.value);
+        if (selected) {
+          document.getElementById(`desc-${idx}`).value = selected.description;
+          const os = document.getElementById(`os-${idx}`).value;
+          const price = os === "Windows" ? selected.priceWindows : selected.priceLinux;
+          document.getElementById(`price-${idx}`).value = price.toFixed(4);
+        }
+      }
+    });
+  });
 }
 
 function updateOS(idx) {
