@@ -211,10 +211,17 @@ function renderResults(results) {
   window._currentResults = results;
 
   // Add modal filter triggers
-  results.forEach((r, idx) => {
-    document.getElementById(`sku-${idx}`).addEventListener('focus', () => openSkuSelector(idx, r));
-  });
+  
   document.getElementById('resultArea').innerHTML = html;
+
+  setTimeout(() => {
+    results.forEach((r, idx) => {
+      const skuInput = document.getElementById(`sku-${idx}`);
+    if (skuInput) {
+      skuInput.addEventListener('focus', () => openSkuSelector(idx, r));
+    }
+      });
+  }, 0);
 
   // Enable jQuery UI Autocomplete for SKU inputs
   const skuOptions = fullCatalog.map(p => `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`);
