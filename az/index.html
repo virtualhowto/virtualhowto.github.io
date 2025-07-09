@@ -99,7 +99,7 @@ fetch('./az_data-export.json')
       cpu: d.numberOfCores,
       ram: d.memoryInMB,
       storage: d.osDiskSizeInMB / 1024,
-      priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)));
+      (priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2));
     console.log('📦 Azure SKU catalog loaded:', fullCatalog.length);
   });
 
@@ -146,7 +146,7 @@ function renderVMTable(vmData) {
       const region = "australiaeast";
       const matches = fullCatalog.filter(sku => Math.abs(sku.cpu - cpu) <= 1 && Math.abs(sku.ram - ram) <= 2 && sku.region.toLowerCase().includes(region));
       const best = matches.sort((a, b) => (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) - (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram)))[0];
-      const price = os.includes("win") ? best?.priceWindows : best?.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2));
+      const price = os.includes("win") ? best?.priceWindows : best?.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2);
       const row = document.createElement('tr');
       row.className = rowClass;
       row.innerHTML = `
@@ -174,7 +174,7 @@ function openSkuPopup(rowIndex) {
   const sortedCatalog = [...fullCatalog].sort((a, b) => {
     const scoreA = Math.abs(a.cpu - currentCPU) + Math.abs(a.ram - currentRAM);
     const scoreB = Math.abs(b.cpu - currentCPU) + Math.abs(b.ram - currentRAM);
-    if (scoreA === scoreB) return (parseFloat(a.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)) || 0) - (parseFloat(b.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)) || 0);
+    if (scoreA === scoreB) return (parseFloat(a.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) || 0) - (parseFloat(b.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) || 0);
     return scoreA - scoreB;
   });
 
@@ -185,7 +185,7 @@ function openSkuPopup(rowIndex) {
       <td>${sku.ram.toFixed(2)}</td>
       <td>${sku.storage.toFixed(2)}</td>
       <td>${sku.description}</td>
-      <td>$${(typeof sku.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)) : parseFloat(sku.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)).toFixed(2))}</td>
+      <td>$${(typeof sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) : parseFloat(sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2).toFixed(2))}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
     </tr>`).join('');
 
@@ -196,7 +196,7 @@ function selectSku(idx) {
   const sku = fullCatalog[idx];
   const row = document.querySelector(`#vmTable tbody`).children[selectedRow];
   row.cells[5].innerHTML = `<span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${selectedRow})">${sku.name}</span>`;
-  row.cells[6].innerText = `$${(typeof sku.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)) : parseFloat(sku.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)).toFixed(2))}`;
+  row.cells[6].innerText = `$${(typeof sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) : parseFloat(sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2).toFixed(2))}`;
   matchedSkus[selectedRow] = sku;
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
@@ -218,7 +218,7 @@ function selectSku(idx) {
         <td>${sku.ram.toFixed(2)}</td>
         <td>${sku.storage.toFixed(2)}</td>
         <td>${sku.description}</td>
-        <td>$${(typeof sku.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)) : parseFloat(sku.priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows.toFixed(2) : parseFloat(sku.priceWindows || 0).toFixed(2)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux.toFixed(2) : parseFloat(sku.priceLinux || 0).toFixed(2)).toFixed(2))}</td>
+        <td>$${(typeof sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) : parseFloat(sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2).toFixed(2))}</td>
         <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
       </tr>`).join('');
   });
