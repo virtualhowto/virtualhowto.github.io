@@ -46,6 +46,22 @@
     </div>
 
     <div class="row mt-3">
+      <div class="col-md-3">
+        <label class="form-label">CPU Tolerance</label>
+        <input type="number" class="form-control" id="cpuTolerance" value="1" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">RAM Tolerance</label>
+        <input type="number" class="form-control" id="ramTolerance" value="2" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">CPU Weight</label>
+        <input type="number" class="form-control" id="cpuWeight" value="1" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">RAM Weight</label>
+        <input type="number" class="form-control" id="ramWeight" value="1" />
+      </div>
       <div class="col-md-6">
         <label class="form-label">Filter by Region</label>
 <select class="form-select" id="filterRegion">
@@ -158,14 +174,24 @@ function matchVMs() {
     console.log(`Processing VM index ${index}:`, vm);
     const osKey = document.getElementById("mapOS").value;
     const osValue = (vm[osKey] || '').toString().toLowerCase();
-    const cpu = parseInt(vm[cpuKey]);
-    const ram = parseInt(vm[ramKey]);
+    const cpu = parseFloat(vm[cpuKey]) || 0;
+    const ram = parseFloat(vm[ramKey]) || 0;
     const storage = parseFloat(vm[storageKey]);
 
     console.log(`Trying to match VM '${vm[nameKey]}' with CPU: ${cpu}, RAM: ${ram}GB`);
-    const match = productCatalog.find(p => (
-      Math.abs(p.cpu - cpu) <= 1 && Math.abs(p.ram - ram) <= 2
-    ));
+    const cpuTolerance = parseInt(document.getElementById("cpuTolerance").value) || 1;
+    const ramTolerance = parseInt(document.getElementById("ramTolerance").value) || 2;
+    const cpuWeight = parseFloat(document.getElementById("cpuWeight").value) || 1;
+    const ramWeight = parseFloat(document.getElementById("ramWeight").value) || 1;
+
+    const match = productCatalog
+      .filter(p => !isNaN(p.cpu) && !isNaN(p.ram) && Math.abs(p.cpu - cpu) <= cpuTolerance && Math.abs(p.ram - ram) <= ramTolerance)
+      .map(p => ({
+        ...p,
+        score: cpuWeight * Math.abs(p.cpu - cpu) + ramWeight * Math.abs(p.ram - ram)
+      }))
+      .sort((a, b) => a.score - b.score || a.priceLinux - b.priceLinux)
+      [0];
     console.log(`Matched SKU for VM '${vm[nameKey]}': ${match ? match.name : 'No match'}`);
 
     const inferredOS = osValue.includes("win") ? "Windows" : "Linux";
@@ -194,7 +220,7 @@ function matchVMs() {
 
 function renderResults(results) {
   let html = `<table class="table table-bordered table-striped"><thead><tr>
-    <th>VM Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Description</th><th>Price/mo</th><th>Override</th></tr></thead><tbody>`;
+    <th>VM Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Description</th><th>Score</th>$1<th>Override</th></tr></thead><tbody>`;
 
   let total = 0;
   let matchedCount = 0;
@@ -213,7 +239,7 @@ function renderResults(results) {
       </td>
       <td><input class="form-control" id="sku-${idx}" value="${r.match.name}" /></td>
       <td><input class="form-control" id="desc-${idx}" value="${r.match.description}" /></td>
-      <td><input class="form-control" id="price-${idx}" value="${price.toFixed(4)}" /></td>
+      <td>${r.match.score !== undefined ? r.match.score.toFixed(2) : '-'}</td>$1
       <td><button class="btn btn-sm btn-outline-primary" onclick="applyOverride(${idx})">Apply</button></td>
     </tr>`;
     total += price;
@@ -341,7 +367,6 @@ function filterSkuTable() {
   const cpu = parseInt(document.getElementById('filterCpuInput').value);
   const ram = parseInt(document.getElementById('filterRamInput').value);
   const results = fullCatalog
-    .filter(p => Math.abs(p.cpu - cpu) <= 8 && Math.abs(p.ram - ram) <= 32)
     .map(p => `
       <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
         <td>${p.name}</td>
