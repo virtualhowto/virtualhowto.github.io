@@ -107,7 +107,14 @@
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, { type: 'array' });
       const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
-      const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+      try {
+        const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+            } catch (err) {
+        document.getElementById('spinner').style.display = 'none';
+        showToast('toastError');
+        console.error('❌ XLSX parsing failed:', err);
+        return;
+      }
       document.getElementById('spinner').style.display = 'none';
       if (!vmData.length) { showToast('toastError'); return; }
       lastVmData = vmData;
@@ -175,7 +182,7 @@ Windows Price: $${best.priceWindows.toFixed(2)}" class="text-primary" style="cur
   }
 
   function selectSku(idx) {
-    const sku = [...fullCatalog].sort((a,b)=>0)[idx];
+    const sku = fullCatalog[idx];
     matchedSkus[selectedRow] = sku;
     renderVMTable(lastVmData);
     bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
