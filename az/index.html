@@ -10,190 +10,180 @@
     .no-match { background-color: #f8d7da; }
     #spinner { display: none; }
     .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
+    .modal-dialog-scrollable { max-height: 90vh; }
     .filter-input { width: 100%; padding: 0.25rem; margin-bottom: 0.5rem; }
-    .sticky-header { position: sticky; top: 0; background: #fff; z-index: 1040; padding: 1rem 0; border-bottom: 1px solid #dee2e6; }
   </style>
 </head>
 <body class="bg-light">
-<div class="container py-4">
-  <!-- Sticky Header -->
-  <div class="sticky-header">
+  <header class="bg-white p-3 mb-4 shadow-sm fixed-top">
     <div class="d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0">RVTools Matcher</h1>
-      <div>Total Azure Price (Monthly): <strong id="summaryPrice">$0.00</strong></div>
+      <div>
+        <span>Total Azure Price: <span id="totalPrice">$0.00</span></span>
+        &nbsp;|&nbsp;
+        <span>Total Storage Cost: <span id="totalStorageCost">$0.00</span></span>
+      </div>
     </div>
-  </div>
+  </header>
+  <main class="container pt-5">
+    <h2>Upload RVTools Export</h2>
+    <input type="file" id="fileInput" class="form-control mb-4" accept=".xlsx" />
 
-  <h2 class="mt-4">Upload RVTools Export</h2>
-  <input type="file" id="fileInput" class="form-control mb-4" accept=".xlsx" />
-  <div id="spinner" class="text-center my-3">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p>Processing...</p>
-  </div>
-  <div class="toast-container">
-    <div id="toastSuccess" class="toast text-bg-success" role="alert"><div class="toast-body">✅ File loaded!</div></div>
-    <div id="toastError" class="toast text-bg-danger" role="alert"><div class="toast-body">❌ No data found.</div></div>
-  </div>
+    <div id="spinner" class="text-center my-3">
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+      <p>Processing...</p>
+    </div>
 
-  <h3>Matched VMs</h3>
-  <table class="table table-bordered" id="vmTable">
-    <thead><tr><th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Azure Price (Monthly)</th></tr></thead>
-    <tbody></tbody>
-  </table>
-</div>
+    <div class="toast-container">
+      <div id="toastSuccess" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex"><div class="toast-body">✅ File loaded successfully!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+      </div>
+      <div id="toastError" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex"><div class="toast-body">❌ No rows found in the selected sheet.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+      </div>
+    </div>
 
-<!-- Modal -->
-<div class="modal fade" id="skuModal" tabindex="-1">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Select SKU</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <div class="row mb-2">
-          <div class="col"><input class="form-control" id="filterName" placeholder="Filter by Name"></div>
-          <div class="col"><input class="form-control" id="filterCPU" placeholder="Filter by CPU"></div>
-          <div class="col"><input class="form-control" id="filterRAM" placeholder="Filter by RAM"></div>
+    <h3 class="mt-4">Matched VMs</h3>
+    <table class="table table-bordered" id="vmTable">
+      <thead class="table-light position-sticky top-0">
+        <tr><th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Azure Price (Monthly)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <!-- SKU Selection Modal -->
+  <div class="modal fade" id="skuModal" tabindex="-1" aria-labelledby="skuModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Select a Matching SKU</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <table class="table table-sm table-striped">
-          <thead><tr><th>Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS Disk</th><th>Price</th><th>Select</th></tr></thead>
-          <tbody id="skuTableBody"></tbody>
-        </table>
+        <div class="modal-body">
+          <div class="row mb-2">
+            <div class="col"><input class="form-control filter-input" id="filterName" placeholder="Filter by Name"></div>
+            <div class="col"><input class="form-control filter-input" id="filterCPU" placeholder="Filter by CPU"></div>
+            <div class="col"><input class="form-control filter-input" id="filterRAM" placeholder="Filter by RAM (GB)"></div>
+          </div>
+          <table class="table table-sm table-striped">
+            <thead><tr><th>Name</th><th>CPU</th><th>RAM (GB)</th><th>Storage (GB)</th><th>OS</th><th>Monthly Price</th><th>Select</th></tr></thead>
+            <tbody id="skuTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-let fullCatalog = [], matchedSkus = [], selectedRow = 0, lastVmData = [];
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  let fullCatalog = [], lastVmData = [], matchedSkus = [], selectedRow = null;
 
-// Initialize Bootstrap tooltips
-function initTooltips() {
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el, {html: true}));
-}
+  // Load Azure catalog
+  fetch('./az_data-export.json')
+    .then(r => r.json())
+    .then(data => {
+      fullCatalog = data.map(d => ({ name: d.name, cpu: d.numberOfCores, ram: d.memoryInMB, storage: d.osDiskSizeInMB, priceLinux: parseFloat(d.linuxPrice), priceWindows: parseFloat(d.windowsPrice) }));
+      console.log('📦 Catalog loaded:', fullCatalog.length);
+    });
 
-function getSkuPrice(sku, os) {
-  const isWin = os.includes('win');
-  const price = isWin ? sku.priceWindows : sku.priceLinux;
-  return price.toFixed(2);
-}
+  function showToast(id) { new bootstrap.Toast(document.getElementById(id)).show(); }
 
-function updateSummary() {
-  const total = matchedSkus.reduce((sum, sku, i) => {
-    if (!sku) return sum;
-    const os = (lastVmData[i]["OS according to the configuration file"] || '').toLowerCase();
-    return sum + parseFloat(getSkuPrice(sku, os));
-  }, 0);
-  document.getElementById('summaryPrice').innerText = `$${total.toFixed(2)}`;
-}
-
-function showToast(id) {
-  new bootstrap.Toast(document.getElementById(id)).show();
-}
-
-fetch('./az_data-export.json').then(r => r.json()).then(data => {
-  fullCatalog = data.map(d => ({
-    name: d.name,
-    cpu: d.numberOfCores,
-    ram: d.memoryInMB,
-    storage: parseFloat(d.osDiskSizeInMB || 0) / 1024,
-    description: d.osDiskSizeInMB ? `${(d.osDiskSizeInMB/1024).toFixed(2)} GB` : '—',
-    priceWindows: parseFloat(d.windowsPrice),
-    priceLinux: parseFloat(d.linuxPrice)
-  }));
-});
-
-document.getElementById("fileInput").addEventListener("change", e => {
-  if (e.target.files.length) readXlsx(e.target.files[0]);
-});
-
-function readXlsx(file) {
-  document.getElementById('spinner').style.display = 'block';
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const vmData = XLSX.utils.sheet_to_json(sheet);
-    document.getElementById('spinner').style.display = 'none';
-    if (!vmData.length) return showToast('toastError');
-    renderVMTable(vmData);
-    showToast('toastSuccess');
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function renderVMTable(vmData) {
-  lastVmData = vmData;
-  const tbody = document.querySelector("#vmTable tbody");
-  tbody.innerHTML = "";
-  matchedSkus = [];
-  vmData.forEach((vm, idx) => {
-    const cpu = parseFloat(vm["CPUs"]);
-    const ram = parseFloat(vm["Memory"]);
-    const storageVal = parseFloat(vm["Provisioned Storage (GB)"] ?? vm["GiB"] ?? vm["Storage"] ?? 0);
-    const os = (vm["OS according to the configuration file"] || '').toLowerCase();
-    const matches = fullCatalog.filter(s =>
-      Math.abs(s.cpu - cpu) <= 0 && Math.abs(s.ram - ram) <= 0
-    );
-    const best = matches[0] || null;
-    matchedSkus[idx] = best;
-    const tip = best ?
-      `<strong>Name:</strong> ${best.name}<br>` +
-      `<strong>CPU:</strong> ${best.cpu}<br>` +
-      `<strong>RAM:</strong> ${best.ram.toFixed(2)} GB<br>` +
-      `<strong>Storage:</strong> ${best.storage.toFixed(2)} GB<br>` +
-      `<strong>Price:</strong> $${getSkuPrice(best, os)}`
-      : 'Click to select';
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${vm["VM"]}</td>
-      <td>${cpu}</td>
-      <td>${ram.toFixed(2)}</td>
-      <td>${storageVal.toFixed(2)}</td>
-      <td>${os}</td>
-      <td><span class="text-primary" style="cursor:pointer" data-bs-toggle="tooltip" data-bs-html="true" title="${tip}" onclick="openSkuPopup(${idx})">${best?.name || 'Select SKU'}</span></td>
-      <td>$${best ? getSkuPrice(best, os) : '-'}</td>
-    `;
-    tbody.appendChild(row);
+  document.getElementById('fileInput').addEventListener('change', e => {
+    if (e.target.files.length) readXlsx(e.target.files[0]);
   });
-  initTooltips();
-  updateSummary();
-}
 
-function openSkuPopup(index) {
-  selectedRow = index;
-  const os = (lastVmData[index]["OS according to the configuration file"] || '').toLowerCase();
-  document.getElementById('skuTableBody').innerHTML = fullCatalog.map((sku, idx) => `
-    <tr>
-      <td>${sku.name}</td>
-      <td>${sku.cpu}</td>
-      <td>${sku.ram.toFixed(2)}</td>
-      <td>${sku.storage.toFixed(2)}</td>
-      <td>${sku.description}</td>
-      <td>$${getSkuPrice(sku, os)}</td>
-      <td><button class="btn btn-sm btn-success" onclick="selectSku(${idx})">✔</button></td>
-    </tr>`).join('');
-  new bootstrap.Modal(document.getElementById('skuModal')).show();
-}
+  function readXlsx(file) {
+    document.getElementById('spinner').style.display = 'block';
+    const reader = new FileReader();
+    reader.onload = e => {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
+      const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheet]);
+      document.getElementById('spinner').style.display = 'none';
+      if (!vmData.length) { showToast('toastError'); return; }
+      renderVMTable(vmData);
+      showToast('toastSuccess');
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
-function selectSku(idx) {
-  const sku = fullCatalog[idx];
-  const row = document.querySelector(`#vmTable tbody`).children[selectedRow];
-  const os = (lastVmData[selectedRow]["OS according to the configuration file"] || '').toLowerCase();
-  const tip = `<strong>Name:</strong> ${sku.name}<br>` +
-              `<strong>CPU:</strong> ${sku.cpu}<br>` +
-              `<strong>RAM:</strong> ${sku.ram.toFixed(2)} GB<br>` +
-              `<strong>Storage:</strong> ${sku.storage.toFixed(2)} GB<br>` +
-              `<strong>Price:</strong> $${getSkuPrice(sku, os)}`;
-  row.cells[5].innerHTML = `<span class="text-primary" style="cursor:pointer" data-bs-toggle="tooltip" data-bs-html="true" title="${tip}" onclick="openSkuPopup(${selectedRow})">${sku.name}</span>`;
-  row.cells[6].innerText = `$${getSkuPrice(sku, os)}`;
-  matchedSkus[selectedRow] = sku;
-  bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
-  initTooltips();
-  updateSummary();
-}
-</script>
+  function renderVMTable(vmData) {
+    lastVmData = vmData;
+    const tbody = document.querySelector('#vmTable tbody'); tbody.innerHTML = '';
+    let totalPrice = 0, totalStorage = 0;
+    vmData.forEach((vm, i) => {
+      const cpu = parseFloat(vm['CPUs'])||0, ram = parseFloat(vm['Memory'])||0;
+      const storageInput = parseFloat(vm['Provisioned Storage (GB)']||0);
+      totalStorage += storageInput;
+      const os = (vm['OS according to the configuration file']||'').toLowerCase();
+      const matches = fullCatalog.filter(s => Math.abs(s.cpu-cpu)<=1 && Math.abs(s.ram-ram)<=2);
+      const best = matches.sort((a,b)=>(Math.abs(a.cpu-cpu)+Math.abs(a.ram-ram))-(Math.abs(b.cpu-cpu)+Math.abs(b.ram-ram)))[0]||{};
+      const price = os.includes('win') ? best.priceWindows : best.priceLinux;
+      totalPrice += price||0;
+      const row = document.createElement('tr'); matchedSkus[i]=best;
+      row.innerHTML = `
+        <td>${vm['VM']}</td>
+        <td>${cpu}</td>
+        <td>${ram.toFixed(2)}</td>
+        <td>${storageInput.toFixed(2)}</td>
+        <td>${os}</td>
+        <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})" title="Name: ${best.name}\nCPU: ${best.cpu}\nRAM: ${best.ram}\nStorage: ${best.storage}\nPrice Linux: $${best.priceLinux}\nPrice Windows: $${best.priceWindows}">${best.name||'Select SKU'}</span></td>
+        <td>$${(price||0).toFixed(2)}</td>`;
+      tbody.appendChild(row);
+    });
+    document.getElementById('totalPrice').innerText = `$${totalPrice.toFixed(2)}`;
+    document.getElementById('totalStorageCost').innerText = `$${(totalStorage * 0.30).toFixed(2)}`;
+  }
+
+  function openSkuPopup(idx) {
+    selectedRow = idx;
+    const row = document.querySelector('#vmTable tbody').children[idx];
+    const cpu = parseFloat(row.cells[1].innerText), ram = parseFloat(row.cells[2].innerText);
+    const sorted = [...fullCatalog].sort((a,b)=>{
+      const sa=Math.abs(a.cpu-cpu)+Math.abs(a.ram-ram), sb=Math.abs(b.cpu-cpu)+Math.abs(b.ram-ram);
+      return sa-sb;
+    });
+    document.getElementById('skuTableBody').innerHTML = sorted.map((sku,i)=>`
+      <tr>
+        <td>${sku.name}</td><td>${sku.cpu}</td><td>${sku.ram.toFixed(2)}</td><td>${sku.storage.toFixed(2)}</td>
+        <td>$${sku.priceLinux.toFixed(2)} / $${sku.priceWindows.toFixed(2)}</td>
+        <td><button class="btn btn-sm btn-success" onclick="selectSku(${i})">✔</button></td>
+      </tr>`).join('');
+    new bootstrap.Modal(document.getElementById('skuModal')).show();
+  }
+
+  function selectSku(i) {
+    const sku = fullCatalog[i];
+    const row = document.querySelector('#vmTable tbody').children[selectedRow];
+    row.cells[5].innerText = sku.name;
+    const os = row.cells[4].innerText;
+    const price = os.includes('win')?sku.priceWindows:sku.priceLinux;
+    row.cells[6].innerText = `$${price.toFixed(2)}`;
+    matchedSkus[selectedRow]=sku;
+    bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+    renderVMTable(lastVmData);
+  }
+
+  ['filterName','filterCPU','filterRAM'].forEach(id=>{
+    document.getElementById(id).addEventListener('input',()=>{
+      const n=document.getElementById('filterName').value.toLowerCase();
+      const c=document.getElementById('filterCPU').value;
+      const r=document.getElementById('filterRAM').value;
+      const filtered = fullCatalog.filter(sku=>
+        (!n||sku.name.toLowerCase().includes(n))&&
+        (!c||sku.cpu.toString().includes(c))&&
+        (!r||sku.ram.toString().includes(r))
+      );
+      document.getElementById('skuTableBody').innerHTML = filtered.map((sku,i)=>`
+        <tr>
+          <td>${sku.name}</td><td>${sku.cpu}</td><td>${sku.ram.toFixed(2)}</td><td>${sku.storage.toFixed(2)}</td>
+          <td>$${sku.priceLinux.toFixed(2)} / $${sku.priceWindows.toFixed(2)}</td>
+          <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
+        </tr>`).join('');
+    });
+  });
+  </script>
 </body>
 </html>
