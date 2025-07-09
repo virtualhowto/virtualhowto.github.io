@@ -2,27 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Azure VM Matcher</title>
+  <title>Azure VM Matcher from Excel</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h2>Azure VM Matcher (Australia East)</h2>
-  <button onclick="matchVMs()">Fetch & Match</button>
-  <pre id="output">Press button to start...</pre>
+  <h2>Upload Excel & Match Azure VMs</h2>
+
+  <input type="file" id="excelFile" accept=".xlsx" />
+  <br><br>
+
+  <label for="vcpuCol">vCPU Column:</label>
+  <input type="text" id="vcpuCol" placeholder="e.g., CPU Count" />
+
+  <label for="ramCol">RAM Column:</label>
+  <input type="text" id="ramCol" placeholder="e.g., Memory (GB)" />
+  <br><br>
+
+  <button onclick="processFile()">Upload & Match</button>
+  <pre id="output">Waiting for file...</pre>
 
   <script>
-    const requirements = [
-      { vcpu: 4, ram: 16 },
-      { vcpu: 4, ram: 32 },
-      { vcpu: 6, ram: 32 },
-      { vcpu: 6, ram: 64 },
-    ];
+    let azureVMs = [];
 
     async function fetchAzureVMs() {
       const baseUrl = "https://prices.azure.com/api/retail/prices";
       const filter = encodeURIComponent(
         "serviceFamily eq 'Compute' and armRegionName eq 'australiaeast' and productName contains 'Virtual Machines' and priceType eq 'Consumption'"
       );
-
       let nextLink = `${baseUrl}?$filter=${filter}`;
       const results = [];
 
@@ -43,24 +49,19 @@
       const match = skuName.match(/(\d+)[a-z]?_?v?\d*/i);
       const vcpu = match ? parseInt(match[1]) : null;
       let ram = vcpu ? vcpu * 4 : null;
-
       if (skuName.toLowerCase().includes("e")) ram = vcpu * 8;
       if (skuName.toLowerCase().includes("f")) ram = vcpu * 2;
-
       return { vcpu, ram };
     }
 
     function findBestMatch(vmList, reqVcpu, reqRam) {
       let best = null;
       let minExcess = Infinity;
-
       for (const vm of vmList) {
         const specs = estimateSpecs(vm.armSkuName);
         if (!specs.vcpu || !specs.ram) continue;
-
         const extraCPU = specs.vcpu - reqVcpu;
         const extraRAM = specs.ram - reqRam;
-
         if (extraCPU >= 0 && extraRAM >= 0) {
           const totalExcess = extraCPU + extraRAM;
           if (totalExcess < minExcess) {
@@ -69,30 +70,56 @@
           }
         }
       }
-
       return best;
     }
 
-    async function matchVMs() {
-      const vmList = await fetchAzureVMs();
-      const output = [];
+    async function processFile() {
+      const file = document.getElementById("excelFile").files[0];
+      const vcpuKey = document.getElementById("vcpuCol").value.trim();
+      const ramKey = document.getElementById("ramCol").value.trim();
 
-      for (const req of requirements) {
-        const match = findBestMatch(vmList, req.vcpu, req.ram);
+      if (!file || !vcpuKey || !ramKey) {
+        alert("Please upload a file and set both column names.");
+        return;
+      }
+
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+
+      document.getElementById("output").textContent = "Fetching Azure VMs...";
+
+      if (azureVMs.length === 0) {
+        azureVMs = await fetchAzureVMs();
+      }
+
+      const results = [];
+      for (const row of rows) {
+        const vcpu = parseFloat(row[vcpuKey]);
+        const ram = parseFloat(row[ramKey]);
+
+        if (isNaN(vcpu) || isNaN(ram)) {
+          results.push({ input: row, match: "Invalid vCPU or RAM" });
+          continue;
+        }
+
+        const match = findBestMatch(azureVMs, vcpu, ram);
         if (match) {
-          output.push({
-            requested: req,
-            match: match.skuName,
-            vcpu: match.specs.vcpu,
-            ram: match.specs.ram,
+          results.push({
+            input: row,
+            matchedSKU: match.skuName,
+            match_vCPU: match.specs.vcpu,
+            match_RAM: match.specs.ram,
             price: `$${match.retailPrice.toFixed(3)} / hr`,
           });
         } else {
-          output.push({ requested: req, match: "No match found" });
+          results.push({ input: row, match: "No suitable match found" });
         }
       }
 
-      document.getElementById("output").textContent = JSON.stringify(output, null, 2);
+      document.getElementById("output").textContent = JSON.stringify(results, null, 2);
     }
   </script>
 </body>
