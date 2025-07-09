@@ -7,12 +7,37 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <style>
     .highlight { background-color: #d1e7dd; }
+    .no-match { background-color: #f8d7da; }
+    #spinner { display: none; }
+    .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
   </style>
 </head>
 <body class="bg-light">
 <div class="container py-5">
   <h2>Upload RVTools Export</h2>
   <input type="file" id="fileInput" class="form-control mb-4" accept=".xlsx" />
+
+  <div id="spinner" class="text-center my-3">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p>Processing...</p>
+  </div>
+
+  <div class="toast-container">
+    <div id="toastSuccess" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">✅ File loaded successfully!</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+    <div id="toastError" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">❌ No rows found in the selected sheet.</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
 
   <h3>Matched VMs</h3>
   <table class="table table-bordered" id="vmTable">
@@ -42,6 +67,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 let fullCatalog = [];
 
@@ -60,7 +86,13 @@ fetch('./az_data-export.json')
     console.log('📦 Azure SKU catalog loaded:', fullCatalog.length);
   });
 
+function showToast(id) {
+  const toast = new bootstrap.Toast(document.getElementById(id));
+  toast.show();
+}
+
 function readXlsx(file) {
+  document.getElementById('spinner').style.display = 'block';
   const reader = new FileReader();
   reader.onload = e => {
     const data = new Uint8Array(e.target.result);
@@ -70,15 +102,16 @@ function readXlsx(file) {
     const vmData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
     console.log(`📄 Loaded sheet: ${sheetName}, Rows: ${vmData.length}`);
 
+    document.getElementById('spinner').style.display = 'none';
+
     if (!vmData.length) {
-      alert("No rows found in the selected sheet.");
+      showToast('toastError');
       return;
     }
 
     renderVMTable(vmData);
+    showToast('toastSuccess');
   };
-  reader.readAsArrayBuffer(file);
-}
   reader.readAsArrayBuffer(file);
 }
 
@@ -108,7 +141,9 @@ function renderVMTable(vmData) {
     })[0];
 
     const price = os.includes("win") ? best?.priceWindows : best?.priceLinux;
-    const row = `<tr>
+    const rowClass = best ? '' : ' class="no-match"';
+
+    const row = `<tr${rowClass}>
       <td>${vm["VM"]}</td>
       <td>${cpu}</td>
       <td>${ram}</td>
@@ -141,7 +176,7 @@ function filterSkuTable() {
   console.log('✅ Filtered results count:', filteredCatalog.length);
 
   const results = filteredCatalog.map(p => `
-    <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
+    <tr>
       <td>${p.name}</td>
       <td>${p.cpu}</td>
       <td>${p.ram.toFixed(2)}</td>
