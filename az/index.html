@@ -174,11 +174,11 @@ function openSkuPopup(rowIndex) {
 
   document.getElementById('skuTableBody').innerHTML = sortedCatalog.map((sku, idx) => `
     <tr>
-      <td>\${sku.name}</td>
-      <td>\${sku.cpu}</td>
-      <td>\${sku.ram.toFixed(2)}</td>
-      <td>\${sku.storage.toFixed(2)}</td>
-      <td><button class="btn btn-sm btn-success" onclick="selectSku(\${fullCatalog.indexOf(sku)})">✔</button></td>
+      <td>${sku.name}</td>
+      <td>${sku.cpu}</td>
+      <td>${sku.ram.toFixed(2)}</td>
+      <td>${sku.storage.toFixed(2)}</td>
+      <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
     </tr>`).join('');
 
   new bootstrap.Modal(document.getElementById('skuModal')).show();
@@ -204,10 +204,10 @@ function selectSku(idx) {
     );
     document.getElementById('skuTableBody').innerHTML = filtered.map((sku, idx) => `
       <tr>
-        <td>\${sku.name}</td>
-        <td>\${sku.cpu}</td>
-        <td>\${sku.ram.toFixed(2)}</td>
-        <td>\${sku.storage.toFixed(2)}</td>
+        <td>${sku.name}</td>
+        <td>${sku.cpu}</td>
+        <td>${sku.ram.toFixed(2)}</td>
+        <td>${sku.storage.toFixed(2)}</td>
         <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
       </tr>`).join('');
   });
