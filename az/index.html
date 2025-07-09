@@ -66,7 +66,7 @@ let sheetData = [];
 let fullCatalog = [];
 let productCatalog = [];
 
-fetch("./az_data-export.json")
+fetch("./az/az_data-export.json")
   .then(res => res.json())
   .then(data => {
     fullCatalog = data.map(p => ({
@@ -142,21 +142,22 @@ function matchVMs() {
     const ram = parseInt(vm[ramKey]);
     const storage = parseFloat(vm[storageKey]);
 
+    console.log(`Trying to match VM '${vm[nameKey]}' with CPU: ${cpu}, RAM: ${ram}GB`);
     const match = productCatalog.find(p => (
       p.cpu === cpu && Math.abs(p.ram - ram) <= 2
     ));
+    console.log(`Matched SKU for VM '${vm[nameKey]}': ${match ? match.name : 'No match'}`);
 
     const inferredOS = osValue.includes("win") ? "Windows" : "Linux";
     console.log(`Inferred OS for VM '${vm[nameKey]}': ${inferredOS}`);
 
     return {
       id: index,
-      os: inferredOS,
       name: vm[nameKey],
       cpu,
       ram,
       storage,
-      os: "Linux",
+      os: inferredOS,
       match: match
         ? {
             name: match.name,
