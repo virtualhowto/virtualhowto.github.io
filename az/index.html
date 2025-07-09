@@ -81,6 +81,10 @@ $1
 
 $1
 let priceMode = 'linux';
+function getSkuPrice(sku) {
+  const price = priceMode === 'windows' ? sku.priceWindows : sku.priceLinux;
+  return typeof price === 'number' ? price.toFixed(2) : parseFloat(price || 0).toFixed(2);
+}
 function togglePriceMode() {
   priceMode = document.getElementById('osToggle').checked ? 'windows' : 'linux';
   renderVMTable(lastVmData);
@@ -185,7 +189,7 @@ function openSkuPopup(rowIndex) {
       <td>${sku.ram.toFixed(2)}</td>
       <td>${sku.storage.toFixed(2)}</td>
       <td>${sku.description}</td>
-      <td>$${(typeof sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) : parseFloat(sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2).toFixed(2))}</td>
+      <td>$${getSkuPrice(sku)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
     </tr>`).join('');
 
@@ -196,7 +200,7 @@ function selectSku(idx) {
   const sku = fullCatalog[idx];
   const row = document.querySelector(`#vmTable tbody`).children[selectedRow];
   row.cells[5].innerHTML = `<span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${selectedRow})">${sku.name}</span>`;
-  row.cells[6].innerText = `$${(typeof sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) : parseFloat(sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2).toFixed(2))}`;
+  row.cells[6].innerText = `$${getSkuPrice(sku)}`;
   matchedSkus[selectedRow] = sku;
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
@@ -218,7 +222,7 @@ function selectSku(idx) {
         <td>${sku.ram.toFixed(2)}</td>
         <td>${sku.storage.toFixed(2)}</td>
         <td>${sku.description}</td>
-        <td>$${(typeof sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2) : parseFloat(sku.(priceMode === 'windows' ? (typeof sku.priceWindows === 'number' ? sku.priceWindows : parseFloat(sku.priceWindows || 0)) : (typeof sku.priceLinux === 'number' ? sku.priceLinux : parseFloat(sku.priceLinux || 0))).toFixed(2).toFixed(2))}</td>
+        <td>$${getSkuPrice(sku)}</td>
         <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
       </tr>`).join('');
   });
