@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Azure VM Matcher from Excel</title>
+  <meta charset="UTF-8" />
+  <title>Azure VM Matcher</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h2>Upload Excel & Match Azure VMs (Australia East)</h2>
+  <h2>Azure VM Matcher (Excel + az_data-export.json)</h2>
 
   <input type="file" id="excelFile" accept=".xlsx" />
   <br><br>
@@ -16,8 +16,8 @@
 
   <label for="ramCol">Select RAM Column:</label>
   <select id="ramCol"></select>
-
   <br><br>
+
   <button onclick="processFile()">Match Azure VMs</button>
   <pre id="output">Upload a file and select columns to begin...</pre>
 
@@ -25,58 +25,40 @@
     let azureVMs = [];
     let detectedRows = [];
 
-    // Fetch Azure pricing with CORS proxy (for GitHub Pages demo)
-    async function fetchAzureVMs() {
-      const corsProxy = "https://corsproxy.io/?";
-      const baseUrl = "https://prices.azure.com/api/retail/prices";
-      const filter = encodeURIComponent(
-        "serviceFamily eq 'Compute' and armRegionName eq 'australiaeast' and productName contains 'Virtual Machines' and priceType eq 'Consumption'"
-      );
-      let nextLink = `${corsProxy}${encodeURIComponent(`${baseUrl}?$filter=${filter}`)}`;
-      const results = [];
-
-      while (nextLink && results.length < 500) {
-        const res = await fetch(nextLink);
-        const data = await res.json();
-        results.push(...data.Items);
-        nextLink = data.NextPageLink ? corsProxy + encodeURIComponent(data.NextPageLink) : null;
-      }
-
-      return results.filter(vm =>
-        vm.unitOfMeasure === "1 Hour" &&
-        vm.skuName.toLowerCase().includes("linux")
+    async function loadAzureVMs() {
+      const res = await fetch("az_data-export.json");
+      const data = await res.json();
+      return data.filter(vm =>
+        vm.regionName === "Australia East" &&
+        vm.linuxPrice &&
+        !isNaN(vm.numberOfCores) &&
+        !isNaN(vm.memoryInMB)
       );
     }
 
-    function estimateSpecs(skuName) {
-      const match = skuName.match(/(\d+)[a-z]?_?v?\d*/i);
-      const vcpu = match ? parseInt(match[1]) : null;
-      let ram = vcpu ? vcpu * 4 : null;
-      if (skuName.toLowerCase().includes("e")) ram = vcpu * 8;
-      if (skuName.toLowerCase().includes("f")) ram = vcpu * 2;
-      return { vcpu, ram };
-    }
-
-    function findBestMatch(vmList, reqVcpu, reqRam) {
+    function findBestMatch(vmList, reqVcpu, reqRamGiB) {
       let best = null;
       let minExcess = Infinity;
+
       for (const vm of vmList) {
-        const specs = estimateSpecs(vm.armSkuName);
-        if (!specs.vcpu || !specs.ram) continue;
-        const extraCPU = specs.vcpu - reqVcpu;
-        const extraRAM = specs.ram - reqRam;
+        const vmCores = parseInt(vm.numberOfCores);
+        const vmRamGiB = vm.memoryInMB / 1024;
+
+        const extraCPU = vmCores - reqVcpu;
+        const extraRAM = vmRamGiB - reqRamGiB;
+
         if (extraCPU >= 0 && extraRAM >= 0) {
           const totalExcess = extraCPU + extraRAM;
           if (totalExcess < minExcess) {
-            best = { ...vm, specs };
+            best = { ...vm, matchCores: vmCores, matchRam: vmRamGiB.toFixed(1) };
             minExcess = totalExcess;
           }
         }
       }
+
       return best;
     }
 
-    // Handle file upload and extract column headers
     document.getElementById("excelFile").addEventListener("change", async (e) => {
       const file = e.target.files[0];
       const data = await file.arrayBuffer();
@@ -91,6 +73,7 @@
         const ramSelect = document.getElementById("ramCol");
         vcpuSelect.innerHTML = "";
         ramSelect.innerHTML = "";
+
         columns.forEach(col => {
           const opt1 = document.createElement("option");
           opt1.value = col;
@@ -115,16 +98,16 @@
         return;
       }
 
-      outputEl.textContent = "Fetching Azure pricing...";
+      outputEl.textContent = "Loading Azure pricing...";
 
       if (azureVMs.length === 0) {
-        azureVMs = await fetchAzureVMs();
+        azureVMs = await loadAzureVMs();
       }
 
       const results = [];
       for (const row of detectedRows) {
         const vcpu = parseFloat(row[vcpuKey]);
-        const ram = parseFloat(row[ramKey]);
+        const ram = parseFloat(row[ramKey]); // GiB
 
         if (isNaN(vcpu) || isNaN(ram)) {
           results.push({ input: row, match: "Invalid vCPU or RAM" });
@@ -135,10 +118,11 @@
         if (match) {
           results.push({
             input: row,
-            matchedSKU: match.skuName,
-            match_vCPU: match.specs.vcpu,
-            match_RAM: match.specs.ram,
-            price: `$${match.retailPrice.toFixed(3)} / hr`,
+            matchedSKU: match.name,
+            match_vCPU: match.matchCores,
+            match_RAM: `${match.matchRam} GiB`,
+            linuxPriceAUD: `$${match.linuxPrice}`,
+            premiumDisk: match.supportPremiumDisk || "unknown"
           });
         } else {
           results.push({ input: row, match: "No suitable match found" });
