@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Peer-to-Peer File Transfer</title>
+</head>
+<body>
+  <h2>Peer-to-Peer File Transfer (WebRTC)</h2>
+  <input type="file" id="fileInput"><br><br>
+  <button onclick="startConnection()">Start Connection</button>
+  <button onclick="sendFile()">Send File</button><br><br>
+
+  <textarea id="offer" placeholder="Paste offer here" cols="80" rows="6"></textarea><br>
+  <button onclick="createAnswer()">Create Answer</button><br>
+  <textarea id="answer" placeholder="Paste answer here" cols="80" rows="6"></textarea><br>
+  <button onclick="setAnswer()">Set Answer</button>
+
+  <script>
+    let pc = new RTCPeerConnection();
+    let dc;
+    let fileReader;
+    let file;
+    let fileInput = document.getElementById('fileInput');
+
+    pc.ondatachannel = event => {
+      dc = event.channel;
+      let receivedBuffers = [];
+
+      dc.onmessage = event => {
+        if (event.data !== 'EOF') {
+          receivedBuffers.push(event.data);
+        } else {
+          const received = new Blob(receivedBuffers);
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(received);
+          a.download = 'received_file';
+          a.click();
+        }
+      };
+    };
+
+    async function startConnection() {
+      dc = pc.createDataChannel('file');
+      dc.onopen = () => console.log('Connection open');
+      dc.onclose = () => console.log('Connection closed');
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      document.getElementById('offer').value = JSON.stringify(offer);
+    }
+
+    async function createAnswer() {
+      const offer = JSON.parse(document.getElementById('offer').value);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      document.getElementById('answer').value = JSON.stringify(answer);
+    }
+
+    async function setAnswer() {
+      const answer = JSON.parse(document.getElementById('answer').value);
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    }
+
+    function sendFile() {
+      file = fileInput.files[0];
+      const chunkSize = 16384;
+      const reader = new FileReader();
+      let offset = 0;
+
+      reader.onload = e => {
+        dc.send(e.target.result);
+        offset += e.target.result.byteLength;
+        if (offset < file.size) {
+          readSlice(offset);
+        } else {
+          dc.send('EOF');
+        }
+      };
+
+      const readSlice = o => {
+        const slice = file.slice(offset, o + chunkSize);
+        reader.readAsArrayBuffer(slice);
+      };
+
+      readSlice(0);
+    }
+  </script>
+</body>
+</html>
