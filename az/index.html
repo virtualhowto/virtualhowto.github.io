@@ -289,6 +289,9 @@ function applyOverride(idx) {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div class="mb-3 text-end">
+          <button class="btn btn-success" onclick="autoSelectBestSku()">Auto Select Best Match</button>
+        </div>
         <div class="row g-3 mb-3">
           <div class="col-md-6">
             <label class="form-label">Filter by CPU</label>
@@ -338,6 +341,18 @@ function filterSkuTable() {
       <tbody>${results}</tbody>
     </table>
   `;
+}
+
+function autoSelectBestSku() {
+  const cpu = parseInt(document.getElementById('filterCpuInput').value);
+  const ram = parseInt(document.getElementById('filterRamInput').value);
+  const os = document.getElementById(`os-${currentSkuIndex}`).value;
+  const best = fullCatalog.find(p => Math.abs(p.cpu - cpu) <= 1 && Math.abs(p.ram - ram) <= 2);
+  if (best) {
+    selectSku(best.name, best.cpu, best.ram, best.description, best.priceLinux, best.priceWindows);
+  } else {
+    alert('No close match found. Try adjusting the filters.');
+  }
 }
 
 function selectSku(name, cpu, ram, desc, priceLinux, priceWindows) {
