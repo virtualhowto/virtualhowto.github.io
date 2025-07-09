@@ -66,7 +66,7 @@
         </div>
         <table class="table table-sm table-striped">
           <thead>
-<tr><th>Name</th><th>CPU</th><th>RAM (GB)</th><th>Storage (GB)</th><th>Select</th></tr>
+$1<th>Monthly Price</th><th>Select</th></tr>
           </thead>
           <tbody id="skuTableBody"></tbody>
         </table>
@@ -150,7 +150,7 @@ function renderVMTable(vmData) {
         <td>${vm["Provisioned Storage (GB)"]}</td>
         <td>${os}</td>
         <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${index})">${best?.name || 'Select SKU'}</span></td>
-        <td>${price ? `$${(price * 720).toFixed(2)}` : '-'}</td>
+        <td>${price ? `$${(price).toFixed(2)}` : '-'}</td>
       `;
       tbody.appendChild(row);
     } catch (err) {
@@ -178,6 +178,8 @@ function openSkuPopup(rowIndex) {
       <td>${sku.cpu}</td>
       <td>${sku.ram.toFixed(2)}</td>
       <td>${sku.storage.toFixed(2)}</td>
+      <td>${sku.description}</td>
+      <td>$${(sku.priceLinux).toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
     </tr>`).join('');
 
@@ -188,7 +190,7 @@ function selectSku(idx) {
   const sku = fullCatalog[idx];
   const row = document.querySelector(`#vmTable tbody`).children[selectedRow];
   row.cells[5].innerHTML = `<span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${selectedRow})">${sku.name}</span>`;
-  row.cells[6].innerText = `$${(sku.priceLinux * 720).toFixed(2)}`;
+  row.cells[6].innerText = `$${(sku.priceLinux).toFixed(2)}`;
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
 
@@ -208,6 +210,8 @@ function selectSku(idx) {
         <td>${sku.cpu}</td>
         <td>${sku.ram.toFixed(2)}</td>
         <td>${sku.storage.toFixed(2)}</td>
+        <td>${sku.description}</td>
+        <td>$${(sku.priceLinux).toFixed(2)}</td>
         <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(sku)})">✔</button></td>
       </tr>`).join('');
   });
