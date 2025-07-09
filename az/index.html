@@ -295,11 +295,11 @@ function applyOverride(idx) {
         <div class="row g-3 mb-3">
           <div class="col-md-6">
             <label class="form-label">Filter by CPU</label>
-            <input type="number" class="form-control" id="filterCpuInput" />
+            <input type="number" class="form-control" id="filterCpuInput" oninput="filterSkuTable()" />
           </div>
           <div class="col-md-6">
             <label class="form-label">Filter by RAM</label>
-            <input type="number" class="form-control" id="filterRamInput" />
+            <input type="number" class="form-control" id="filterRamInput" oninput="filterSkuTable()" />
           </div>
         </div>
         <div id="skuSelectorResults" class="table-responsive"></div>
@@ -324,7 +324,7 @@ function filterSkuTable() {
   const cpu = parseInt(document.getElementById('filterCpuInput').value);
   const ram = parseInt(document.getElementById('filterRamInput').value);
   const results = fullCatalog
-    .filter(p => Math.abs(p.cpu - cpu) <= 2 && Math.abs(p.ram - ram) <= 4)
+    .filter(p => Math.abs(p.cpu - cpu) <= 8 && Math.abs(p.ram - ram) <= 32)
     .map(p => `
       <tr onclick="selectSku('${p.name}', ${p.cpu}, ${p.ram}, '${p.description}', ${p.priceLinux}, ${p.priceWindows})" style="cursor:pointer">
         <td>${p.name}</td>
