@@ -66,7 +66,7 @@ let sheetData = [];
 let fullCatalog = [];
 let productCatalog = [];
 
-fetch("./az/az_data-export.json")
+fetch("./az_data-export.json")
   .then(res => res.json())
   .then(data => {
     fullCatalog = data.map(p => ({
@@ -135,6 +135,7 @@ function matchVMs() {
   const storageKey = document.getElementById("mapStorage").value;
 
   const results = sheetData.map((vm, index) => {
+    console.log(`Processing VM index ${index}:`, vm);
     const osKey = document.getElementById("mapOS").value;
     const osValue = (vm[osKey] || '').toString().toLowerCase();
     const cpu = parseInt(vm[cpuKey]);
@@ -146,9 +147,11 @@ function matchVMs() {
     ));
 
     const inferredOS = osValue.includes("win") ? "Windows" : "Linux";
+    console.log(`Inferred OS for VM '${vm[nameKey]}': ${inferredOS}`);
 
     return {
       id: index,
+      os: inferredOS,
       name: vm[nameKey],
       cpu,
       ram,
