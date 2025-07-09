@@ -212,14 +212,34 @@ function renderResults(results) {
   document.getElementById('resultArea').innerHTML = html;
 
   // Enable jQuery UI Autocomplete for SKU inputs
-  const skuOptions = fullCatalog.map(p => p.name);
+  const skuOptions = fullCatalog.map(p => `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`);
   results.forEach((r, idx) => {
     $(`#sku-${idx}`).autocomplete({
-      source: skuOptions,
+      source: function(request, response) {
+        const os = document.getElementById(`os-${idx}`).value;
+        const seriesFilter = document.getElementById("filterSeries").value.trim().toUpperCase();
+        const filtered = fullCatalog.filter(p => {
+          const matchesText = `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`.toLowerCase().includes(request.term.toLowerCase());
+          const matchesSeries = !seriesFilter || p.series.toUpperCase().startsWith(seriesFilter);
+          return matchesText && matchesSeries;
+        }).map(p => ({
+          label: `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`,
+          value: `${p.name} (${p.cpu} vCPU, ${p.ram}GB RAM)`
+        }));
+        response(filtered);
+      },
+      minLength: 1,
       select: function(event, ui) {
-        const selected = fullCatalog.find(p => p.name === ui.item.value);
+        const selected = fullCatalog.find(p => ui.item.value.startsWith(p.name));
+        console.log(`Autocomplete selected: ${selected.name} (${selected.cpu} vCPU, ${selected.ram}GB RAM)`);
         if (selected) {
           document.getElementById(`desc-${idx}`).value = selected.description;
+          const preview = `<div class='mt-2'><strong>${selected.name}</strong><br/>${selected.cpu} vCPU, ${selected.ram}GB RAM<br/>${selected.description}</div>`;
+          const existingPreview = document.querySelector(`#sku-${idx}`).closest('tr').nextElementSibling;
+          if (existingPreview && existingPreview.classList.contains('table-secondary')) {
+            existingPreview.remove();
+          }
+          document.getElementById(`sku-${idx}`).closest('tr').insertAdjacentHTML('afterend', `<tr class='table-secondary'><td colspan='9'>${preview}</td></tr>`);
           const os = document.getElementById(`os-${idx}`).value;
           const price = os === "Windows" ? selected.priceWindows : selected.priceLinux;
           document.getElementById(`price-${idx}`).value = price.toFixed(4);
