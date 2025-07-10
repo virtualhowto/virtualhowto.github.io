@@ -272,7 +272,7 @@ function exportCSV(type) {
     const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
 
     if (type === 'azure') {
-      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",\$${azurePrice.toFixed(2)},\$${azureStorage.cost.toFixed(2)},${azureStorage.tier},\$${azureTotal}
+      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",$${azurePrice.toFixed(2)},$${azureStorage.cost.toFixed(2)},${azureStorage.tier},$${azureTotal}
 `;
     }
   });
