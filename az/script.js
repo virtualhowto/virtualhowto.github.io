@@ -33,6 +33,49 @@ fileInput.addEventListener('change', event => {
   }
 });
 
+function setupSkuFilter(data) {
+  const nameInput = document.getElementById('filterName');
+  const cpuInput = document.getElementById('filterCPU');
+  const ramInput = document.getElementById('filterRAM');
+
+  const filterHandler = () => {
+    const nameVal = nameInput.value.toLowerCase();
+    const cpuVal = cpuInput.value;
+    const ramVal = ramInput.value;
+
+    const filtered = data.filter(item => {
+      const nameMatch = item.name.toLowerCase().includes(nameVal);
+      const cpuMatch = cpuVal === '' || item.cpu == cpuVal;
+      const ramMatch = ramVal === '' || item.ram == ramVal;
+      return nameMatch && cpuMatch && ramMatch;
+    });
+
+    document.getElementById('skuTableBody').innerHTML = filtered.map((s, i) => `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.cpu}</td>
+        <td>${s.ram}</td>
+        <td>${s.storage}</td>
+        <td>$${s.priceLinux.toFixed(2)}</td>
+        <td><button class="btn btn-sm btn-success" onclick="selectSkuFromFilter('${s.name}')">✔</button></td>
+      </tr>
+    `).join('');
+  };
+
+  nameInput.oninput = filterHandler;
+  cpuInput.oninput = filterHandler;
+  ramInput.oninput = filterHandler;
+  filterHandler();
+}
+
+function selectSkuFromFilter(name) {
+  const sku = fullCatalog.find(s => s.name === name);
+  if (!sku) return;
+  matchedSkus[selectedRow] = { ...sku };
+  renderVMTable(lastVmData);
+  bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+}
+
 function readXlsx(file) {
   document.getElementById('spinner').style.display = 'block';
   const reader = new FileReader();
@@ -136,7 +179,8 @@ Storage Tier: ${azureStorage.tier}
 Disks: ${azureStorage.diskCount} x ${azureStorage.provisionedSize / azureStorage.diskCount}GB">$${azureTotal}</td>
         <td title="CPU: ${cpu} x $${ataPricing.unitCPU}
 RAM: ${ram} x $${ataPricing.unitRAM}
-Storage: ${storage} x $${ataPricing.unitStorage}${os.includes('win') ? '\nOctopus: $20' : ''}">$${privatePrice}</td>
+Storage: ${storage} x $${ataPricing.unitStorage}${os.includes('win') ? '
+Octopus: $20' : ''}">$${privatePrice}</td>
       </tr>
     `;
   });
@@ -185,51 +229,9 @@ function openSkuPopup(idx) {
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
 
-function setupSkuFilter(data) {
-  const nameInput = document.getElementById('filterName');
-  const cpuInput = document.getElementById('filterCPU');
-  const ramInput = document.getElementById('filterRAM');
-
-  const filterHandler = () => {
-    const nameVal = nameInput.value.toLowerCase();
-    const cpuVal = cpuInput.value;
-    const ramVal = ramInput.value;
-
-    const filtered = data.filter(item => {
-      const nameMatch = item.name.toLowerCase().includes(nameVal);
-      const cpuMatch = cpuVal === '' || item.cpu == cpuVal;
-      const ramMatch = ramVal === '' || item.ram == ramVal;
-      return nameMatch && cpuMatch && ramMatch;
-    });
-
-    document.getElementById('skuTableBody').innerHTML = filtered.map((s, i) => `
-      <tr>
-        <td>${s.name}</td>
-        <td>${s.cpu}</td>
-        <td>${s.ram}</td>
-        <td>${s.storage}</td>
-        <td>$${s.priceLinux.toFixed(2)}</td>
-        <td><button class="btn btn-sm btn-success" onclick="selectSkuFromFilter('${s.name}')">✔</button></td>
-      </tr>
-    `).join('');
-  };
-
-  nameInput.oninput = filterHandler;
-  cpuInput.oninput = filterHandler;
-  ramInput.oninput = filterHandler;
-  filterHandler();
-}
-
-function selectSkuFromFilter(name) {
-  const sku = fullCatalog.find(s => s.name === name);
-  if (!sku) return;
-  matchedSkus[selectedRow] = sku;
-  renderVMTable(lastVmData);
-  bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
-}
-
 function exportCSV(type) {
-  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total\n';
+  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total
+';
 
   lastVmData.forEach((vm, i) => {
     const cpu = +vm['CPUs'] || 0;
@@ -242,7 +244,8 @@ function exportCSV(type) {
     const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
 
     if (type === 'azure') {
-      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",$${azurePrice.toFixed(2)},$${azureStorage.cost.toFixed(2)},${azureStorage.tier},$${azureTotal}\n`;
+      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",\$${azurePrice.toFixed(2)},\$${azureStorage.cost.toFixed(2)},${azureStorage.tier},\$${azureTotal}
+`;
     }
   });
 
