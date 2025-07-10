@@ -258,3 +258,27 @@ function openSkuPopup(idx) {
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
 
+function exportCSV(type) {
+  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total';
+
+  lastVmData.forEach((vm, i) => {
+    const cpu = +vm['CPUs'] || 0;
+    const ram = +vm['Memory'] || 0;
+    const storage = +vm['Provisioned Storage (GB)'] || 0;
+    const os = (vm['OS according to the configuration file'] || '').toLowerCase();
+    const sku = matchedSkus[i]?.name || '';
+    const azurePrice = os.includes('win') ? matchedSkus[i]?.priceWindows || 0 : matchedSkus[i]?.priceLinux || 0;
+    const azureStorage = calculateAzureStorageCost(storage);
+    const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
+
+    if (type === 'azure') {
+      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",$${azurePrice.toFixed(2)},$${azureStorage.cost.toFixed(2)},${azureStorage.tier},$${azureTotal}`;
+    }
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${type}_summary.csv`;
+  link.click();
+}
