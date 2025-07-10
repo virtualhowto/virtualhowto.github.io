@@ -1,3 +1,5 @@
+// RVTools Matcher - JavaScript Logic
+
 let fullCatalog = [];
 let ataPricing = {};
 let selectedRow = null;
@@ -5,55 +7,55 @@ let lastVmData = [];
 let matchedSkus = [];
 const octopusFeePerWindowsVM = 20;
 
+// Load Azure and Private pricing catalogs
 fetch('./az_data-export.json')
-  .then(r => r.json())
+  .then(res => res.json())
   .then(data => {
-    fullCatalog = data.map(d => ({
-      name: d.name,
-      cpu: d.numberOfCores,
-      ram: d.memoryInMB,
-      storage: d.osDiskSizeInMB || 0,
-      priceLinux: parseFloat(d.linuxPrice) || 0,
-      priceWindows: parseFloat(d.windowsPrice) || 0
+    fullCatalog = data.map(item => ({
+      name: item.name,
+      cpu: item.numberOfCores,
+      ram: item.memoryInMB,
+      storage: item.osDiskSizeInMB || 0,
+      priceLinux: parseFloat(item.linuxPrice) || 0,
+      priceWindows: parseFloat(item.windowsPrice) || 0
     }));
   });
 
 fetch('./cld-pricing.json')
-  .then(r => r.json())
-  .then(data => {
-    ataPricing = data;
-  });
+  .then(res => res.json())
+  .then(data => { ataPricing = data; });
 
-function showToast(id) {
-  new bootstrap.Toast(document.getElementById(id)).show();
-}
+// Handle file input
+const fileInput = document.getElementById('fileInput');
+fileInput.addEventListener('change', event => {
+  if (event.target.files.length) {
+    readXlsx(event.target.files[0]);
+  }
+});
 
 function readXlsx(file) {
   document.getElementById('spinner').style.display = 'block';
   const reader = new FileReader();
+
   reader.onload = e => {
-    const data = new Uint8Array(e.target.result);
-    const wb = XLSX.read(data, { type: 'array' });
-    const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
     try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
       const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
       document.getElementById('spinner').style.display = 'none';
-      if (!vmData.length) return showToast('toastError');
+
+      if (!vmData.length) return alert('No data found');
       lastVmData = vmData;
       renderVMTable(vmData);
-      showToast('toastSuccess');
     } catch (err) {
       document.getElementById('spinner').style.display = 'none';
-      console.error('❌ XLSX parsing failed:', err);
-      showToast('toastError');
+      alert('XLSX parsing failed');
     }
   };
+
   reader.readAsArrayBuffer(file);
 }
-
-document.getElementById('fileInput').addEventListener('change', e => {
-  if (e.target.files.length) readXlsx(e.target.files[0]);
-});
 
 function renderVMTable(vmData) {
   const tbody = document.querySelector('#vmTable tbody');
@@ -66,93 +68,76 @@ function renderVMTable(vmData) {
     const storage = +vm['Provisioned Storage (GB)'] || 0;
     const os = (vm['OS according to the configuration file'] || '').toLowerCase();
 
-    // Match SKU
-    const matches = fullCatalog.filter(s => Math.abs(s.cpu - cpu) <= 1 && Math.abs(s.ram - ram) <= 2);
-    const best = matches.sort((a,b) => (Math.abs(a.cpu-cpu)+Math.abs(a.ram-ram)) - (Math.abs(b.cpu-cpu)+Math.abs(b.ram-ram)))[0] || {};
-    matchedSkus[i] = best;
+    const matches = fullCatalog.filter(sku =>
+      Math.abs(sku.cpu - cpu) <= 1 &&
+      Math.abs(sku.ram - ram) <= 2048
+    );
 
-    const azurePrice = os.includes('win') ? best.priceWindows : best.priceLinux;
-    const azureStoragePrice = storage * 0.30;
-    const ataPrice = (cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + (os.includes('win') ? octopusFeePerWindowsVM : 0);
+    const bestMatch = matches.sort((a, b) =>
+      (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
+      (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
+    )[0] || {};
 
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${vm['VM']}</td>
-      <td>${cpu}</td>
-      <td>${ram}</td>
-      <td>${storage}</td>
-      <td>${os}</td>
-      <td>
-        <span title="Name: ${best.name || 'N/A'}
-CPU: ${best.cpu} cores
-RAM: ${best.ram} MB
-Storage: ${best.storage} MB
-Linux Price: $${best.priceLinux?.toFixed(2)}
-Windows Price: $${best.priceWindows?.toFixed(2)}"
-        class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${best.name || 'Select SKU'}</span>
-      </td>
-      <td title="VM: $${azurePrice?.toFixed(2)} + Storage: $${azureStoragePrice.toFixed(2)} = Total">
-        $${(azurePrice + azureStoragePrice).toFixed(2)}
-      </td>
-      <td title="CPU: ${cpu} × $${ataPricing.unitCPU} + RAM: ${ram} × $${ataPricing.unitRAM} + Storage: ${storage} × $${ataPricing.unitStorage} + Octopus: $${os.includes('win') ? octopusFeePerWindowsVM : 0}">
-        $${ataPrice.toFixed(2)}
-      </td>
+    matchedSkus[i] = bestMatch;
+
+    const azurePrice = os.includes('win') ? bestMatch.priceWindows : bestMatch.priceLinux;
+    const azureStorage = calculateAzureStorageCost(storage);
+    const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
+
+    const privatePrice = (
+      (cpu * ataPricing.unitCPU) +
+      (ram * ataPricing.unitRAM) +
+      (storage * ataPricing.unitStorage) +
+      (os.includes('win') ? octopusFeePerWindowsVM : 0)
+    ).toFixed(2);
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${vm['VM']}</td>
+        <td>${cpu}</td>
+        <td>${ram}</td>
+        <td>${storage}</td>
+        <td>${os}</td>
+        <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${bestMatch.name || 'Select SKU'}</span></td>
+        <td title="VM Cost: \$${azurePrice.toFixed(2)}
+Storage Cost: \$${azureStorage.cost.toFixed(2)}
+Storage Tier: ${azureStorage.tier}">$${azureTotal}</td>
+        <td title="CPU: ${cpu} x $${ataPricing.unitCPU}
+RAM: ${ram} x $${ataPricing.unitRAM}
+Storage: ${storage} x $${ataPricing.unitStorage}$1">$${privatePrice}</td>
+      </tr>
     `;
-    tbody.appendChild(row);
   });
 
   updateSummary();
 }
 
-function openSkuPopup(idx) {
-  selectedRow = idx;
-  const cpu = +lastVmData[idx]['CPUs'];
-  const ram = +lastVmData[idx]['Memory'];
-  const sorted = [...fullCatalog].sort((a,b) => (Math.abs(a.cpu-cpu)+Math.abs(a.ram-ram)) - (Math.abs(b.cpu-cpu)+Math.abs(b.ram-ram)));
-  document.getElementById('skuTableBody').innerHTML = sorted.map((s,i)=>`
-    <tr>
-      <td>${s.name}</td>
-      <td>${s.cpu}</td>
-      <td>${s.ram}</td>
-      <td>${s.storage}</td>
-      <td>$${(s.priceLinux).toFixed(2)}</td>
-      <td><button class="btn btn-sm btn-success" onclick="selectSku(${i})">✔</button></td>
-    </tr>
-  `).join('');
-  new bootstrap.Modal(document.getElementById('skuModal')).show();
-}
+function calculateAzureStorageCost(storageGB) {
+  const unitPrice = 0.30;
+  let tier = 'P30';
 
-function selectSku(idx) {
-  const sku = fullCatalog[idx];
-  matchedSkus[selectedRow] = sku;
-  renderVMTable(lastVmData);
-  bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
-}
+  if (storageGB <= 128) tier = 'P10';
+  else if (storageGB <= 512) tier = 'P20';
+  else if (storageGB <= 1024) tier = 'P30';
+  else tier = `P${Math.ceil(storageGB / 1024) * 30}`;
 
-['filterName','filterCPU','filterRAM'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{
-    const nameV=document.getElementById('filterName').value.toLowerCase();
-    const cpuV=document.getElementById('filterCPU').value;
-    const ramV=document.getElementById('filterRAM').value;
-    const filtered=fullCatalog.filter(s=>
-      (!nameV||s.name.toLowerCase().includes(nameV))&&
-      (!cpuV||s.cpu.toString().includes(cpuV))&&
-      (!ramV||s.ram.toString().includes(ramV))
-    );
-    document.getElementById('skuTableBody').innerHTML=filtered.map(s=>`
-      <tr>
-        <td>${s.name}</td><td>${s.cpu}</td><td>${s.ram}</td><td>${s.storage}</td><td>$${s.priceLinux.toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(s)})">✔</button></td>
-      </tr>
-    `).join('');
-  });
-});
+  const matchedSize =
+    storageGB <= 128 ? 128 :
+    storageGB <= 512 ? 512 :
+    storageGB <= 1024 ? 1024 : Math.ceil(storageGB / 1024) * 1024;
+
+  return {
+    tier,
+    cost: matchedSize * unitPrice
+  };
+}
 
 function updateSummary() {
   let azureTotal = 0;
   document.querySelectorAll('#vmTable tbody tr').forEach(row => {
-    const priceCell = row.children[6];
-    if (priceCell && priceCell.textContent.includes('$')) {
-      azureTotal += parseFloat(priceCell.textContent.replace('$', '')) || 0;
+    const cell = row.children[6];
+    if (cell && cell.textContent.includes('$')) {
+      azureTotal += parseFloat(cell.textContent.replace('$', '')) || 0;
     }
   });
 
@@ -167,4 +152,59 @@ function updateSummary() {
 
   document.getElementById('totalPrice').innerText = `$${azureTotal.toFixed(2)}`;
   document.getElementById('ataPrice').innerText = `$${privateTotal.toFixed(2)}`;
+}
+
+function openSkuPopup(idx) {
+  selectedRow = idx;
+  const cpu = +lastVmData[idx]['CPUs'];
+  const ram = +lastVmData[idx]['Memory'];
+
+  const sorted = [...fullCatalog].sort((a, b) =>
+    (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
+    (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
+  );
+
+  document.getElementById('skuTableBody').innerHTML = sorted.map((s, i) => `
+    <tr>
+      <td>${s.name}</td>
+      <td>${s.cpu}</td>
+      <td>${s.ram}</td>
+      <td>${s.storage}</td>
+      <td>$${s.priceLinux.toFixed(2)}</td>
+      <td><button class="btn btn-sm btn-success" onclick="selectSku(${i})">✔</button></td>
+    </tr>
+  `).join('');
+
+  new bootstrap.Modal(document.getElementById('skuModal')).show();
+}
+
+function selectSku(idx) {
+  matchedSkus[selectedRow] = fullCatalog[idx];
+  renderVMTable(lastVmData);
+  bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+}
+
+function exportCSV(type) {
+  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total\n';
+
+  lastVmData.forEach((vm, i) => {
+    const cpu = +vm['CPUs'] || 0;
+    const ram = +vm['Memory'] || 0;
+    const storage = +vm['Provisioned Storage (GB)'] || 0;
+    const os = (vm['OS according to the configuration file'] || '').toLowerCase();
+    const sku = matchedSkus[i]?.name || '';
+    const azurePrice = os.includes('win') ? matchedSkus[i]?.priceWindows || 0 : matchedSkus[i]?.priceLinux || 0;
+    const azureStorage = calculateAzureStorageCost(storage);
+    const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
+
+    if (type === 'azure') {
+      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",\$${azurePrice.toFixed(2)},\$${azureStorage.cost.toFixed(2)},${azureStorage.tier},\$${azureTotal}\n`;
+    }
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${type}_summary.csv`;
+  link.click();
 }
