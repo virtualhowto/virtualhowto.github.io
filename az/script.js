@@ -73,7 +73,7 @@ function setupSkuFilter(data) {
 function selectSkuFromFilter(name) {
   const sku = fullCatalog.find(s => s.name === name);
   if (!sku) return;
-  matchedSkus[selectedRow] = { ...sku };
+  matchedSkus[selectedRow] = { ...sku, manual: true };
   // Re-render only the updated row to avoid resetting all
   renderVMTable(lastVmData);
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
@@ -137,7 +137,7 @@ function calculateAzureStorageCost(storageGB) {
 function renderVMTable(vmData) {
   const tbody = document.querySelector('#vmTable tbody');
   tbody.innerHTML = '';
-  matchedSkus = [];
+  // Do not reset manually selected SKUs here
 
   vmData.forEach((vm, i) => {
     const cpu = +vm['CPUs'] || 0;
