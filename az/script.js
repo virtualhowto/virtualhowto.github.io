@@ -102,9 +102,6 @@ function selectSkuFromFilter(name) {
   if (!sku) return;
   matchedSkus[selectedRow] = { ...sku, manual: true };
   renderVMTable(lastVmData);
-  renderVMTable(lastVmData);
-  // Re-render only the updated row to avoid resetting all
-  renderVMTable(lastVmData);
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
 
@@ -204,7 +201,7 @@ function renderVMTable(vmData) {
         <td>${ram}</td>
         <td>${storage}</td>
         <td>${os}</td>
-        <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${bestMatch.name || 'Select SKU'}</span></td>
+        <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${matchedSkus[i]?.name || 'Select SKU'}</span></td>
         <td title="VM Cost: $${azurePrice.toFixed(2)}
 Storage Cost: $${azureStorage.cost.toFixed(2)}
 Storage Tier: ${azureStorage.tier}
@@ -259,4 +256,5 @@ function openSkuPopup(idx) {
 
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
+
 
