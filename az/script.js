@@ -4,9 +4,7 @@ let fullCatalog = [];
 let ataPricing = {};
 let selectedRow = null;
 let lastVmData = [];
-let // retain previous matches
-  const previousSkus = [...matchedSkus];
-  matchedSkus = previousSkus;
+let matchedSkus = [];
 const octopusFeePerWindowsVM = 20;
 
 // Load Azure and Private pricing catalogs
