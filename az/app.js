@@ -154,4 +154,17 @@ function updateSummary() {
     if (priceCell && priceCell.textContent.includes('$')) {
       azureTotal += parseFloat(priceCell.textContent.replace('$', '')) || 0;
     }
-  }
+  });
+
+  const privateTotal = lastVmData.reduce((sum, vm, i) => {
+    const cpu = +vm['CPUs'] || 0;
+    const ram = +vm['Memory'] || 0;
+    const storage = +vm['Provisioned Storage (GB)'] || 0;
+    const os = (vm['OS according to the configuration file'] || '').toLowerCase();
+    const octopus = os.includes('win') ? octopusFeePerWindowsVM : 0;
+    return sum + ((cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + octopus);
+  }, 0);
+
+  document.getElementById('totalPrice').innerText = `$${azureTotal.toFixed(2)}`;
+  document.getElementById('ataPrice').innerText = `$${privateTotal.toFixed(2)}`;
+}
