@@ -41,60 +41,29 @@ function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
   return (coreCount / 2) * unitPrice;
 }
 
-function getSqlTagHtml(index) {
-  return `
-    <div class="form-check">
-      <input class="form-check-input sql-checkbox" type="checkbox" id="sqlTag-${index}" onchange="updateSQLTag(${index})">
-      <label class="form-check-label" for="sqlTag-${index}">SQL Std</label>
-      <input class="form-check-input sql-checkbox ms-2" type="checkbox" id="sqlEntTag-${index}" onchange="updateSQLTag(${index}, true)">
-      <label class="form-check-label" for="sqlEntTag-${index}">SQL Ent</label>
-    </div>
-  `;
+function toggleSQLTag(index) {
+  const vm = lastVmData[index];
+  const tagHTML = vm.sqlLicenseType
+    ? `<span class="badge bg-success">${vm.sqlLicenseType} <span onclick="clearSQLTag(${index})" style="cursor:pointer">&times;</span></span>`
+    : `<button class="btn btn-sm btn-outline-primary" onclick="assignSQLTag(${index})">+</button>`;
+  return `<div class="sql-tags">${tagHTML}</div>`;
 }
 
-function updateSQLTag(index, isEnt = false) {
-  const std = document.getElementById(`sqlTag-${index}`).checked;
-  const ent = document.getElementById(`sqlEntTag-${index}`).checked;
-  lastVmData[index].sqlLicensed = std || ent;
-  lastVmData[index].sqlLicenseType = ent ? 'SQL-Ent' : std ? 'SQL-Std' : null;
-  renderVMTable(lastVmData);
-}
-
-function readXlsx(file) {
-  document.getElementById('spinner').style.display = 'block';
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = new Uint8Array(e.target.result);
-    const wb = XLSX.read(data, { type: 'array' });
-    const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
-    try {
-      const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
-      document.getElementById('spinner').style.display = 'none';
-      if (!vmData.length) return alert('No data found');
-      lastVmData = vmData;
-      renderVMTable(vmData);
-    } catch (err) {
-      document.getElementById('spinner').style.display = 'none';
-      alert('XLSX parsing failed');
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function calculateAzureStorageCost(storageGB) {
-  const tiers = [
-    { tier: 'P10', size: 128, unitPrice: 0.3 },
-    { tier: 'P20', size: 512, unitPrice: 0.3 },
-    { tier: 'P30', size: 1024, unitPrice: 0.3 }
-  ];
-  for (let i = tiers.length - 1; i >= 0; i--) {
-    const t = tiers[i];
-    if (storageGB > t.size || i === 0) {
-      const disks = Math.ceil(storageGB / t.size);
-      return { cost: disks * t.size * t.unitPrice, tier: t.tier, disks };
-    }
+function assignSQLTag(index) {
+  const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):');
+  if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
+    lastVmData[index].sqlLicensed = true;
+    lastVmData[index].sqlLicenseType = tag;
+    renderVMTable(lastVmData);
+  } else {
+    alert('Invalid tag. Use SQL-Std or SQL-Ent.');
   }
-  return { cost: 0, tier: 'Unknown', disks: 0 };
+}
+
+function clearSQLTag(index) {
+  lastVmData[index].sqlLicensed = false;
+  lastVmData[index].sqlLicenseType = null;
+  renderVMTable(lastVmData);
 }
 
 function renderVMTable(vmData) {
@@ -139,7 +108,7 @@ function renderVMTable(vmData) {
       <td>${cpu}</td>
       <td>${ram}</td>
       <td>${storage}</td>
-      <td>${os}</td>
+      <td>${os} ${toggleSQLTag(i)}</td>
       <td>
         <span class="text-primary" style="cursor:pointer" title="${best.name}\nCPU: ${best.cpu}\nRAM: ${best.ram}\nStorage: ${best.storage}\nLinux: $${best.priceLinux}\nWindows: $${best.priceWindows}" onclick="openSkuPopup(${i})">
           ${best.name || 'Select SKU'}
@@ -156,55 +125,4 @@ function renderVMTable(vmData) {
   });
 
   updateSummary();
-}
-
-function updateSummary() {
-  let azureTotal = 0;
-  document.querySelectorAll('#vmTable tbody tr').forEach(row => {
-    const priceCell = row.children[6];
-    if (priceCell && priceCell.textContent.includes('$')) {
-      azureTotal += parseFloat(priceCell.textContent.replace('$', '')) || 0;
-    }
-  });
-
-  const privateTotal = lastVmData.reduce((sum, vm, i) => {
-    const cpu = +vm['CPUs'] || 0;
-    const ram = +vm['Memory'] || 0;
-    const storage = +vm['Provisioned Storage (GB)'] || 0;
-    const os = (vm['OS according to the configuration file'] || '').toLowerCase();
-    const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
-    const octopus = os.includes('win') ? octopusFeePerWindowsVM : 0;
-    return sum + ((cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + octopus + sqlCost);
-  }, 0);
-
-  document.getElementById('totalPrice').innerText = `$${azureTotal.toFixed(2)}`;
-  document.getElementById('ataPrice').innerText = `$${privateTotal.toFixed(2)}`;
-}
-
-function openSkuPopup(idx) {
-  selectedRow = idx;
-  const cpu = +lastVmData[idx]['CPUs'];
-  const ram = +lastVmData[idx]['Memory'];
-  const sorted = [...fullCatalog].sort((a, b) =>
-    (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
-    (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
-  );
-  document.getElementById('skuTableBody').innerHTML = sorted.map((s, i) => `
-    <tr>
-      <td>${s.name}</td>
-      <td>${s.cpu}</td>
-      <td>${s.ram}</td>
-      <td>${s.storage}</td>
-      <td>$${s.priceLinux.toFixed(2)}</td>
-      <td><button class="btn btn-sm btn-success" onclick="selectSku(${i})">✔</button></td>
-    </tr>
-  `).join('');
-  new bootstrap.Modal(document.getElementById('skuModal')).show();
-}
-
-function selectSku(idx) {
-  if (selectedRow === null) return;
-  matchedSkus[selectedRow] = fullCatalog[idx];
-  renderVMTable(lastVmData);
-  bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
