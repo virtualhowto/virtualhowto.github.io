@@ -141,23 +141,14 @@ function renderVMTable(vmData) {
       <td>${storage}</td>
       <td>${os}</td>
       <td>
-        <span class="text-primary" style="cursor:pointer" title="${best.name}
-CPU: ${best.cpu}
-RAM: ${best.ram}
-Storage: ${best.storage}
-Linux: $${best.priceLinux}
-Windows: $${best.priceWindows}" onclick="openSkuPopup(${i})">
+        <span class="text-primary" style="cursor:pointer" title="${best.name}\nCPU: ${best.cpu}\nRAM: ${best.ram}\nStorage: ${best.storage}\nLinux: $${best.priceLinux}\nWindows: $${best.priceWindows}" onclick="openSkuPopup(${i})">
           ${best.name || 'Select SKU'}
         </span>
       </td>
-      <td title="VM: $${azurePrice.toFixed(2)}
-Storage: $${azureStorage.cost.toFixed(2)}
-Tier: ${azureStorage.tier}
-Disks: ${azureStorage.disks}
-SQL: $${sqlCost.toFixed(2)}">
+      <td title="VM: $${azurePrice.toFixed(2)}\nStorage: $${azureStorage.cost.toFixed(2)}\nTier: ${azureStorage.tier}\nDisks: ${azureStorage.disks}\nSQL: $${sqlCost.toFixed(2)}">
         $${totalAzure}
       </td>
-      <td title="CPU: ${cpu} x $${ataPricing.unitCPU} + RAM: ${ram} x $${ataPricing.unitRAM} + Storage: ${storage} x $${ataPricing.unitStorage}${os.includes('win') ? ' + Octopus: $20' : ''}${isSql ? ' + SQL: $' + sqlCost.toFixed(2) : ''}">
+      <td title="CPU: ${cpu} x $${ataPricing.unitCPU}\nRAM: ${ram} x $${ataPricing.unitRAM}\nStorage: ${storage} x $${ataPricing.unitStorage}${os.includes('win') ? '\nOctopus: $20' : ''}${isSql ? `\nSQL: $${sqlCost.toFixed(2)}` : ''}">
         $${ataPrice}
       </td>
     `;
