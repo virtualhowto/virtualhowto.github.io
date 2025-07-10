@@ -57,6 +57,37 @@ function readXlsx(file) {
   reader.readAsArrayBuffer(file);
 }
 
+function calculateAzureStorageCost(storageGB) {
+  const unitPrice = 0.30;
+  let tier = 'P30';
+  let baseSize = 1024;
+
+  if (storageGB <= 128) {
+    tier = 'P10';
+    baseSize = 128;
+  } else if (storageGB <= 512) {
+    tier = 'P20';
+    baseSize = 512;
+  } else if (storageGB <= 1024) {
+    tier = 'P30';
+    baseSize = 1024;
+  } else {
+    tier = `P${Math.ceil(storageGB / 1024) * 30}`;
+    baseSize = 1024;
+  }
+
+  const diskCount = Math.ceil(storageGB / baseSize);
+  const provisionedSize = diskCount * baseSize;
+  const cost = provisionedSize * unitPrice;
+
+  return {
+    tier,
+    cost,
+    diskCount,
+    provisionedSize
+  };
+}
+
 function renderVMTable(vmData) {
   const tbody = document.querySelector('#vmTable tbody');
   tbody.innerHTML = '';
@@ -102,41 +133,15 @@ function renderVMTable(vmData) {
         <td title="VM Cost: $${azurePrice.toFixed(2)}
 Storage Cost: $${azureStorage.cost.toFixed(2)}
 Storage Tier: ${azureStorage.tier}
-Disks: ${azureStorage.diskCount} x ${(azureStorage.diskCount ? azureStorage.provisionedSize / azureStorage.diskCount : 0)}GB">$${azureTotal}</td>
+Disks: ${azureStorage.diskCount} x ${azureStorage.provisionedSize / azureStorage.diskCount}GB">$${azureTotal}</td>
         <td title="CPU: ${cpu} x $${ataPricing.unitCPU}
 RAM: ${ram} x $${ataPricing.unitRAM}
-Storage: ${storage} x $${ataPricing.unitStorage}$1">$${privatePrice}</td>
+Storage: ${storage} x $${ataPricing.unitStorage}${os.includes('win') ? '\nOctopus: $20' : ''}">$${privatePrice}</td>
       </tr>
     `;
   });
 
   updateSummary();
-}
-
-function calculateAzureStorageCost(storageGB) {
-  const unitPrice = 0.30;
-  let tier = 'P30';
-
-  if (storageGB <= 128) tier = 'P10';
-  else if (storageGB <= 512) tier = 'P20';
-  else if (storageGB <= 1024) tier = 'P30';
-  else tier = `P${Math.ceil(storageGB / 1024) * 30}`;
-
-  const matchedSize =
-    storageGB <= 128 ? 128 :
-    storageGB <= 512 ? 512 :
-    storageGB <= 1024 ? 1024 : Math.ceil(storageGB / 1024) * 1024;
-
-  const diskCount = Math.ceil(storageGB / matchedSize);
-const provisionedSize = diskCount * matchedSize;
-const cost = provisionedSize * unitPrice;
-
-return {
-  tier,
-  cost,
-  diskCount,
-  provisionedSize
-};
 }
 
 function updateSummary() {
@@ -171,22 +176,54 @@ function openSkuPopup(idx) {
     (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
   );
 
-  document.getElementById('skuTableBody').innerHTML = sorted.map((s, i) => `
-    <tr>
-      <td>${s.name}</td>
-      <td>${s.cpu}</td>
-      <td>${s.ram}</td>
-      <td>${s.storage}</td>
-      <td>$${s.priceLinux.toFixed(2)}</td>
-      <td><button class="btn btn-sm btn-success" onclick="selectSku(${i})">✔</button></td>
-    </tr>
-  `).join('');
+  document.getElementById('filterName').value = '';
+  document.getElementById('filterCPU').value = '';
+  document.getElementById('filterRAM').value = '';
+
+  setupSkuFilter(sorted);
 
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
 
-function selectSku(idx) {
-  matchedSkus[selectedRow] = fullCatalog[idx];
+function setupSkuFilter(data) {
+  const nameInput = document.getElementById('filterName');
+  const cpuInput = document.getElementById('filterCPU');
+  const ramInput = document.getElementById('filterRAM');
+
+  const filterHandler = () => {
+    const nameVal = nameInput.value.toLowerCase();
+    const cpuVal = cpuInput.value;
+    const ramVal = ramInput.value;
+
+    const filtered = data.filter(item => {
+      const nameMatch = item.name.toLowerCase().includes(nameVal);
+      const cpuMatch = cpuVal === '' || item.cpu == cpuVal;
+      const ramMatch = ramVal === '' || item.ram == ramVal;
+      return nameMatch && cpuMatch && ramMatch;
+    });
+
+    document.getElementById('skuTableBody').innerHTML = filtered.map((s, i) => `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.cpu}</td>
+        <td>${s.ram}</td>
+        <td>${s.storage}</td>
+        <td>$${s.priceLinux.toFixed(2)}</td>
+        <td><button class="btn btn-sm btn-success" onclick="selectSkuFromFilter('${s.name}')">✔</button></td>
+      </tr>
+    `).join('');
+  };
+
+  nameInput.oninput = filterHandler;
+  cpuInput.oninput = filterHandler;
+  ramInput.oninput = filterHandler;
+  filterHandler();
+}
+
+function selectSkuFromFilter(name) {
+  const sku = fullCatalog.find(s => s.name === name);
+  if (!sku) return;
+  matchedSkus[selectedRow] = sku;
   renderVMTable(lastVmData);
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
@@ -205,7 +242,7 @@ function exportCSV(type) {
     const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
 
     if (type === 'azure') {
-      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",\$${azurePrice.toFixed(2)},\$${azureStorage.cost.toFixed(2)},${azureStorage.tier},\$${azureTotal}\n`;
+      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",$${azurePrice.toFixed(2)},$${azureStorage.cost.toFixed(2)},${azureStorage.tier},$${azureTotal}\n`;
     }
   });
 
