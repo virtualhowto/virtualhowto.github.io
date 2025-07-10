@@ -72,14 +72,8 @@
     </div>
   </div>
 
-  <script>
-    // Inside renderVMTable function update these cells:
-    const azureTooltip = `VM: $${azurePrice.toFixed(2)} + Storage: $${azureStoragePrice.toFixed(2)} = Total`;
-    const ataTooltip = `CPU: ${cpu}×$${ataPricing.unitCPU} + RAM: ${ram}×$${ataPricing.unitRAM} + Storage: ${storage}×$${ataPricing.unitStorage} + Octopus: $${os.includes('win') ? 20 : 0}`;
-    // And inject like this:
-    // <td title="${azureTooltip}">$${(azurePrice + azureStoragePrice).toFixed(2)}</td>
-    // <td title="${ataTooltip}">$${ataPrice.toFixed(2)}</td>
-    // Also restore SKU cell title to include CPU, RAM, Storage in hover
-  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
