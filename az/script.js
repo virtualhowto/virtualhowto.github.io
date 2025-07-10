@@ -101,6 +101,7 @@ function selectSkuFromFilter(name) {
   const sku = fullCatalog.find(s => s.name === name);
   if (!sku) return;
   matchedSkus[selectedRow] = { ...sku, manual: true };
+  renderVMTable(lastVmData);
   // Re-render only the updated row to avoid resetting all
   renderVMTable(lastVmData);
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
@@ -182,7 +183,7 @@ function renderVMTable(vmData) {
       (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
     )[0] || {};
 
-    matchedSkus[i] = bestMatch;
+    matchedSkus[i] = matchedSkus[i] && matchedSkus[i].manual ? matchedSkus[i] : bestMatch;
 
     const azurePrice = os.includes('win') ? bestMatch.priceWindows : bestMatch.priceLinux;
     const azureStorage = calculateAzureStorageCost(storage);
@@ -259,7 +260,8 @@ function openSkuPopup(idx) {
 }
 
 function exportCSV(type) {
-  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total';
+  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total
+';
 
   lastVmData.forEach((vm, i) => {
     const cpu = +vm['CPUs'] || 0;
@@ -272,7 +274,8 @@ function exportCSV(type) {
     const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
 
     if (type === 'azure') {
-      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",$${azurePrice.toFixed(2)},$${azureStorage.cost.toFixed(2)},${azureStorage.tier},$${azureTotal}`;
+      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",${azurePrice.toFixed(2)},${azureStorage.cost.toFixed(2)},${azureStorage.tier},${azureTotal}
+`;
     }
   });
 
@@ -281,4 +284,5 @@ function exportCSV(type) {
   link.href = URL.createObjectURL(blob);
   link.download = `${type}_summary.csv`;
   link.click();
+}
 }
