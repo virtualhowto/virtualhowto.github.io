@@ -209,8 +209,7 @@ Storage Tier: ${azureStorage.tier}
 Disks: ${azureStorage.diskCount} x ${azureStorage.provisionedSize / azureStorage.diskCount}GB">$${azureTotal}</td>
         <td title="CPU: ${cpu} x $${ataPricing.unitCPU}
 RAM: ${ram} x $${ataPricing.unitRAM}
-Storage: ${storage} x $${ataPricing.unitStorage}${os.includes('win') ? '
-Octopus: $20' : ''}">$${privatePrice}</td>
+Storage: ${storage} x $${ataPricing.unitStorage}${os.includes('win') ? '\\nOctopus: $20' : ''}">$${privatePrice}</td>
       </tr>
     `;
   });
