@@ -102,13 +102,16 @@ function renderVMTable(vmData) {
     const ataPrice = ((cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) +
       (os.includes('win') ? octopusFeePerWindowsVM : 0) + sqlCost).toFixed(2);
 
+    const sqlBadge = isSql ? `<span class='badge bg-info ms-1'>${sqlType}</span>` : '';
+
     const row = document.createElement('tr');
+    row.setAttribute('data-sql', isSql ? sqlType : '');
     row.innerHTML = `
       <td>${vm['VM']}</td>
       <td>${cpu}</td>
       <td>${ram}</td>
       <td>${storage}</td>
-      <td>${os} ${toggleSQLTag(i)}</td>
+      <td>${os} ${toggleSQLTag(i)} ${sqlBadge}</td>
       <td>
         <span class="text-primary" style="cursor:pointer" title="${best.name}\nCPU: ${best.cpu}\nRAM: ${best.ram}\nStorage: ${best.storage}\nLinux: $${best.priceLinux}\nWindows: $${best.priceWindows}" onclick="openSkuPopup(${i})">
           ${best.name || 'Select SKU'}
