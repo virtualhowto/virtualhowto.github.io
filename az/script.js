@@ -259,8 +259,7 @@ function openSkuPopup(idx) {
 }
 
 function exportCSV(type) {
-  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total
-';
+  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total\n';
 
   lastVmData.forEach((vm, i) => {
     const cpu = +vm['CPUs'] || 0;
