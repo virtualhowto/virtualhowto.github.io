@@ -99,10 +99,10 @@ function renderVMTable(vmData) {
         <td>${storage}</td>
         <td>${os}</td>
         <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${bestMatch.name || 'Select SKU'}</span></td>
-        <td title="VM Cost: \$${azurePrice.toFixed(2)}
-Storage Cost: \$${azureStorage.cost.toFixed(2)}
+        <td title="VM Cost: $${azurePrice.toFixed(2)}
+Storage Cost: $${azureStorage.cost.toFixed(2)}
 Storage Tier: ${azureStorage.tier}
-Disks: ${azureStorage.diskCount} x ${azureStorage.provisionedSize / azureStorage.diskCount}GB">$${azureTotal}</td>
+Disks: ${azureStorage.diskCount} x ${(azureStorage.diskCount ? azureStorage.provisionedSize / azureStorage.diskCount : 0)}GB">$${azureTotal}</td>
         <td title="CPU: ${cpu} x $${ataPricing.unitCPU}
 RAM: ${ram} x $${ataPricing.unitRAM}
 Storage: ${storage} x $${ataPricing.unitStorage}$1">$${privatePrice}</td>
@@ -127,10 +127,16 @@ function calculateAzureStorageCost(storageGB) {
     storageGB <= 512 ? 512 :
     storageGB <= 1024 ? 1024 : Math.ceil(storageGB / 1024) * 1024;
 
-  return {
-    tier,
-    cost: matchedSize * unitPrice
-  };
+  const diskCount = Math.ceil(storageGB / matchedSize);
+const provisionedSize = diskCount * matchedSize;
+const cost = provisionedSize * unitPrice;
+
+return {
+  tier,
+  cost,
+  diskCount,
+  provisionedSize
+};
 }
 
 function updateSummary() {
