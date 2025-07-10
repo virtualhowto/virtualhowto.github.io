@@ -85,10 +85,15 @@ function selectBestSku() {
     Math.abs(sku.ram - ram) <= 2048
   );
 
-  const bestMatch = matches.sort((a, b) =>
-    (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
-    (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
-  )[0];
+  const preferredSeries = ['Dsv5', 'Dasv5', 'Esv5'];
+
+  const bestMatch = matches.sort((a, b) => {
+    const scoreA = Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram);
+    const scoreB = Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram);
+    const isPreferredA = preferredSeries.some(series => a.name.startsWith(series)) ? -1 : 0;
+    const isPreferredB = preferredSeries.some(series => b.name.startsWith(series)) ? -1 : 0;
+    return (scoreA + isPreferredA) - (scoreB + isPreferredB);
+  })[0];
 
   if (bestMatch) {
     matchedSkus[selectedRow] = bestMatch;
@@ -176,10 +181,15 @@ function renderVMTable(vmData) {
       Math.abs(sku.ram - ram) <= 2048
     );
 
-    const bestMatch = matches.sort((a, b) =>
-      (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
-      (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
-    )[0] || {};
+    const preferredSeries = ['Dsv5', 'Dasv5', 'Esv5'];
+
+    const bestMatch = matches.sort((a, b) => {
+      const scoreA = Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram);
+      const scoreB = Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram);
+      const isPreferredA = preferredSeries.some(series => a.name.startsWith(series)) ? -1 : 0;
+      const isPreferredB = preferredSeries.some(series => b.name.startsWith(series)) ? -1 : 0;
+      return (scoreA + isPreferredA) - (scoreB + isPreferredB);
+    })[0] || {};
 
     matchedSkus[i] = matchedSkus[i] && matchedSkus[i].manual ? matchedSkus[i] : bestMatch;
 
