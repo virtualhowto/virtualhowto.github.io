@@ -102,6 +102,7 @@ function selectSkuFromFilter(name) {
   if (!sku) return;
   matchedSkus[selectedRow] = { ...sku, manual: true };
   renderVMTable(lastVmData);
+  renderVMTable(lastVmData);
   // Re-render only the updated row to avoid resetting all
   renderVMTable(lastVmData);
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
@@ -260,7 +261,8 @@ function openSkuPopup(idx) {
 }
 
 function exportCSV(type) {
-  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total\n';
+  let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total
+';
 
   lastVmData.forEach((vm, i) => {
     const cpu = +vm['CPUs'] || 0;
@@ -273,7 +275,8 @@ function exportCSV(type) {
     const azureTotal = (azurePrice + azureStorage.cost).toFixed(2);
 
     if (type === 'azure') {
-      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",${azurePrice.toFixed(2)},${azureStorage.cost.toFixed(2)},${azureStorage.tier},${azureTotal}\n`;
+      csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",${azurePrice.toFixed(2)},${azureStorage.cost.toFixed(2)},${azureStorage.tier},${azureTotal}
+`;
     }
   });
 
@@ -283,4 +286,4 @@ function exportCSV(type) {
   link.download = `${type}_summary.csv`;
   link.click();
 }
-
+}
