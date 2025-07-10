@@ -52,7 +52,13 @@ function setupSkuFilter(data) {
       return nameMatch && cpuMatch && ramMatch;
     });
 
-    document.getElementById('skuTableBody').innerHTML = filtered.map((s, i) => `
+    document.getElementById('skuTableBody').innerHTML = [
+    `<tr class='table-info'>
+      <td colspan="6" class="text-center">
+        <button class="btn btn-outline-primary btn-sm" onclick="selectBestSku()">Use Best Match</button>
+      </td>
+    </tr>`,
+    ...filtered.map((s, i) => `
       <tr>
         <td>${s.name}</td>
         <td>${s.cpu}</td>
@@ -61,13 +67,36 @@ function setupSkuFilter(data) {
         <td>$${s.priceLinux.toFixed(2)}</td>
         <td><button class="btn btn-sm btn-success" onclick="selectSkuFromFilter('${s.name}')">✔</button></td>
       </tr>
-    `).join('');
+    `)
+  ].join('');
   };
 
   nameInput.oninput = filterHandler;
   cpuInput.oninput = filterHandler;
   ramInput.oninput = filterHandler;
   filterHandler();
+}
+
+function selectBestSku() {
+  const vm = lastVmData[selectedRow];
+  const cpu = +vm['CPUs'] || 0;
+  const ram = +vm['Memory'] || 0;
+
+  const matches = fullCatalog.filter(sku =>
+    Math.abs(sku.cpu - cpu) <= 1 &&
+    Math.abs(sku.ram - ram) <= 2048
+  );
+
+  const bestMatch = matches.sort((a, b) =>
+    (Math.abs(a.cpu - cpu) + Math.abs(a.ram - ram)) -
+    (Math.abs(b.cpu - cpu) + Math.abs(b.ram - ram))
+  )[0];
+
+  if (bestMatch) {
+    matchedSkus[selectedRow] = bestMatch;
+    renderVMTable(lastVmData);
+    bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+  }
 }
 
 function selectSkuFromFilter(name) {
