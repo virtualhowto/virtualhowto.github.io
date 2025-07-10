@@ -101,7 +101,8 @@ function renderVMTable(vmData) {
         <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${bestMatch.name || 'Select SKU'}</span></td>
         <td title="VM Cost: \$${azurePrice.toFixed(2)}
 Storage Cost: \$${azureStorage.cost.toFixed(2)}
-Storage Tier: ${azureStorage.tier}">$${azureTotal}</td>
+Storage Tier: ${azureStorage.tier}
+Disks: ${azureStorage.diskCount} x ${azureStorage.provisionedSize / azureStorage.diskCount}GB">$${azureTotal}</td>
         <td title="CPU: ${cpu} x $${ataPricing.unitCPU}
 RAM: ${ram} x $${ataPricing.unitRAM}
 Storage: ${storage} x $${ataPricing.unitStorage}$1">$${privatePrice}</td>
