@@ -187,6 +187,31 @@
       `).join('');
       new bootstrap.Modal(document.getElementById('skuModal')).show();
     }
+
+    function exportCSV(type) {
+      let csv = 'VM,CPU,RAM,Storage,OS,SKU,' + (type === 'azure' ? 'Azure Price' : 'Private Cloud Price') + '\n';
+      lastVmData.forEach((vm, i) => {
+        const cpu = +vm['CPUs'] || 0;
+        const ram = +vm['Memory'] || 0;
+        const storage = +vm['Provisioned Storage (GB)'] || 0;
+        const os = (vm['OS according to the configuration file'] || '').toLowerCase();
+        const sku = matchedSkus[i]?.name || '';
+
+        const azurePrice = os.includes('win') ? matchedSkus[i]?.priceWindows || 0 : matchedSkus[i]?.priceLinux || 0;
+        const azureStoragePrice = calculateAzureStorageCost(storage);
+        const totalAzure = (azurePrice + azureStoragePrice).toFixed(2);
+
+        const ataPrice = ((cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + (os.includes('win') ? 20 : 0)).toFixed(2);
+
+        csv += `"${vm['VM']}",${cpu},${ram},${storage},${os},"${sku}",` + (type === 'azure' ? totalAzure : ataPrice) + '\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = type + '_summary.csv';
+      link.click();
+    }
+
   </script>
 </body>
 </html>
