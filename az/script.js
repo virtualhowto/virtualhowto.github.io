@@ -4,7 +4,9 @@ let fullCatalog = [];
 let ataPricing = {};
 let selectedRow = null;
 let lastVmData = [];
-let matchedSkus = [];
+let // retain previous matches
+  const previousSkus = [...matchedSkus];
+  matchedSkus = previousSkus;
 const octopusFeePerWindowsVM = 20;
 
 // Load Azure and Private pricing catalogs
@@ -72,6 +74,7 @@ function selectSkuFromFilter(name) {
   const sku = fullCatalog.find(s => s.name === name);
   if (!sku) return;
   matchedSkus[selectedRow] = { ...sku };
+  // Re-render only the updated row to avoid resetting all
   renderVMTable(lastVmData);
   bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
 }
