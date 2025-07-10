@@ -1,59 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RVTools Matcher</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
   <style>
-    body { padding-top: 5rem; }
-    .sticky-header {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      z-index: 1020;
-      background: #fff;
-      padding: 0.5rem 1rem;
-      box-shadow: 0 2px 2px rgba(0,0,0,0.1);
-    }
-    .summary-tile {
-      padding: 1rem;
-      border-radius: 0.75rem;
-      color: white;
-      font-weight: bold;
-      text-align: center;
-      min-width: 160px;
-    }
-    .azure-tile {
-      background-color: #0072C6;
-    }
-    .privatecloud-tile {
-      background-color: #00a19b;
-    }
-    .grand-total {
-      font-size: 1.25rem;
-      font-weight: bold;
-    }
+    body { padding-top: 5.5rem; }
+    .highlight { background-color: #d1e7dd; }
+    .no-match { background-color: #f8d7da; }
+    #spinner { display: none; }
+    .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
+    .modal-dialog-scrollable { max-height: 90vh; }
     .filter-input { width: 100%; padding: 0.25rem; margin-bottom: 0.5rem; }
+    .sticky-header { position: fixed; top: 0; width: 100%; z-index: 1020; background: #fff; padding: .75rem 1rem; box-shadow: 0 2px 2px rgba(0,0,0,0.1); }
+    .summary-tile { display: inline-block; padding: 0.5rem 1rem; border-radius: 0.5rem; color: #fff; margin-right: 1rem; min-width: 200px; text-align: center; font-weight: 500; }
+    .azure-tile { background-color: #0072C6; }
+    .privatecloud-tile { background-color: #00a19b; }
   </style>
 </head>
 <body class="bg-light">
   <div class="sticky-header d-flex justify-content-between align-items-center">
     <h4 class="mb-0">RVTools Matcher</h4>
-    <div class="d-flex gap-3 align-items-center">
-      <div class="summary-tile azure-tile">
-        Azure Total<br>
-        <span id="combinedAzureTotal">$0.00</span>
-      </div>
-      <div class="summary-tile privatecloud-tile">
-        Private Cloud Total<br>
-        <span id="privateCloudTotal">$0.00</span>
-      </div>
-      <div class="grand-total">
-        Grand Total:<br><span id="grandTotal">$0.00</span>
-      </div>
+    <div>
+      <span class="summary-tile azure-tile">Azure Total: <strong id="totalPrice">$0.00</strong></span>
+      <span class="summary-tile privatecloud-tile">Private Cloud: <strong id="ataPrice">$0.00</strong></span>
+      <span>Total Combined: <strong id="grandTotal">$0.00</strong></span>
     </div>
   </div>
+
   <div class="container mt-4">
     <h2>Upload RVTools Export</h2>
     <input type="file" id="fileInput" class="form-control mb-4" accept=".xlsx" />
@@ -61,14 +36,23 @@
       <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
       <p>Processing...</p>
     </div>
+
+    <div class="toast-container">
+      <div id="toastSuccess" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex"><div class="toast-body">✅ File loaded successfully!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+      </div>
+      <div id="toastError" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex"><div class="toast-body">❌ No rows found in the selected sheet.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+      </div>
+    </div>
+
     <h3>Matched VMs</h3>
     <table class="table table-bordered" id="vmTable">
-      <thead><tr><th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Azure Price</th><th>Private Cloud Price</th></tr></thead>
+      <thead><tr><th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Matched SKU</th><th>Azure Price</th><th>Private Cloud</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
 
-  <!-- SKU Selection Modal -->
   <div class="modal fade" id="skuModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
@@ -93,8 +77,7 @@
   <script>
     let fullCatalog = [], ataPricing = {};
     let selectedRow = null;
-    let lastVmData = [];
-    let matchedSkus = [];
+    let lastVmData = [], matchedSkus = [];
     const octopusFeePerWindowsVM = 20;
 
     fetch('./az_data-export.json')
@@ -111,74 +94,99 @@
       });
 
     fetch('./cld-pricing.json')
-      .then(r => r.json())
-      .then(data => ataPricing = data);
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load cld-pricing.json (${r.status})`);
+        return r.json();
+      })
+      .then(data => {
+        ataPricing = data;
+      })
+      .catch(err => console.error('❌ Error loading cld-pricing.json:', err.message));
 
-    function updateSummary() {
-      const azureTotal = matchedSkus.reduce((sum, sku, i) => {
-        const os = (lastVmData[i]['OS according to the configuration file'] || '').toLowerCase();
-        return sum + (sku ? (os.includes('win') ? sku.priceWindows : sku.priceLinux) : 0);
-      }, 0);
-      document.getElementById('combinedAzureTotal').innerText = `$${azureTotal.toFixed(2)}`;
-
-      const privateCloudTotal = lastVmData.reduce((sum, vm) => {
-        const cpu = +vm['CPUs'] || 0;
-        const ram = +vm['Memory'] || 0;
-        const storage = +vm['Provisioned Storage (GB)'] || 0;
-        const os = (vm['OS according to the configuration file'] || '').toLowerCase();
-        const octopus = os.includes('win') ? octopusFeePerWindowsVM : 0;
-        return sum + ((cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + octopus);
-      }, 0);
-      document.getElementById('privateCloudTotal').innerText = `$${privateCloudTotal.toFixed(2)}`;
-
-      const grandTotal = azureTotal + privateCloudTotal;
-      document.getElementById('grandTotal').innerText = `$${grandTotal.toFixed(2)}`;
+    function showToast(id) {
+      new bootstrap.Toast(document.getElementById(id)).show();
     }
 
     document.getElementById('fileInput').addEventListener('change', e => {
-      if (!e.target.files.length) return;
-      document.getElementById('spinner').style.display = 'block';
-      const reader = new FileReader();
-      reader.onload = evt => {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets['vInfo'] || workbook.Sheets[workbook.SheetNames[0]];
-        const vmData = XLSX.utils.sheet_to_json(sheet);
-        document.getElementById('spinner').style.display = 'none';
-        if (!vmData.length) return;
-        lastVmData = vmData;
-        renderTable(vmData);
-      };
-      reader.readAsArrayBuffer(e.target.files[0]);
+      if (e.target.files.length) readXlsx(e.target.files[0]);
     });
 
-    function renderTable(vmData) {
+    function readXlsx(file) {
+      document.getElementById('spinner').style.display = 'block';
+      const reader = new FileReader();
+      reader.onload = e => {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
+        try {
+          const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+          document.getElementById('spinner').style.display = 'none';
+          if (!vmData.length) return showToast('toastError');
+          lastVmData = vmData;
+          renderVMTable(vmData);
+          showToast('toastSuccess');
+        } catch (err) {
+          document.getElementById('spinner').style.display = 'none';
+          showToast('toastError');
+          console.error('❌ XLSX parsing failed:', err);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderVMTable(vmData) {
       const tbody = document.querySelector('#vmTable tbody');
       tbody.innerHTML = '';
       matchedSkus = [];
+
       vmData.forEach((vm, i) => {
         const cpu = +vm['CPUs'] || 0;
         const ram = +vm['Memory'] || 0;
         const storage = +vm['Provisioned Storage (GB)'] || 0;
         const os = (vm['OS according to the configuration file'] || '').toLowerCase();
-        const match = fullCatalog.find(sku => Math.abs(sku.cpu - cpu) <= 1 && Math.abs(sku.ram - ram) <= 2);
-        matchedSkus[i] = match || null;
-        const azurePrice = match ? (os.includes('win') ? match.priceWindows : match.priceLinux) : 0;
-        const octopus = os.includes('win') ? octopusFeePerWindowsVM : 0;
-        const privateCloudPrice = (cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + octopus;
-        tbody.innerHTML += `
-          <tr>
-            <td>${vm['VM']}</td>
-            <td>${cpu}</td>
-            <td>${ram}</td>
-            <td>${storage}</td>
-            <td>${os}</td>
-            <td><span style="cursor:pointer; color:blue" onclick="openSkuPopup(${i})" title="${match ? match.name : 'No match'}">${match ? match.name : 'Select SKU'}</span></td>
-            <td>$${azurePrice.toFixed(2)}</td>
-            <td>$${privateCloudPrice.toFixed(2)}</td>
-          </tr>`;
+        const matches = fullCatalog.filter(s => Math.abs(s.cpu - cpu) <= 1 && Math.abs(s.ram - ram) <= 2);
+        const best = matches.sort((a,b) => (Math.abs(a.cpu-cpu)+Math.abs(a.ram-ram)) - (Math.abs(b.cpu-cpu)+Math.abs(b.ram-ram)))[0] || {};
+        matchedSkus[i] = best;
+
+        const azurePrice = os.includes('win') ? best.priceWindows : best.priceLinux;
+        const azureStoragePrice = storage * 0.30;
+        const ataPrice = (cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + (os.includes('win') ? octopusFeePerWindowsVM : 0);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${vm['VM']}</td>
+          <td>${cpu}</td>
+          <td>${ram}</td>
+          <td>${storage}</td>
+          <td>${os}</td>
+          <td><span title="${best.name || 'N/A'}" class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">${best.name || 'Select SKU'}</span></td>
+          <td>$${(azurePrice + azureStoragePrice).toFixed(2)}</td>
+          <td>$${ataPrice.toFixed(2)}</td>
+        `;
+        tbody.appendChild(row);
       });
+
       updateSummary();
+    }
+
+    function updateSummary() {
+      let totalAzure = 0;
+      let ataTotal = 0;
+
+      lastVmData.forEach((vm, idx) => {
+        const cpu = +vm['CPUs'] || 0;
+        const ram = +vm['Memory'] || 0;
+        const storage = +vm['Provisioned Storage (GB)'] || 0;
+        const os = (vm['OS according to the configuration file'] || '').toLowerCase();
+        const sku = matchedSkus[idx];
+        const azurePrice = sku ? (os.includes('win') ? sku.priceWindows : sku.priceLinux) : 0;
+        totalAzure += (azurePrice + storage * 0.30);
+        ataTotal += ((cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + (os.includes('win') ? octopusFeePerWindowsVM : 0));
+      });
+
+      document.getElementById('totalPrice').innerText = `$${totalAzure.toFixed(2)}`;
+      document.getElementById('ataPrice').innerText = `$${ataTotal.toFixed(2)}`;
+      document.getElementById('grandTotal').innerText = `$${(totalAzure + ataTotal).toFixed(2)}`;
     }
 
     function openSkuPopup(idx) {
@@ -188,34 +196,33 @@
       const sorted = [...fullCatalog].sort((a,b) => (Math.abs(a.cpu-cpu)+Math.abs(a.ram-ram)) - (Math.abs(b.cpu-cpu)+Math.abs(b.ram-ram)));
       document.getElementById('skuTableBody').innerHTML = sorted.map((s,i)=>`
         <tr>
-          <td>${s.name}</td><td>${s.cpu}</td><td>${s.ram}</td><td>${s.storage}</td><td>$${s.priceLinux.toFixed(2)}</td>
-          <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(s)})">✔</button></td>
-        </tr>`).join('');
+          <td>${s.name}</td><td>${s.cpu}</td><td>${s.ram}</td><td>${s.storage}</td><td>$${s.priceLinux.toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="selectSku(${i})">✔</button></td>
+        </tr>
+      `).join('');
       new bootstrap.Modal(document.getElementById('skuModal')).show();
     }
 
     function selectSku(idx) {
-      const sku = fullCatalog[idx];
-      matchedSkus[selectedRow] = sku;
-      renderTable(lastVmData);
+      matchedSkus[selectedRow] = fullCatalog[idx];
+      renderVMTable(lastVmData);
       bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
     }
 
-    ['filterName','filterCPU','filterRAM'].forEach(id => {
-      document.getElementById(id).addEventListener('input', () => {
-        const nameV = document.getElementById('filterName').value.toLowerCase();
-        const cpuV = document.getElementById('filterCPU').value;
-        const ramV = document.getElementById('filterRAM').value;
-        const filtered = fullCatalog.filter(s =>
-          (!nameV || s.name.toLowerCase().includes(nameV)) &&
-          (!cpuV || s.cpu.toString().includes(cpuV)) &&
-          (!ramV || s.ram.toString().includes(ramV))
+    ['filterName','filterCPU','filterRAM'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', ()=>{
+        const nameV=document.getElementById('filterName').value.toLowerCase();
+        const cpuV=document.getElementById('filterCPU').value;
+        const ramV=document.getElementById('filterRAM').value;
+        const filtered=fullCatalog.filter(s=>
+          (!nameV||s.name.toLowerCase().includes(nameV))&&
+          (!cpuV||s.cpu.toString().includes(cpuV))&&
+          (!ramV||s.ram.toString().includes(ramV))
         );
-        document.getElementById('skuTableBody').innerHTML = filtered.map(s => `
+        document.getElementById('skuTableBody').innerHTML=filtered.map(s=>`
           <tr>
-            <td>${s.name}</td><td>${s.cpu}</td><td>${s.ram}</td><td>${s.storage}</td><td>$${s.priceLinux.toFixed(2)}</td>
-            <td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(s)})">✔</button></td>
-          </tr>`).join('');
+            <td>${s.name}</td><td>${s.cpu}</td><td>${s.ram}</td><td>${s.storage}</td><td>$${s.priceLinux.toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="selectSku(${fullCatalog.indexOf(s)})">✔</button></td>
+          </tr>
+        `).join('');
       });
     });
   </script>
