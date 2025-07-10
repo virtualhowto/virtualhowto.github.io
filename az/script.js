@@ -201,9 +201,12 @@ function renderVMTable(vmData) {
         <td>${ram}</td>
         <td>${storage}</td>
         <td>${os}</td>
-        <td><span class="text-primary" style="cursor:pointer" onclick="openSkuPopup(${i})">
-  ${matchedSkus[i]?.manual ? '<span class=\"badge bg-warning text-dark\">Manual</span> ' : ''}${matchedSkus[i]?.name || 'Select SKU'}
-</span></td>
+        <td><span class=\"text-primary\" style=\"cursor:pointer\" onclick=\"openSkuPopup(${i})\" title=\"SKU: ${matchedSkus[i]?.name || 'N/A'}
+CPU: ${matchedSkus[i]?.cpu || 'N/A'}
+RAM: ${matchedSkus[i]?.ram || 'N/A'} MB
+Storage: ${matchedSkus[i]?.storage || 'N/A'} MB
+Linux Price: $${matchedSkus[i]?.priceLinux?.toFixed(2) || 'N/A'}
+Windows Price: $${matchedSkus[i]?.priceWindows?.toFixed(2) || 'N/A'}\">${matchedSkus[i]?.manual ? '<span class=\"badge bg-warning text-dark\">Manual</span> ' : ''}${matchedSkus[i]?.name || 'Select SKU'}</span></td>
         <td title="VM Cost: $${azurePrice.toFixed(2)}
 Storage Cost: $${azureStorage.cost.toFixed(2)}
 Storage Tier: ${azureStorage.tier}
@@ -259,4 +262,11 @@ function openSkuPopup(idx) {
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
 
-
+// exportCSV temporarily disabled due to bugs
+// function exportCSV(type) {
+//   let csv = 'VM,CPU,RAM,Storage,OS,SKU,Azure VM Cost,Azure Storage,Storage Tier,Azure Total
+';
+//   ...
+// }
+}
+}
