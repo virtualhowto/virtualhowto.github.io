@@ -39,10 +39,11 @@ function readXlsx(file) {
   document.getElementById('spinner').style.display = 'block';
   const reader = new FileReader();
   reader.onload = e => {
-    const data = new Uint8Array(e.target.result);
-    const wb = XLSX.read(data, { type: 'array' });
-    const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
     try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      console.log('Sheet names:', wb.SheetNames);
+      const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
       const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
       document.getElementById('spinner').style.display = 'none';
       if (!vmData.length) return alert('No data found');
@@ -50,7 +51,8 @@ function readXlsx(file) {
       renderVMTable(vmData);
     } catch (err) {
       document.getElementById('spinner').style.display = 'none';
-      alert('XLSX parsing failed');
+      alert('XLSX parsing failed: ' + err.message);
+      console.error('XLSX parse error:', err);
     }
   };
   reader.readAsArrayBuffer(file);
