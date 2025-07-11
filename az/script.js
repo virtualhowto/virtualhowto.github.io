@@ -35,6 +35,27 @@ fileInput.addEventListener('change', event => {
   }
 });
 
+function readXlsx(file) {
+  document.getElementById('spinner').style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array' });
+    const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
+    try {
+      const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+      document.getElementById('spinner').style.display = 'none';
+      if (!vmData.length) return alert('No data found');
+      lastVmData = vmData;
+      renderVMTable(vmData);
+    } catch (err) {
+      document.getElementById('spinner').style.display = 'none';
+      alert('XLSX parsing failed');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
   const coreCount = Math.max(4, Math.ceil(cpuCount / 2) * 2);
   const unitPrice = ataPricing[type] || 0;
