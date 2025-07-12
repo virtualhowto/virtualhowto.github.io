@@ -24,11 +24,8 @@ fetch('./az_data-export.json')
 
 fetch('./cld-pricing.json')
   .then(res => res.json())
-  .then(data => {
-    ataPricing = data;
-  });
+  .then(data => { ataPricing = data; });
 
-// Handle file input
 const fileInput = document.getElementById('fileInput');
 fileInput.addEventListener('change', event => {
   if (event.target.files.length) {
@@ -43,23 +40,24 @@ document.getElementById('filterRAM').addEventListener('input', filterSKUs);
 function readXlsx(file) {
   document.getElementById('spinner').style.display = 'block';
   const reader = new FileReader();
+
   reader.onload = e => {
     try {
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, { type: 'array' });
-      console.log('Sheet names:', wb.SheetNames);
       const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
       const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
       document.getElementById('spinner').style.display = 'none';
+
       if (!vmData.length) return alert('No data found');
       lastVmData = vmData;
       renderVMTable(vmData);
     } catch (err) {
       document.getElementById('spinner').style.display = 'none';
-      alert('XLSX parsing failed: ' + err.message);
-      console.error('XLSX parse error:', err);
+      alert('XLSX parsing failed');
     }
   };
+
   reader.readAsArrayBuffer(file);
 }
 
@@ -75,7 +73,8 @@ function calculateAzureStorageCost(storageGB) {
       return {
         cost: t.size * t.unitPrice,
         tier: t.tier,
-        disks: 1
+        disks: 1,
+        provisionedSize: t.size
       };
     }
   }
@@ -85,7 +84,8 @@ function calculateAzureStorageCost(storageGB) {
   return {
     cost: disks * base.size * base.unitPrice,
     tier: base.tier,
-    disks: disks
+    disks: disks,
+    provisionedSize: disks * base.size
   };
 }
 
@@ -165,30 +165,6 @@ function selectSkuByName(name) {
   }
 }
 
-function updateSummary() {
-  let azureTotal = 0;
-  document.querySelectorAll('#vmTable tbody tr').forEach(row => {
-    const priceCell = row.children[6];
-    if (priceCell && priceCell.textContent.includes('$')) {
-      azureTotal += parseFloat(priceCell.textContent.replace('$', '')) || 0;
-    }
-  });
-
-  const privateTotal = lastVmData.reduce((sum, vm, i) => {
-    const cpu = +vm['CPUs'] || 0;
-    const ram = +vm['Memory'] || 0;
-    const storage = +vm['Provisioned Storage (GB)'] || 0;
-    const os = (vm['OS according to the configuration file'] || '').toLowerCase();
-    const octopus = os.includes('win') ? octopusFeePerWindowsVM : 0;
-    const sql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
-    return sum + ((cpu * ataPricing.unitCPU) + (ram * ataPricing.unitRAM) + (storage * ataPricing.unitStorage) + octopus + sql);
-  }, 0);
-
-  document.getElementById('totalPrice').innerText = `$${azureTotal.toFixed(2)}`;
-  document.getElementById('ataPrice').innerText = `$${privateTotal.toFixed(2)}`;
-}
-
-// Apply preferred series matching
 function getPreferredSku(matches, cpu, ram) {
   const weighted = matches.map(sku => {
     const preference = preferredSeries.some(prefix => sku.name.startsWith(prefix)) ? -10 : 0;
