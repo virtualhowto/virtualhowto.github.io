@@ -173,6 +173,7 @@ function getPreferredSku(matches, cpu, ram) {
   });
   return weighted.sort((a, b) => a.score - b.score)[0]?.sku || matches[0];
 }
+
 function renderVMTable(vmData) {
   const tbody = document.querySelector('#vmTable tbody');
   tbody.innerHTML = '';
@@ -182,8 +183,8 @@ function renderVMTable(vmData) {
 
   vmData.forEach((vm, index) => {
     const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-    const ram = parseFloat(vm['Memory'] || vm['MemoryMB'] || 0); // MB
-    const storage = parseInt(vm['Provisioned Space'] || vm['Used Space'] || 0); // GB
+    const ram = parseFloat(vm['Memory'] || 0); // MB
+    const storage = parseInt(vm['Provisioned Storage (GB)'] || 0); // GB
     const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
 
     const skuMatch = vm.manualSku || getPreferredSku(
@@ -195,7 +196,7 @@ function renderVMTable(vmData) {
     matchedSkus[index] = skuMatch;
 
     const azureBasePrice = skuMatch ? (os === 'Windows' ? skuMatch.priceWindows : skuMatch.priceLinux) : 0;
-    const storageCost = calculateAzureStorageCost(storage || 127); // default 127GB if missing
+    const storageCost = calculateAzureStorageCost(storage || 127);
     const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
     const azureTotal = azureBasePrice + storageCost.cost + sqlCost + (os === 'Windows' ? octopusFeePerWindowsVM : 0);
 
@@ -242,8 +243,8 @@ function exportCSV(type) {
 
   lastVmData.forEach((vm, index) => {
     const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-    const ram = parseFloat(vm['Memory'] || vm['MemoryMB'] || 0);
-    const storage = parseInt(vm['Provisioned Storage (GB)'] || vm['In Use GiB'] || 0);
+    const ram = parseFloat(vm['Memory'] || 0);
+    const storage = parseInt(vm['Provisioned Storage (GB)'] || 0);
     const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
     const sku = matchedSkus[index];
 
@@ -280,6 +281,7 @@ function exportCSV(type) {
   link.download = `vm-cost-summary-${type}.csv`;
   link.click();
 }
+
 function toggleDarkMode() {
   document.body.classList.toggle('dark-mode');
   document.querySelectorAll('.modal-content').forEach(modal => modal.classList.toggle('dark-mode'));
