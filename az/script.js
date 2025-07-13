@@ -280,3 +280,8 @@ function exportCSV(type) {
   link.download = `vm-cost-summary-${type}.csv`;
   link.click();
 }
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  document.querySelectorAll('.modal-content').forEach(modal => modal.classList.toggle('dark-mode'));
+  document.querySelectorAll('.table').forEach(tbl => tbl.classList.toggle('table-dark'));
+}
