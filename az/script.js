@@ -95,87 +95,17 @@ function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
   return (coreCount / 2) * unitPrice;
 }
 
-function toggleSQLTag(index) {
-  const vm = lastVmData[index];
-  const tagHTML = vm.sqlLicenseType
-    ? `<span class="badge bg-success">${vm.sqlLicenseType} <span onclick="clearSQLTag(${index})" style="cursor:pointer">&times;</span></span>`
-    : `<button class="btn btn-sm btn-outline-primary" onclick="assignSQLTag(${index})">+</button>`;
-  return `<div class="sql-tags">${tagHTML}</div>`;
-}
+function renderVMTable(vmData) {
+  const tbody = document.querySelector('#vmTable tbody');
+  tbody.innerHTML = '';
 
-function assignSQLTag(index) {
-  const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):');
-  if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
-    lastVmData[index].sqlLicensed = true;
-    lastVmData[index].sqlLicenseType = tag;
-    renderVMTable(lastVmData);
-  } else {
-    alert('Invalid tag. Use SQL-Std or SQL-Ent.');
-  }
-}
+  let totalAzure = 0;
+  let totalPrivate = 0;
 
-function clearSQLTag(index) {
-  lastVmData[index].sqlLicensed = false;
-  lastVmData[index].sqlLicenseType = null;
-  renderVMTable(lastVmData);
-}
-
-function openSkuPopup(index) {
-  selectedRow = index;
-  filterSKUs();
-  new bootstrap.Modal(document.getElementById('skuModal')).show();
-}
-
-function filterSKUs() {
-  const name = document.getElementById('filterName').value.toLowerCase();
-  const cpu = document.getElementById('filterCPU').value;
-  const ram = document.getElementById('filterRAM').value;
-
-  const filtered = fullCatalog.filter(sku => {
-    return (
-      (!name || sku.name.toLowerCase().includes(name)) &&
-      (!cpu || sku.cpu.toString().includes(cpu)) &&
-      (!ram || sku.ram.toString().includes(ram))
-    );
-  });
-
-  document.getElementById('skuTableBody').innerHTML = filtered
-    .map(
-      (s, i) => `
-        <tr>
-          <td>${s.name}</td>
-          <td>${s.cpu}</td>
-          <td>${s.ram}</td>
-          <td>${s.storage}</td>
-          <td>$${s.priceLinux.toFixed(2)}</td>
-          <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
-        </tr>
-      `
-    )
-    .join('');
-}
-
-function selectSkuByName(name) {
-  const selectedSku = fullCatalog.find(s => s.name === name);
-  if (selectedSku && selectedRow !== null) {
-    matchedSkus[selectedRow] = selectedSku;
-    lastVmData[selectedRow].manualSku = selectedSku;
-    renderVMTable(lastVmData);
-    bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
-  }
-}
-
-function getPreferredSku(matches, cpu, ram) {
-  const weighted = matches.map(sku => {
-    const preference = preferredSeries.some(prefix => sku.name.startsWith(prefix)) ? -10 : 0;
-    const score = Math.abs(sku.cpu - cpu) + Math.abs(sku.ram - ram) + preference;
-    return { sku, score };
-  });
-  return weighted.sort((a, b) => a.score - b.score)[0]?.sku || matches[0];
-}
-
-function toggleDarkMode() {
-  document.body.classList.toggle('dark-mode');
-  document.querySelectorAll('.modal-content').forEach(modal => modal.classList.toggle('dark-mode'));
-  document.querySelectorAll('.table').forEach(tbl => tbl.classList.toggle('table-dark'));
-}
+  vmData.forEach((vm, index) => {
+    const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+    const rawRam = parseFloat(vm['Memory'] || 0);
+    const ram = rawRam > 64 ? rawRam : rawRam * 1024;
+    if (rawRam > 0 && rawRam <= 64) {
+      console.warn(`RAM for VM '${vm['Display Name'] || vm['VM'] || 'Unnamed'}' appears to be in GB. Converting to MB.`);
+    }
