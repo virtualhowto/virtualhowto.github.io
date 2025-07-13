@@ -96,8 +96,8 @@ function renderVMTable(vmData) {
 
   vmData.forEach((vm, index) => {
     const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-    const ram = parseFloat(vm['Memory'] || vm['MemoryMB'] || 0); // GB
-    const storage = parseInt(vm['Provisioned Storage (GB)'] || 0); // GB
+    const ram = parseFloat(vm['Memory'] || vm['MemoryMB'] || 0);
+    const storage = parseInt(vm['Provisioned Storage (GB)'] || 0);
     const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
 
     const skuMatch = vm.manualSku || getPreferredSku(
