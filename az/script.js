@@ -183,7 +183,7 @@ function renderVMTable(vmData) {
 
   vmData.forEach((vm, index) => {
     const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-    const ram = parseFloat(vm['Memory'] || 0); // MB
+    const ram = parseFloat(vm['Memory'] || 0); // GB
     const storage = parseInt(vm['Provisioned Storage (GB)'] || 0); // GB
     const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
 
@@ -202,7 +202,7 @@ function renderVMTable(vmData) {
 
     const privateBasePrice = ataPricing?.base || 0;
     const privateCpu = (cpu * (ataPricing?.cpu || 0));
-    const privateRam = ((ram / 1024) * (ataPricing?.ram || 0));
+    const privateRam = ((ram * (ataPricing?.ram || 0));
     const privateStorage = (storage * (ataPricing?.storage || 0));
     const privateSql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
     const privateTotal = privateBasePrice + privateCpu + privateRam + privateStorage + privateSql;
@@ -216,7 +216,7 @@ function renderVMTable(vmData) {
       <tr class="${highlightClass}">
         <td>${vm['Display Name'] || vm['VM'] || 'Unnamed'}</td>
         <td>${cpu}</td>
-        <td>${(ram / 1024).toFixed(1)} GB</td>
+        <td>${(ram).toFixed(1)} GB</td>
         <td>${storage} GB (${storageCost.tier})</td>
         <td>${os}</td>
         <td>
@@ -255,7 +255,7 @@ function exportCSV(type) {
 
     const privateBasePrice = ataPricing?.base || 0;
     const privateCpu = (cpu * (ataPricing?.cpu || 0));
-    const privateRam = ((ram / 1024) * (ataPricing?.ram || 0));
+    const privateRam = ((ram * (ataPricing?.ram || 0));
     const privateStorage = (storage * (ataPricing?.storage || 0));
     const privateSql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
     const privateTotal = privateBasePrice + privateCpu + privateRam + privateStorage + privateSql;
@@ -263,7 +263,7 @@ function exportCSV(type) {
     rows.push([
       vm['Display Name'] || vm['VM'] || 'Unnamed',
       cpu,
-      (ram / 1024).toFixed(1),
+      (ram).toFixed(1),
       storage,
       os,
       sku ? sku.name : '',
