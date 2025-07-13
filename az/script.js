@@ -1,6 +1,7 @@
-// RVTools Matcher - JavaScript Logic
+// RVTools Matcher - Improved JavaScript Logic
 
-let fullCatalog = [];
+// Global state
+const fullCatalog = [];
 let ataPricing = {};
 let selectedRow = null;
 let lastVmData = [];
@@ -8,28 +9,58 @@ let matchedSkus = [];
 const octopusFeePerWindowsVM = 20;
 const preferredSeries = ['Dsv5', 'Dasv5', 'Esv5'];
 
+// Utility: Debounce function to limit rapid event triggers
+function debounce(fn, ms) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), ms);
+  };
+}
+
+// Utility: Escape CSV values to prevent injection
+function escapeCsvValue(value) {
+  if (typeof value !== 'string') return value;
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
 // Load Azure and Private pricing catalogs
 fetch('./az_data-export.json')
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure catalog`);
+    return res.json();
+  })
   .then(data => {
-    fullCatalog = data.map(item => ({
-      name: item.name,
-      cpu: item.numberOfCores,
-      ram: item.memoryInMB,
-      storage: item.osDiskSizeInMB || 0,
+    fullCatalog.push(...data.map(item => ({
+      name: item.name || '',
+      cpu: parseInt(item.numberOfCores) || 0,
+      ram: parseInt(item.memoryInMB) || 0,
+      storage: parseInt(item.osDiskSizeInMB) || 0,
       priceLinux: parseFloat(item.linuxPrice) || 0,
       priceWindows: parseFloat(item.windowsPrice) || 0
-    }));
+    })));
+  })
+  .catch(err => {
+    console.error('Azure catalog load error:', err);
+    alert(`Failed to load Azure catalog: ${err.message}`);
   });
 
 fetch('./cld-pricing.json')
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load private cloud pricing`);
+    return res.json();
+  })
   .then(data => {
     ataPricing = data;
     populatePricingEditor();
     updateSummary();
+  })
+  .catch(err => {
+    console.error('Private cloud pricing load error:', err);
+    alert(`Failed to load private cloud pricing: ${err.message}`);
   });
 
+// Initialize event listeners
 window.onload = () => {
   const fileInput = document.getElementById('fileInput');
   if (fileInput) {
@@ -40,9 +71,12 @@ window.onload = () => {
     });
   }
 
-  document.getElementById('filterName')?.addEventListener('input', filterSKUs);
-  document.getElementById('filterCPU')?.addEventListener('input', filterSKUs);
-  document.getElementById('filterRAM')?.addEventListener('input', filterSKUs);
+  // Debounced SKU filtering
+  document.getElementById('filterName')?.addEventListener('input', debounce(filterSKUs, 300));
+  document.getElementById('filterCPU')?.addEventListener('input', debounce(filterSKUs, 300));
+  document.getElementById('filterRAM')?.addEventListener('input', debounce(filterSKUs, 300));
+
+  // Dark mode toggle
   document.getElementById('darkModeToggle')?.addEventListener('click', () => {
     document.body.classList.toggle('dark');
     localStorage.setItem('darkMode', document.body.classList.contains('dark'));
@@ -52,19 +86,20 @@ window.onload = () => {
     document.body.classList.add('dark');
   }
 
+  // CSV download
   document.getElementById('downloadCsv')?.addEventListener('click', () => {
     const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Azure Cost', 'Private Cloud Cost', 'SQL']];
     lastVmData.forEach((vm, i) => {
       rows.push([
-        vm['Display Name'] || vm['VM'] || 'Unnamed',
+        escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
         vm['Num CPU'] || vm['CPUs'] || '',
         vm['Memory'] || '',
         vm['Provisioned Storage (GB)'] || '',
         (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
-        matchedSkus[i]?.name || 'No Match',
+        escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
         `$${calculateAzureVMPrice(i).toFixed(2)}`,
         `$${calculatePrivateCloudPrice(i).toFixed(2)}`,
-        vm.sqlLicenseType || ''
+        escapeCsvValue(vm.sqlLicenseType || '')
       ]);
     });
     const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
@@ -75,10 +110,29 @@ window.onload = () => {
     link.click();
     document.body.removeChild(link);
   });
+
+  // Batch SQL license assignment
+  document.getElementById('batchSqlAssign')?.addEventListener('click', () => {
+    const tag = prompt('Enter SQL License Tag for selected VMs (SQL-Std or SQL-Ent):');
+    if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
+      lastVmData.forEach((vm, i) => {
+        if (vm.selected) {
+          vm.sqlLicensed = true;
+          vm.sqlLicenseType = tag;
+        }
+      });
+      renderVMTable(lastVmData);
+      updateSummary();
+    } else {
+      alert('Invalid tag. Use SQL-Std or SQL-Ent.');
+    }
+  });
 };
 
+// Read and parse XLSX file
 function readXlsx(file) {
-  document.getElementById('spinner').style.display = 'block';
+  const spinner = document.getElementById('spinner');
+  spinner.style.display = 'block';
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -86,18 +140,27 @@ function readXlsx(file) {
       const wb = XLSX.read(data, { type: 'array' });
       const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
       const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
-      document.getElementById('spinner').style.display = 'none';
-      if (!vmData.length) return alert('No data found');
-      lastVmData = vmData;
-      renderVMTable(vmData);
+      spinner.style.display = 'none';
+      if (!vmData.length) {
+        alert('No data found in the uploaded file');
+        return;
+      }
+      lastVmData = vmData.map(vm => ({ ...vm, selected: false })); // Add selected flag for batch operations
+      renderVMTable(lastVmData);
+      updateSummary();
     } catch (err) {
-      document.getElementById('spinner').style.display = 'none';
-      alert('XLSX parsing failed: ' + err.message);
+      spinner.style.display = 'none';
+      alert(`XLSX parsing failed: ${err.message}. Please ensure the file is a valid RVTools export.`);
     }
+  };
+  reader.onerror = () => {
+    spinner.style.display = 'none';
+    alert('Failed to read the file. Please try again.');
   };
   reader.readAsArrayBuffer(file);
 }
 
+// Calculate Azure VM price
 function calculateAzureVMPrice(index) {
   const sku = matchedSkus[index] || lastVmData[index].manualSku;
   const os = (lastVmData[index]['OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
@@ -106,17 +169,26 @@ function calculateAzureVMPrice(index) {
   return (os === 'Windows' ? sku.priceWindows : sku.priceLinux) + sql;
 }
 
+// Calculate private cloud price
 function calculatePrivateCloudPrice(index) {
   const vm = lastVmData[index];
-  const cpu = +vm['CPUs'] || 0;
-  const ram = +vm['Memory'] || 0;
-  const storage = +vm['Provisioned Storage (GB)'] || 0;
+  const cpu = parseInt(vm['CPUs']) || 0;
+  const ram = parseFloat(vm['Memory']) || 0;
+  const storage = parseInt(vm['Provisioned Storage (GB)']) || 0;
   const os = (vm['OS'] || '').toLowerCase();
   const octopus = os.includes('win') ? octopusFeePerWindowsVM : 0;
   const sql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
-  return (cpu * ataPricing.cpu) + (ram * ataPricing.ram) + (storage * ataPricing.storage) + (ataPricing.base || 0) + octopus + sql;
+  return (cpu * (ataPricing.cpu || 0)) + (ram * (ataPricing.ram || 0)) + (storage * (ataPricing.storage || 0)) + (ataPricing.base || 0) + octopus + sql;
 }
 
+// Calculate SQL license cost
+function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
+  const coreCount = Math.max(4, Math.ceil(parseInt(cpuCount) / 2) * 2);
+  const unitPrice = ataPricing[type] || 0;
+  return (coreCount / 2) * unitPrice;
+}
+
+// Update total cost summary
 function updateSummary() {
   const azureTotal = lastVmData.reduce((sum, _, i) => sum + calculateAzureVMPrice(i), 0);
   const privateTotal = lastVmData.reduce((sum, _, i) => sum + calculatePrivateCloudPrice(i), 0);
@@ -124,6 +196,7 @@ function updateSummary() {
   document.getElementById('ataPrice').innerText = `$${privateTotal.toFixed(2)}`;
 }
 
+// Populate pricing editor with input validation
 function populatePricingEditor() {
   const editor = document.getElementById('pricingEditor');
   if (!editor) return;
@@ -131,17 +204,36 @@ function populatePricingEditor() {
   const entries = ['base', 'cpu', 'ram', 'storage', 'SQL-Std', 'SQL-Ent'];
   entries.forEach(key => {
     const div = document.createElement('div');
-    div.innerHTML = `
-      <label>${key}: </label>
-      <input type="number" step="0.01" value="${ataPricing[key] || 0}" onchange="ataPricing['${key}'] = parseFloat(this.value); renderVMTable(lastVmData); updateSummary();">
-    `;
+    const label = document.createElement('label');
+    label.textContent = `${key}: `;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.01';
+    input.min = '0';
+    input.value = ataPricing[key] || 0;
+    input.addEventListener('change', () => {
+      const value = parseFloat(input.value);
+      if (isNaN(value) || value < 0) {
+        alert(`Invalid value for ${key}. Please enter a non-negative number.`);
+        input.value = ataPricing[key] || 0;
+        return;
+      }
+      ataPricing[key] = value;
+      renderVMTable(lastVmData);
+      updateSummary();
+    });
+    div.appendChild(label);
+    div.appendChild(input);
     editor.appendChild(div);
   });
 }
 
+// Render VM table with DOM APIs
 function renderVMTable(vmData) {
+  if (!vmData || !vmData.length) return;
   const tbody = document.querySelector('#vmTable tbody');
-  tbody.innerHTML = '';
+  if (!tbody) return;
+  tbody.innerHTML = ''; // Clear existing content
   vmData.forEach((vm, index) => {
     const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
     const ram = parseFloat(vm['Memory'] || 0);
@@ -155,49 +247,113 @@ function renderVMTable(vmData) {
     matchedSkus[index] = skuMatch;
     const azurePrice = calculateAzureVMPrice(index).toFixed(2);
     const privatePrice = calculatePrivateCloudPrice(index).toFixed(2);
-    const sqlHTML = vm.sqlLicenseType
-      ? `<span class="badge bg-success">${vm.sqlLicenseType} <span onclick="clearSQLTag(${index})" style="cursor:pointer">&times;</span></span>`
-      : `<button class="btn btn-sm btn-outline-primary" onclick="assignSQLTag(${index})">+</button>`;
-    const skuName = skuMatch ? skuMatch.name : '<em>No Match</em>';
-    const skuFix = skuMatch ? '' : `<button class="btn btn-sm btn-warning" onclick="openSkuPopup(${index})">Fix</button>`;
-    const tooltip = `Azure: $${azurePrice}\nPrivate: $${privatePrice}`;
-    tbody.innerHTML += `
-      <tr title="${tooltip}">
-        <td>${vm['Display Name'] || vm['VM'] || 'Unnamed'}</td>
-        <td>${cpu}</td>
-        <td>${ram.toFixed(1)} GB</td>
-        <td>${storage} GB</td>
-        <td>${os}</td>
-        <td>${skuName} ${skuFix}</td>
-        <td>$${azurePrice}</td>
-        <td>$${privatePrice}</td>
-        <td>${sqlHTML}</td>
-      </tr>
-    `;
+
+    const tr = document.createElement('tr');
+    tr.title = `Azure: $${azurePrice}\nPrivate: $${privatePrice}`;
+    if (!skuMatch) tr.classList.add('table-danger'); // Highlight unmatched SKUs
+
+    // VM Name
+    const tdName = document.createElement('td');
+    tdName.textContent = vm['Display Name'] || vm['VM'] || 'Unnamed';
+    tr.appendChild(tdName);
+
+    // CPU
+    const tdCpu = document.createElement('td');
+    tdCpu.textContent = cpu;
+    tr.appendChild(tdCpu);
+
+    // RAM
+    const tdRam = document.createElement('td');
+    tdRam.textContent = `${ram.toFixed(1)} GB`;
+    tr.appendChild(tdRam);
+
+    // Storage
+    const tdStorage = document.createElement('td');
+    tdStorage.textContent = `${storage} GB`;
+    tr.appendChild(tdStorage);
+
+    // OS
+    const tdOs = document.createElement('td');
+    tdOs.textContent = os;
+    tr.appendChild(tdOs);
+
+    // SKU
+    const tdSku = document.createElement('td');
+    if (skuMatch) {
+      tdSku.textContent = skuMatch.name;
+    } else {
+      const em = document.createElement('em');
+      em.textContent = 'No Match';
+      tdSku.appendChild(em);
+      const fixBtn = document.createElement('button');
+      fixBtn.className = 'btn btn-sm btn-warning ms-2';
+      fixBtn.textContent = 'Fix';
+      fixBtn.onclick = () => openSkuPopup(index);
+      tdSku.appendChild(fixBtn);
+    }
+    tr.appendChild(tdSku);
+
+    // Azure Price
+    const tdAzure = document.createElement('td');
+    tdAzure.textContent = `$${azurePrice}`;
+    tr.appendChild(tdAzure);
+
+    // Private Price
+    const tdPrivate = document.createElement('td');
+    tdPrivate.textContent = `$${privatePrice}`;
+    tr.appendChild(tdPrivate);
+
+    // SQL License
+    const tdSql = document.createElement('td');
+    if (vm.sqlLicenseType) {
+      const span = document.createElement('span');
+      span.className = 'badge bg-success';
+      span.textContent = vm.sqlLicenseType;
+      const close = document.createElement('span');
+      close.style.cursor = 'pointer';
+      close.textContent = ' ×';
+      close.onclick = () => clearSQLTag(index);
+      span.appendChild(close);
+      tdSql.appendChild(span);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-sm btn-outline-primary';
+      btn.textContent = '+';
+      btn.onclick = () => assignSQLTag(index);
+      tdSql.appendChild(btn);
+    }
+    tr.appendChild(tdSql);
+
+    tbody.appendChild(tr);
   });
 }
 
+// Assign SQL license tag
 function assignSQLTag(index) {
-  const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):');
+  const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):')?.trim();
   if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
     lastVmData[index].sqlLicensed = true;
     lastVmData[index].sqlLicenseType = tag;
     renderVMTable(lastVmData);
+    updateSummary();
   } else {
     alert('Invalid tag. Use SQL-Std or SQL-Ent.');
   }
 }
 
+// Clear SQL license tag
 function clearSQLTag(index) {
   lastVmData[index].sqlLicensed = false;
   lastVmData[index].sqlLicenseType = null;
   renderVMTable(lastVmData);
+  updateSummary();
 }
 
+// Filter SKUs for modal
 function filterSKUs() {
-  const name = document.getElementById('filterName')?.value.toLowerCase();
-  const cpu = document.getElementById('filterCPU')?.value;
-  const ram = document.getElementById('filterRAM')?.value;
+  const name = document.getElementById('filterName')?.value.toLowerCase() || '';
+  const cpu = document.getElementById('filterCPU')?.value || '';
+  const ram = document.getElementById('filterRAM')?.value || '';
   const filtered = fullCatalog.filter(sku => {
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
@@ -205,45 +361,51 @@ function filterSKUs() {
       (!ram || sku.ram.toString().includes(ram))
     );
   });
-  document.getElementById('skuTableBody').innerHTML = filtered.map(s => `
-    <tr>
+  const tbody = document.getElementById('skuTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  filtered.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
       <td>${s.name}</td>
       <td>${s.cpu}</td>
       <td>${(s.ram / 1024).toFixed(1)} GB</td>
       <td>${(s.storage / 1024).toFixed(1)} GB</td>
       <td>$${s.priceLinux.toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
-    </tr>
-  `).join('');
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
+// Open SKU selection modal
 function openSkuPopup(index) {
   selectedRow = index;
   filterSKUs();
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
 
+// Select SKU manually
 function selectSkuByName(name) {
   const selectedSku = fullCatalog.find(s => s.name === name);
   if (selectedSku && selectedRow !== null) {
     matchedSkus[selectedRow] = selectedSku;
     lastVmData[selectedRow].manualSku = selectedSku;
     renderVMTable(lastVmData);
+    updateSummary();
     bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
   }
 }
 
-function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
-  const coreCount = Math.max(4, Math.ceil(cpuCount / 2) * 2);
-  const unitPrice = ataPricing[type] || 0;
-  return (coreCount / 2) * unitPrice;
-}
-
+// Get preferred SKU with improved scoring
 function getPreferredSku(matches, cpu, ram) {
+  if (!matches.length) return null;
   const weighted = matches.map(sku => {
     const preference = preferredSeries.some(prefix => sku.name.startsWith(prefix)) ? -10 : 0;
-    const score = Math.abs(sku.cpu - cpu) + Math.abs(sku.ram - ram) + preference;
-    return { sku, score };
+    const cpuDiff = Math.abs(sku.cpu - cpu) * 0.4; // Lower weight for CPU
+    const ramDiff = Math.abs(sku.ram - ram) * 0.6; // Higher weight for RAM
+    const costPenalty = (sku.priceLinux + sku.priceWindows) / 2 * 0.01; // Consider cost in tiebreakers
+    return { sku, score: cpuDiff + ramDiff + preference + costPenalty };
   });
-  return weighted.sort((a, b) => a.score - b.score)[0]?.sku || matches[0];
+  return weighted.sort((a, b) => a.score - b.score)[0]?.sku || null;
 }
