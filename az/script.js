@@ -160,8 +160,9 @@ function renderVMTable(vmData) {
       : `<button class="btn btn-sm btn-outline-primary" onclick="assignSQLTag(${index})">+</button>`;
     const skuName = skuMatch ? skuMatch.name : '<em>No Match</em>';
     const skuFix = skuMatch ? '' : `<button class="btn btn-sm btn-warning" onclick="openSkuPopup(${index})">Fix</button>`;
+    const tooltip = `Azure: $${azurePrice}\nPrivate: $${privatePrice}`;
     tbody.innerHTML += `
-      <tr>
+      <tr title="${tooltip}">
         <td>${vm['Display Name'] || vm['VM'] || 'Unnamed'}</td>
         <td>${cpu}</td>
         <td>${ram.toFixed(1)} GB</td>
