@@ -59,7 +59,6 @@ function previewSheetOptions(file) {
       document.getElementById('sheetSelect').innerHTML = sheetSelectHtml;
       document.getElementById('sheetPickerContainer').style.display = 'block';
 
-      // Store workbook in memory for later
       window._pendingWorkbook = wb;
       document.getElementById('spinner').style.display = 'none';
 
@@ -87,46 +86,55 @@ function loadSelectedSheet() {
   document.getElementById('sheetPickerContainer').style.display = 'none';
 }
 
-function exportSQLSummary() {
-  let totalSQLCost = 0;
-  const rows = [['VM', 'CPU', 'SQL Type', 'Cost']];
+function calculateAzureStorageCost(storageGB) {
+  const tiers = [
+    { tier: 'P10', size: 128, unitPrice: 0.30 },
+    { tier: 'P20', size: 512, unitPrice: 0.30 },
+    { tier: 'P30', size: 1024, unitPrice: 0.30 }
+  ];
 
-  lastVmData.forEach(vm => {
-    if (vm.sqlLicensed) {
-      const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-      const cost = calculateSqlLicenseCost(cpu, vm.sqlLicenseType);
-      totalSQLCost += cost;
-      rows.push([
-        vm['Display Name'] || vm['VM'] || 'Unnamed',
-        cpu,
-        vm.sqlLicenseType,
-        `$${cost.toFixed(2)}`
-      ]);
+  for (let t of tiers) {
+    if (storageGB <= t.size) {
+      return {
+        cost: t.size * t.unitPrice,
+        tier: t.tier,
+        disks: 1,
+        provisionedSize: t.size
+      };
     }
-  });
+  }
 
-  rows.push(['Total', '', '', `$${totalSQLCost.toFixed(2)}`]);
-
-  const csvContent = rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `sql-license-summary.csv`;
-  link.click();
-}
-
-function showCostSummary(period = 'monthly') {
-  const factor = period === 'yearly' ? 12 : 1;
-  const totalAzure = parseFloat(document.getElementById('totalPrice').innerText.replace(/[^\d.]/g, '')) * factor;
-  const totalPrivate = parseFloat(document.getElementById('ataPrice').innerText.replace(/[^\d.]/g, '')) * factor;
-
-  alert(`${period.toUpperCase()} COST SUMMARY:\nAzure: $${totalAzure.toFixed(2)}\nPrivate Cloud: $${totalPrivate.toFixed(2)}`);
+  const base = tiers[tiers.length - 1];
+  const disks = Math.ceil(storageGB / base.size);
+  return {
+    cost: disks * base.size * base.unitPrice,
+    tier: base.tier,
+    disks: disks,
+    provisionedSize: disks * base.size
+  };
 }
 
 function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
   const coreCount = Math.max(4, Math.ceil(cpuCount / 2) * 2);
   const unitPrice = ataPricing[type] || 0;
   return (coreCount / 2) * unitPrice;
+}
+
+function assignSQLTag(index) {
+  const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):');
+  if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
+    lastVmData[index].sqlLicensed = true;
+    lastVmData[index].sqlLicenseType = tag;
+    renderVMTable(lastVmData);
+  } else {
+    alert('Invalid tag. Use SQL-Std or SQL-Ent.');
+  }
+}
+
+function clearSQLTag(index) {
+  lastVmData[index].sqlLicensed = false;
+  lastVmData[index].sqlLicenseType = null;
+  renderVMTable(lastVmData);
 }
 
 function renderVMTable(vmData) {
@@ -138,8 +146,8 @@ function renderVMTable(vmData) {
 
   vmData.forEach((vm, index) => {
     const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-    const ram = parseFloat(vm['Memory'] || 0); // GB
-    const storage = parseInt(vm['Provisioned Storage (GB)'] || 0); // GB
+    const ram = parseFloat(vm['Memory'] || 0);
+    const storage = parseInt(vm['Provisioned Storage (GB)'] || 0);
     const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
 
     const skuMatch = getPreferredSku(
@@ -188,23 +196,6 @@ function renderVMTable(vmData) {
   document.getElementById('ataPrice').innerText = `$${totalPrivate.toFixed(2)}`;
 }
 
-function assignSQLTag(index) {
-  const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):');
-  if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
-    lastVmData[index].sqlLicensed = true;
-    lastVmData[index].sqlLicenseType = tag;
-    renderVMTable(lastVmData);
-  } else {
-    alert('Invalid tag. Use SQL-Std or SQL-Ent.');
-  }
-}
-
-function clearSQLTag(index) {
-  lastVmData[index].sqlLicensed = false;
-  lastVmData[index].sqlLicenseType = null;
-  renderVMTable(lastVmData);
-}
-
 function getPreferredSku(matches, cpu, ram) {
   const weighted = matches.map(sku => {
     const preference = preferredSeries.some(prefix => sku.name.startsWith(prefix)) ? -10 : 0;
@@ -223,13 +214,13 @@ function filterSKUs() {
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
       (!cpu || sku.cpu.toString().includes(cpu)) &&
-      (!ram || sku.ram.toString().includes(ram))
+      (!ram || (sku.ram / 1024).toString().includes(ram))
     );
   });
 
   document.getElementById('skuTableBody').innerHTML = filtered
     .map(
-      (s, i) => `
+      s => `
         <tr>
           <td>${s.name}</td>
           <td>${s.cpu}</td>
@@ -241,4 +232,50 @@ function filterSKUs() {
       `
     )
     .join('');
+}
+
+function selectSkuByName(name) {
+  const selectedSku = fullCatalog.find(s => s.name === name);
+  if (selectedSku && selectedRow !== null) {
+    matchedSkus[selectedRow] = selectedSku;
+    lastVmData[selectedRow].manualSku = selectedSku;
+    renderVMTable(lastVmData);
+    bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+  }
+}
+
+function exportSQLSummary() {
+  let totalSQLCost = 0;
+  const rows = [['VM', 'CPU', 'SQL Type', 'Cost']];
+
+  lastVmData.forEach(vm => {
+    if (vm.sqlLicensed) {
+      const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+      const cost = calculateSqlLicenseCost(cpu, vm.sqlLicenseType);
+      totalSQLCost += cost;
+      rows.push([
+        vm['Display Name'] || vm['VM'] || 'Unnamed',
+        cpu,
+        vm.sqlLicenseType,
+        `$${cost.toFixed(2)}`
+      ]);
+    }
+  });
+
+  rows.push(['Total', '', '', `$${totalSQLCost.toFixed(2)}`]);
+
+  const csvContent = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `sql-license-summary.csv`;
+  link.click();
+}
+
+function showCostSummary(period = 'monthly') {
+  const factor = period === 'yearly' ? 12 : 1;
+  const totalAzure = parseFloat(document.getElementById('totalPrice').innerText.replace(/[^\d.]/g, '')) * factor;
+  const totalPrivate = parseFloat(document.getElementById('ataPrice').innerText.replace(/[^\d.]/g, '')) * factor;
+
+  alert(`${period.toUpperCase()} COST SUMMARY:\nAzure: $${totalAzure.toFixed(2)}\nPrivate Cloud: $${totalPrivate.toFixed(2)}`);
 }
