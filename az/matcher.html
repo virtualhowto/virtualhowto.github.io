@@ -7,6 +7,42 @@
   <title>RVTools Matcher</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
   <style>
+    .dark-mode {
+  background-color: #121212;
+  color: #f1f1f1;
+}
+
+.dark-mode .table,
+.dark-mode .modal-content {
+  background-color: #1e1e1e;
+  color: #eee;
+}
+
+.dark-mode .summary-tile {
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .table thead th:nth-child(3),
+  .table tbody td:nth-child(3),
+  .table thead th:nth-child(4),
+  .table tbody td:nth-child(4),
+  .table thead th:nth-child(5),
+  .table tbody td:nth-child(5) {
+    display: none;
+  }
+
+  .sticky-header h4 {
+    font-size: 1.1rem;
+  }
+
+  .summary-tile {
+    font-size: 0.85rem;
+    min-width: 130px;
+    margin-bottom: 0.5rem;
+  }
+}
+    
     body { padding-top: 5.5rem; }
     .highlight { background-color: #d1e7dd; }
     .no-match { background-color: #f8d7da; }
@@ -56,6 +92,9 @@
         Private Cloud: <strong id="ataPrice">$0.00</strong>
       </span>
     </div>
+    <button class="btn btn-outline-dark btn-sm me-2" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+  🌓
+</button>
   </div>
 
   <div class="container mt-4">
