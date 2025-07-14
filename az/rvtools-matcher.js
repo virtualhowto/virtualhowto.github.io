@@ -10,6 +10,9 @@ let azureVMPricing = [];
 let storageUnit = 'GB';
 let workbook = null;
 
+// USD to AUD conversion factor (optional, adjust as needed)
+const USD_TO_AUD = 1.5;
+
 // Debounce utility
 function debounce(fn, ms) {
   let timeout;
@@ -25,35 +28,35 @@ function escapeCsvValue(value) {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-// Load Azure VM catalog and pricing from JSON
+// Load Azure VM catalog and pricing from cloudprice.net JSON
 async function loadAzureDataFromJson() {
   try {
-    const res = await fetch('./az_data-export.json');
+    const res = await fetch('./cloudprice_azure_vms.json'); // Replace with actual path or URL
     if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure data`);
     const data = await res.json();
-    console.log('Data from az_data-export.json:', data); // Debug
-    const azureData = data.Items || data; // Access Items or root array
+    console.log('Data from cloudprice_azure_vms.json:', data); // Debug
+    const azureData = Array.isArray(data) ? data : data.Items || []; // Handle array or nested Items
     if (!Array.isArray(azureData)) {
       throw new Error(`Expected an array, got ${typeof azureData}`);
     }
     // Map data for fullCatalog
     fullCatalog.length = 0;
     fullCatalog.push(...azureData.map(item => ({
-      name: item.armSkuName || '',
-      cpu: parseInt(item.meterName?.match(/\d+/)?.[0]) || 0,
-      ram: parseInt(item.productName?.match(/\d+/)?.[0]) || 0,
-      storage: 0, // Not provided in JSON, default to 0
-      priceLinux: item.productName?.includes('Windows') ? 0 : parseFloat(item.retailPrice) * 730,
-      priceWindows: item.productName?.includes('Windows') ? parseFloat(item.retailPrice) * 730 : 0
+      name: item.sku || '',
+      cpu: parseInt(item.vCPUs) || 0,
+      ram: parseFloat(item.memoryGiB) * 1024 || 0, // Convert GiB to MiB
+      storage: 0, // Not provided in JSON
+      priceLinux: parseFloat(item.linuxPricePerHour) * 730 * USD_TO_AUD || 0, // Hourly to monthly, USD to AUD
+      priceWindows: parseFloat(item.windowsPricePerHour) * 730 * USD_TO_AUD || 0 // Hourly to monthly, USD to AUD
     })));
     // Map data for azureVMPricing
     azureVMPricing = azureData.map(item => ({
-      name: item.armSkuName || '',
-      cpu: parseInt(item.meterName?.match(/\d+/)?.[0]) || 0,
-      ram: parseInt(item.productName?.match(/\d+/)?.[0]) || 0,
-      storage: 0, // Not provided in JSON, default to 0
-      priceLinux: item.productName?.includes('Windows') ? 0 : parseFloat(item.retailPrice) * 730,
-      priceWindows: item.productName?.includes('Windows') ? parseFloat(item.retailPrice) * 730 : 0
+      name: item.sku || '',
+      cpu: parseInt(item.vCPUs) || 0,
+      ram: parseFloat(item.memoryGiB) * 1024 || 0, // Convert GiB to MiB
+      storage: 0, // Not provided in JSON
+      priceLinux: parseFloat(item.linuxPricePerHour) * 730 * USD_TO_AUD || 0,
+      priceWindows: parseFloat(item.windowsPricePerHour) * 730 * USD_TO_AUD || 0
     }));
     // Merge specs from catalog (retained for compatibility)
     fullCatalog.forEach(catalogItem => {
@@ -80,7 +83,7 @@ async function loadAzureStoragePricingFromJson() {
     const data = await response.json();
     azureStoragePricing = data.Items.map(item => ({
       skuName: item.skuName,
-      retailPrice: parseFloat(item.retailPrice),
+      retailPrice: parseFloat(item.retailPrice) * USD_TO_AUD, // Convert to AUD if needed
       unitOfMeasure: item.unitOfMeasure,
       diskSizeGB: parseInt(item.skuName?.match(/\d+/)?.[0]) || 0,
       diskType: item.productName?.includes('Premium SSD') ? 'Premium SSD' : 'Standard SSD'
@@ -328,7 +331,7 @@ function calculateAzureStorageCost(storage, skuStorageMB, diskType = 'Standard S
     .sort((a, b) => a.diskSizeGB - b.diskSizeGB)[0];
 
   if (!disk) {
-    return diskType === 'Standard SSD' ? additionalStorageGiB * defaultAzureStoragePricePerGB : 0;
+    return diskType === 'Standard SSD' ? additionalStorageGiB * defaultAzureStoragePricePerGB * USD_TO_AUD : 0;
   }
   return disk.retailPrice;
 }
@@ -414,7 +417,7 @@ function filterSKUs() {
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
       (!cpu || sku.cpu.toString().includes(cpu)) &&
-      (!ram || sku.ram.toString().includes(ram))
+      (!ram || (sku.ram / 1024).toString().includes(ram))
     );
   });
   const tbody = document.getElementById('skuTableBody');
