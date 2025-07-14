@@ -36,28 +36,26 @@ async function loadAzureDataFromJson() {
     if (!Array.isArray(azureData)) {
       throw new Error(`Expected an array, got ${typeof azureData}`);
     }
-    // Map data for both fullCatalog and azureVMPricing
-    const mappedData = azureData.map(item => ({
-      name: item.name || '',
-      cpu: parseInt(item.numberOfCores) || 0,
-      ram: parseInt(item.memoryInMB) || 0,
-      storage: parseInt(item.osDiskSizeInMB) || 0,
-      priceLinux: parseFloat(item.linuxPrice) || 0,
-      priceWindows: parseFloat(item.windowsPrice) || 0
-    }));
-    // Populate fullCatalog
+    // Map data for fullCatalog
     fullCatalog.length = 0;
-    fullCatalog.push(...mappedData);
-    // Populate azureVMPricing
-    azureVMPricing = mappedData.map(item => ({
-      name: item.name,
-      cpu: item.cpu,
-      ram: item.ram,
-      storage: item.storage,
-      priceLinux: item.priceLinux, // Adjust if hourly: item.priceLinux * 730
-      priceWindows: item.priceWindows // Adjust if hourly: item.priceWindows * 730
+    fullCatalog.push(...azureData.map(item => ({
+      name: item.armSkuName || '',
+      cpu: parseInt(item.meterName?.match(/\d+/)?.[0]) || 0,
+      ram: parseInt(item.productName?.match(/\d+/)?.[0]) || 0,
+      storage: 0, // Not provided in JSON, default to 0
+      priceLinux: item.productName?.includes('Windows') ? 0 : parseFloat(item.retailPrice) * 730,
+      priceWindows: item.productName?.includes('Windows') ? parseFloat(item.retailPrice) * 730 : 0
+    })));
+    // Map data for azureVMPricing
+    azureVMPricing = azureData.map(item => ({
+      name: item.armSkuName || '',
+      cpu: parseInt(item.meterName?.match(/\d+/)?.[0]) || 0,
+      ram: parseInt(item.productName?.match(/\d+/)?.[0]) || 0,
+      storage: 0, // Not provided in JSON, default to 0
+      priceLinux: item.productName?.includes('Windows') ? 0 : parseFloat(item.retailPrice) * 730,
+      priceWindows: item.productName?.includes('Windows') ? parseFloat(item.retailPrice) * 730 : 0
     }));
-    // Optional merge (retained for compatibility)
+    // Merge specs from catalog (retained for compatibility)
     fullCatalog.forEach(catalogItem => {
       const apiItem = azureVMPricing.find(api => api.name === catalogItem.name);
       if (apiItem) {
@@ -338,14 +336,13 @@ function calculateAzureStorageCost(storage, skuStorageMB, diskType = 'Standard S
 function calculateAzureVMPrice(index) {
   const vm = lastVmData[index];
   const sku = matchedSkus[index] || vm.manualSku;
-  const os = (vm['OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
   const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
   const diskType = vm.diskType || 'Standard SSD';
   if (!sku) return { total: 0, base: 0, storage: 0, sql: 0 };
 
   let basePrice = 0;
   const apiSku = azureVMPricing.find(s => s.name === sku.name);
-  basePrice = apiSku ? (os === 'Windows' ? apiSku.priceWindows : apiSku.priceLinux) : 0;
+  basePrice = apiSku ? (sku.priceWindows > 0 ? apiSku.priceWindows : apiSku.priceLinux) : 0;
 
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['CPUs'], vm.sqlLicenseType) : 0;
   const storageCost = calculateAzureStorageCost(storage, sku.storage, diskType);
@@ -467,7 +464,7 @@ function assignSQLTag(index) {
   if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
     lastVmData[index].sqlLicensed = true;
     lastVmData[index].sqlLicenseType = tag;
-    renderVMVMTable(lastVmData);
+    renderVMTable(lastVmData);
     updateSummary();
   } else {
     alert('Invalid tag. Use SQL-Std or SQL-Ent.');
