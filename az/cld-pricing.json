@@ -1,7 +1,7 @@
 {
-  "unitCPU": 13.58,
-  "unitRAM": 33.18,
-  "unitStorage": 0.24,
+  "CPU": 13.58,
+  "RAM": 33.18,
+  "Storage": 0.24,
   "octopus": 5.00,
   "SQL-Std": 390.07,
   "SQL-Ent": 1174.91
