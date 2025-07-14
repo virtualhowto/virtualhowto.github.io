@@ -8,6 +8,7 @@ const defaultAzureStoragePricePerGB = 0.3;
 let azureStoragePricing = [];
 let azureVMPricing = [];
 let storageUnit = 'GB';
+let workbook = null;
 
 // Debounce utility
 function debounce(fn, ms) {
@@ -138,42 +139,13 @@ window.onload = async () => {
   document.getElementById('filterCPU')?.addEventListener('input', debounce(filterSKUs, 300));
   document.getElementById('filterRAM')?.addEventListener('input', debounce(filterSKUs, 300));
 
-  document.getElementById('darkModeToggle')?.addEventListener('click', () => {
-    document.body.classList.toggle('dark');
-    localStorage.setItem('darkMode', document.body.classList.contains('dark'));
-  });
+  document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
 
   if (localStorage.getItem('darkMode') === 'true') {
-    document.body.classList.add('dark');
+    document.body.classList.add('dark-mode');
   }
 
-  document.getElementById('downloadCsv')?.addEventListener('click', () => {
-    const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type', 'Azure Cost (A$)', 'Azure VM Cost (A$)', 'Azure Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
-    lastVmData.forEach((vm, i) => {
-      const azureCostBreakdown = calculateAzureVMPrice(i);
-      rows.push([
-        escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
-        vm['Num CPU'] || vm['CPUs'] || '',
-        vm['Memory'] || '',
-        `${vm['Provisioned Storage (GB)'] || ''} ${storageUnit}`,
-        (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
-        escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
-        vm.diskType || 'Standard SSD',
-        `A$${azureCostBreakdown.total.toFixed(2)}`,
-        `A$${azureCostBreakdown.base.toFixed(2)}`,
-        `A$${azureCostBreakdown.storage.toFixed(2)}`,
-        `A$${calculatePrivateCloudPrice(i).toFixed(2)}`,
-        escapeCsvValue(vm.sqlLicenseType || '')
-      ]);
-    });
-    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
-    const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', 'vm_cost_summary.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  });
+  document.getElementById('downloadCsv')?.addEventListener('click', downloadCsv);
 
   document.getElementById('batchSqlAssign')?.addEventListener('click', () => {
     const tag = prompt('Enter SQL License Tag for selected VMs (SQL-Std or SQL-Ent):');
@@ -199,6 +171,41 @@ window.onload = async () => {
   });
 };
 
+// Toggle dark mode
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+}
+
+// Download CSV
+function downloadCsv() {
+  const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type', 'Azure Cost (A$)', 'Azure VM Cost (A$)', 'Azure Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
+  lastVmData.forEach((vm, i) => {
+    const azureCostBreakdown = calculateAzureVMPrice(i);
+    rows.push([
+      escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
+      vm['Num CPU'] || vm['CPUs'] || '',
+      vm['Memory'] || '',
+      `${vm['Provisioned Storage (GB)'] || ''} ${storageUnit}`,
+      (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
+      escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
+      vm.diskType || 'Standard SSD',
+      `A$${azureCostBreakdown.total.toFixed(2)}`,
+      `A$${azureCostBreakdown.base.toFixed(2)}`,
+      `A$${azureCostBreakdown.storage.toFixed(2)}`,
+      `A$${calculatePrivateCloudPrice(i).toFixed(2)}`,
+      escapeCsvValue(vm.sqlLicenseType || '')
+    ]);
+  });
+  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
+  const link = document.createElement('a');
+  link.setAttribute('href', encodeURI(csvContent));
+  link.setAttribute('download', 'vm_cost_summary.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 // XLSX reading
 function readXlsx(file) {
   const spinner = document.getElementById('spinner');
@@ -207,32 +214,16 @@ function readXlsx(file) {
   reader.onload = e => {
     try {
       const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: 'array' });
-      const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
-      const sheet = wb.Sheets[sheetName];
-
-      const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] || [];
-      const storageHeader = headers.find(h => h && h.toString().toLowerCase().includes('provisioned storage'));
-      if (storageHeader) {
-        const headerLower = storageHeader.toLowerCase();
-        if (headerLower.includes('(gib)')) storageUnit = 'GiB';
-        else if (headerLower.includes('(gb)')) storageUnit = 'GB';
-        else if (headerLower.includes('(mib)')) storageUnit = 'MiB';
-        else if (headerLower.includes('(mb)')) storageUnit = 'MB';
-        else storageUnit = 'GB';
+      workbook = XLSX.read(data, { type: 'array' });
+      const sheetPicker = document.getElementById('sheetPickerContainer');
+      const sheetSelect = document.getElementById('sheetSelect');
+      if (workbook.SheetNames.length > 1) {
+        sheetSelect.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
+        sheetPicker.style.display = 'block';
+        spinner.style.display = 'none';
       } else {
-        storageUnit = 'GB';
+        loadSheet(workbook.SheetNames[0]);
       }
-
-      const vmData = XLSX.utils.sheet_to_json(sheet);
-      spinner.style.display = 'none';
-      if (!vmData.length) {
-        alert('No data found in the uploaded file');
-        return;
-      }
-      lastVmData = vmData.map(vm => ({ ...vm, selected: false, diskType: 'Standard SSD' }));
-      renderVMTable(lastVmData);
-      updateSummary();
     } catch (err) {
       spinner.style.display = 'none';
       alert(`XLSX parsing failed: ${err.message}. Please ensure the file is a valid RVTools export.`);
@@ -243,6 +234,48 @@ function readXlsx(file) {
     alert('Failed to read the file. Please try again.');
   };
   reader.readAsArrayBuffer(file);
+}
+
+// Load selected sheet
+function loadSelectedSheet() {
+  const sheetSelect = document.getElementById('sheetSelect');
+  const sheetName = sheetSelect.value;
+  loadSheet(sheetName);
+  document.getElementById('sheetPickerContainer').style.display = 'none';
+}
+
+// Load specific sheet
+function loadSheet(sheetName) {
+  const spinner = document.getElementById('spinner');
+  spinner.style.display = 'block';
+  try {
+    const sheet = workbook.Sheets[sheetName];
+    const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] || [];
+    const storageHeader = headers.find(h => h && h.toString().toLowerCase().includes('provisioned storage'));
+    if (storageHeader) {
+      const headerLower = storageHeader.toLowerCase();
+      if (headerLower.includes('(gib)')) storageUnit = 'GiB';
+      else if (headerLower.includes('(gb)')) storageUnit = 'GB';
+      else if (headerLower.includes('(mib)')) storageUnit = 'MiB';
+      else if (headerLower.includes('(mb)')) storageUnit = 'MB';
+      else storageUnit = 'GB';
+    } else {
+      storageUnit = 'GB';
+    }
+
+    const vmData = XLSX.utils.sheet_to_json(sheet);
+    spinner.style.display = 'none';
+    if (!vmData.length) {
+      alert('No data found in the uploaded file');
+      return;
+    }
+    lastVmData = vmData.map(vm => ({ ...vm, selected: false, diskType: 'Standard SSD' }));
+    renderVMTable(lastVmData);
+    updateSummary();
+  } catch (err) {
+    spinner.style.display = 'none';
+    alert(`Sheet loading failed: ${err.message}. Please ensure the file is a valid RVTools export.`);
+  }
 }
 
 // Storage unit conversions
@@ -494,19 +527,19 @@ function renderVMTable(vmData) {
     tdSku.appendChild(adjBtn);
     tr.appendChild(tdSku);
 
-    const tdDiskType FILLER
-System: = document.createElement('td');
-    tdDiskType.innerHTML = `
-      <select class="form-select form-select-sm">
-        <option value="Standard SSD" ${vm.diskType === 'Standard SSD' ? 'selected' : ''}>Standard SSD</option>
-        <option value="Premium SSD" ${vm.diskType === 'Premium SSD' ? 'selected' : ''}>Premium SSD</option>
-      </select>
+    const tdDiskType = document.createElement('td');
+    const diskSelect = document.createElement('select');
+    diskSelect.className = 'form-select form-select-sm';
+    diskSelect.innerHTML = `
+      <option value="Standard SSD" ${vm.diskType === 'Standard SSD' ? 'selected' : ''}>Standard SSD</option>
+      <option value="Premium SSD" ${vm.diskType === 'Premium SSD' ? 'selected' : ''}>Premium SSD</option>
     `;
-    tdDiskType.querySelector('select').onchange = (e) => {
+    diskSelect.onchange = (e) => {
       vm.diskType = e.target.value;
       renderVMTable(lastVmData);
       updateSummary();
     };
+    tdDiskType.appendChild(diskSelect);
     tr.appendChild(tdDiskType);
 
     const tdAzure = document.createElement('td');
