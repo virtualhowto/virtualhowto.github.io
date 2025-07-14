@@ -3,15 +3,11 @@ let ataPricing = {};
 let selectedRow = null;
 let lastVmData = [];
 let matchedSkus = [];
-const preferredSeries = ['Dsv5', 'Dasv5', 'Esv5'];
+const preferredSeries = ['B', 'A']; // Updated to include B and A series from JSON
 const defaultAzureStoragePricePerGB = 0.3;
 let azureStoragePricing = [];
 let azureVMPricing = [];
 let storageUnit = 'GB';
-let workbook = null;
-
-// USD to AUD conversion factor (optional, adjust as needed)
-const USD_TO_AUD = 1.5;
 
 // Debounce utility
 function debounce(fn, ms) {
@@ -28,35 +24,37 @@ function escapeCsvValue(value) {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-// Load Azure VM catalog and pricing from cloudprice.net JSON
+// Load Azure VM catalog and pricing from JSON
 async function loadAzureDataFromJson() {
   try {
-    const res = await fetch('./cloudprice_azure_vms.json'); // Replace with actual path or URL
+    const res = await fetch('./cloudprice_azure_vms.json'); // Ensure correct path to JSON
     if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure data`);
     const data = await res.json();
-    console.log('Data from cloudprice_azure_vms.json:', data); // Debug
-    const azureData = Array.isArray(data) ? data : data.Items || []; // Handle array or nested Items
+    console.log('Data from cloudprice_azure_vms.json:', data);
+    const azureData = Array.isArray(data) ? data : data.Items || [];
     if (!Array.isArray(azureData)) {
       throw new Error(`Expected an array, got ${typeof azureData}`);
     }
     // Map data for fullCatalog
     fullCatalog.length = 0;
     fullCatalog.push(...azureData.map(item => ({
-      name: item.sku || '',
-      cpu: parseInt(item.vCPUs) || 0,
-      ram: parseFloat(item.memoryGiB) * 1024 || 0, // Convert GiB to MiB
-      storage: 0, // Not provided in JSON
-      priceLinux: parseFloat(item.linuxPricePerHour) * 730 * USD_TO_AUD || 0, // Hourly to monthly, USD to AUD
-      priceWindows: parseFloat(item.windowsPricePerHour) * 730 * USD_TO_AUD || 0 // Hourly to monthly, USD to AUD
+      name: item.name || '',
+      cpu: parseInt(item.numberOfCores) || 0,
+      ram: parseFloat(item.memoryInMB) || 0, // Already in MiB
+      storage: parseInt(item.osDiskSizeInMB) || 0, // Use osDiskSizeInMB
+      priceLinux: parseFloat(item.linuxPrice) || 0, // Monthly AUD
+      priceWindows: parseFloat(item.windowsPrice) || 0, // Monthly AUD
+      supportPremiumDisk: item.supportPremiumDisk || 'no' // Add for filtering
     })));
     // Map data for azureVMPricing
     azureVMPricing = azureData.map(item => ({
-      name: item.sku || '',
-      cpu: parseInt(item.vCPUs) || 0,
-      ram: parseFloat(item.memoryGiB) * 1024 || 0, // Convert GiB to MiB
-      storage: 0, // Not provided in JSON
-      priceLinux: parseFloat(item.linuxPricePerHour) * 730 * USD_TO_AUD || 0,
-      priceWindows: parseFloat(item.windowsPricePerHour) * 730 * USD_TO_AUD || 0
+      name: item.name || '',
+      cpu: parseInt(item.numberOfCores) || 0,
+      ram: parseFloat(item.memoryInMB) || 0,
+      storage: parseInt(item.osDiskSizeInMB) || 0,
+      priceLinux: parseFloat(item.linuxPrice) || 0,
+      priceWindows: parseFloat(item.windowsPrice) || 0,
+      supportPremiumDisk: item.supportPremiumDisk || 'no'
     }));
     // Merge specs from catalog (retained for compatibility)
     fullCatalog.forEach(catalogItem => {
@@ -65,6 +63,7 @@ async function loadAzureDataFromJson() {
         apiItem.cpu = catalogItem.cpu;
         apiItem.ram = catalogItem.ram;
         apiItem.storage = catalogItem.storage;
+        apiItem.supportPremiumDisk = catalogItem.supportPremiumDisk;
       }
     });
   } catch (err) {
@@ -83,7 +82,7 @@ async function loadAzureStoragePricingFromJson() {
     const data = await response.json();
     azureStoragePricing = data.Items.map(item => ({
       skuName: item.skuName,
-      retailPrice: parseFloat(item.retailPrice) * USD_TO_AUD, // Convert to AUD if needed
+      retailPrice: parseFloat(item.retailPrice), // Assume AUD, adjust if USD
       unitOfMeasure: item.unitOfMeasure,
       diskSizeGB: parseInt(item.skuName?.match(/\d+/)?.[0]) || 0,
       diskType: item.productName?.includes('Premium SSD') ? 'Premium SSD' : 'Standard SSD'
@@ -176,7 +175,7 @@ function toggleDarkMode() {
   localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
 }
 
-// Download combined CSV (legacy)
+// Download combined CSV
 function downloadCsv() {
   const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type', 'Azure Cost (A$)', 'Azure VM Cost (A$)', 'Azure Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
   lastVmData.forEach((vm, i) => {
@@ -309,11 +308,9 @@ function loadSheet(sheetName) {
 function convertToGiB(storage, unit) {
   switch (unit) {
     case 'GiB':
-      return storage;
     case 'GB':
       return storage;
     case 'MiB':
-      return storage / 1024;
     case 'MB':
       return storage / 1024;
     default:
@@ -321,6 +318,7 @@ function convertToGiB(storage, unit) {
   }
 }
 
+// Calculate Azure storage cost
 function calculateAzureStorageCost(storage, skuStorageMB, diskType = 'Standard SSD') {
   const storageGiB = convertToGiB(parseFloat(storage) || 0, storageUnit);
   const skuStorageGiB = skuStorageMB / 1024;
@@ -331,11 +329,12 @@ function calculateAzureStorageCost(storage, skuStorageMB, diskType = 'Standard S
     .sort((a, b) => a.diskSizeGB - b.diskSizeGB)[0];
 
   if (!disk) {
-    return diskType === 'Standard SSD' ? additionalStorageGiB * defaultAzureStoragePricePerGB * USD_TO_AUD : 0;
+    return diskType === 'Standard SSD' ? additionalStorageGiB * defaultAzureStoragePricePerGB : 0;
   }
   return disk.retailPrice;
 }
 
+// Calculate Azure VM price
 function calculateAzureVMPrice(index) {
   const vm = lastVmData[index];
   const sku = matchedSkus[index] || vm.manualSku;
@@ -345,15 +344,16 @@ function calculateAzureVMPrice(index) {
 
   let basePrice = 0;
   const apiSku = azureVMPricing.find(s => s.name === sku.name);
-  basePrice = apiSku ? (sku.priceWindows > 0 ? apiSku.priceWindows : apiSku.priceLinux) : 0;
+  basePrice = apiSku ? ((vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? apiSku.priceWindows : apiSku.priceLinux) : 0;
 
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['CPUs'], vm.sqlLicenseType) : 0;
-  const storageCost = calculateAzureStorageCost(storage, sku.storage, diskType);
+  const storageCost = calculateAzureStorageCost(storage, sku.storage / 1024, diskType); // Convert MiB to GiB
   const total = basePrice + storageCost + sqlCost;
 
   return { total, base: basePrice, storage: storageCost, sql: sqlCost };
 }
 
+// Calculate private cloud price
 function calculatePrivateCloudPrice(index) {
   const vm = lastVmData[index];
   const cpu = parseInt(vm['CPUs']) || 0;
@@ -365,12 +365,14 @@ function calculatePrivateCloudPrice(index) {
   return (cpu * (ataPricing.cpu || 0)) + (ram * (ataPricing.ram || 0)) + (storage * (ataPricing.storage || 0)) + (ataPricing.base || 0) + octopus + sql;
 }
 
+// Calculate SQL license cost
 function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
   const coreCount = Math.max(4, Math.ceil(parseInt(cpuCount) / 2) * 2);
   const unitPrice = ataPricing[type] || 0;
   return (coreCount / 2) * unitPrice;
 }
 
+// Update summary
 function updateSummary() {
   const azureTotal = lastVmData.reduce((sum, _, i) => sum + calculateAzureVMPrice(i).total, 0);
   const privateTotal = lastVmData.reduce((sum, _, i) => sum + calculatePrivateCloudPrice(i), 0);
@@ -378,6 +380,7 @@ function updateSummary() {
   document.getElementById('ataPrice').innerText = `A$${privateTotal.toFixed(2)}`;
 }
 
+// Populate pricing editor
 function populatePricingEditor() {
   const editor = document.getElementById('pricingEditor');
   if (!editor) return;
@@ -409,6 +412,7 @@ function populatePricingEditor() {
   });
 }
 
+// Filter SKUs
 function filterSKUs() {
   const name = document.getElementById('filterName')?.value.toLowerCase() || '';
   const cpu = document.getElementById('filterCPU')?.value || '';
@@ -437,6 +441,7 @@ function filterSKUs() {
   });
 }
 
+// Open SKU popup
 function openSkuPopup(index) {
   selectedRow = index;
   const vm = lastVmData[index];
@@ -451,6 +456,7 @@ function openSkuPopup(index) {
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
 
+// Select SKU by name
 function selectSkuByName(name) {
   const selectedSku = azureVMPricing.find(s => s.name === name);
   if (selectedSku && selectedRow !== null) {
@@ -462,6 +468,7 @@ function selectSkuByName(name) {
   }
 }
 
+// Assign SQL tag
 function assignSQLTag(index) {
   const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):')?.trim();
   if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
@@ -474,6 +481,7 @@ function assignSQLTag(index) {
   }
 }
 
+// Clear SQL tag
 function clearSQLTag(index) {
   lastVmData[index].sqlLicensed = false;
   lastVmData[index].sqlLicenseType = null;
@@ -481,6 +489,7 @@ function clearSQLTag(index) {
   updateSummary();
 }
 
+// Render VM table
 function renderVMTable(vmData) {
   if (!vmData || !vmData.length) return;
   const tbody = document.querySelector('#vmTable tbody');
@@ -492,7 +501,7 @@ function renderVMTable(vmData) {
     const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
     const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
     const skuMatch = vm.manualSku || getPreferredSku(
-      azureVMPricing.filter(s => s.cpu >= cpu && s.ram >= ram * 1024),
+      azureVMPricing.filter(s => s.cpu >= cpu && s.ram >= ram * 1024 && (s.supportPremiumDisk === 'yes' || !vm.diskType.includes('Premium'))),
       cpu,
       ram * 1024
     );
@@ -619,8 +628,10 @@ function renderVMTable(vmData) {
   });
 }
 
+// Get preferred SKU
 function getPreferredSku(skus, cpu, ram) {
-  const preferred = skus.filter(sku => preferredSeries.some(series => sku.name.includes(series)))
-    .sort((a, b) => (a.cpu - cpu) || (a.ram - ram) || (a.priceLinux - b.priceLinux));
+  const preferred = skus.filter(sku => 
+    (preferredSeries.some(series => sku.name.includes(series)) || sku.supportPremiumDisk === 'yes')
+  ).sort((a, b) => (a.cpu - cpu) || (a.ram - ram) || (a.priceLinux - b.priceLinux));
   return preferred[0] || skus.sort((a, b) => (a.cpu - cpu) || (a.ram - ram) || (a.priceLinux - b.priceLinux))[0];
 }
