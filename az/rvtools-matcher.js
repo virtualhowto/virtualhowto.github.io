@@ -177,7 +177,7 @@ function toggleDarkMode() {
   localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
 }
 
-// Download CSV
+// Download combined CSV (legacy)
 function downloadCsv() {
   const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type', 'Azure Cost (A$)', 'Azure VM Cost (A$)', 'Azure Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
   lastVmData.forEach((vm, i) => {
@@ -201,6 +201,34 @@ function downloadCsv() {
   const link = document.createElement('a');
   link.setAttribute('href', encodeURI(csvContent));
   link.setAttribute('download', 'vm_cost_summary.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Export CSV for Azure or Private Cloud
+function exportCSV(type) {
+  const headers = ['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type', type === 'azure' ? 'Azure Cost (A$)' : 'Private Cloud Cost (A$)', 'Tag'];
+  const rows = [headers];
+  lastVmData.forEach((vm, i) => {
+    const azureCostBreakdown = calculateAzureVMPrice(i);
+    const privatePrice = calculatePrivateCloudPrice(i);
+    rows.push([
+      escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
+      vm['Num CPU'] || vm['CPUs'] || '',
+      vm['Memory'] || '',
+      `${vm['Provisioned Storage (GB)'] || ''} ${storageUnit}`,
+      (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
+      escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
+      vm.diskType || 'Standard SSD',
+      type === 'azure' ? `A$${azureCostBreakdown.total.toFixed(2)}` : `A$${privatePrice.toFixed(2)}`,
+      escapeCsvValue(vm.sqlLicenseType || '')
+    ]);
+  });
+  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
+  const link = document.createElement('a');
+  link.setAttribute('href', encodeURI(csvContent));
+  link.setAttribute('download', `vm_cost_${type}_summary.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -413,6 +441,14 @@ function filterSKUs() {
 
 function openSkuPopup(index) {
   selectedRow = index;
+  const vm = lastVmData[index];
+  const vmName = vm['Display Name'] || vm['VM'] || 'Unnamed';
+  const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+  const ram = parseFloat(vm['Memory'] || 0);
+  const modalTitle = document.querySelector('#skuModal .modal-title');
+  if (modalTitle) {
+    modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB)`;
+  }
   filterSKUs();
   new bootstrap.Modal(document.getElementById('skuModal')).show();
 }
