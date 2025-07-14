@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,40 +7,40 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
   <style>
     .dark-mode {
-  background-color: #121212;
-  color: #f1f1f1;
-}
+      background-color: #121212;
+      color: #f1f1f1;
+    }
 
-.dark-mode .table,
-.dark-mode .modal-content {
-  background-color: #1e1e1e;
-  color: #eee;
-}
+    .dark-mode .table,
+    .dark-mode .modal-content {
+      background-color: #1e1e1e;
+      color: #eee;
+    }
 
-.dark-mode .summary-tile {
-  opacity: 0.9;
-}
+    .dark-mode .summary-tile {
+      opacity: 0.9;
+    }
 
-@media (max-width: 768px) {
-  .table thead th:nth-child(3),
-  .table tbody td:nth-child(3),
-  .table thead th:nth-child(4),
-  .table tbody td:nth-child(4),
-  .table thead th:nth-child(5),
-  .table tbody td:nth-child(5) {
-    display: none;
-  }
+    @media (max-width: 768px) {
+      .table thead th:nth-child(3),
+      .table tbody td:nth-child(3),
+      .table thead th:nth-child(4),
+      .table tbody td:nth-child(4),
+      .table thead th:nth-child(5),
+      .table tbody td:nth-child(5) {
+        display: none;
+      }
 
-  .sticky-header h4 {
-    font-size: 1.1rem;
-  }
+      .sticky-header h4 {
+        font-size: 1.1rem;
+      }
 
-  .summary-tile {
-    font-size: 0.85rem;
-    min-width: 130px;
-    margin-bottom: 0.5rem;
-  }
-}
+      .summary-tile {
+        font-size: 0.85rem;
+        min-width: 130px;
+        margin-bottom: 0.5rem;
+      }
+    }
     
     body { padding-top: 5.5rem; }
     .highlight { background-color: #d1e7dd; }
@@ -85,20 +84,28 @@
   <div class="sticky-header d-flex justify-content-between align-items-center">
     <h4 class="mb-0">RVTools Matcher</h4>
     <div>
-      <span class="summary-tile azure-tile" onclick="exportCSV('azure')" title="Click to export detailed Azure pricing breakdown">
-        Azure Total: <strong id="totalPrice">$0.00</strong>
+      <span class="summary-tile azure-tile" onclick="downloadCsv()" title="Click to export detailed Azure pricing breakdown">
+        Azure Total: <strong id="totalPrice">A$0.00</strong>
       </span>
-      <span class="summary-tile privatecloud-tile" onclick="exportCSV('private')" title="Click to export detailed Private Cloud pricing breakdown">
-        Private Cloud: <strong id="ataPrice">$0.00</strong>
+      <span class="summary-tile privatecloud-tile" onclick="downloadCsv()" title="Click to export detailed Private Cloud pricing breakdown">
+        Private Cloud: <strong id="ataPrice">A$0.00</strong>
       </span>
     </div>
-    <button class="btn btn-outline-dark btn-sm me-2" onclick="toggleDarkMode()" title="Toggle Dark Mode">
-  🌓
-</button>
+    <button id="darkModeToggle" class="btn btn-outline-dark btn-sm me-2" title="Toggle Dark Mode">
+      🌓
+    </button>
   </div>
 
   <div class="container mt-4">
-    <input type="file" id="fileInput" class="form-control mb-3" accept=".xlsx" />
+    <div class="mb-3">
+      <input type="file" id="fileInput" class="form-control mb-2" accept=".xlsx" />
+      <button id="batchSqlAssign" class="btn btn-primary btn-sm">Batch Assign SQL Tags</button>
+    </div>
+    <div id="sheetPickerContainer" style="display:none;">
+      <label for="sheetSelect">Select Sheet:</label>
+      <select id="sheetSelect" class="form-select d-inline-block w-auto"></select>
+      <button onclick="loadSelectedSheet()" class="btn btn-primary btn-sm ms-2">Load</button>
+    </div>
     <div id="spinner" class="text-center my-3">
       <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
       <p>Processing...</p>
@@ -107,17 +114,23 @@
     <table class="table table-bordered" id="vmTable">
       <thead>
         <tr>
-          <th>VM</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>SKU</th><th>AZ_Storage</th><th>Azure</th><th>Private</th><th>Tags</th>
+          <th>VM</th>
+          <th>CPU</th>
+          <th>RAM</th>
+          <th>Storage</th>
+          <th>OS</th>
+          <th>SKU</th>
+          <th>AZ_Storage</th>
+          <th>Azure</th>
+          <th>Private</th>
+          <th>Tags</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
+
+    <div id="pricingEditor" class="mt-4"></div>
   </div>
-<div id="sheetPickerContainer" style="display:none;">
-  <label>Select Sheet:</label>
-  <select id="sheetSelect"></select>
-  <button onclick="loadSelectedSheet()">Load</button>
-</div>
 
   <div class="modal fade" id="skuModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -143,6 +156,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="./script.js"></script>
+  <script src="./rvtools-matcher.js"></script>
 </body>
 </html>
