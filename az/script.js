@@ -127,6 +127,14 @@ window.onload = () => {
       alert('Invalid tag. Use SQL-Std or SQL-Ent.');
     }
   });
+
+  // Initialize Bootstrap tooltips
+  document.addEventListener('DOMContentLoaded', () => {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(tooltipTriggerEl => {
+      new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  });
 };
 
 // Read and parse XLSX file
@@ -145,7 +153,7 @@ function readXlsx(file) {
         alert('No data found in the uploaded file');
         return;
       }
-      lastVmData = vmData.map(vm => ({ ...vm, selected: false })); // Add selected flag for batch operations
+      lastVmData = vmData.map(vm => ({ ...vm, selected: false }));
       renderVMTable(lastVmData);
       updateSummary();
     } catch (err) {
@@ -245,11 +253,32 @@ function renderVMTable(vmData) {
       ram * 1024
     );
     matchedSkus[index] = skuMatch;
-    const azurePrice = calculateAzureVMPrice(index).toFixed(2);
-    const privatePrice = calculatePrivateCloudPrice(index).toFixed(2);
+    const azurePrice = calculateAzureVMPrice(index);
+    const privatePrice = calculatePrivateCloudPrice(index);
+
+    // Calculate Azure cost breakdown for tooltip
+    const sku = matchedSkus[index] || vm.manualSku;
+    const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['CPUs'], vm.sqlLicenseType) : 0;
+    const baseAzurePrice = sku ? (os === 'Windows' ? sku.priceWindows : sku.priceLinux) : 0;
+    const azureTooltip = sku
+      ? `Base VM: $${baseAzurePrice.toFixed(2)}${sqlCost ? `\nSQL License (${vm.sqlLicenseType}): $${sqlCost.toFixed(2)}` : ''}\nTotal: $${azurePrice.toFixed(2)}`
+      : 'No SKU selected';
+
+    // Calculate private cloud cost breakdown for tooltip
+    const cpuCost = cpu * (ataPricing.cpu || 0);
+    const ramCost = ram * (ataPricing.ram || 0);
+    const storageCost = storage * (ataPricing.storage || 0);
+    const baseCost = ataPricing.base || 0;
+    const octopusCost = os.includes('Windows') ? octopusFeePerWindowsVM : 0;
+    const privateTooltip = `CPU: $${cpuCost.toFixed(2)} (${cpu} × $${(ataPricing.cpu || 0).toFixed(2)})\n` +
+                          `RAM: $${ramCost.toFixed(2)} (${ram} GB × $${(ataPricing.ram || 0).toFixed(2)})\n` +
+                          `Storage: $${storageCost.toFixed(2)} (${storage} GB × $${(ataPricing.storage || 0).toFixed(2)})\n` +
+                          `Base Fee: $${baseCost.toFixed(2)}\n` +
+                          `Octopus Fee: $${octopusCost.toFixed(2)}${sqlCost ? `\nSQL License (${vm.sqlLicenseType}): $${sqlCost.toFixed(2)}` : ''}\n` +
+                          `Total: $${privatePrice.toFixed(2)}`;
 
     const tr = document.createElement('tr');
-    tr.title = `Azure: $${azurePrice}\nPrivate: $${privatePrice}`;
+    tr.title = `Azure: $${azurePrice.toFixed(2)}\nPrivate: $${privatePrice.toFixed(2)}`;
     if (!skuMatch) tr.classList.add('table-danger'); // Highlight unmatched SKUs
 
     // VM Name
@@ -279,28 +308,34 @@ function renderVMTable(vmData) {
 
     // SKU
     const tdSku = document.createElement('td');
-    if (skuMatch) {
-      tdSku.textContent = skuMatch.name;
-    } else {
+    tdSku.textContent = skuMatch ? skuMatch.name : 'No Match';
+    if (!skuMatch) {
       const em = document.createElement('em');
       em.textContent = 'No Match';
+      tdSku.textContent = '';
       tdSku.appendChild(em);
-      const fixBtn = document.createElement('button');
-      fixBtn.className = 'btn btn-sm btn-warning ms-2';
-      fixBtn.textContent = 'Fix';
-      fixBtn.onclick = () => openSkuPopup(index);
-      tdSku.appendChild(fixBtn);
     }
+    const adjBtn = document.createElement('button');
+    adjBtn.className = 'btn btn-sm btn-warning ms-2';
+    adjBtn.textContent = 'Adj';
+    adjBtn.onclick = () => openSkuPopup(index);
+    tdSku.appendChild(adjBtn);
     tr.appendChild(tdSku);
 
     // Azure Price
     const tdAzure = document.createElement('td');
-    tdAzure.textContent = `$${azurePrice}`;
+    tdAzure.textContent = `$${azurePrice.toFixed(2)}`;
+    tdAzure.setAttribute('data-bs-toggle', 'tooltip');
+    tdAzure.setAttribute('data-bs-placement', 'top');
+    tdAzure.setAttribute('title', azureTooltip);
     tr.appendChild(tdAzure);
 
     // Private Price
     const tdPrivate = document.createElement('td');
-    tdPrivate.textContent = `$${privatePrice}`;
+    tdPrivate.textContent = `$${privatePrice.toFixed(2)}`;
+    tdPrivate.setAttribute('data-bs-toggle', 'tooltip');
+    tdPrivate.setAttribute('data-bs-placement', 'top');
+    tdPrivate.setAttribute('title', privateTooltip);
     tr.appendChild(tdPrivate);
 
     // SQL License
@@ -325,6 +360,12 @@ function renderVMTable(vmData) {
     tr.appendChild(tdSql);
 
     tbody.appendChild(tr);
+  });
+
+  // Re-initialize tooltips after rendering table
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.forEach(tooltipTriggerEl => {
+    new bootstrap.Tooltip(tooltipTriggerEl);
   });
 }
 
