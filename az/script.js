@@ -11,6 +11,7 @@ const defaultAzureStoragePricePerGB = 0.3; // Fallback price in AUD per GB/month
 let azureStoragePricing = []; // Cache for storage pricing from API (Standard SSD and Premium SSD)
 let azureVMPricing = []; // Cache for VM pricing from API
 let useApiPricing = false; // Toggle: false = cached JSON, true = API
+let storageUnit = 'GB'; // Detected storage unit (GB, GiB, MB, MiB)
 
 // Utility: Debounce function to limit rapid event triggers
 function debounce(fn, ms) {
@@ -182,7 +183,7 @@ window.onload = async () => {
         escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
         vm['Num CPU'] || vm['CPUs'] || '',
         vm['Memory'] || '',
-        vm['Provisioned Storage (GB)'] || '',
+        `${vm['Provisioned Storage (GB)'] || ''} ${storageUnit}`,
         (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
         escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
         vm.diskType || 'Standard SSD',
@@ -228,7 +229,7 @@ window.onload = async () => {
   });
 };
 
-// Read and parse XLSX file
+// Read and parse XLSX file with storage unit detection
 function readXlsx(file) {
   const spinner = document.getElementById('spinner');
   spinner.style.display = 'block';
@@ -238,7 +239,23 @@ function readXlsx(file) {
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, { type: 'array' });
       const sheetName = wb.SheetNames.includes('vInfo') ? 'vInfo' : wb.SheetNames[0];
-      const vmData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+      const sheet = wb.Sheets[sheetName];
+      
+      // Detect storage column and unit
+      const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] || [];
+      const storageHeader = headers.find(h => h && h.toString().toLowerCase().includes('provisioned storage'));
+      if (storageHeader) {
+        const headerLower = storageHeader.toLowerCase();
+        if (headerLower.includes('(gib)')) storageUnit = 'GiB';
+        else if (headerLower.includes('(gb)')) storageUnit = 'GB';
+        else if (headerLower.includes('(mib)')) storageUnit = 'MiB';
+        else if (headerLower.includes('(mb)')) storageUnit = 'MB';
+        else storageUnit = 'GB'; // Default to GB if unit not specified
+      } else {
+        storageUnit = 'GB'; // Fallback
+      }
+
+      const vmData = XLSX.utils.sheet_to_json(sheet);
       spinner.style.display = 'none';
       if (!vmData.length) {
         alert('No data found in the uploaded file');
@@ -259,20 +276,37 @@ function readXlsx(file) {
   reader.readAsArrayBuffer(file);
 }
 
+// Convert storage to GiB for Azure calculations
+function convertToGiB(storage, unit) {
+  switch (unit) {
+    case 'GiB':
+      return storage;
+    case 'GB':
+      return storage; // Assume 1:1 for simplicity, as RVTools often treats GB and GiB equivalently
+    case 'MiB':
+      return storage / 1024;
+    case 'MB':
+      return storage / 1024; // Approximate, as 1 MB = 0.0009313 GiB
+    default:
+      return storage; // Fallback to GB
+  }
+}
+
 // Calculate Azure storage cost based on disk size and type
-function calculateAzureStorageCost(storageGB, skuStorageMB, diskType = 'Standard SSD') {
-  const skuStorageGB = skuStorageMB / 1024; // Convert SKU storage to GB
-  const additionalStorageGB = Math.max(0, storageGB - skuStorageGB); // Additional storage needed
-  if (additionalStorageGB <= 0) return 0; // No additional storage cost if within SKU
+function calculateAzureStorageCost(storage, skuStorageMB, diskType = 'Standard SSD') {
+  const storageGiB = convertToGiB(parseFloat(storage) || 0, storageUnit);
+  const skuStorageGiB = skuStorageMB / 1024; // Convert SKU storage to GiB
+  const additionalStorageGiB = Math.max(0, storageGiB - skuStorageGiB); // Additional storage needed
+  if (additionalStorageGiB <= 0) return 0; // No additional storage cost if within SKU
 
   // Find the smallest disk tier that fits the additional storage
   const disk = azureStoragePricing
-    .filter(d => d.diskSizeGB >= additionalStorageGB && d.diskType === diskType)
+    .filter(d => d.diskSizeGB >= additionalStorageGiB && d.diskType === diskType)
     .sort((a, b) => a.diskSizeGB - b.diskSizeGB)[0];
 
   if (!disk) {
     // Fallback to default price for Standard SSD
-    return diskType === 'Standard SSD' ? additionalStorageGB * defaultAzureStoragePricePerGB : 0;
+    return diskType === 'Standard SSD' ? additionalStorageGiB * defaultAzureStoragePricePerGB : 0;
   }
 
   // Azure bills for the entire disk tier
@@ -284,7 +318,7 @@ function calculateAzureVMPrice(index) {
   const vm = lastVmData[index];
   const sku = matchedSkus[index] || vm.manualSku;
   const os = (vm['OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
-  const storageGB = parseInt(vm['Provisioned Storage (GB)']) || 0;
+  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
   const diskType = vm.diskType || 'Standard SSD';
   if (!sku) return { total: 0, base: 0, storage: 0, sql: 0 };
 
@@ -297,7 +331,7 @@ function calculateAzureVMPrice(index) {
   }
 
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['CPUs'], vm.sqlLicenseType) : 0;
-  const storageCost = calculateAzureStorageCost(storageGB, sku.storage, diskType);
+  const storageCost = calculateAzureStorageCost(storage, sku.storage, diskType);
   const total = basePrice + storageCost + sqlCost;
 
   return { total, base: basePrice, storage: storageCost, sql: sqlCost };
@@ -308,7 +342,7 @@ function calculatePrivateCloudPrice(index) {
   const vm = lastVmData[index];
   const cpu = parseInt(vm['CPUs']) || 0;
   const ram = parseFloat(vm['Memory']) || 0;
-  const storage = parseInt(vm['Provisioned Storage (GB)']) || 0;
+  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
   const os = (vm['OS'] || '').toLowerCase();
   const octopus = os.includes('win') ? (ataPricing.octopus || 0) : 0;
   const sql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
@@ -440,7 +474,7 @@ function renderVMTable(vmData) {
   vmData.forEach((vm, index) => {
     const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
     const ram = parseFloat(vm['Memory'] || 0);
-    const storage = parseInt(vm['Provisioned Storage (GB)'] || 0);
+    const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
     const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
     const skuMatch = vm.manualSku || getPreferredSku(
       (useApiPricing && azureVMPricing.length ? azureVMPricing : fullCatalog).filter(s => s.cpu >= cpu && s.ram >= ram * 1024),
@@ -455,7 +489,7 @@ function renderVMTable(vmData) {
     const sku = matchedSkus[index] || vm.manualSku;
     const azureTooltip = sku
       ? `Base VM: A$${azureCostBreakdown.base.toFixed(2)}\n` +
-        `Storage (${vm.diskType || 'Standard SSD'}): A$${azureCostBreakdown.storage.toFixed(2)} (${storage} GB)\n` +
+        `Storage (${vm.diskType || 'Standard SSD'}): A$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${storageUnit})\n` +
         `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): A$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
         `Total: A$${azureCostBreakdown.total.toFixed(2)}`
       : 'No SKU selected';
@@ -469,7 +503,7 @@ function renderVMTable(vmData) {
     const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['CPUs'], vm.sqlLicenseType) : 0;
     const privateTooltip = `CPU: A$${cpuCost.toFixed(2)} (${cpu} × A$${(ataPricing.cpu || 0).toFixed(2)})\n` +
                           `RAM: A$${ramCost.toFixed(2)} (${ram} GB × A$${(ataPricing.ram || 0).toFixed(2)})\n` +
-                          `Storage: A$${storageCost.toFixed(2)} (${storage} GB × A$${(ataPricing.storage || 0).toFixed(2)})\n` +
+                          `Storage: A$${storageCost.toFixed(2)} (${storage} ${storageUnit} × A$${(ataPricing.storage || 0).toFixed(2)})\n` +
                           `Base Fee: A$${baseCost.toFixed(2)}\n` +
                           `Octopus Fee: A$${octopusCost.toFixed(2)}\n` +
                           `${sqlCost ? `SQL License (${vm.sqlLicenseType}): A$${sqlCost.toFixed(2)}\n` : ''}` +
@@ -496,7 +530,7 @@ function renderVMTable(vmData) {
 
     // Storage
     const tdStorage = document.createElement('td');
-    tdStorage.textContent = `${storage} GB`;
+    tdStorage.textContent = `${storage} ${storageUnit}`;
     tr.appendChild(tdStorage);
 
     // OS
