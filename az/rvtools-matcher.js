@@ -25,45 +25,19 @@ function escapeCsvValue(value) {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-// Load Azure VM catalog from JSON
-async function loadAzureVMCatalogFromJson() {
+// Load Azure VM catalog and pricing from JSON
+async function loadAzureDataFromJson() {
   try {
     const res = await fetch('./az_data-export.json');
-    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure catalog`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure data`);
     const data = await res.json();
-    console.log('Data from az_data-export.json (catalog):', data); // Debug
-    const catalogData = data.Items || data; // Access Items or root array
-    if (!Array.isArray(catalogData)) {
-      throw new Error(`Expected an array for catalog data, got ${typeof catalogData}`);
+    console.log('Data from az_data-export.json:', data); // Debug
+    const azureData = data.Items || data; // Access Items or root array
+    if (!Array.isArray(azureData)) {
+      throw new Error(`Expected an array, got ${typeof azureData}`);
     }
-    fullCatalog.length = 0;
-    fullCatalog.push(...catalogData.map(item => ({
-      name: item.name || '',
-      cpu: parseInt(item.numberOfCores) || 0,
-      ram: parseInt(item.memoryInMB) || 0,
-      storage: parseInt(item.osDiskSizeInMB) || 0,
-      priceLinux: parseFloat(item.linuxPrice) || 0,
-      priceWindows: parseFloat(item.windowsPrice) || 0
-    })));
-  } catch (err) {
-    console.error('Azure catalog load error:', err);
-    alert(`Failed to load Azure catalog: ${err.message}`);
-    fullCatalog.length = 0; // Ensure empty catalog on error
-  }
-}
-
-// Load Azure VM pricing from local JSON
-async function loadAzureVMPricingFromJson() {
-  try {
-    const response = await fetch('./az_data-export.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure VM pricing`);
-    const data = await response.json();
-    console.log('Data from az_data-export.json (pricing):', data); // Debug
-    const pricingData = data.Items || data; // Access Items or root array
-    if (!Array.isArray(pricingData)) {
-      throw new Error(`Expected an array for pricing data, got ${typeof pricingData}`);
-    }
-    azureVMPricing = pricingData.map(item => ({
+    // Map data for both fullCatalog and azureVMPricing
+    const mappedData = azureData.map(item => ({
       name: item.name || '',
       cpu: parseInt(item.numberOfCores) || 0,
       ram: parseInt(item.memoryInMB) || 0,
@@ -71,7 +45,19 @@ async function loadAzureVMPricingFromJson() {
       priceLinux: parseFloat(item.linuxPrice) || 0,
       priceWindows: parseFloat(item.windowsPrice) || 0
     }));
-    // Merge specs from catalog (if needed)
+    // Populate fullCatalog
+    fullCatalog.length = 0;
+    fullCatalog.push(...mappedData);
+    // Populate azureVMPricing
+    azureVMPricing = mappedData.map(item => ({
+      name: item.name,
+      cpu: item.cpu,
+      ram: item.ram,
+      storage: item.storage,
+      priceLinux: item.priceLinux, // Adjust if hourly: item.priceLinux * 730
+      priceWindows: item.priceWindows // Adjust if hourly: item.priceWindows * 730
+    }));
+    // Optional merge (retained for compatibility)
     fullCatalog.forEach(catalogItem => {
       const apiItem = azureVMPricing.find(api => api.name === catalogItem.name);
       if (apiItem) {
@@ -81,7 +67,9 @@ async function loadAzureVMPricingFromJson() {
       }
     });
   } catch (err) {
-    console.error('Azure VM pricing load error:', err);
+    console.error('Azure data load error:', err);
+    alert(`Failed to load Azure data: ${err.message}`);
+    fullCatalog.length = 0;
     azureVMPricing = [];
   }
 }
@@ -132,8 +120,7 @@ async function loadPrivateCloudPricing() {
 
 // Initialize on window load
 window.onload = async () => {
-  await loadAzureVMCatalogFromJson();
-  await loadAzureVMPricingFromJson();
+  await loadAzureDataFromJson();
   await loadAzureStoragePricingFromJson();
   await loadPrivateCloudPricing();
 
@@ -480,7 +467,7 @@ function assignSQLTag(index) {
   if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
     lastVmData[index].sqlLicensed = true;
     lastVmData[index].sqlLicenseType = tag;
-    renderVMTable(lastVmData);
+    renderVMVMTable(lastVmData);
     updateSummary();
   } else {
     alert('Invalid tag. Use SQL-Std or SQL-Ent.');
