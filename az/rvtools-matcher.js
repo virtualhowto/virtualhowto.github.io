@@ -31,8 +31,13 @@ async function loadAzureVMCatalogFromJson() {
     const res = await fetch('./az_data-export.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure catalog`);
     const data = await res.json();
+    console.log('Data from az_data-export.json (catalog):', data); // Debug
+    const catalogData = data.Items || data; // Access Items or root array
+    if (!Array.isArray(catalogData)) {
+      throw new Error(`Expected an array for catalog data, got ${typeof catalogData}`);
+    }
     fullCatalog.length = 0;
-    fullCatalog.push(...data.map(item => ({
+    fullCatalog.push(...catalogData.map(item => ({
       name: item.name || '',
       cpu: parseInt(item.numberOfCores) || 0,
       ram: parseInt(item.memoryInMB) || 0,
@@ -43,24 +48,30 @@ async function loadAzureVMCatalogFromJson() {
   } catch (err) {
     console.error('Azure catalog load error:', err);
     alert(`Failed to load Azure catalog: ${err.message}`);
+    fullCatalog.length = 0; // Ensure empty catalog on error
   }
 }
 
 // Load Azure VM pricing from local JSON
 async function loadAzureVMPricingFromJson() {
   try {
-    const response = await fetch('./az_vm-pricing.json');
+    const response = await fetch('./az_data-export.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure VM pricing`);
     const data = await response.json();
-    azureVMPricing = data.Items.map(item => ({
-      name: item.armSkuName || '',
-      cpu: parseInt(item.meterName?.match(/\d+/)?.[0]) || 0,
-      ram: parseInt(item.productName?.match(/\d+/)?.[0]) || 0,
-      storage: 0,
-      priceLinux: item.productName?.includes('Windows') ? 0 : parseFloat(item.retailPrice) * 730,
-      priceWindows: item.productName?.includes('Windows') ? parseFloat(item.retailPrice) * 730 : 0
+    console.log('Data from az_data-export.json (pricing):', data); // Debug
+    const pricingData = data.Items || data; // Access Items or root array
+    if (!Array.isArray(pricingData)) {
+      throw new Error(`Expected an array for pricing data, got ${typeof pricingData}`);
+    }
+    azureVMPricing = pricingData.map(item => ({
+      name: item.name || '',
+      cpu: parseInt(item.numberOfCores) || 0,
+      ram: parseInt(item.memoryInMB) || 0,
+      storage: parseInt(item.osDiskSizeInMB) || 0,
+      priceLinux: parseFloat(item.linuxPrice) || 0,
+      priceWindows: parseFloat(item.windowsPrice) || 0
     }));
-    // Merge specs from catalog
+    // Merge specs from catalog (if needed)
     fullCatalog.forEach(catalogItem => {
       const apiItem = azureVMPricing.find(api => api.name === catalogItem.name);
       if (apiItem) {
