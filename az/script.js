@@ -289,7 +289,7 @@ function calculateAzureVMPrice(index) {
   basePrice = apiSku ? (os === 'Windows' ? apiSku.priceWindows : apiSku.priceLinux) : 0;
 
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['CPUs'], vm.sqlLicenseType) : 0;
-  const storageCost = calculateAzureStorage Natural
+  const storageCost = calculateAzureStorageCost(storage, sku.storage, diskType);
 
 System: Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
     lastVmData.forEach((vm, i) => {
