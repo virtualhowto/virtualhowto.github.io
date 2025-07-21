@@ -207,10 +207,10 @@ function escapeCsvValue(value) {
 // Load Azure VM catalog and pricing from JSON
 async function loadAzureDataFromJson() {
   try {
-    const res = await fetch('./cloudprice_azure_vms.json'); // Ensure correct path to JSON
+    const res = await fetch('./az_data-export.json'); // Ensure correct path to JSON
     if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure data`);
     const data = await res.json();
-    console.log('Data from cloudprice_azure_vms.json:', data);
+    console.log('Data from az_data-export.json:', data);
     const azureData = Array.isArray(data) ? data : data.Items || [];
     if (!Array.isArray(azureData)) {
       throw new Error(`Expected an array, got ${typeof azureData}`);
