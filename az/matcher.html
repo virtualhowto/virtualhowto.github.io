@@ -265,9 +265,9 @@ const defaultAzureStoragePricePerGB = 0.3;
 let azureStoragePricing = [];
 let azureVMPricing = [];
 let storageUnit = 'GB';
-let workbook = null; // Global workbook variable
-let columnHeaders = []; // Store sheet headers for mapping
-let columnMapping = {}; // Store user-selected column mappings
+let workbook = null;
+let columnHeaders = [];
+let columnMapping = {};
 
 // Debounce utility
 function debounce(fn, ms) {
@@ -485,7 +485,9 @@ function exportCSV(type) {
       escapeCsvValue(vm.sqlLicenseType || '')
     ]);
   });
-  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
+  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n
+
+');
   const link = document.createElement('a');
   link.setAttribute('href', encodeURI(csvContent));
   link.setAttribute('download', `vm_cost_${type}_summary.csv`);
@@ -541,6 +543,12 @@ function showColumnMappingModal() {
       const select = document.getElementById(id);
       select.innerHTML = '<option value="">Select Column</option>' + 
         columnHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
+      // Preselect likely matches for convenience
+      if (id === 'mapDisplayName' && columnHeaders.includes('VM')) select.value = 'VM';
+      if (id === 'mapCpu' && columnHeaders.includes('CPUs')) select.value = 'CPUs';
+      if (id === 'mapMemory' && columnHeaders.includes('Memory')) select.value = 'Memory';
+      if (id === 'mapStorage' && columnHeaders.includes('Total disk capacity MiB')) select.value = 'Total disk capacity MiB';
+      if (id === 'mapOs' && columnHeaders.includes('OS according to the configuration file')) select.value = 'OS according to the configuration file';
     });
 
     document.getElementById('sheetPickerContainer').style.display = 'none';
@@ -580,13 +588,13 @@ function loadSheet(sheetName) {
   try {
     const sheet = workbook.Sheets[sheetName];
     const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] || [];
-    const storageHeader = headers.find(h => h && h.toString().toLowerCase().includes('provisioned storage'));
+    const storageHeader = headers.find(h => h && h.toString().toLowerCase().includes('disk capacity') || h.toString().toLowerCase().includes('provisioned storage'));
     if (storageHeader) {
       const headerLower = storageHeader.toLowerCase();
-      if (headerLower.includes('(gib)')) storageUnit = 'GiB';
-      else if (headerLower.includes('(gb)')) storageUnit = 'GB';
-      else if (headerLower.includes('(mib)')) storageUnit = 'MiB';
-      else if (headerLower.includes('(mb)')) storageUnit = 'MB';
+      if (headerLower.includes('mib')) storageUnit = 'MiB';
+      else if (headerLower.includes('gib')) storageUnit = 'GiB';
+      else if (headerLower.includes('gb')) storageUnit = 'GB';
+      else if (headerLower.includes('mb')) storageUnit = 'MB';
       else storageUnit = 'GB';
     } else {
       storageUnit = 'GB';
@@ -599,13 +607,12 @@ function loadSheet(sheetName) {
       return;
     }
 
-    // Map columns based on user selections
     lastVmData = vmData.map(vm => ({
-      'Display Name': vm[columnMapping['Display Name']] || vm['Display Name'] || vm['VM'] || 'Unnamed',
-      'Num CPU': vm[columnMapping['Num CPU']] || vm['Num CPU'] || vm['CPUs'] || 0,
-      'Memory': vm[columnMapping['Memory']] || vm['Memory'] || 0,
-      'Provisioned Storage (GB)': vm[columnMapping['Provisioned Storage (GB)']] || vm['Provisioned Storage (GB)'] || 0,
-      'OS': vm[columnMapping['OS']] || vm['OS'] || vm['Guest OS'] || '',
+      'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
+      'Num CPU': vm[columnMapping['Num CPU']] || vm['CPUs'] || 0,
+      'Memory': parseFloat(vm[columnMapping['Memory']] || vm['Memory'] || 0),
+      'Provisioned Storage (GB)': storageUnit === 'MiB' ? (parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0) / 1024) : parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
+      'OS': vm[columnMapping['OS']] || vm['OS according to the configuration file'] || vm['OS'] || '',
       selected: false,
       diskType: 'Standard SSD'
     }));
@@ -626,6 +633,7 @@ function convertToGiB(storage, unit) {
     case 'gb':
       return storage;
     case 'mib':
+      return storage / 1024;
     case 'mb':
       return storage / 1024;
     default:
@@ -660,7 +668,7 @@ function calculateAzureVMPrice(index) {
 
   let basePrice = 0;
   const apiSku = azureVMPricing.find(s => s.name === sku.name);
-  basePrice = apiSku ? ((vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? apiSku.priceWindows : apiSku.priceLinux) : 0;
+  basePrice = apiSku ? ((vm['OS'] || '').includes('Windows') ? apiSku.priceWindows : apiSku.priceLinux) : 0;
 
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
   const storageCost = calculateAzureStorageCost(storage, sku.storage / 1024, diskType);
@@ -683,7 +691,6 @@ function calculatePrivateCloudPrice(index) {
 
 // Calculate SQL license cost
 function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
-  // Enforces minimum 4 cores per SQL Server licensing requirements
   const coreCount = Math.max(4, Math.ceil(parseInt(cpuCount) / 2) * 2);
   const unitPrice = ataPricing[type] || 0;
   return (coreCount / 2) * unitPrice;
@@ -844,7 +851,7 @@ function renderVMTable(vmData) {
     tr.appendChild(tdRam);
 
     const tdStorage = document.createElement('td');
-    tdStorage.textContent = `${storage} ${storageUnit}`;
+    tdStorage.textContent = `${storage.toFixed(2)} ${storageUnit}`;
     tr.appendChild(tdStorage);
 
     const tdOs = document.createElement('td');
