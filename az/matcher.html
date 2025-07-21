@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,18 +84,18 @@
   <div class="sticky-header d-flex justify-content-between align-items-center">
     <h4 class="mb-0">RVTools Matcher</h4>
     <div>
-      <span class="summary-tile azure-tile" onclick="downloadCsv()" title="Click to export detailed Azure pricing breakdown">
+      <span class="summary-tile azure-tile" onclick="exportCSV('azure')" title="Click to export detailed Azure pricing breakdown">
         Azure Total: <strong id="totalPrice">A$0.00</strong>
       </span>
-      <span class="summary-tile privatecloud-tile" onclick="downloadCsv()" title="Click to export detailed Private Cloud pricing breakdown">
+      <span class="summary-tile privatecloud-tile" onclick="exportCSV('private')" title="Click to export detailed Private Cloud pricing breakdown">
         Private Cloud: <strong id="ataPrice">A$0.00</strong>
       </span>
+      <button id="downloadCsv" class="btn btn-primary btn-sm ms-2" title="Download full cost summary as CSV">Download CSV</button>
     </div>
-    <button id="darkModeToggle" class="btn btn-outline-dark btn-sm me-2" title="Toggle Dark Mode">
-      🌓
-    </button>
-        <button class="btn btn-outline-info btn-sm" onclick="togglePricingEditor()" title="Edit Pricing">🛠️ Edit Pricing</button>
-
+    <div>
+      <button id="darkModeToggle" class="btn btn-outline-dark btn-sm me-2" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌓</button>
+      <button class="btn btn-outline-info btn-sm" onclick="togglePricingEditor()" title="Edit Pricing" aria-label="Edit pricing">🛠️ Edit Pricing</button>
+    </div>
   </div>
 
   <div class="container mt-4">
@@ -132,44 +131,77 @@
       <tbody></tbody>
     </table>
 
-     <div id="pricingEditor">
+    <div id="pricingEditor" style="display:none;">
       <h5>Edit Cost Model</h5>
       <div class="row">
-        <div class="col-md-3 form-group">
+        <div class="col-md-3 form-group mb-3">
           <label>Base Fee</label>
           <input type="number" class="form-control" step="0.01" min="0" id="baseFee" value="0" onchange="updateAta('base')">
         </div>
-        <div class="col-md-3 form-group">
+        <div class="col-md-3 form-group mb-3">
           <label>CPU (per core)</label>
           <input type="number" class="form-control" step="0.01" min="0" id="cpuFee" value="13.58" onchange="updateAta('cpu')">
         </div>
-        <div class="col-md-3 form-group">
+        <div class="col-md-3 form-group mb-3">
           <label>RAM (per GB)</label>
           <input type="number" class="form-control" step="0.01" min="0" id="ramFee" value="33.18" onchange="updateAta('ram')">
         </div>
-        <div class="col-md-3 form-group">
+        <div class="col-md-3 form-group mb-3">
           <label>Storage (per GB)</label>
           <input type="number" class="form-control" step="0.01" min="0" id="storageFee" value="0.24" onchange="updateAta('storage')">
         </div>
-        <div class="col-md-3 form-group">
+        <div class="col-md-3 form-group mb-3">
           <label>Octopus Fee</label>
           <input type="number" class="form-control" step="0.01" min="0" id="octopusFee" value="5" onchange="updateAta('octopus')">
         </div>
-        <div class="col-md-3 form-group">
+        <div class="col-md-3 form-group mb-3">
           <label>SQL Std (per 2 cores)</label>
           <input type="number" class="form-control" step="0.01" min="0" id="sqlStdFee" value="390.07" onchange="updateAta('SQL-Std')">
         </div>
-        <div class="col-md-3 form-group">
+        <div class="col-md-3 form-group mb-3">
           <label>SQL Ent (per 2 cores)</label>
           <input type="number" class="form-control" step="0.01" min="0" id="sqlEntFee" value="1174.91" onchange="updateAta('SQL-Ent')">
         </div>
       </div>
     </div>
   </div>
+
+  <!-- SKU Selection Modal -->
+  <div class="modal fade" id="skuModal" tabindex="-1" aria-labelledby="skuModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="skuModalLabel">Select a Matching SKU</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col">
+              <input type="text" id="filterName" class="form-control filter-input" placeholder="Filter by SKU Name">
+            </div>
+            <div class="col">
+              <input type="text" id="filterCPU" class="form-control filter-input" placeholder="Filter by CPU">
+            </div>
+            <div class="col">
+              <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB)">
+            </div>
+          </div>
           <table class="table table-sm table-striped">
-            <thead><tr><th>Name</th><th>CPU</th><th>RAM</th><th>Storage</th><th>Linux Price</th><th>Select</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>Storage</th>
+                <th>Linux Price</th>
+                <th>Select</th>
+              </tr>
+            </thead>
             <tbody id="skuTableBody"></tbody>
           </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
@@ -183,7 +215,7 @@ let ataPricing = {};
 let selectedRow = null;
 let lastVmData = [];
 let matchedSkus = [];
-const preferredSeries = ['B', 'A']; // Updated to include B and A series from JSON
+const preferredSeries = ['B', 'A'];
 const defaultAzureStoragePricePerGB = 0.3;
 let azureStoragePricing = [];
 let azureVMPricing = [];
@@ -201,32 +233,36 @@ function debounce(fn, ms) {
 // Escape CSV values
 function escapeCsvValue(value) {
   if (typeof value !== 'string') return value;
-  return `"${value.replace(/"/g, '""')}"`;
+  value = value.replace(/"/g, '""');
+  if (value.includes(',') || value.includes('\n')) {
+    return `"${value}"`;
+  }
+  return value;
 }
 
 // Load Azure VM catalog and pricing from JSON
 async function loadAzureDataFromJson() {
   try {
-    const res = await fetch('./az_data-export.json'); // Ensure correct path to JSON
+    const res = await fetch('./az_data-export.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load Azure data`);
     const data = await res.json();
-    console.log('Data from az_data-export.json:', data);
+    if (data.currency && data.currency !== 'AUD') {
+      console.warn(`Currency is ${data.currency}. Prices assumed to be in AUD.`);
+    }
     const azureData = Array.isArray(data) ? data : data.Items || [];
     if (!Array.isArray(azureData)) {
       throw new Error(`Expected an array, got ${typeof azureData}`);
     }
-    // Map data for fullCatalog
     fullCatalog.length = 0;
     fullCatalog.push(...azureData.map(item => ({
       name: item.name || '',
       cpu: parseInt(item.numberOfCores) || 0,
-      ram: parseFloat(item.memoryInMB) || 0, // Already in MiB
-      storage: parseInt(item.osDiskSizeInMB) || 0, // Use osDiskSizeInMB
-      priceLinux: parseFloat(item.linuxPrice) || 0, // Monthly AUD
-      priceWindows: parseFloat(item.windowsPrice) || 0, // Monthly AUD
-      supportPremiumDisk: item.supportPremiumDisk || 'no' // Add for filtering
+      ram: parseFloat(item.memoryInMB) || 0,
+      storage: parseInt(item.osDiskSizeInMB) || 0,
+      priceLinux: parseFloat(item.linuxPrice) || 0,
+      priceWindows: parseFloat(item.windowsPrice) || 0,
+      supportPremiumDisk: item.supportPremiumDisk || 'no'
     })));
-    // Map data for azureVMPricing
     azureVMPricing = azureData.map(item => ({
       name: item.name || '',
       cpu: parseInt(item.numberOfCores) || 0,
@@ -236,7 +272,6 @@ async function loadAzureDataFromJson() {
       priceWindows: parseFloat(item.windowsPrice) || 0,
       supportPremiumDisk: item.supportPremiumDisk || 'no'
     }));
-    // Merge specs from catalog (retained for compatibility)
     fullCatalog.forEach(catalogItem => {
       const apiItem = azureVMPricing.find(api => api.name === catalogItem.name);
       if (apiItem) {
@@ -248,7 +283,7 @@ async function loadAzureDataFromJson() {
     });
   } catch (err) {
     console.error('Azure data load error:', err);
-    alert(`Failed to load Azure data: ${err.message}`);
+    alert(`Failed to load Azure data: ${err.message}. Ensure the file 'az_data-export.json' is accessible and valid.`);
     fullCatalog.length = 0;
     azureVMPricing = [];
   }
@@ -260,25 +295,28 @@ async function loadAzureStoragePricingFromJson() {
     const response = await fetch('./az_storage-pricing.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure storage pricing`);
     const data = await response.json();
+    if (data.currency && data.currency !== 'AUD') {
+      console.warn(`Currency is ${data.currency}. Prices assumed to be in AUD.`);
+    }
     azureStoragePricing = data.Items.map(item => ({
       skuName: item.skuName,
-      retailPrice: parseFloat(item.retailPrice), // Assume AUD, adjust if USD
+      retailPrice: parseFloat(item.retailPrice),
       unitOfMeasure: item.unitOfMeasure,
       diskSizeGB: parseInt(item.skuName?.match(/\d+/)?.[0]) || 0,
       diskType: item.productName?.includes('Premium SSD') ? 'Premium SSD' : 'Standard SSD'
     }));
-    // Disk size mapping
+    const sizeMap = {
+      'E1': 4, 'E2': 8, 'E3': 16, 'E4': 32, 'E6': 64, 'E10': 128, 'E15': 256, 'E20': 512,
+      'E30': 1024, 'E40': 2048, 'E50': 4096, 'E60': 8192, 'E70': 16384, 'E80': 32767,
+      'P4': 32, 'P6': 64, 'P10': 128, 'P15': 256, 'P20': 512, 'P30': 1024, 'P40': 2048,
+      'P50': 4096, 'P60': 8192, 'P70': 16384, 'P80': 32767
+    };
     azureStoragePricing.forEach(item => {
-      const sizeMap = {
-        'E1': 4, 'E2': 8, 'E3': 16, 'E4': 32, 'E6': 64, 'E10': 128, 'E15': 256, 'E20': 512,
-        'E30': 1024, 'E40': 2048, 'E50': 4096, 'E60': 8192, 'E70': 16384, 'E80': 32767,
-        'P4': 32, 'P6': 64, 'P10': 128, 'P15': 256, 'P20': 512, 'P30': 1024, 'P40': 2048,
-        'P50': 4096, 'P60': 8192, 'P70': 16384, 'P80': 32767
-      };
       item.diskSizeGB = sizeMap[item.skuName] || item.diskSizeGB;
     });
   } catch (err) {
     console.error('Azure storage pricing load error:', err);
+    alert(`Failed to load Azure storage pricing: ${err.message}. Ensure the file 'az_storage-pricing.json' is accessible and valid.`);
     azureStoragePricing = [];
   }
 }
@@ -294,7 +332,7 @@ async function loadPrivateCloudPricing() {
     updateSummary();
   } catch (err) {
     console.error('Private cloud pricing load error:', err);
-    alert(`Failed to load private cloud pricing: ${err.message}`);
+    alert(`Failed to load private cloud pricing: ${err.message}. Ensure the file 'cld-pricing.json' is accessible and valid.`);
   }
 }
 
@@ -339,13 +377,6 @@ window.onload = async () => {
     } else {
       alert('Invalid tag. Use SQL-Std or SQL-Ent.');
     }
-  });
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(tooltipTriggerEl => {
-      new bootstrap.Tooltip(tooltipTriggerEl);
-    });
   });
 };
 
@@ -420,7 +451,7 @@ function readXlsx(file) {
   reader.onload = e => {
     try {
       const data = new Uint8Array(e.target.result);
-      workbook = XLSX.read(data, { type: 'array' });
+      const workbook = XLSX.read(data, { type: 'array' });
       const sheetPicker = document.getElementById('sheetPickerContainer');
       const sheetSelect = document.getElementById('sheetSelect');
       if (workbook.SheetNames.length > 1) {
@@ -432,12 +463,12 @@ function readXlsx(file) {
       }
     } catch (err) {
       spinner.style.display = 'none';
-      alert(`XLSX parsing failed: ${err.message}. Please ensure the file is a valid RVTools export.`);
+      alert(`XLSX parsing failed: ${err.message}. Ensure the file is a valid RVTools export in XLSX format.`);
     }
   };
   reader.onerror = () => {
     spinner.style.display = 'none';
-    alert('Failed to read the file. Please try again.');
+    alert('Failed to read the file. Please ensure it is a valid XLSX file and try again.');
   };
   reader.readAsArrayBuffer(file);
 }
@@ -472,7 +503,7 @@ function loadSheet(sheetName) {
     const vmData = XLSX.utils.sheet_to_json(sheet);
     spinner.style.display = 'none';
     if (!vmData.length) {
-      alert('No data found in the uploaded file');
+      alert('No data found in the uploaded file. Please ensure it contains VM data.');
       return;
     }
     lastVmData = vmData.map(vm => ({ ...vm, selected: false, diskType: 'Standard SSD' }));
@@ -480,20 +511,22 @@ function loadSheet(sheetName) {
     updateSummary();
   } catch (err) {
     spinner.style.display = 'none';
-    alert(`Sheet loading failed: ${err.message}. Please ensure the file is a valid RVTools export.`);
+    alert(`Sheet loading failed: ${err.message}. Ensure the selected sheet contains valid RVTools data.`);
   }
 }
 
 // Storage unit conversions
 function convertToGiB(storage, unit) {
-  switch (unit) {
-    case 'GiB':
-    case 'GB':
+  if (isNaN(storage)) return 0;
+  switch (unit.toLowerCase()) {
+    case 'gib':
+    case 'gb':
       return storage;
-    case 'MiB':
-    case 'MB':
+    case 'mib':
+    case 'mb':
       return storage / 1024;
     default:
+      console.warn(`Unknown storage unit: ${unit}. Assuming GB.`);
       return storage;
   }
 }
@@ -527,7 +560,7 @@ function calculateAzureVMPrice(index) {
   basePrice = apiSku ? ((vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? apiSku.priceWindows : apiSku.priceLinux) : 0;
 
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['CPUs'], vm.sqlLicenseType) : 0;
-  const storageCost = calculateAzureStorageCost(storage, sku.storage / 1024, diskType); // Convert MiB to GiB
+  const storageCost = calculateAzureStorageCost(storage, sku.storage / 1024, diskType);
   const total = basePrice + storageCost + sqlCost;
 
   return { total, base: basePrice, storage: storageCost, sql: sqlCost };
@@ -547,6 +580,7 @@ function calculatePrivateCloudPrice(index) {
 
 // Calculate SQL license cost
 function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
+  // Enforces minimum 4 cores per SQL Server licensing requirements
   const coreCount = Math.max(4, Math.ceil(parseInt(cpuCount) / 2) * 2);
   const unitPrice = ataPricing[type] || 0;
   return (coreCount / 2) * unitPrice;
@@ -564,31 +598,10 @@ function updateSummary() {
 function populatePricingEditor() {
   const editor = document.getElementById('pricingEditor');
   if (!editor) return;
-  editor.innerHTML = '';
-  const entries = ['base', 'cpu', 'ram', 'storage', 'octopus', 'SQL-Std', 'SQL-Ent'];
-  entries.forEach(key => {
-    const div = document.createElement('div');
-    const label = document.createElement('label');
-    label.textContent = `${key}: `;
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.step = '0.01';
-    input.min = '0';
-    input.value = ataPricing[key] || 0;
-    input.addEventListener('change', () => {
-      const value = parseFloat(input.value);
-      if (isNaN(value) || value < 0) {
-        alert(`Invalid value for ${key}. Please enter a non-negative number.`);
-        input.value = ataPricing[key] || 0;
-        return;
-      }
-      ataPricing[key] = value;
-      renderVMTable(lastVmData);
-      updateSummary();
-    });
-    div.appendChild(label);
-    div.appendChild(input);
-    editor.appendChild(div);
+  editor.querySelectorAll('.form-group').forEach(div => {
+    const input = div.querySelector('input');
+    const key = Object.keys(keyMap).find(k => keyMap[k] === input.id);
+    if (key) input.value = ataPricing[key] || 0;
   });
 }
 
@@ -816,29 +829,34 @@ function getPreferredSku(skus, cpu, ram) {
   return preferred[0] || skus.sort((a, b) => (a.cpu - cpu) || (a.ram - ram) || (a.priceLinux - b.priceLinux))[0];
 }
 
-    function togglePricingEditor() {
-      const editor = document.getElementById('pricingEditor');
-      editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
-    }
+// Toggle pricing editor visibility
+function togglePricingEditor() {
+  const editor = document.getElementById('pricingEditor');
+  editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+}
 
-    function updateAta(key) {
-      const val = parseFloat(document.getElementById(keyMap[key]).value);
-      if (!isNaN(val) && val >= 0) {
-        ataPricing[key] = val;
-        renderVMTable(lastVmData);
-        updateSummary();
-      }
-    }
+// Update private cloud pricing
+function updateAta(key) {
+  const val = parseFloat(document.getElementById(keyMap[key]).value);
+  if (!isNaN(val) && val >= 0) {
+    ataPricing[key] = val;
+    renderVMTable(lastVmData);
+    updateSummary();
+  } else {
+    alert(`Invalid value for ${key}. Please enter a non-negative number.`);
+    document.getElementById(keyMap[key]).value = ataPricing[key] || 0;
+  }
+}
 
-    const keyMap = {
-      base: 'baseFee',
-      cpu: 'cpuFee',
-      ram: 'ramFee',
-      storage: 'storageFee',
-      octopus: 'octopusFee',
-      'SQL-Std': 'sqlStdFee',
-      'SQL-Ent': 'sqlEntFee'
-    };
+const keyMap = {
+  base: 'baseFee',
+  cpu: 'cpuFee',
+  ram: 'ramFee',
+  storage: 'storageFee',
+  octopus: 'octopusFee',
+  'SQL-Std': 'sqlStdFee',
+  'SQL-Ent': 'sqlEntFee'
+};
   </script>
 </body>
 </html>
