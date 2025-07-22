@@ -310,7 +310,7 @@ fullCatalog.push(...azureData.map(item => ({
   name: item.name || '',
   cpu: parseInt(item.numberOfCores) || 0,
   ram: (parseFloat(item.memoryInGB || item.memory) || 0) * 1024,
-  storage: (parseFloat(item.osDiskSizeInGB || item.osDiskSize) || 0) * 1024,
+  storage: (parseFloat(item.osDiskSizeInGB || item.osDiskSizeInMB) || 0) * 1024,
   priceLinux: parseFloat(item.linuxPrice) || 0,
   priceWindows: parseFloat(item.windowsPrice) || 0,
   supportPremiumDisk: item.supportPremiumDisk || 'no'
