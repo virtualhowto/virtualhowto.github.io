@@ -103,11 +103,6 @@
       <input type="file" id="fileInput" class="form-control mb-2" accept=".xlsx" />
       <button id="batchSqlAssign" class="btn btn-primary btn-sm">Auto Assign SQL Tags</button>
     </div>
-    <div id="sheetPickerContainer" style="display:none;">
-      <label for="sheetSelect">Select Sheet:</label>
-      <select id="sheetSelect" class="form-select d-inline-block w-auto"></select>
-      <button onclick="showColumnMappingModal()" class="btn btn-primary btn-sm ms-2">Load & Map Columns</button>
-    </div>
     <div id="spinner" class="text-center my-3">
       <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
       <p>Processing...</p>
@@ -216,6 +211,10 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <div class="mb-3">
+            <label for="modalSheetSelect" class="form-label">Select Sheet</label>
+            <select id="modalSheetSelect" class="form-select" onchange="updateColumnMappings()"></select>
+          </div>
           <p>Map the columns in your sheet to the required fields. All fields except 'OS' are required.</p>
           <div class="row mb-3">
             <div class="col-md-6">
@@ -504,16 +503,11 @@ function readXlsx(file) {
       const data = new Uint8Array(e.target.result);
       workbook = XLSX.read(data, { type: 'array', cellText: true, cellDates: false });
       console.log('Workbook loaded:', workbook.SheetNames);
-      const sheetPicker = document.getElementById('sheetPickerContainer');
-      const sheetSelect = document.getElementById('sheetSelect');
-      if (workbook.SheetNames.length > 1) {
-        sheetSelect.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
-        sheetPicker.style.display = 'block';
-        spinner.style.display = 'none';
-      } else {
-        console.log('Single sheet detected:', workbook.SheetNames[0]);
-        showColumnMappingModal(workbook.SheetNames[0]);
+      if (!workbook.SheetNames.length) {
+        throw new Error('No sheets found in the workbook.');
       }
+      spinner.style.display = 'none';
+      showColumnMappingModal();
     } catch (err) {
       spinner.style.display = 'none';
       alert(`XLSX parsing failed: ${err.message}. Ensure the file is a valid RVTools export in XLSX format.`);
@@ -528,21 +522,33 @@ function readXlsx(file) {
 }
 
 // Show column mapping modal
-function showColumnMappingModal(sheetName) {
-  if (!sheetName) sheetName = document.getElementById('sheetSelect')?.value || workbook.SheetNames[0];
-  console.log('Attempting to load sheet:', sheetName);
+function showColumnMappingModal() {
+  if (!workbook || !workbook.SheetNames.length) {
+    alert('No workbook loaded. Please upload a valid XLSX file.');
+    return;
+  }
+
+  const modalSheetSelect = document.getElementById('modalSheetSelect');
+  modalSheetSelect.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
+  modalSheetSelect.value = workbook.SheetNames.find(name => name.toLowerCase().includes('vinfo')) || workbook.SheetNames[0];
+  updateColumnMappings();
+  new bootstrap.Modal(document.getElementById('columnMappingModal')).show();
+}
+
+// Update column mappings based on selected sheet
+function updateColumnMappings() {
+  const sheetName = document.getElementById('modalSheetSelect').value;
+  console.log('Updating column mappings for sheet:', sheetName);
   try {
     const sheet = workbook.Sheets[sheetName];
     if (!sheet) {
-      alert(`Sheet "${sheetName}" not found in the workbook.`);
+      alert(`Sheet "${sheetName}" not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
       return;
     }
 
-    // Get the sheet's range to ensure we capture all data
     const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
     console.log('Sheet range:', range);
 
-    // Extract headers from the first non-empty row
     let headers = [];
     for (let row = range.s.r; row <= range.e.r; row++) {
       const rowData = XLSX.utils.sheet_to_json(sheet, { header: 1, range: row })[0] || [];
@@ -559,31 +565,27 @@ function showColumnMappingModal(sheetName) {
       return;
     }
 
-    const selects = ['mapDisplayName', 'mapCpu', 'mapMemory', 'mapStorage', 'mapOs'];
-    selects.forEach(id => {
+    const selects = [
+      { id: 'mapDisplayName', patterns: ['vm', 'name', 'display name'] },
+      { id: 'mapCpu', patterns: ['cpu', 'cpus', 'vcpus', 'cores'] },
+      { id: 'mapMemory', patterns: ['memory', 'ram'] },
+      { id: 'mapStorage', patterns: ['disk', 'storage', 'capacity', 'provisioned'] },
+      { id: 'mapOs', patterns: ['os', 'operating system', 'guest os'] }
+    ];
+
+    selects.forEach(({ id, patterns }) => {
       const select = document.getElementById(id);
       select.innerHTML = '<option value="">Select Column</option>' + 
         columnHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
-      // Preselect likely matches with case-insensitive and partial matching
-      if (id === 'mapDisplayName' && columnHeaders.some(h => h.toString().toLowerCase().includes('vm'))) {
-        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('vm')) || '';
-      }
-      if (id === 'mapCpu' && columnHeaders.some(h => h.toString().toLowerCase().includes('cpu'))) {
-        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('cpu')) || '';
-      }
-      if (id === 'mapMemory' && columnHeaders.some(h => h.toString().toLowerCase().includes('memory'))) {
-        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('memory')) || '';
-      }
-      if (id === 'mapStorage' && columnHeaders.some(h => h.toString().toLowerCase().includes('disk') || h.toString().toLowerCase().includes('storage'))) {
-        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('disk') || h.toString().toLowerCase().includes('storage')) || '';
-      }
-      if (id === 'mapOs' && columnHeaders.some(h => h.toString().toLowerCase().includes('os'))) {
-        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('os')) || '';
+      
+      // Pre-populate with the first matching header
+      const matchedHeader = columnHeaders.find(h => 
+        patterns.some(pattern => h.toString().toLowerCase().includes(pattern))
+      );
+      if (matchedHeader) {
+        select.value = matchedHeader;
       }
     });
-
-    document.getElementById('sheetPickerContainer').style.display = 'none';
-    new bootstrap.Modal(document.getElementById('columnMappingModal')).show();
   } catch (err) {
     alert(`Failed to read sheet "${sheetName}": ${err.message}. Ensure the selected sheet is valid.`);
     console.error('Sheet reading error:', err);
@@ -607,8 +609,7 @@ function applyColumnMapping() {
     return;
   }
 
-  const sheetSelect = document.getElementById('sheetSelect');
-  const sheetName = sheetSelect ? sheetSelect.value : workbook.SheetNames[0];
+  const sheetName = document.getElementById('modalSheetSelect').value;
   loadSheet(sheetName);
   bootstrap.Modal.getInstance(document.getElementById('columnMappingModal')).hide();
 }
@@ -618,7 +619,16 @@ function loadSheet(sheetName) {
   const spinner = document.getElementById('spinner');
   spinner.style.display = 'block';
   try {
-    const sheet = workbook.Sheets[sheetName];
+    if (!workbook || !workbook.SheetNames.length) {
+      throw new Error('No workbook loaded.');
+    }
+    const normalizedSheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === sheetName.trim().toLowerCase());
+    if (!normalizedSheetName) {
+      throw new Error(`Sheet "${sheetName}" not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
+    }
+    const sheet = workbook.Sheets[normalizedSheetName];
+    console.log('Loading sheet:', normalizedSheetName, 'Available sheets:', workbook.SheetNames);
+
     const storageHeader = columnMapping['Provisioned Storage (GB)'];
     if (storageHeader) {
       const headerLower = storageHeader.toLowerCase();
@@ -633,11 +643,9 @@ function loadSheet(sheetName) {
       console.log('No storage column selected, defaulting to GB');
     }
 
-    // Get the sheet's range
     const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
     console.log('Sheet range:', range);
 
-    // Find the header row (use the same logic as showColumnMappingModal)
     let headerRow = 0;
     let headers = [];
     for (let row = range.s.r; row <= range.e.r; row++) {
@@ -650,12 +658,11 @@ function loadSheet(sheetName) {
       }
     }
 
-    // Parse data rows starting after the header row
     const vmData = XLSX.utils.sheet_to_json(sheet, { header: headers, range: headerRow + 1, blankrows: false, defval: '' });
     console.log('Parsed VM data:', vmData);
     spinner.style.display = 'none';
     if (!vmData.length) {
-      alert('No data found in the uploaded file. Please ensure it contains VM data below the header row.');
+      alert('No data found in the selected sheet. Please ensure it contains VM data below the header row.');
       return;
     }
 
