@@ -267,6 +267,7 @@ let storageUnit = 'GB';
 let workbook = null;
 let columnHeaders = [];
 let columnMapping = {};
+const currency = 'AUD';
 
 // Debounce utility
 function debounce(fn, ms) {
@@ -878,12 +879,13 @@ function renderVMTable(vmData) {
 
     const sku = matchedSkus[index] || vm.manualSku;
     const azureTooltip = sku
-      ? `SKU: ${sku.name}\n` +
+      ? `Currency: ${currency}\n` +
+        `SKU: ${sku.name}\n` +
         `SKU Specs: ${sku.cpu} CPU, ${(sku.ram / 1024).toFixed(1)} GB RAM, ${(sku.storage / 1024).toFixed(1)} GB Storage\n` +
-        `Base VM: A$${azureCostBreakdown.base.toFixed(2)}\n` +
-        `Storage (${vm.diskType || 'Standard SSD'}): A$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${storageUnit})\n` +
-        `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): A$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
-        `Total: A$${azureCostBreakdown.total.toFixed(2)}`
+        `Base VM: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
+        `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${storageUnit})\n` +
+        `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
+        `Total: ${currency}$${azureCostBreakdown.total.toFixed(2)}`
       : 'No SKU selected';
 
     const cpuCost = cpu * (ataPricing.cpu || 0);
