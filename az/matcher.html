@@ -178,7 +178,10 @@
               <input type="text" id="filterCPU" class="form-control filter-input" placeholder="Filter by CPU">
             </div>
             <div class="col">
-              <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB)">
+              <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB or MB)">
+            </div>
+            <div class="col">
+              <input type="text" id="filterStorage" class="form-control filter-input" placeholder="Filter by Storage (GB or MB)">
             </div>
           </div>
           <table class="table table-sm table-striped">
@@ -402,6 +405,7 @@ window.onload = async () => {
   document.getElementById('filterName')?.addEventListener('input', debounce(filterSKUs, 300));
   document.getElementById('filterCPU')?.addEventListener('input', debounce(filterSKUs, 300));
   document.getElementById('filterRAM')?.addEventListener('input', debounce(filterSKUs, 300));
+  document.getElementById('filterStorage')?.addEventListener('input', debounce(filterSKUs, 300));
 
   document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
 
@@ -784,14 +788,60 @@ function populatePricingEditor() {
 function filterSKUs() {
   const name = document.getElementById('filterName')?.value.toLowerCase() || '';
   const cpu = document.getElementById('filterCPU')?.value || '';
-  const ram = document.getElementById('filterRAM')?.value || '';
+  let ramInput = document.getElementById('filterRAM')?.value || '';
+  let storageInput = document.getElementById('filterStorage')?.value || '';
+
+  // Parse RAM input to detect unit
+  let ramValue = 0;
+  let ramUnit = 'GB'; // Default to GB
+  if (ramInput) {
+    ramInput = ramInput.trim().toLowerCase();
+    if (ramInput.includes('gb')) {
+      ramUnit = 'GB';
+      ramValue = parseFloat(ramInput.replace('gb', '').trim());
+    } else if (ramInput.includes('mb')) {
+      ramUnit = 'MB';
+      ramValue = parseFloat(ramInput.replace('mb', '').trim());
+    } else {
+      ramValue = parseFloat(ramInput);
+      if (!isNaN(ramValue)) {
+        ramUnit = ramValue >= 1024 ? 'MB' : 'GB';
+      }
+    }
+    console.log(`RAM filter: ${ramValue} ${ramUnit} detected`);
+  }
+  const ramInMB = ramUnit === 'GB' ? ramValue * 1024 : ramValue;
+
+  // Parse Storage input to detect unit
+  let storageValue = 0;
+  let storageUnitFilter = 'GB'; // Default to GB
+  if (storageInput) {
+    storageInput = storageInput.trim().toLowerCase();
+    if (storageInput.includes('gb')) {
+      storageUnitFilter = 'GB';
+      storageValue = parseFloat(storageInput.replace('gb', '').trim());
+    } else if (storageInput.includes('mb')) {
+      storageUnitFilter = 'MB';
+      storageValue = parseFloat(storageInput.replace('mb', '').trim());
+    } else {
+      storageValue = parseFloat(storageInput);
+      if (!isNaN(storageValue)) {
+        storageUnitFilter = storageValue >= 1024 ? 'MB' : 'GB';
+      }
+    }
+    console.log(`Storage filter: ${storageValue} ${storageUnitFilter} detected`);
+  }
+  const storageInMB = storageUnitFilter === 'GB' ? storageValue * 1024 : storageValue;
+
   const filtered = azureVMPricing.filter(sku => {
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
       (!cpu || sku.cpu.toString().includes(cpu)) &&
-      (!ram || (sku.ram / 1024).toString().includes(ram))
+      (!ramInput || Math.abs(sku.ram - ramInMB) < 0.01) &&
+      (!storageInput || Math.abs(sku.storage - storageInMB) < 0.01)
     );
   });
+
   const tbody = document.getElementById('skuTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
@@ -816,9 +866,10 @@ function openSkuPopup(index) {
   const vmName = vm['Display Name'] || vm['VM'] || 'Unnamed';
   const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
   const ram = parseFloat(vm['Memory'] || 0);
+  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
   const modalTitle = document.querySelector('#skuModal .modal-title');
   if (modalTitle) {
-    modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB)`;
+    modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} ${storageUnit})`;
   }
   filterSKUs();
   new bootstrap.Modal(document.getElementById('skuModal')).show();
