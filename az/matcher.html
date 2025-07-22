@@ -541,7 +541,7 @@ function showColumnMappingModal() {
       const select = document.getElementById(id);
       select.innerHTML = '<option value="">Select Column</option>' + 
         columnHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
-      // Preselect likely matches for convenience
+      // Preselect likely matches
       if (id === 'mapDisplayName' && columnHeaders.includes('VM')) select.value = 'VM';
       if (id === 'mapCpu' && columnHeaders.includes('CPUs')) select.value = 'CPUs';
       if (id === 'mapMemory' && columnHeaders.includes('Memory')) select.value = 'Memory';
