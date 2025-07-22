@@ -166,13 +166,16 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="skuModalLabel">Select a Matching Storage SKU</h5>
+          <h5 class="modal-title" id="skuModalLabel">Select a Matching SKU</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <div class="row mb-3">
             <div class="col">
               <input type="text" id="filterName" class="form-control filter-input" placeholder="Filter by SKU Name">
+            </div>
+            <div class="col">
+              <input type="text" id="filterCPU" class="form-control filter-input" placeholder="Filter by CPUs">
             </div>
             <div class="col">
               <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB or MB)">
@@ -185,6 +188,8 @@
             <thead>
               <tr>
                 <th>Name</th>
+                <th>CPUs</th>
+                <th>RAM</th>
                 <th>Storage</th>
                 <th>Price</th>
                 <th>Select</th>
@@ -258,7 +263,7 @@ let selectedRow = null;
 let lastVmData = [];
 let matchedSkus = [];
 const defaultAzureStoragePricePerGB = 0.3;
-let azureStoragePricing = [];
+let azureVMPricing = [];
 let storageUnit = 'GB';
 let workbook = null;
 let columnHeaders = [];
@@ -284,37 +289,29 @@ function escapeCsvValue(value) {
   return value;
 }
 
-// Load Azure storage pricing from local JSON
-async function loadAzureStoragePricingFromJson() {
+// Load Azure VM pricing from local JSON
+async function loadAzureVMPricingFromJson() {
   try {
-    const response = await fetch('./az_storage-pricing.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure storage pricing`);
+    const response = await fetch('./az_vm-pricing.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure VM pricing`);
     const data = await response.json();
     if (data.currency && data.currency !== 'AUD') {
       console.warn(`Currency is ${data.currency}. Prices assumed to be in AUD.`);
     }
-    azureStoragePricing = data.Items.map(item => ({
+    azureVMPricing = data.Items.map(item => ({
       name: item.skuName,
+      vCPUs: parseInt(item.vCPUs) || 0,
+      ram: parseFloat(item.memoryInMB) || 0,
+      storage: parseFloat(item.osDiskSizeInMB) || 0,
       retailPrice: parseFloat(item.retailPrice) || 0,
-      unitOfMeasure: item.unitOfMeasure,
-      diskSizeGB: parseInt(item.skuName?.match(/\d+/)?.[0]) || parseInt(item.diskSizeGB) || 0,
-      diskType: item.productName?.includes('Premium SSD') ? 'Premium SSD' : 'Standard SSD'
+      unitOfMeasure: item.unitOfMeasure
     }));
-    const sizeMap = {
-      'E1': 4, 'E2': 8, 'E3': 16, 'E4': 32, 'E6': 64, 'E10': 128, 'E15': 256, 'E20': 512,
-      'E30': 1024, 'E40': 2048, 'E50': 4096, 'E60': 8192, 'E70': 16384, 'E80': 32767,
-      'P4': 32, 'P6': 64, 'P10': 128, 'P15': 256, 'P20': 512, 'P30': 1024, 'P40': 2048,
-      'P50': 4096, 'P60': 8192, 'P70': 16384, 'P80': 32767
-    };
-    azureStoragePricing.forEach(item => {
-      item.diskSizeGB = sizeMap[item.name] || item.diskSizeGB;
-    });
     fullCatalog.length = 0;
-    fullCatalog.push(...azureStoragePricing);
+    fullCatalog.push(...azureVMPricing);
   } catch (err) {
-    console.error('Azure storage pricing load error:', err);
-    alert(`Failed to load Azure storage pricing: ${err.message}. Ensure the file 'az_storage-pricing.json' is accessible and valid.`);
-    azureStoragePricing = [];
+    console.error('Azure VM pricing load error:', err);
+    alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file 'az_vm-pricing.json' is accessible and valid.`);
+    azureVMPricing = [];
     fullCatalog.length = 0;
   }
 }
@@ -336,7 +333,7 @@ async function loadPrivateCloudPricing() {
 
 // Initialize on window load
 window.onload = async () => {
-  await loadAzureStoragePricingFromJson();
+  await loadAzureVMPricingFromJson();
   await loadPrivateCloudPricing();
 
   const fileInput = document.getElementById('fileInput');
@@ -349,6 +346,7 @@ window.onload = async () => {
   }
 
   document.getElementById('filterName')?.addEventListener('input', debounce(filterSKUs, 300));
+  document.getElementById('filterCPU')?.addEventListener('input', debounce(filterSKUs, 300));
   document.getElementById('filterRAM')?.addEventListener('input', debounce(filterSKUs, 300));
   document.getElementById('filterStorage')?.addEventListener('input', debounce(filterSKUs, 300));
 
@@ -658,9 +656,10 @@ function convertToGiB(storage, unit) {
 function calculateAzureStorageCost(storage, diskType = 'Standard SSD') {
   const storageGiB = convertToGiB(parseFloat(storage) || 0, storageUnit);
   if (storageGiB <= 0) return 0;
-  const disk = azureStoragePricing
-    .filter(d => d.diskSizeGB >= storageGiB && d.diskType === diskType)
-    .sort((a, b) => a.diskSizeGB - b.diskSizeGB)[0];
+  const storageMB = storageGiB * 1024;
+  const disk = azureVMPricing
+    .filter(d => d.storage >= storageMB)
+    .sort((a, b) => a.storage - b.storage)[0];
 
   if (!disk) {
     return diskType === 'Standard SSD' ? storageGiB * defaultAzureStoragePricePerGB : 0;
@@ -676,8 +675,9 @@ function calculateAzureVMPrice(index) {
   const diskType = vm.diskType || 'Standard SSD';
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
   const storageCost = calculateAzureStorageCost(storage, diskType);
-  const total = storageCost + sqlCost;
-  return { total, base: 0, storage: storageCost, sql: sqlCost };
+  const baseCost = sku ? sku.retailPrice : 0;
+  const total = baseCost + storageCost + sqlCost;
+  return { total, base: baseCost, storage: storageCost, sql: sqlCost };
 }
 
 // Calculate private cloud price
@@ -721,8 +721,12 @@ function populatePricingEditor() {
 // Filter SKUs
 function filterSKUs() {
   const name = document.getElementById('filterName')?.value.toLowerCase() || '';
+  const cpuInput = document.getElementById('filterCPU')?.value || '';
   let ramInput = document.getElementById('filterRAM')?.value || '';
   let storageInput = document.getElementById('filterStorage')?.value || '';
+
+  // Parse CPU input
+  const cpuValue = parseInt(cpuInput) || 0;
 
   // Parse RAM input to detect unit
   let ramValue = 0;
@@ -766,14 +770,13 @@ function filterSKUs() {
   }
   const storageInMB = storageUnitFilter === 'GB' ? storageValue * 1024 : storageValue;
 
-  // Filter storage SKUs based on name and storage size
-  const filtered = azureStoragePricing.filter(sku => {
-    const vm = lastVmData[selectedRow] || { 'Memory': 0 };
-    const vmRamInMB = parseFloat(vm['Memory']) * 1024;
+  // Filter SKUs based on name, CPU, RAM, and storage
+  const filtered = azureVMPricing.filter(sku => {
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
-      (!ramInput || Math.abs(vmRamInMB - ramInMB) < 0.01) &&
-      (!storageInput || Math.abs(sku.diskSizeGB * 1024 - storageInMB) < 0.01)
+      (!cpuInput || sku.vCPUs === cpuValue) &&
+      (!ramInput || Math.abs(sku.ram - ramInMB) < 0.01) &&
+      (!storageInput || Math.abs(sku.storage - storageInMB) < 0.01)
     );
   });
 
@@ -784,7 +787,9 @@ function filterSKUs() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.name}</td>
-      <td>${s.diskSizeGB.toFixed(1)} GB</td>
+      <td>${s.vCPUs}</td>
+      <td>${(s.ram / 1024).toFixed(1)} GB</td>
+      <td>${(s.storage / 1024).toFixed(1)} GB</td>
       <td>A$${s.retailPrice.toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
     `;
@@ -802,7 +807,7 @@ function openSkuPopup(index) {
   const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
   const modalTitle = document.querySelector('#skuModal .modal-title');
   if (modalTitle) {
-    modalTitle.textContent = `Select a Matching Storage SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} ${storageUnit})`;
+    modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} ${storageUnit})`;
   }
   filterSKUs();
   new bootstrap.Modal(document.getElementById('skuModal')).show();
@@ -810,7 +815,7 @@ function openSkuPopup(index) {
 
 // Select SKU by name
 function selectSkuByName(name) {
-  const selectedSku = azureStoragePricing.find(s => s.name === name);
+  const selectedSku = azureVMPricing.find(s => s.name === name);
   if (selectedSku && selectedRow !== null) {
     matchedSkus[selectedRow] = selectedSku;
     lastVmData[selectedRow].manualSku = selectedSku;
@@ -858,8 +863,11 @@ function renderVMTable(vmData) {
 
     const azureTooltip = sku
       ? `Currency: ${currency}\n` +
-        `Storage SKU: ${sku.name}\n` +
-        `Storage Size: ${sku.diskSizeGB.toFixed(1)} GB\n` +
+        `SKU: ${sku.name}\n` +
+        `CPUs: ${sku.vCPUs}\n` +
+        `RAM: ${(sku.ram / 1024).toFixed(1)} GB\n` +
+        `Storage: ${(sku.storage / 1024).toFixed(1)} GB\n` +
+        `Base VM Cost: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
         `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${storageUnit})\n` +
         `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
         `Total: ${currency}$${azureCostBreakdown.total.toFixed(2)}`
