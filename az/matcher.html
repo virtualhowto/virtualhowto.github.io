@@ -178,7 +178,7 @@
               <input type="text" id="filterCPU" class="form-control filter-input" placeholder="Filter by CPUs">
             </div>
             <div class="col">
-              <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB or MB)">
+              <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB)">
             </div>
             <div class="col">
               <input type="text" id="filterStorage" class="form-control filter-input" placeholder="Filter by Storage (GB or MB)">
@@ -292,25 +292,27 @@ function escapeCsvValue(value) {
 // Load Azure VM pricing from local JSON
 async function loadAzureVMPricingFromJson() {
   try {
-    const response = await fetch('./az_vm-pricing.json');
+    const response = await fetch('./az_data-export.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure VM pricing`);
     const data = await response.json();
-    if (data.currency && data.currency !== 'AUD') {
-      console.warn(`Currency is ${data.currency}. Prices assumed to be in AUD.`);
+    if (data[0]?.currency && data[0].currency !== 'AUD') {
+      console.warn(`Currency is ${data[0].currency}. Prices assumed to be in AUD.`);
     }
-    azureVMPricing = data.Items.map(item => ({
-      name: item.skuName,
-      vCPUs: parseInt(item.vCPUs) || 0,
-      ram: parseFloat(item.memoryInMB) || 0,
-      storage: parseFloat(item.osDiskSizeInMB) || 0,
-      retailPrice: parseFloat(item.retailPrice) || 0,
-      unitOfMeasure: item.unitOfMeasure
+    azureVMPricing = data.map(item => ({
+      name: item.name,
+      vCPUs: parseInt(item.numberOfCores) || 0,
+      ram: parseFloat(item.memoryInMB) || 0, // memoryInMB is in GB
+      storage: parseFloat(item.osDiskSizeInMB) || 0, // osDiskSizeInMB is in MB
+      retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
+      unitOfMeasure: '1 Hour',
+      linuxPrice: parseFloat(item.linuxPrice) || 0,
+      windowsPrice: parseFloat(item.windowsPrice) || 0
     }));
     fullCatalog.length = 0;
     fullCatalog.push(...azureVMPricing);
   } catch (err) {
     console.error('Azure VM pricing load error:', err);
-    alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file 'az_vm-pricing.json' is accessible and valid.`);
+    alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file 'az_data-export.json' is accessible and valid.`);
     azureVMPricing = [];
     fullCatalog.length = 0;
   }
@@ -664,7 +666,7 @@ function calculateAzureStorageCost(storage, diskType = 'Standard SSD') {
   if (!disk) {
     return diskType === 'Standard SSD' ? storageGiB * defaultAzureStoragePricePerGB : 0;
   }
-  return disk.retailPrice;
+  return diskType === 'Standard SSD' ? storageGiB * defaultAzureStoragePricePerGB : 0;
 }
 
 // Calculate Azure VM price
@@ -675,7 +677,8 @@ function calculateAzureVMPrice(index) {
   const diskType = vm.diskType || 'Standard SSD';
   const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
   const storageCost = calculateAzureStorageCost(storage, diskType);
-  const baseCost = sku ? sku.retailPrice : 0;
+  const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+  const baseCost = sku ? (os === 'Windows' ? sku.windowsPrice : sku.linuxPrice) : 0;
   const total = baseCost + storageCost + sqlCost;
   return { total, base: baseCost, storage: storageCost, sql: sqlCost };
 }
@@ -728,9 +731,9 @@ function filterSKUs() {
   // Parse CPU input
   const cpuValue = parseInt(cpuInput) || 0;
 
-  // Parse RAM input to detect unit
+  // Parse RAM input (memoryInMB is in GB)
   let ramValue = 0;
-  let ramUnit = 'GB'; // Default to GB
+  let ramUnit = 'GB';
   if (ramInput) {
     ramInput = ramInput.trim().toLowerCase();
     if (ramInput.includes('gb')) {
@@ -738,20 +741,19 @@ function filterSKUs() {
       ramValue = parseFloat(ramInput.replace('gb', '').trim());
     } else if (ramInput.includes('mb')) {
       ramUnit = 'MB';
-      ramValue = parseFloat(ramInput.replace('mb', '').trim());
+      ramValue = parseFloat(ramInput.replace('mb', '').trim()) / 1024; // Convert MB to GB
     } else {
       ramValue = parseFloat(ramInput);
       if (!isNaN(ramValue)) {
-        ramUnit = ramValue >= 1024 ? 'MB' : 'GB';
+        ramUnit = 'GB'; // Default to GB for numeric input
       }
     }
     console.log(`RAM filter: ${ramValue} ${ramUnit} detected`);
   }
-  const ramInMB = ramUnit === 'GB' ? ramValue * 1024 : ramValue;
 
-  // Parse Storage input to detect unit
+  // Parse Storage input (osDiskSizeInMB is in MB)
   let storageValue = 0;
-  let storageUnitFilter = 'GB'; // Default to GB
+  let storageUnitFilter = 'GB';
   if (storageInput) {
     storageInput = storageInput.trim().toLowerCase();
     if (storageInput.includes('gb')) {
@@ -775,7 +777,7 @@ function filterSKUs() {
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
       (!cpuInput || sku.vCPUs === cpuValue) &&
-      (!ramInput || Math.abs(sku.ram - ramInMB) < 0.01) &&
+      (!ramInput || Math.abs(sku.ram - ramValue) < 0.01) &&
       (!storageInput || Math.abs(sku.storage - storageInMB) < 0.01)
     );
   });
@@ -784,13 +786,15 @@ function filterSKUs() {
   if (!tbody) return;
   tbody.innerHTML = '';
   filtered.forEach(s => {
+    const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+    const price = os === 'Windows' ? s.windowsPrice : s.linuxPrice;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.name}</td>
       <td>${s.vCPUs}</td>
-      <td>${(s.ram / 1024).toFixed(1)} GB</td>
+      <td>${s.ram.toFixed(1)} GB</td>
       <td>${(s.storage / 1024).toFixed(1)} GB</td>
-      <td>A$${s.retailPrice.toFixed(2)}</td>
+      <td>A$${price.toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
     `;
     tbody.appendChild(tr);
@@ -865,7 +869,7 @@ function renderVMTable(vmData) {
       ? `Currency: ${currency}\n` +
         `SKU: ${sku.name}\n` +
         `CPUs: ${sku.vCPUs}\n` +
-        `RAM: ${(sku.ram / 1024).toFixed(1)} GB\n` +
+        `RAM: ${sku.ram.toFixed(1)} GB\n` +
         `Storage: ${(sku.storage / 1024).toFixed(1)} GB\n` +
         `Base VM Cost: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
         `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${storageUnit})\n` +
