@@ -485,9 +485,7 @@ function exportCSV(type) {
       escapeCsvValue(vm.sqlLicenseType || '')
     ]);
   });
-  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n
-
-');
+  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
   const link = document.createElement('a');
   link.setAttribute('href', encodeURI(csvContent));
   link.setAttribute('download', `vm_cost_${type}_summary.csv`);
