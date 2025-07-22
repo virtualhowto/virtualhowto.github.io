@@ -502,7 +502,8 @@ function readXlsx(file) {
   reader.onload = e => {
     try {
       const data = new Uint8Array(e.target.result);
-      workbook = XLSX.read(data, { type: 'array' });
+      workbook = XLSX.read(data, { type: 'array', cellText: true, cellDates: false });
+      console.log('Workbook loaded:', workbook.SheetNames);
       const sheetPicker = document.getElementById('sheetPickerContainer');
       const sheetSelect = document.getElementById('sheetSelect');
       if (workbook.SheetNames.length > 1) {
@@ -510,11 +511,13 @@ function readXlsx(file) {
         sheetPicker.style.display = 'block';
         spinner.style.display = 'none';
       } else {
+        console.log('Single sheet detected:', workbook.SheetNames[0]);
         showColumnMappingModal(workbook.SheetNames[0]);
       }
     } catch (err) {
       spinner.style.display = 'none';
       alert(`XLSX parsing failed: ${err.message}. Ensure the file is a valid RVTools export in XLSX format.`);
+      console.error('XLSX parsing error:', err);
     }
   };
   reader.onerror = () => {
@@ -525,14 +528,34 @@ function readXlsx(file) {
 }
 
 // Show column mapping modal
-function showColumnMappingModal() {
-  const sheetSelect = document.getElementById('sheetSelect');
-  const sheetName = sheetSelect ? sheetSelect.value : workbook.SheetNames[0];
+function showColumnMappingModal(sheetName) {
+  if (!sheetName) sheetName = document.getElementById('sheetSelect')?.value || workbook.SheetNames[0];
+  console.log('Attempting to load sheet:', sheetName);
   try {
     const sheet = workbook.Sheets[sheetName];
-    columnHeaders = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] || [];
+    if (!sheet) {
+      alert(`Sheet "${sheetName}" not found in the workbook.`);
+      return;
+    }
+
+    // Get the sheet's range to ensure we capture all data
+    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+    console.log('Sheet range:', range);
+
+    // Extract headers from the first non-empty row
+    let headers = [];
+    for (let row = range.s.r; row <= range.e.r; row++) {
+      const rowData = XLSX.utils.sheet_to_json(sheet, { header: 1, range: row })[0] || [];
+      headers = rowData.filter(h => h != null && h.toString().trim() !== '');
+      if (headers.length) {
+        console.log('Headers found in row', row + 1, ':', headers);
+        break;
+      }
+    }
+
+    columnHeaders = headers;
     if (!columnHeaders.length) {
-      alert('No headers found in the selected sheet. Please ensure the sheet contains valid data.');
+      alert('No valid headers found in the selected sheet. Please ensure the sheet has a header row with non-empty values.');
       return;
     }
 
@@ -541,18 +564,29 @@ function showColumnMappingModal() {
       const select = document.getElementById(id);
       select.innerHTML = '<option value="">Select Column</option>' + 
         columnHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
-      // Preselect likely matches
-      if (id === 'mapDisplayName' && columnHeaders.includes('VM')) select.value = 'VM';
-      if (id === 'mapCpu' && columnHeaders.includes('CPUs')) select.value = 'CPUs';
-      if (id === 'mapMemory' && columnHeaders.includes('Memory')) select.value = 'Memory';
-      if (id === 'mapStorage' && columnHeaders.includes('Total disk capacity MiB')) select.value = 'Total disk capacity MiB';
-      if (id === 'mapOs' && columnHeaders.includes('OS according to the configuration file')) select.value = 'OS according to the configuration file';
+      // Preselect likely matches with case-insensitive and partial matching
+      if (id === 'mapDisplayName' && columnHeaders.some(h => h.toString().toLowerCase().includes('vm'))) {
+        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('vm')) || '';
+      }
+      if (id === 'mapCpu' && columnHeaders.some(h => h.toString().toLowerCase().includes('cpu'))) {
+        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('cpu')) || '';
+      }
+      if (id === 'mapMemory' && columnHeaders.some(h => h.toString().toLowerCase().includes('memory'))) {
+        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('memory')) || '';
+      }
+      if (id === 'mapStorage' && columnHeaders.some(h => h.toString().toLowerCase().includes('disk') || h.toString().toLowerCase().includes('storage'))) {
+        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('disk') || h.toString().toLowerCase().includes('storage')) || '';
+      }
+      if (id === 'mapOs' && columnHeaders.some(h => h.toString().toLowerCase().includes('os'))) {
+        select.value = columnHeaders.find(h => h.toString().toLowerCase().includes('os')) || '';
+      }
     });
 
     document.getElementById('sheetPickerContainer').style.display = 'none';
     new bootstrap.Modal(document.getElementById('columnMappingModal')).show();
   } catch (err) {
-    alert(`Failed to read sheet headers: ${err.message}. Ensure the selected sheet is valid.`);
+    alert(`Failed to read sheet "${sheetName}": ${err.message}. Ensure the selected sheet is valid.`);
+    console.error('Sheet reading error:', err);
   }
 }
 
@@ -585,8 +619,8 @@ function loadSheet(sheetName) {
   spinner.style.display = 'block';
   try {
     const sheet = workbook.Sheets[sheetName];
-    const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] || [];
-    const storageHeader = headers.find(h => h && h.toString().toLowerCase().includes('disk capacity') || h.toString().toLowerCase().includes('provisioned storage'));
+    const headers = columnHeaders; // Use headers from showColumnMappingModal
+    const storageHeader = headers.find(h => h && (h.toString().toLowerCase().includes('disk capacity') || h.toString().toLowerCase().includes('provisioned storage')));
     if (storageHeader) {
       const headerLower = storageHeader.toLowerCase();
       if (headerLower.includes('mib')) storageUnit = 'MiB';
@@ -599,6 +633,7 @@ function loadSheet(sheetName) {
     }
 
     const vmData = XLSX.utils.sheet_to_json(sheet);
+    console.log('Parsed VM data:', vmData);
     spinner.style.display = 'none';
     if (!vmData.length) {
       alert('No data found in the uploaded file. Please ensure it contains VM data.');
@@ -615,11 +650,13 @@ function loadSheet(sheetName) {
       diskType: 'Standard SSD'
     }));
 
+    console.log('Mapped VM data:', lastVmData);
     renderVMTable(lastVmData);
     updateSummary();
   } catch (err) {
     spinner.style.display = 'none';
     alert(`Sheet loading failed: ${err.message}. Ensure the selected sheet contains valid RVTools data.`);
+    console.error('Sheet loading error:', err);
   }
 }
 
