@@ -83,7 +83,7 @@
 </head>
 <body class="bg-light">
   <div class="sticky-header d-flex justify-content-between align-items-center">
-    <h4 class="mb-0">RVTools Matcher</h4>
+    <h4 class="mb-0">RVTools er</h4>
     <div>
       <span class="summary-tile azure-tile" onclick="exportCSV('azure')" title="Click to export detailed Azure pricing breakdown">
         Azure Total: <strong id="totalPrice">A$0.00</strong>
@@ -167,7 +167,7 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="skuModalLabel">Select a Matching SKU</h5>
+          <h5 class="modal-title" id="skuModalLabel">Select a ing SKU</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -262,7 +262,7 @@ const fullCatalog = [];
 let ataPricing = {};
 let selectedRow = null;
 let lastVmData = [];
-let matchedSkus = [];
+let edSkus = [];
 const preferredSeries = ['B', 'A'];
 const defaultAzureStoragePricePerGB = 0.3;
 let azureStoragePricing = [];
@@ -355,7 +355,7 @@ async function loadAzureStoragePricingFromJson() {
       skuName: item.skuName,
       retailPrice: parseFloat(item.retailPrice),
       unitOfMeasure: item.unitOfMeasure,
-      diskSizeGB: parseInt(item.skuName?.match(/\d+/)?.[0]) || 0,
+      diskSizeGB: parseInt(item.skuName?.(/\d+/)?.[0]) || 0,
       diskType: item.productName?.includes('Premium SSD') ? 'Premium SSD' : 'Standard SSD'
     }));
     const sizeMap = {
@@ -454,7 +454,7 @@ function downloadCsv() {
       vm['Memory'] || '',
       `${vm['Provisioned Storage (GB)'] || ''} ${storageUnit}`,
       (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
-      escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
+      escapeCsvValue(edSkus[i]?.name || 'No '),
       vm.diskType || 'Standard SSD',
       `A$${azureCostBreakdown.total.toFixed(2)}`,
       `A$${azureCostBreakdown.base.toFixed(2)}`,
@@ -934,10 +934,13 @@ function renderVMTable(vmData) {
     const azureTooltip = sku
       ? `Currency: ${currency}\n` +
         `SKU: ${sku.name}\n` +
-        `SKU Specs: ${sku.cpu} CPU, ${(sku.ram / 1024).toFixed(1)} GB RAM, ${(sku.storage / 1024).toFixed(1)} GB Storage\n` +
+        `SKU Specs: ${sku.cpu} CPU\n` +
+        `${(sku.ram / 1024).toFixed(1)} GB RAM\n` +
+        `${(sku.storage / 1024).toFixed(1)} GB Storage\n` +
         `Base VM: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
         `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${storageUnit})\n` +
         `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
+        `SKU: ${sku.os}\n` +
         `Total: ${currency}$${azureCostBreakdown.total.toFixed(2)}`
       : 'No SKU selected';
 
