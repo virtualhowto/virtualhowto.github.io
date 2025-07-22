@@ -569,8 +569,8 @@ function updateColumnMappings() {
       { id: 'mapDisplayName', patterns: ['vm', 'name', 'display name'] },
       { id: 'mapCpu', patterns: ['cpu', 'cpus', 'vcpus', 'cores'] },
       { id: 'mapMemory', patterns: ['memory', 'ram'] },
-      { id: 'mapStorage', patterns: ['disk', 'storage', 'capacity', 'provisioned'] },
-      { id: 'mapOs', patterns: ['os', 'operating system', 'guest os'] }
+      { id: 'mapStorage', patterns: ['provisioned storage (gb)', 'disk', 'storage', 'capacity', 'provisioned'] },
+      { id: 'mapOs', patterns: ['os according to the configuration file', 'os', 'operating system', 'guest os'] }
     ];
 
     selects.forEach(({ id, patterns }) => {
@@ -578,10 +578,13 @@ function updateColumnMappings() {
       select.innerHTML = '<option value="">Select Column</option>' + 
         columnHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
       
-      // Pre-populate with the first matching header
-      const matchedHeader = columnHeaders.find(h => 
-        patterns.some(pattern => h.toString().toLowerCase().includes(pattern))
-      );
+      // Pre-populate with the first matching header, prioritizing exact matches
+      let matchedHeader = null;
+      for (const pattern of patterns) {
+        matchedHeader = columnHeaders.find(h => h.toString().toLowerCase() === pattern.toLowerCase()) ||
+                        columnHeaders.find(h => h.toString().toLowerCase().includes(pattern.toLowerCase()));
+        if (matchedHeader) break;
+      }
       if (matchedHeader) {
         select.value = matchedHeader;
       }
@@ -875,7 +878,9 @@ function renderVMTable(vmData) {
 
     const sku = matchedSkus[index] || vm.manualSku;
     const azureTooltip = sku
-      ? `Base VM: A$${azureCostBreakdown.base.toFixed(2)}\n` +
+      ? `SKU: ${sku.name}\n` +
+        `SKU Specs: ${sku.cpu} CPU, ${(sku.ram / 1024).toFixed(1)} GB RAM, ${(sku.storage / 1024).toFixed(1)} GB Storage\n` +
+        `Base VM: A$${azureCostBreakdown.base.toFixed(2)}\n` +
         `Storage (${vm.diskType || 'Standard SSD'}): A$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${storageUnit})\n` +
         `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): A$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
         `Total: A$${azureCostBreakdown.total.toFixed(2)}`
