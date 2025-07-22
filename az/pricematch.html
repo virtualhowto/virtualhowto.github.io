@@ -306,23 +306,24 @@ async function loadAzureDataFromJson() {
       throw new Error(`Expected an array, got ${typeof azureData}`);
     }
     fullCatalog.length = 0;
-    fullCatalog.push(...azureData.map(item => ({
-      name: item.name || '',
-      cpu: parseInt(item.numberOfCores) || 0,
-      ram: parseFloat(item.memoryInMB) || 0,
-      storage: parseInt(item.osDiskSizeInMB) || 0,
-      priceLinux: parseFloat(item.linuxPrice) || 0,
-      priceWindows: parseFloat(item.windowsPrice) || 0,
-      supportPremiumDisk: item.supportPremiumDisk || 'no'
+fullCatalog.push(...azureData.map(item => ({
+  name: item.name || '',
+  cpu: parseInt(item.numberOfCores) || 0,
+  ram: (parseFloat(item.memoryInGB || item.memory) || 0) * 1024,
+  storage: (parseFloat(item.osDiskSizeInGB || item.osDiskSize) || 0) * 1024,
+  priceLinux: parseFloat(item.linuxPrice) || 0,
+  priceWindows: parseFloat(item.windowsPrice) || 0,
+  supportPremiumDisk: item.supportPremiumDisk || 'no'
+})));
     })));
     azureVMPricing = azureData.map(item => ({
-      name: item.name || '',
-      cpu: parseInt(item.numberOfCores) || 0,
-      ram: parseFloat(item.memoryInMB) || 0,
-      storage: parseInt(item.osDiskSizeInMB) || 0,
-      priceLinux: parseFloat(item.linuxPrice) || 0,
-      priceWindows: parseFloat(item.windowsPrice) || 0,
-      supportPremiumDisk: item.supportPremiumDisk || 'no'
+  name: item.name || '',
+  cpu: parseInt(item.numberOfCores) || 0,
+  ram: (parseFloat(item.memoryInGB || item.memory) || 0) * 1024,
+  storage: (parseFloat(item.osDiskSizeInGB || item.osDiskSize) || 0) * 1024,
+  priceLinux: parseFloat(item.linuxPrice) || 0,
+  priceWindows: parseFloat(item.windowsPrice) || 0,
+  supportPremiumDisk: item.supportPremiumDisk || 'no'
     }));
     fullCatalog.forEach(catalogItem => {
       const apiItem = azureVMPricing.find(api => api.name === catalogItem.name);
