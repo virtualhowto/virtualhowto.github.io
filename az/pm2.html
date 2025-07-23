@@ -230,7 +230,7 @@
 
     async function loadAzureVMPricingFromJson() {
       try {
-        const response = await fetch('./az_data-export.json');
+        const response = await fetch('https://raw.githubusercontent.com/virtualhowto/virtualhowto.github.io/main/az/az_data-export.json');
         if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure VM pricing`);
         const data = await response.json();
         azureVMPricing = data.map(item => ({
@@ -244,7 +244,7 @@
         console.log('Azure VM pricing loaded:', azureVMPricing);
       } catch (err) {
         console.error('Azure VM pricing load error:', err);
-        alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file 'az_data-export.json' is accessible and valid.`);
+        alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file is accessible and valid.`);
         azureVMPricing = [];
       }
     }
@@ -278,7 +278,7 @@
 
     async function loadAwsVMPricingFromJson() {
       try {
-        const response = await fetch('./aws_data-export.json');
+        const response = await fetch('https://raw.githubusercontent.com/virtualhowto/virtualhowto.github.io/main/az/aws_data-export.json');
         if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load AWS VM pricing`);
         const data = await response.json();
         awsVMPricing = data.map(item => ({
@@ -292,14 +292,48 @@
         console.log('AWS VM pricing loaded:', awsVMPricing);
       } catch (err) {
         console.error('AWS VM pricing load error:', err);
-        alert(`Failed to load AWS VM pricing: ${err.message}. Ensure the file 'aws_data-export.json' is accessible and valid.`);
-        awsVMPricing = [];
+        alert(`Failed to load AWS VM pricing: ${err.message}. Ensure the file 'aws_data-export.json' is accessible and valid. Using default pricing.`);
+        awsVMPricing = [
+          {
+            name: "t4g.xlarge",
+            vCPUs: 4,
+            ram: 16,
+            storage: 0,
+            linuxPrice: 98.11,
+            windowsPrice: 156.70
+          },
+          {
+            name: "m5.large",
+            vCPUs: 2,
+            ram: 8,
+            storage: 0,
+            linuxPrice: 70.08,
+            windowsPrice: 115.34
+          },
+          {
+            name: "m5.xlarge",
+            vCPUs: 4,
+            ram: 16,
+            storage: 0,
+            linuxPrice: 140.16,
+            windowsPrice: 230.68
+          },
+          {
+            name: "c5.2xlarge",
+            vCPUs: 8,
+            ram: 16,
+            storage: 0,
+            linuxPrice: 248.20,
+            windowsPrice: 411.72
+          }
+        ];
+        console.log('Using default AWS VM pricing:', awsVMPricing);
       }
     }
 
     async function loadAwsDiskPricing() {
       try {
-        const response = await fetch('./aws_storage-pricing.json');
+        const response = await fetch('https://raw.githubusercontent.com/virtualhowto/virtualhowto.github.io/main/az/aws_storage-pricing.json');
         if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load AWS disk pricing`);
         const data = await response.json();
         awsDiskPricing = {
@@ -320,7 +354,23 @@
       } catch (err) {
         console.error('AWS disk pricing load error:', err);
         alert(`Failed to load AWS disk pricing: ${err.message}. Using default cost of 0.`);
-        awsDiskPricing = { "General Purpose SSD (gp3)": [], "Provisioned IOPS SSD (io2)": [] };
+        awsDiskPricing = {
+          "General Purpose SSD (gp3)": [
+            { name: "gp3-128", sizeGiB: 128, pricePerMonth: 12.29 },
+            { name: "gp3-256", sizeGiB: 256, pricePerMonth: 24.58 },
+            { name: "gp3-1024", sizeGiB: 1024, pricePerMonth: 98.30 },
+            { name: "gp3-2048", sizeGiB: 2048, pricePerMonth: 196.61 },
+            { name: "gp3-4096", sizeGiB: 4096, pricePerMonth: 393.22 }
+          ],
+          "Provisioned IOPS SSD (io2)": [
+            { name: "io2-128", sizeGiB: 128, pricePerMonth: 24.00 },
+            { name: "io2-256", sizeGiB: 256, pricePerMonth: 48.00 },
+            { name: "io2-1024", sizeGiB: 1024, pricePerMonth: 192.00 },
+            { name: "io2-2048", sizeGiB: 2048, pricePerMonth: 384.00 },
+            { name: "io2-4096", sizeGiB: 4096, pricePerMonth: 768.00 }
+          ]
+        };
+        console.log('Using default AWS disk pricing:', awsDiskPricing);
       }
     }
 
