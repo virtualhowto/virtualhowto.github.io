@@ -78,6 +78,9 @@
       font-size: 0.875rem;
       line-height: 1.4;
     }
+    .tag-button {
+      margin: 0.25rem;
+    }
   </style>
 </head>
 <body class="bg-light">
@@ -205,6 +208,25 @@
     </div>
   </div>
 
+  <!-- Tag Selection Modal -->
+  <div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="tagModalLabel">Select SQL License Tag</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <button class="btn btn-success tag-button" onclick="selectSQLTag('SQL-Std')">SQL-Std</button>
+          <button class="btn btn-success tag-button" onclick="selectSQLTag('SQL-Ent')">SQL-Ent</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Column Mapping Modal -->
   <div class="modal fade" id="columnMappingModal" tabindex="-1" aria-labelledby="columnMappingModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -301,8 +323,8 @@ const StorageModule = {
 
     // Find the smallest disk that meets or exceeds the storage requirement
     const disk = azureVMPricing
-      .filter(d => d.storage >= storageMB)
-      .sort((a, b) => a.storage - b.storage)[0];
+      .filter(d => (d.storage * 1024) >= storageMB) // Convert SKU storage (GB) to MB
+      .sort((a, b) => (a.storage * 1024) - (b.storage * 1024))[0];
 
     const pricePerGB = diskType === 'Premium SSD' ? this.premiumSSDCostPerGB : this.standardSSDCostPerGB;
     return storageGiB * pricePerGB;
@@ -397,7 +419,7 @@ async function loadAzureVMPricingFromJson() {
       name: item.name,
       vCPUs: parseInt(item.numberOfCores) || 0,
       ram: parseFloat(item.memoryInMB) || 0,
-      storage: parseFloat(item.osDiskSizeInMB) || 0,
+      storage: parseFloat(item.osDiskSizeInMB) || 0, // Already in GB from az_data-export.json
       retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
       unitOfMeasure: '1 Hour',
       linuxPrice: parseFloat(item.linuxPrice) || 0,
@@ -816,7 +838,7 @@ function filterSKUs() {
   // Filter SKUs based on inputs
   let filtered = azureVMPricing.filter(sku => {
     const storageMatch = !storageInput || 
-      Math.abs(sku.storage - storageInMB) <= StorageModule.tuningParameters.storageMatchToleranceMB;
+      Math.abs((sku.storage * 1024) - storageInMB) <= StorageModule.tuningParameters.storageMatchToleranceMB;
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
       (!cpuInput || sku.vCPUs >= cpuValue) &&
@@ -853,7 +875,7 @@ function filterSKUs() {
       <td>${s.name}</td>
       <td>${s.vCPUs}</td>
       <td>${s.ram.toFixed(1)} GB</td>
-      <td>${(s.storage / 1024).toFixed(1)} GB</td>
+      <td>${s.storage.toFixed(1)} GB</td>
       <td>A$${totalPrice.toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
     `;
@@ -898,23 +920,25 @@ function selectSkuByName(name) {
 
 // Assign SQL tag
 function assignSQLTag(index) {
-  const tag = prompt('Enter SQL License Tag (SQL-Std or SQL-Ent):')?.trim();
-  if (tag === 'SQL-Std' || tag === 'SQL-Ent') {
-    lastVmData[index].sqlLicensed = true;
-    lastVmData[index].sqlLicenseType = tag;
-    renderVMTable(lastVmData);
-    updateSummary();
-  } else {
-    alert('Invalid tag. Use SQL-Std or SQL-Ent.');
+  selectedRow = index;
+  const vm = lastVmData[index];
+  const vmName = vm['Display Name'] || vm['VM'] || 'Unnamed';
+  const modalTitle = document.querySelector('#tagModal .modal-title');
+  if (modalTitle) {
+    modalTitle.textContent = `Select SQL License Tag for ${vmName}`;
   }
+  new bootstrap.Modal(document.getElementById('tagModal')).show();
 }
 
-// Clear SQL tag
-function clearSQLTag(index) {
-  lastVmData[index].sqlLicensed = false;
-  lastVmData[index].sqlLicenseType = null;
-  renderVMTable(lastVmData);
-  updateSummary();
+// Select SQL tag
+function selectSQLTag(tag) {
+  if (selectedRow !== null && (tag === 'SQL-Std' || tag === 'SQL-Ent')) {
+    lastVmData[selectedRow].sqlLicensed = true;
+    lastVmData[selectedRow].sqlLicenseType = tag;
+    renderVMTable(lastVmData);
+    updateSummary();
+    bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
+  }
 }
 
 // Render VM table
@@ -937,7 +961,7 @@ function renderVMTable(vmData) {
         `AZ_SKU: ${sku.name}\n` +
         `CPUs: ${sku.vCPUs}\n` +
         `RAM: ${sku.ram.toFixed(1)} GB\n` +
-        `Storage: ${(sku.storage / 1024).toFixed(1)} GB\n` +
+        `Storage: ${sku.storage.toFixed(1)} GB\n` +
         `Base VM Cost: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
         `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${StorageModule.storageUnit})\n` +
         `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
@@ -1031,12 +1055,12 @@ function renderVMTable(vmData) {
       const span = document.createElement('span');
       span.className = 'badge bg-success';
       span.textContent = vm.sqlLicenseType;
-      const close = document.createElement('span');
-      close.style.cursor = 'pointer';
-      close.textContent = ' ×';
-      close.onclick = () => clearSQLTag(index);
-      span.appendChild(close);
       tdTag.appendChild(span);
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn btn-sm btn-outline-primary ms-1';
+      addBtn.textContent = '+';
+      addBtn.onclick = () => assignSQLTag(index);
+      tdTag.appendChild(addBtn);
     } else {
       const btn = document.createElement('button');
       btn.className = 'btn btn-sm btn-outline-primary';
