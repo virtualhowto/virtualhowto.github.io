@@ -1,214 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RVTools Matcher</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body {
-      padding-top: 5.5rem;
-      transition: background-color 0.3s, color 0.3s;
-    }
-
-    .dark-mode {
-      background-color: #121212;
-      color: #f1f1f1;
-    }
-
-    .dark-mode .table,
-    .dark-mode .modal-content,
-    .dark-mode .sticky-header {
-      background-color: #1e1e1e;
-      color: #f1f1f1;
-      border-color: #444;
-    }
-
-    .dark-mode .form-control,
-    .dark-mode .form-select {
-      background-color: #2a2a2a;
-      color: #f1f1f1;
-      border-color: #555;
-    }
-
-    .dark-mode .form-control:focus,
-    .dark-mode .form-select:focus {
-      background-color: #2a2a2a;
-      color: #f1f1f1;
-      border-color: #777;
-      box-shadow: 0 0 0 0.2rem rgba(100, 100, 100, 0.5);
-    }
-
-    .dark-mode .btn-outline-primary {
-      color: #66b0ff;
-      border-color: #66b0ff;
-    }
-
-    .dark-mode .btn-outline-primary:hover {
-      background-color: #66b0ff;
-      color: #1e1e1e;
-    }
-
-    .dark-mode .btn-primary {
-      background-color: #005f99;
-      border-color: #005f99;
-    }
-
-    .dark-mode .btn-primary:hover {
-      background-color: #0078cc;
-      border-color: #0078cc;
-    }
-
-    .dark-mode .btn-warning {
-      background-color: #cc8500;
-      border-color: #cc8500;
-      color: #1e1e1e;
-    }
-
-    .dark-mode .btn-warning:hover {
-      background-color: #e69500;
-      border-color: #e69500;
-    }
-
-    .dark-mode .btn-success {
-      background-color: #2e7d32;
-      border-color: #2e7d32;
-    }
-
-    .dark-mode .btn-success:hover {
-      background-color: #388e3c;
-      border-color: #388e3c;
-    }
-
-    .dark-mode .btn-outline-dark {
-      color: #f1f1f1;
-      border-color: #f1f1f1;
-    }
-
-    .dark-mode .btn-outline-dark:hover {
-      background-color: #f1f1f1;
-      color: #1e1e1e;
-    }
-
-    .dark-mode .btn-outline-info {
-      color: #4dd0e1;
-      border-color: #4dd0e1;
-    }
-
-    .dark-mode .btn-outline-info:hover {
-      background-color: #4dd0e1;
-      color: #1e1e1e;
-    }
-
-    .dark-mode .badge.bg-success {
-      background-color: #2e7d32;
-    }
-
-    .dark-mode .summary-tile {
-      opacity: 0.9;
-    }
-
-    .dark-mode .tooltip-inner {
-      background-color: #333;
-      color: #f1f1f1;
-    }
-
-    .dark-mode .tooltip .tooltip-arrow::before {
-      border-color: #333 transparent transparent transparent;
-    }
-
-    @media (max-width: 768px) {
-      .table thead th:nth-child(3),
-      .table tbody td:nth-child(3),
-      .table thead th:nth-child(4),
-      .table tbody td:nth-child(4),
-      .table thead th:nth-child(5),
-      .table tbody td:nth-child(5) {
-        display: none;
-      }
-
-      .sticky-header h4 {
-        font-size: 1.1rem;
-      }
-
-      .summary-tile {
-        font-size: 0.85rem;
-        min-width: 130px;
-        margin-bottom: 0.5rem;
-      }
-    }
-    
-    .highlight { background-color: #d1e7dd; }
-    .dark-mode .highlight { background-color: #2e7d32; }
-    .no-match { background-color: #f8d7da; }
-    .dark-mode .no-match { background-color: #5c2d2f; }
-    #spinner { display: none; }
-    .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
-    .modal-dialog-scrollable { max-height: 90vh; }
-    .filter-input { width: 100%; padding: 0.25rem; margin-bottom: 0.5rem; }
-    .sticky-header {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      z-index: 1020;
-      background: #fff;
-      padding: .75rem 1rem;
-      box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
-    }
-    .summary-tile {
-      display: inline-block;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      color: #fff;
-      margin-right: 1rem;
-      min-width: 200px;
-      text-align: center;
-      font-weight: 500;
-      cursor: pointer;
-    }
-    .azure-tile { background-color: #0072C6; }
-    .privatecloud-tile { background-color: #00a19b; }
-    .tooltip-inner {
-      max-width: 350px;
-      text-align: left;
-      white-space: pre-wrap;
-      font-size: 0.875rem;
-      line-height: 1.4;
-    }
-    .tag-button {
-      margin: 0.25rem;
-    }
+    .summary-tile { padding: 10px; margin: 5px; cursor: pointer; border-radius: 5px; color: white; }
+    .azure-tile { background-color: #0078d4; }
+    .aws-tile { background-color: #FF9900; }
+    .ata-tile { background-color: #6c757d; }
+    body.dark-mode { background-color: #222; color: #fff; }
+    body.dark-mode .table { background-color: #333; color: #fff; }
+    body.dark-mode .modal-content { background-color: #333; color: #fff; }
+    body.dark-mode .form-control, body.dark-mode .form-select { background-color: #444; color: #fff; border-color: #555; }
+    .badge { cursor: pointer; }
   </style>
 </head>
-<body class="bg-light">
-  <div class="sticky-header d-flex justify-content-between align-items-center">
-    <h4 class="mb-0">RVTools Matcher</h4>
-    <div>
+<body>
+  <div class="container my-3">
+    <h1>RVTools Matcher</h1>
+    <div class="mb-3">
+      <input type="file" id="fileInput" class="form-control" accept=".csv">
+    </div>
+    <div class="mb-3">
+      <button class="btn btn-primary" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    </div>
+    <div class="mb-3 d-flex">
       <span class="summary-tile azure-tile" onclick="exportCSV('azure')" title="Click to export detailed Azure pricing breakdown">
         Azure Total: <strong id="totalPrice">A$0.00</strong>
       </span>
-      <span class="summary-tile privatecloud-tile" onclick="exportCSV('private')" title="Click to export detailed Private Cloud pricing breakdown">
-        Private Cloud: <strong id="ataPrice">A$0.00</strong>
+      <span class="summary-tile aws-tile" onclick="exportCSV('aws')" title="Click to export detailed AWS pricing breakdown">
+        AWS Total: <strong id="awsTotalPrice">A$0.00</strong>
       </span>
-      <button id="downloadCsv" class="btn btn-primary btn-sm ms-2" title="Download full cost summary as CSV">Download CSV</button>
+      <span class="summary-tile ata-tile" onclick="exportCSV('ata')" title="Click to export detailed Private Cloud pricing breakdown">
+        Private Cloud Total: <strong id="ataPrice">A$0.00</strong>
+      </span>
     </div>
-    <div>
-      <button id="darkModeToggle" class="btn btn-outline-dark btn-sm me-2" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌓</button>
-      <button class="btn btn-outline-info btn-sm" onclick="togglePricingEditor()" title="Edit Pricing" aria-label="Edit pricing">🛠️ Edit Pricing</button>
-    </div>
-  </div>
-
-  <div class="container mt-4">
-    <div class="mb-3">
-      <input type="file" id="fileInput" class="form-control mb-2" accept=".xlsx" />
-      <button id="batchSqlAssign" class="btn btn-primary btn-sm">Auto Assign SQL Tags</button>
-    </div>
-    <div id="spinner" class="text-center my-3">
-      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
-      <p>Processing...</p>
-    </div>
-
-    <table class="table table-bordered" id="vmTable">
+    <table id="vmTable" class="table table-bordered">
       <thead>
         <tr>
           <th>VM</th>
@@ -217,74 +46,46 @@
           <th>Storage</th>
           <th>OS</th>
           <th>AZ_SKU</th>
+          <th>AWS_SKU</th>
           <th>Storage Tier</th>
           <th>Azure</th>
+          <th>AWS</th>
           <th>Private</th>
           <th>Tags</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
-
-    <div id="pricingEditor" style="display:none;">
-      <h5>Edit Cost Model</h5>
-      <div class="row">
-        <div class="col-md-3 form-group mb-3">
-          <label>Base Fee</label>
-          <input type="number" class="form-control" step="0.01" min="0" id="baseFee" value="0" onchange="updateAta('base')">
-        </div>
-        <div class="col-md-3 form-group mb-3">
-          <label>CPU (per core)</label>
-          <input type="number" class="form-control" step="0.01" min="0" id="cpuFee" value="13.58" onchange="updateAta('cpu')">
-        </div>
-        <div class="col-md-3 form-group mb-3">
-          <label>RAM (per GB)</label>
-          <input type="number" class="form-control" step="0.01" min="0" id="ramFee" value="33.18" onchange="updateAta('ram')">
-        </div>
-        <div class="col-md-3 form-group mb-3">
-          <label>Storage (per GB)</label>
-          <input type="number" class="form-control" step="0.01" min="0" id="storageFee" value="0.24" onchange="updateAta('storage')">
-        </div>
-        <div class="col-md-3 form-group mb-3">
-          <label>Octopus Fee</label>
-          <input type="number" class="form-control" step="0.01" min="0" id="octopusFee" value="5" onchange="updateAta('octopus')">
-        </div>
-        <div class="col-md-3 form-group mb-3">
-          <label>SQL Std (per 2 cores)</label>
-          <input type="number" class="form-control" step="0.01" min="0" id="sqlStdFee" value="390.07" onchange="updateAta('SQL-Std')">
-        </div>
-        <div class="col-md-3 form-group mb-3">
-          <label>SQL Ent (per 2 cores)</label>
-          <input type="number" class="form-control" step="0.01" min="0" id="sqlEntFee" value="1174.91" onchange="updateAta('SQL-Ent')">
-        </div>
-      </div>
-    </div>
   </div>
 
-  <!-- SKU Selection Modal -->
-  <div class="modal fade" id="skuModal" tabindex="-1" aria-labelledby="skuModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+  <!-- SKU Modal -->
+  <div class="modal fade" id="skuModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="skuModalLabel">Select a Matching SKU</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title">Select a Matching SKU</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
+          <select id="providerSelect" class="form-select mb-3">
+            <option value="Azure">Azure</option>
+            <option value="AWS">AWS</option>
+          </select>
           <div class="row mb-3">
             <div class="col">
-              <input type="text" id="filterName" class="form-control filter-input" placeholder="Filter by Name">
+              <input type="text" id="filterName" class="form-control" placeholder="Filter by name">
             </div>
             <div class="col">
-              <input type="text" id="filterCPU" class="form-control filter-input" placeholder="Filter by CPUs">
+              <input type="text" id="filterCPU" class="form-control" placeholder="Min CPUs">
             </div>
             <div class="col">
-              <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB)">
+              <input type="text" id="filterRAM" class="form-control" placeholder="RAM (GB)">
             </div>
             <div class="col">
-              <input type="text" id="filterStorage" class="form-control filter-input" placeholder="Filter by Storage (GB or MB)">
+              <input type="text" id="filterStorage" class="form-control" placeholder="Storage (GB)">
             </div>
           </div>
-          <table class="table table-sm table-striped">
+          <table class="table table-bordered">
             <thead>
               <tr>
                 <th>Name</th>
@@ -298,956 +99,609 @@
             <tbody id="skuTableBody"></tbody>
           </table>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
       </div>
     </div>
   </div>
 
-  <!-- Tag Selection Modal -->
-  <div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
+  <!-- Tag Modal -->
+  <div class="modal fade" id="tagModal" tabindex="-1">
+    <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="tagModalLabel">Select SQL License Tag</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title">Assign SQL Tag</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <button class="btn btn-success tag-button" onclick="selectSQLTag('SQL-Std')">SQL-Std</button>
-          <button class="btn btn-success tag-button" onclick="selectSQLTag('SQL-Ent')">SQL-Ent</button>
+          <select id="sqlTagSelect" class="form-select">
+            <option value="SQL-Std">SQL Standard</option>
+            <option value="SQL-Ent">SQL Enterprise</option>
+          </select>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" onclick="applySQLTag()">Apply</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Column Mapping Modal -->
-  <div class="modal fade" id="columnMappingModal" tabindex="-1" aria-labelledby="columnMappingModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="columnMappingModalLabel">Map Column Headings</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="modalSheetSelect" class="form-label">Select Sheet</label>
-            <select id="modalSheetSelect" class="form-select" onchange="updateColumnMappings()"></select>
-          </div>
-          <p>Map the columns in your sheet to the required fields. All fields except 'OS' are required.</p>
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="mapDisplayName" class="form-label">VM Name</label>
-              <select id="mapDisplayName" class="form-select"></select>
-            </div>
-            <div class="col-md-6">
-              <label for="mapCpu" class="form-label">CPU</label>
-              <select id="mapCpu" class="form-select"></select>
-            </div>
-          </div>
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="mapMemory" class="form-label">Memory (RAM)</label>
-              <select id="mapMemory" class="form-select"></select>
-            </div>
-            <div class="col-md-6">
-              <label for="mapStorage" class="form-label">Provisioned Storage</label>
-              <select id="mapStorage" class="form-select"></select>
-            </div>
-          </div>
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="mapOs" class="form-label">OS (Optional)</label>
-              <select id="mapOs" class="form-select"></select>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="applyColumnMapping()">Apply Mapping</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-const fullCatalog = [];
-let ataPricing = {};
-let azureDiskPricing = [];
-let selectedRow = null;
-let lastVmData = [];
-let matchedSkus = [];
-let azureVMPricing = [];
-let workbook = null;
-let columnHeaders = [];
-let columnMapping = {};
-const currency = 'AUD';
+    let azureVMPricing = [];
+    let azureDiskPricing = { "Standard SSD": [], "Premium SSD": [] };
+    let awsVMPricing = [];
+    let awsDiskPricing = { "General Purpose SSD (gp3)": [], "Provisioned IOPS SSD (io2)": [] };
+    let privateCloudPricing = [];
+    let lastVmData = [];
+    let matchedSkus = [];
+    let matchedAwsSkus = [];
+    let selectedRow = null;
+    let currency = 'A$';
+    const StorageModule = {
+      storageUnit: 'GB',
+      tuningParameters: { storageMatchToleranceMB: 0 },
+      convertToGiB: function(value, unit) {
+        if (unit === 'MB') return value / 1024;
+        return value;
+      },
+      filterStorageSKUs: function(input) {
+        if (!input) return { storageInMB: 0 };
+        const trimmed = input.trim().toLowerCase();
+        let value = parseFloat(trimmed);
+        let unit = 'GB';
+        if (trimmed.includes('gb')) {
+          unit = 'GB';
+          value = parseFloat(trimmed.replace('gb', '').trim());
+        } else if (trimmed.includes('mb')) {
+          unit = 'MB';
+          value = parseFloat(trimmed.replace('mb', '').trim());
+        }
+        return { storageInMB: this.convertToGiB(value, unit) * 1024 };
+      },
+      calculateAzureStorageCost: function(storage, diskType = 'Standard SSD') {
+        const storageGiB = this.convertToGiB(parseFloat(storage) || 0, this.storageUnit);
+        if (storageGiB <= 0) return 0;
 
-// Storage Matching and Selection Module
-const StorageModule = {
-  storageUnit: 'GB',
+        const diskArray = azureDiskPricing[diskType] || [];
+        if (!diskArray.length) {
+          console.warn(`No disks available in azureDiskPricing[${diskType}]`);
+          return 0;
+        }
 
-  // Convert storage values to GiB for internal calculations
-  convertToGiB(storage, unit) {
-    if (isNaN(storage)) return 0;
-    switch (unit.toLowerCase()) {
-      case 'gib':
-      case 'gb':
-        return storage;
-      case 'mib':
-        return storage / 1024;
-      case 'mb':
-        return storage / 1024;
-      case 'tb':
-        return storage * 1024;
-      default:
-        console.warn(`Unknown storage unit: ${unit}. Assuming GB.`);
-        return storage;
+        // Sort disks by size (ascending) to prioritize smaller disks
+        const sortedDisks = diskArray.sort((a, b) => a.sizeGiB - b.sizeGiB);
+
+        // Find the smallest combination of disks to meet or exceed storageGiB
+        let remainingStorage = storageGiB;
+        let totalCost = 0;
+        const selectedDisks = [];
+
+        while (remainingStorage > 0) {
+          const disk = sortedDisks.find(d => d.sizeGiB >= remainingStorage) || sortedDisks[sortedDisks.length - 1];
+          if (!disk) {
+            console.warn(`No disk found in azureDiskPricing[${diskType}] for remaining ${remainingStorage} GiB`);
+            return totalCost;
+          }
+          selectedDisks.push(disk);
+          totalCost += disk.pricePerMonth;
+          remainingStorage -= disk.sizeGiB;
+        }
+
+        if (selectedDisks.length === 0) {
+          console.warn(`No disk combination found in azureDiskPricing[${diskType}] for ${storageGiB} GiB`);
+          return 0;
+        }
+
+        console.log(`Selected disks for ${storageGiB} GiB (${diskType}):`, selectedDisks);
+        return totalCost;
+      },
+      calculateAwsStorageCost: function(storage, awsDiskType = 'General Purpose SSD (gp3)') {
+        const storageGiB = this.convertToGiB(parseFloat(storage) || 0, this.storageUnit);
+        if (storageGiB <= 0) return 0;
+
+        const diskArray = awsDiskPricing[awsDiskType] || [];
+        if (!diskArray.length) {
+          console.warn(`No disks available in awsDiskPricing[${awsDiskType}]`);
+          return 0;
+        }
+
+        const sortedDisks = diskArray.sort((a, b) => a.sizeGiB - b.sizeGiB);
+
+        let remainingStorage = storageGiB;
+        let totalCost = 0;
+        const selectedDisks = [];
+
+        while (remainingStorage > 0) {
+          const disk = sortedDisks.find(d => d.sizeGiB >= remainingStorage) || sortedDisks[sortedDisks.length - 1];
+          if (!disk) {
+            console.warn(`No disk found in awsDiskPricing[${awsDiskType}] for remaining ${remainingStorage} GiB`);
+            return totalCost;
+          }
+          selectedDisks.push(disk);
+          totalCost += disk.pricePerMonth;
+          remainingStorage -= disk.sizeGiB;
+        }
+
+        if (selectedDisks.length === 0) {
+          console.warn(`No disk combination found in awsDiskPricing[${awsDiskType}] for ${storageGiB} GiB`);
+          return 0;
+        }
+
+        console.log(`Selected disks for ${storageGiB} GiB (${awsDiskType}):`, selectedDisks);
+        return totalCost;
+      }
+    };
+
+    async function loadAzureVMPricingFromJson() {
+      try {
+        const response = await fetch('./az_data-export.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure VM pricing`);
+        const data = await response.json();
+        azureVMPricing = data.map(item => ({
+          name: item.name,
+          vCPUs: parseInt(item.vCPUs) || 0,
+          ram: parseFloat(item.ram) || 0,
+          storage: item.osDiskSizeInMB ? parseFloat(item.osDiskSizeInMB) / 1024 : 0,
+          linuxPrice: parseFloat(item.linuxPrice) || 0,
+          windowsPrice: parseFloat(item.windowsPrice) || 0
+        }));
+        console.log('Azure VM pricing loaded:', azureVMPricing);
+      } catch (err) {
+        console.error('Azure VM pricing load error:', err);
+        alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file 'az_data-export.json' is accessible and valid.`);
+        azureVMPricing = [];
+      }
     }
-  },
 
-  // Calculate Azure storage cost based on VM storage requirements and disk type
-  calculateAzureStorageCost(storage, diskType = 'Standard SSD', azureVMPricing) {
-    const storageGiB = this.convertToGiB(parseFloat(storage) || 0, this.storageUnit);
-    if (storageGiB <= 0) return 0;
-    const storageMB = storageGiB * 1024; // Convert to MB for Azure SKU matching
-
-    // Find the smallest disk from azureVMPricing that meets or exceeds the storage requirement
-    const disk = azureVMPricing
-      .filter(d => (d.storage * 1024) >= storageMB)
-      .sort((a, b) => (a.storage * 1024) - (b.storage * 1024))[0];
-
-    if (!disk) {
-      console.warn(`No disk found in azureVMPricing for ${storageGiB} GiB`);
-      return 0;
+    async function loadAzureDiskPricing() {
+      try {
+        const response = await fetch('https://raw.githubusercontent.com/virtualhowto/virtualhowto.github.io/refs/heads/main/az/az_storage-pricing.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure disk pricing`);
+        const data = await response.json();
+        azureDiskPricing = {
+          "Standard SSD": data["Standard SSD"].map(item => ({
+            name: item.name,
+            type: "Standard SSD",
+            sizeGiB: parseFloat(item.sizeGiB) || 0,
+            pricePerMonth: parseFloat(item.pricePerMonth) || 0
+          })),
+          "Premium SSD": data["Premium SSD"].map(item => ({
+            name: item.name,
+            type: "Premium SSD",
+            sizeGiB: parseFloat(item.sizeGiB) || 0,
+            pricePerMonth: parseFloat(item.pricePerMonth) || 0
+          }))
+        };
+        console.log('Azure disk pricing loaded:', azureDiskPricing);
+      } catch (err) {
+        console.error('Azure disk pricing load error:', err);
+        alert(`Failed to load Azure disk pricing: ${err.message}. Using default cost of 0.`);
+        azureDiskPricing = { "Standard SSD": [], "Premium SSD": [] };
+      }
     }
 
-    // Find the matching disk in azureDiskPricing by size and type
-    const diskSizeGiB = disk.storage; // Size in GiB from azureVMPricing
-    const matchingDisk = azureDiskPricing
-      .filter(d => d.type === diskType && d.sizeGiB >= diskSizeGiB)
-      .sort((a, b) => a.sizeGiB - b.sizeGiB)[0];
-
-    if (!matchingDisk) {
-      console.warn(`No matching disk found in azureDiskPricing for ${diskType}, ${diskSizeGiB} GiB`);
-      return 0;
+    async function loadAwsVMPricingFromJson() {
+      try {
+        const response = await fetch('./aws_pricing.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load AWS VM pricing`);
+        const data = await response.json();
+        awsVMPricing = data.map(item => ({
+          name: item.name,
+          vCPUs: parseInt(item.vCPUs) || 0,
+          ram: parseFloat(item.ram) || 0,
+          storage: parseFloat(item.storage) || 0,
+          linuxPrice: parseFloat(item.linuxPrice) || 0,
+          windowsPrice: parseFloat(item.windowsPrice) || 0
+        }));
+        console.log('AWS VM pricing loaded:', awsVMPricing);
+      } catch (err) {
+        console.error('AWS VM pricing load error:', err);
+        alert(`Failed to load AWS VM pricing: ${err.message}. Ensure the file 'aws_pricing.json' is accessible and valid.`);
+        awsVMPricing = [];
+      }
     }
 
-    return matchingDisk.pricePerMonth || 0;
-  },
+    async function loadAwsDiskPricing() {
+      try {
+        const response = await fetch('./aws_storage-pricing.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load AWS disk pricing`);
+        const data = await response.json();
+        awsDiskPricing = {
+          "General Purpose SSD (gp3)": data["General Purpose SSD (gp3)"].map(item => ({
+            name: item.name,
+            type: "General Purpose SSD (gp3)",
+            sizeGiB: parseFloat(item.sizeGiB) || 0,
+            pricePerMonth: parseFloat(item.pricePerMonth) || 0
+          })),
+          "Provisioned IOPS SSD (io2)": data["Provisioned IOPS SSD (io2)"].map(item => ({
+            name: item.name,
+            type: "Provisioned IOPS SSD (io2)",
+            sizeGiB: parseFloat(item.sizeGiB) || 0,
+            pricePerMonth: parseFloat(item.pricePerMonth) || 0
+          }))
+        };
+        console.log('AWS disk pricing loaded:', awsDiskPricing);
+      } catch (err) {
+        console.error('AWS disk pricing load error:', err);
+        alert(`Failed to load AWS disk pricing: ${err.message}. Using default cost of 0.`);
+        awsDiskPricing = { "General Purpose SSD (gp3)": [], "Provisioned IOPS SSD (io2)": [] };
+      }
+    }
 
-  // Filter SKUs by storage input
-  filterStorageSKUs(storageInput) {
-    let storageValue = 0;
-    let storageUnitFilter = 'GB';
-    if (storageInput) {
-      storageInput = storageInput.trim().toLowerCase();
-      if (storageInput.includes('gb')) {
-        storageUnitFilter = 'GB';
-        storageValue = parseFloat(storageInput.replace('gb', '').trim());
-      } else if (storageInput.includes('mb')) {
-        storageUnitFilter = 'MB';
-        storageValue = parseFloat(storageInput.replace('mb', '').trim());
-      } else if (storageInput.includes('tb')) {
-        storageUnitFilter = 'TB';
-        storageValue = parseFloat(storageInput.replace('tb', '').trim());
-      } else {
-        storageValue = parseFloat(storageInput);
-        if (!isNaN(storageValue)) {
-          storageUnitFilter = storageValue >= 1024 ? 'MB' : 'GB';
+    async function loadPrivateCloudPricing() {
+      try {
+        const response = await fetch('./private_cloud_pricing.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Private Cloud pricing`);
+        privateCloudPricing = await response.json();
+        console.log('Private Cloud pricing loaded:', privateCloudPricing);
+      } catch (err) {
+        console.error('Private Cloud pricing load error:', err);
+        alert(`Failed to load Private Cloud pricing: ${err.message}. Using default cost of 0.`);
+        privateCloudPricing = [];
+      }
+    }
+
+    function calculateSqlLicenseCost(numCPUs, licenseType) {
+      const costPerCore = licenseType === 'SQL-Ent' ? 500 : licenseType === 'SQL-Std' ? 200 : 0;
+      return costPerCore * (parseInt(numCPUs) || 0);
+    }
+
+    function calculateAzureVMPrice(index) {
+      const vm = lastVmData[index];
+      const sku = matchedSkus[index] || vm.manualSku;
+      const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+      const diskType = vm.diskType || 'Standard SSD';
+      const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
+      const storageCost = StorageModule.calculateAzureStorageCost(storage, diskType);
+      const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+      const baseCost = sku ? (os === 'Windows' ? sku.windowsPrice : sku.linuxPrice) : 0;
+      const total = baseCost + storageCost + sqlCost;
+      return { total, base: baseCost, storage: storageCost, sql: sqlCost };
+    }
+
+    function calculateAwsVMPrice(index) {
+      const vm = lastVmData[index];
+      const sku = matchedAwsSkus[index] || vm.manualAwsSku;
+      const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+      const awsDiskType = vm.awsDiskType || 'General Purpose SSD (gp3)';
+      const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
+      const storageCost = StorageModule.calculateAwsStorageCost(storage, awsDiskType);
+      const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+      const baseCost = sku ? (os === 'Windows' ? sku.windowsPrice : sku.linuxPrice) : 0;
+      const total = baseCost + storageCost + sqlCost;
+      return { total, base: baseCost, storage: storageCost, sql: sqlCost };
+    }
+
+    function calculatePrivateCloudPrice(index) {
+      const vm = lastVmData[index];
+      const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+      const ram = parseFloat(vm['Memory'] || 0);
+      const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+      const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
+      return (cpu * 100 + ram * 50 + storage * 0.1 + sqlCost) || 0;
+    }
+
+    function openSkuPopup(index, provider = 'Azure') {
+      selectedRow = index;
+      lastVmData[index].provider = provider;
+      const vm = lastVmData[index];
+      const vmName = vm['Display Name'] || vm['VM'] || 'Unnamed';
+      const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+      const ram = parseFloat(vm['Memory'] || 0);
+      const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+      const modalTitle = document.querySelector('#skuModal .modal-title');
+      modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} ${StorageModule.storageUnit})`;
+      
+      const providerSelect = document.querySelector('#providerSelect');
+      providerSelect.value = provider;
+      providerSelect.onchange = () => {
+        lastVmData[index].provider = providerSelect.value;
+        filterSKUs();
+      };
+
+      document.getElementById('filterName').value = '';
+      document.getElementById('filterCPU').value = '';
+      document.getElementById('filterRAM').value = '';
+      document.getElementById('filterStorage').value = '';
+      
+      filterSKUs();
+      new bootstrap.Modal(document.getElementById('skuModal')).show();
+    }
+
+    function selectSkuByName(name, provider) {
+      const selectedSku = (provider === 'Azure' ? azureVMPricing : awsVMPricing).find(s => s.name === name);
+      if (selectedSku && selectedRow !== null) {
+        if (provider === 'Azure') {
+          matchedSkus[selectedRow] = selectedSku;
+          lastVmData[selectedRow].manualSku = selectedSku;
+        } else {
+          matchedAwsSkus[selectedRow] = selectedSku;
+          lastVmData[selectedRow].manualAwsSku = selectedSku;
+        }
+        renderVMTable(lastVmData);
+        updateSummary();
+        bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
+      }
+    }
+
+    function filterSKUs() {
+      if (selectedRow === null) return;
+      const vm = lastVmData[selectedRow];
+      const provider = vm.provider || 'Azure';
+      const diskType = vm.diskType || 'Standard SSD';
+      const awsDiskType = vm.awsDiskType || 'General Purpose SSD (gp3)';
+      const os = vm['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+
+      const name = document.getElementById('filterName')?.value.toLowerCase() || '';
+      const cpuInput = document.getElementById('filterCPU')?.value || '';
+      const ramInput = document.getElementById('filterRAM')?.value || '';
+      const storageInput = document.getElementById('filterStorage')?.value || '';
+
+      const cpuValue = parseInt(cpuInput) || 0;
+      let ramValue = 0;
+      let ramUnit = 'GB';
+      if (ramInput) {
+        const trimmedRam = ramInput.trim().toLowerCase();
+        if (trimmedRam.includes('gb')) {
+          ramUnit = 'GB';
+          ramValue = parseFloat(trimmedRam.replace('gb', '').trim());
+        } else if (trimmedRam.includes('mb')) {
+          ramUnit = 'MB';
+          ramValue = parseFloat(trimmedRam.replace('mb', '').trim()) / 1024;
+        } else {
+          ramValue = parseFloat(trimmedRam);
+          if (!isNaN(ramValue)) ramUnit = 'GB';
         }
       }
-      console.log(`Storage filter: ${storageValue} ${storageUnitFilter} detected`);
-    }
-    const storageInMB = storageUnitFilter === 'GB' ? storageValue * 1024 : 
-                        storageUnitFilter === 'TB' ? storageValue * 1024 * 1024 : 
-                        storageValue;
-    return { storageInMB };
-  },
 
-  // Update storage unit based on column mapping
-  updateStorageUnit(columnMapping) {
-    const storageHeader = columnMapping['Provisioned Storage (GB)'];
-    if (storageHeader) {
-      const headerLower = storageHeader.toLowerCase();
-      if (headerLower.includes('mib')) this.storageUnit = 'MiB';
-      else if (headerLower.includes('gib')) this.storageUnit = 'GiB';
-      else if (headerLower.includes('gb')) this.storageUnit = 'GB';
-      else if (headerLower.includes('mb')) this.storageUnit = 'MB';
-      else if (headerLower.includes('tb')) this.storageUnit = 'TB';
-      else this.storageUnit = 'GB';
-      console.log('Storage unit determined from selected column:', this.storageUnit);
-    } else {
-      this.storageUnit = 'GB';
-      console.log('No storage column selected, defaulting to GB');
-    }
-  },
+      const { storageInMB } = StorageModule.filterStorageSKUs(storageInput);
+      const pricingData = provider === 'Azure' ? azureVMPricing : awsVMPricing;
+      const diskPricing = provider === 'Azure' ? azureDiskPricing : awsDiskPricing;
+      const calculateStorageCost = provider === 'Azure' ? StorageModule.calculateAzureStorageCost : StorageModule.calculateAwsStorageCost;
+      const selectedDiskType = provider === 'Azure' ? diskType : awsDiskType;
 
-  tuningParameters: {
-    minStorageThresholdMB: 0,
-    storageMatchToleranceMB: 100, // Allow 100 MB tolerance for matching
-  }
-};
+      let filtered = pricingData.filter(sku => {
+        const storageMatch = !storageInput || 
+          Math.abs((sku.storage * 1024) - storageInMB) <= StorageModule.tuningParameters.storageMatchToleranceMB;
+        return (
+          (!name || sku.name.toLowerCase().includes(name)) &&
+          (!cpuInput || sku.vCPUs >= cpuValue) &&
+          (!ramInput || Math.abs(sku.ram - ramValue) <= 0.01) &&
+          storageMatch
+        );
+      });
 
-// Debounce utility
-function debounce(fn, ms) {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), ms);
-  };
-}
+      filtered = filtered.map(sku => {
+        const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
+        const storageCost = calculateStorageCost(
+          vm['Provisioned Storage (GB)'] || 0,
+          selectedDiskType
+        );
+        return { sku, totalCost: vmPrice + storageCost };
+      }).sort((a, b) => a.totalCost - b.totalCost).map(item => item.sku);
 
-// Escape CSV values
-function escapeCsvValue(value) {
-  if (typeof value !== 'string') return value;
-  value = value.replace(/"/g, '""');
-  if (value.includes(',') || value.includes('\n')) {
-    return `"${value}"`;
-  }
-  return value;
-}
-
-// Load Azure VM pricing from local JSON
-async function loadAzureVMPricingFromJson() {
-  try {
-    const response = await fetch('./az_data-export.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure VM pricing`);
-    const data = await response.json();
-    if (data[0]?.currency && data[0].currency !== 'AUD') {
-      console.warn(`Currency is ${data[0].currency}. Prices assumed to be in AUD.`);
-    }
-    azureVMPricing = data.map(item => ({
-      name: item.name,
-      vCPUs: parseInt(item.numberOfCores) || 0,
-      ram: parseFloat(item.memoryInMB) || 0,
-      storage: parseFloat(item.osDiskSizeInMB) / 1024 || 0, // Convert MB to GB
-      retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
-      unitOfMeasure: '1 Hour',
-      linuxPrice: parseFloat(item.linuxPrice) || 0,
-      windowsPrice: parseFloat(item.windowsPrice) || 0
-    }));
-    fullCatalog.length = 0;
-    fullCatalog.push(...azureVMPricing);
-  } catch (err) {
-    console.error('Azure VM pricing load error:', err);
-    alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file 'az_data-export.json' is accessible and valid.`);
-    azureVMPricing = [];
-    fullCatalog.length = 0;
-  }
-}
-
-// Load Azure disk pricing from az_storage-pricing.json
-async function loadAzureDiskPricing() {
-  try {
-    const response = await fetch('https://raw.githubusercontent.com/virtualhowto/virtualhowto.github.io/refs/heads/main/az/az_storage-pricing.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load Azure disk pricing`);
-    const data = await response.json();
-    azureDiskPricing = data.map(item => ({
-      name: item.name,
-      type: item.type,
-      sizeGiB: parseFloat(item.sizeGiB) || 0,
-      pricePerMonth: parseFloat(item.pricePerMonth) || 0
-    }));
-    console.log('Azure disk pricing loaded:', azureDiskPricing);
-  } catch (err) {
-    console.error('Azure disk pricing load error:', err);
-    alert(`Failed to load Azure disk pricing: ${err.message}. Ensure the file 'az_storage-pricing.json' is accessible and valid. Using default cost of 0.`);
-    azureDiskPricing = [];
-  }
-}
-
-// Load private cloud pricing
-async function loadPrivateCloudPricing() {
-  try {
-    const res = await fetch('./cld-pricing.json');
-    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load private cloud pricing`);
-    const data = await res.json();
-    ataPricing = data;
-    populatePricingEditor();
-    updateSummary();
-  } catch (err) {
-    console.error('Private cloud pricing load error:', err);
-    alert(`Failed to load private cloud pricing: ${err.message}. Ensure the file 'cld-pricing.json' is accessible and valid.`);
-  }
-}
-
-// Initialize on window load
-window.onload = async () => {
-  await loadAzureVMPricingFromJson();
-  await loadAzureDiskPricing();
-  await loadPrivateCloudPricing();
-
-  const fileInput = document.getElementById('fileInput');
-  if (fileInput) {
-    fileInput.addEventListener('change', event => {
-      if (event.target.files.length) {
-        readXlsx(event.target.files[0]);
-      }
-    });
-  }
-
-  document.getElementById('filterName')?.addEventListener('input', debounce(filterSKUs, 300));
-  document.getElementById('filterCPU')?.addEventListener('input', debounce(filterSKUs, 300));
-  document.getElementById('filterRAM')?.addEventListener('input', debounce(filterSKUs, 300));
-  document.getElementById('filterStorage')?.addEventListener('input', debounce(filterSKUs, 300));
-
-  document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
-
-  if (localStorage.getItem('darkMode') === 'true') {
-    document.body.classList.add('dark-mode');
-    initializeTooltips();
-  }
-
-  document.getElementById('downloadCsv')?.addEventListener('click', downloadCsv);
-
-  document.getElementById('batchSqlAssign')?.addEventListener('click', () => {
-    if (!lastVmData.length) {
-      alert('No VM data loaded. Please upload an RVTools file first.');
-      return;
-    }
-    let assignedCount = 0;
-    lastVmData.forEach((vm, i) => {
-      const vmName = (vm['Display Name'] || vm['VM'] || '').toLowerCase();
-      if (vmName.includes('sql')) {
-        vm.sqlLicensed = true;
-        vm.sqlLicenseType = 'SQL-Std';
-        assignedCount++;
-      }
-    });
-    renderVMTable(lastVmData);
-    updateSummary();
-    alert(`Assigned SQL-Std tags to ${assignedCount} VMs with 'SQL' in their name.`);
-  });
-};
-
-// Toggle dark mode
-function toggleDarkMode() {
-  document.body.classList.toggle('dark-mode');
-  localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
-  initializeTooltips();
-}
-
-// Initialize tooltips
-function initializeTooltips() {
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.forEach(tooltipTriggerEl => {
-    const tooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl);
-    if (tooltip) tooltip.dispose();
-    new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-}
-
-// Download combined CSV
-function downloadCsv() {
-  const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'AZ_SKU', 'Storage Tier', 'Azure Cost (A$)', 'Azure Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
-  lastVmData.forEach((vm, i) => {
-    const azureCostBreakdown = calculateAzureVMPrice(i);
-    rows.push([
-      escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
-      vm['Num CPU'] || vm['CPUs'] || '',
-      vm['Memory'] || '',
-      `${vm['Provisioned Storage (GB)'] || ''} ${StorageModule.storageUnit}`,
-      (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
-      escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
-      vm.diskType || 'Standard SSD',
-      `A$${azureCostBreakdown.total.toFixed(2)}`,
-      `A$${azureCostBreakdown.storage.toFixed(2)}`,
-      `A$${calculatePrivateCloudPrice(i).toFixed(2)}`,
-      escapeCsvValue(vm.sqlLicenseType || '')
-    ]);
-  });
-  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
-  const link = document.createElement('a');
-  link.setAttribute('href', encodeURI(csvContent));
-  link.setAttribute('download', 'vm_cost_summary.csv');
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-// Export CSV for Azure or Private Cloud
-function exportCSV(type) {
-  const headers = ['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'AZ_SKU', 'Storage Tier', type === 'azure' ? 'Azure Cost (A$)' : 'Private Cloud Cost (A$)', 'Tag'];
-  const rows = [headers];
-  lastVmData.forEach((vm, i) => {
-    const azureCostBreakdown = calculateAzureVMPrice(i);
-    const privatePrice = calculatePrivateCloudPrice(i);
-    rows.push([
-      escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
-      vm['Num CPU'] || vm['CPUs'] || '',
-      vm['Memory'] || '',
-      `${vm['Provisioned Storage (GB)'] || ''} ${StorageModule.storageUnit}`,
-      (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
-      escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
-      vm.diskType || 'Standard SSD',
-      type === 'azure' ? `A$${azureCostBreakdown.total.toFixed(2)}` : `A$${privatePrice.toFixed(2)}`,
-      escapeCsvValue(vm.sqlLicenseType || '')
-    ]);
-  });
-  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
-  const link = document.createElement('a');
-  link.setAttribute('href', encodeURI(csvContent));
-  link.setAttribute('download', `vm_cost_${type}_summary.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-// XLSX reading
-function readXlsx(file) {
-  const spinner = document.getElementById('spinner');
-  spinner.style.display = 'block';
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = new Uint8Array(e.target.result);
-      workbook = XLSX.read(data, { type: 'array', cellText: true, cellDates: false });
-      console.log('Workbook loaded:', workbook.SheetNames);
-      if (!workbook.SheetNames.length) {
-        throw new Error('No sheets found in the workbook.');
-      }
-      spinner.style.display = 'none';
-      showColumnMappingModal();
-    } catch (err) {
-      spinner.style.display = 'none';
-      alert(`XLSX parsing failed: ${err.message}. Ensure the file is a valid RVTools export in XLSX format.`);
-      console.error('XLSX parsing error:', err);
-    }
-  };
-  reader.onerror = () => {
-    spinner.style.display = 'none';
-    alert('Failed to read the file. Please ensure it is a valid XLSX file and try again.');
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// Show column mapping modal
-function showColumnMappingModal() {
-  if (!workbook || !workbook.SheetNames.length) {
-    alert('No workbook loaded. Please upload a valid XLSX file.');
-    return;
-  }
-
-  const modalSheetSelect = document.getElementById('modalSheetSelect');
-  modalSheetSelect.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
-  modalSheetSelect.value = workbook.SheetNames.find(name => name.toLowerCase().includes('vinfo')) || workbook.SheetNames[0];
-  updateColumnMappings();
-  new bootstrap.Modal(document.getElementById('columnMappingModal')).show();
-}
-
-// Update column mappings based on selected sheet
-function updateColumnMappings() {
-  const sheetName = document.getElementById('modalSheetSelect').value;
-  console.log('Updating column mappings for sheet:', sheetName);
-  try {
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) {
-      alert(`Sheet "${sheetName}" not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
-      return;
+      const tbody = document.getElementById('skuTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      filtered.forEach(s => {
+        const vmPrice = os === 'Windows' ? s.windowsPrice : s.linuxPrice;
+        const storageCost = calculateStorageCost(
+          vm['Provisioned Storage (GB)'] || 0,
+          selectedDiskType
+        );
+        const totalPrice = vmPrice + storageCost;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.name}</td>
+          <td>${s.vCPUs}</td>
+          <td>${s.ram.toFixed(1)} GB</td>
+          <td>${s.storage.toFixed(1)} GB</td>
+          <td>A$${totalPrice.toFixed(2)}</td>
+          <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}', '${provider}')">✔</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
-    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
-    console.log('Sheet range:', range);
+    function assignSQLTag(index) {
+      selectedRow = index;
+      new bootstrap.Modal(document.getElementById('tagModal')).show();
+    }
 
-    let headers = [];
-    for (let row = range.s.r; row <= range.e.r; row++) {
-      const rowData = XLSX.utils.sheet_to_json(sheet, { header: 1, range: row })[0] || [];
-      headers = rowData.filter(h => h != null && h.toString().trim() !== '');
-      if (headers.length) {
-        console.log('Headers found in row', row + 1, ':', headers);
-        break;
+    function applySQLTag() {
+      if (selectedRow !== null) {
+        const sqlTag = document.getElementById('sqlTagSelect').value;
+        lastVmData[selectedRow].sqlLicensed = true;
+        lastVmData[selectedRow].sqlLicenseType = sqlTag;
+        renderVMTable(lastVmData);
+        updateSummary();
+        bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
       }
     }
 
-    columnHeaders = headers;
-    if (!columnHeaders.length) {
-      alert('No valid headers found in the selected sheet. Please ensure the sheet has a header row with non-empty values.');
-      return;
-    }
-
-    const selects = [
-      { id: 'mapDisplayName', patterns: ['vm', 'name', 'display name'] },
-      { id: 'mapCpu', patterns: ['cpu', 'cpus', 'vcpus', 'cores'] },
-      { id: 'mapMemory', patterns: ['memory', 'ram'] },
-      { id: 'mapStorage', patterns: ['provisioned storage (gb)', 'disk', 'storage', 'capacity', 'provisioned'] },
-      { id: 'mapOs', patterns: ['os according to the configuration file', 'os', 'operating system', 'guest os'] }
-    ];
-
-    selects.forEach(({ id, patterns }) => {
-      const select = document.getElementById(id);
-      select.innerHTML = '<option value="">Select Column</option>' + 
-        columnHeaders.map(h => `<option value="${h}">${h}</option>`).join('');
-      
-      let matchedHeader = null;
-      for (const pattern of patterns) {
-        matchedHeader = columnHeaders.find(h => h.toString().toLowerCase() === pattern.toLowerCase()) ||
-                        columnHeaders.find(h => h.toString().toLowerCase().includes(pattern.toLowerCase()));
-        if (matchedHeader) break;
-      }
-      if (matchedHeader) {
-        select.value = matchedHeader;
-      }
-    });
-  } catch (err) {
-    alert(`Failed to read sheet "${sheetName}": ${err.message}. Ensure the selected sheet is valid.`);
-    console.error('Sheet reading error:', err);
-  }
-}
-
-// Apply column mapping
-function applyColumnMapping() {
-  columnMapping = {
-    'Display Name': document.getElementById('mapDisplayName').value,
-    'Num CPU': document.getElementById('mapCpu').value,
-    'Memory': document.getElementById('mapMemory').value,
-    'Provisioned Storage (GB)': document.getElementById('mapStorage').value,
-    'OS': document.getElementById('mapOs').value
-  };
-
-  const requiredFields = ['Display Name', 'Num CPU', 'Memory', 'Provisioned Storage (GB)'];
-  const missingFields = requiredFields.filter(field => !columnMapping[field]);
-  if (missingFields.length) {
-    alert(`Please map all required fields: ${missingFields.join(', ')}`);
-    return;
-  }
-
-  const sheetName = document.getElementById('modalSheetSelect').value;
-  loadSheet(sheetName);
-  bootstrap.Modal.getInstance(document.getElementById('columnMappingModal')).hide();
-}
-
-// Load specific sheet
-function loadSheet(sheetName) {
-  const spinner = document.getElementById('spinner');
-  spinner.style.display = 'block';
-  try {
-    if (!workbook || !workbook.SheetNames.length) {
-      throw new Error('No workbook loaded.');
-    }
-    const normalizedSheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === sheetName.trim().toLowerCase());
-    if (!normalizedSheetName) {
-      throw new Error(`Sheet "${sheetName}" not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
-    }
-    const sheet = workbook.Sheets[normalizedSheetName];
-    console.log('Loading sheet:', normalizedSheetName, 'Available sheets:', workbook.SheetNames);
-
-    StorageModule.updateStorageUnit(columnMapping);
-
-    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
-    console.log('Sheet range:', range);
-
-    let headerRow = 0;
-    let headers = [];
-    for (let row = range.s.r; row <= range.e.r; row++) {
-      const rowData = XLSX.utils.sheet_to_json(sheet, { header: 1, range: row })[0] || [];
-      headers = rowData.filter(h => h != null && h.toString().trim() !== '');
-      if (headers.length) {
-        headerRow = row;
-        console.log('Headers found in row', row + 1, ':', headers);
-        break;
-      }
-    }
-
-    const vmData = XLSX.utils.sheet_to_json(sheet, { header: headers, range: headerRow + 1, blankrows: false, defval: '' });
-    console.log('Parsed VM data:', vmData);
-    spinner.style.display = 'none';
-    if (!vmData.length) {
-      alert('No data found in the selected sheet. Please ensure it contains VM data below the header row.');
-      return;
-    }
-
-    lastVmData = vmData.map(vm => ({
-      'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
-      'Num CPU': vm[columnMapping['Num CPU']] || vm['CPUs'] || 0,
-      'Memory': parseFloat(vm[columnMapping['Memory']] || vm['Memory'] || 0),
-      'Provisioned Storage (GB)': StorageModule.convertToGiB(
-        parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
-        StorageModule.storageUnit
-      ),
-      'OS': vm[columnMapping['OS']] || vm['OS according to the configuration file'] || vm['OS'] || '',
-      selected: false,
-      diskType: 'Standard SSD'
-    }));
-
-    console.log('Mapped VM data:', lastVmData);
-    renderVMTable(lastVmData);
-    updateSummary();
-  } catch (err) {
-    spinner.style.display = 'none';
-    alert(`Sheet loading failed: ${err.message}. Ensure the selected sheet contains valid RVTools data.`);
-    console.error('Sheet loading error:', err);
-  }
-}
-
-// Calculate Azure VM price
-function calculateAzureVMPrice(index) {
-  const vm = lastVmData[index];
-  const sku = matchedSkus[index] || vm.manualSku;
-  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
-  const diskType = vm.diskType || 'Standard SSD';
-  const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
-  const storageCost = StorageModule.calculateAzureStorageCost(storage, diskType, azureVMPricing);
-  const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
-  const baseCost = sku ? (os === 'Windows' ? sku.windowsPrice : sku.linuxPrice) : 0;
-  const total = baseCost + storageCost + sqlCost;
-  return { total, base: baseCost, storage: storageCost, sql: sqlCost };
-}
-
-// Calculate private cloud price
-function calculatePrivateCloudPrice(index) {
-  const vm = lastVmData[index];
-  const cpu = parseInt(vm['Num CPU']) || 0;
-  const ram = parseFloat(vm['Memory']) || 0;
-  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
-  const os = (vm['OS'] || '').toLowerCase();
-  const octopus = os.includes('win') ? (ataPricing.octopus || 0) : 0;
-  const sql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
-  return (cpu * (ataPricing.cpu || 0)) + (ram * (ataPricing.ram || 0)) + (storage * (ataPricing.storage || 0)) + (ataPricing.base || 0) + octopus + sql;
-}
-
-// Calculate SQL license cost
-function calculateSqlLicenseCost(cpuCount, type = 'SQL-Std') {
-  const coreCount = Math.max(4, Math.ceil(parseInt(cpuCount) / 2) * 2);
-  const unitPrice = ataPricing[type] || 0;
-  return (coreCount / 2) * unitPrice;
-}
-
-// Update summary
-function updateSummary() {
-  const azureTotal = lastVmData.reduce((sum, _, i) => sum + calculateAzureVMPrice(i).total, 0);
-  const privateTotal = lastVmData.reduce((sum, _, i) => sum + calculatePrivateCloudPrice(i), 0);
-  document.getElementById('totalPrice').innerText = `A$${azureTotal.toFixed(2)}`;
-  document.getElementById('ataPrice').innerText = `A$${privateTotal.toFixed(2)}`;
-}
-
-// Populate pricing editor
-function populatePricingEditor() {
-  const editor = document.getElementById('pricingEditor');
-  if (!editor) return;
-  editor.querySelectorAll('.form-group').forEach(div => {
-    const input = div.querySelector('input');
-    const key = Object.keys(keyMap).find(k => keyMap[k] === input.id);
-    if (key) input.value = ataPricing[key] || 0;
-  });
-}
-
-// Filter SKUs
-function filterSKUs() {
-  if (selectedRow === null) return;
-
-  const vm = lastVmData[selectedRow];
-  const diskType = vm.diskType || 'Standard SSD';
-  const os = vm['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
-
-  const name = document.getElementById('filterName')?.value.toLowerCase() || '';
-  const cpuInput = document.getElementById('filterCPU')?.value || '';
-  const ramInput = document.getElementById('filterRAM')?.value || '';
-  const storageInput = document.getElementById('filterStorage')?.value || '';
-
-  const cpuValue = parseInt(cpuInput) || 0;
-  let ramValue = 0;
-  let ramUnit = 'GB';
-  if (ramInput) {
-    const trimmedRam = ramInput.trim().toLowerCase();
-    if (trimmedRam.includes('gb')) {
-      ramUnit = 'GB';
-      ramValue = parseFloat(trimmedRam.replace('gb', '').trim());
-    } else if (trimmedRam.includes('mb')) {
-      ramUnit = 'MB';
-      ramValue = parseFloat(trimmedRam.replace('mb', '').trim()) / 1024;
-    } else {
-      ramValue = parseFloat(trimmedRam);
-      if (!isNaN(ramValue)) ramUnit = 'GB';
-    }
-    console.log(`RAM filter: ${ramValue} ${ramUnit} detected`);
-  }
-
-  const { storageInMB } = StorageModule.filterStorageSKUs(storageInput);
-
-  let filtered = azureVMPricing.filter(sku => {
-    const storageMatch = !storageInput || 
-      Math.abs((sku.storage * 1024) - storageInMB) <= StorageModule.tuningParameters.storageMatchToleranceMB;
-    return (
-      (!name || sku.name.toLowerCase().includes(name)) &&
-      (!cpuInput || sku.vCPUs >= cpuValue) &&
-      (!ramInput || Math.abs(sku.ram - ramValue) <= 0.01) &&
-      storageMatch
-    );
-  });
-
-  filtered = filtered.map(sku => {
-    const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
-    const storageCost = StorageModule.calculateAzureStorageCost(
-      vm['Provisioned Storage (GB)'] || 0,
-      diskType,
-      azureVMPricing
-    );
-    return { sku, totalCost: vmPrice + storageCost };
-  }).sort((a, b) => a.totalCost - b.totalCost).map(item => item.sku);
-
-  const tbody = document.getElementById('skuTableBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  filtered.forEach(s => {
-    const vmPrice = os === 'Windows' ? s.windowsPrice : s.linuxPrice;
-    const storageCost = StorageModule.calculateAzureStorageCost(
-      vm['Provisioned Storage (GB)'] || 0,
-      diskType,
-      azureVMPricing
-    );
-    const totalPrice = vmPrice + storageCost;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${s.name}</td>
-      <td>${s.vCPUs}</td>
-      <td>${s.ram.toFixed(1)} GB</td>
-      <td>${s.storage.toFixed(1)} GB</td>
-      <td>A$${totalPrice.toFixed(2)}</td>
-      <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-// Open SKU popup
-function openSkuPopup(index) {
-  selectedRow = index;
-  const vm = lastVmData[index];
-  const vmName = vm['Display Name'] || vm['VM'] || 'Unnamed';
-  const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-  const ram = parseFloat(vm['Memory'] || 0);
-  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
-  const modalTitle = document.querySelector('#skuModal .modal-title');
-  if (modalTitle) {
-    modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} ${StorageModule.storageUnit})`;
-  }
-
-  document.getElementById('filterName').value = '';
-  document.getElementById('filterCPU').value = '';
-  document.getElementById('filterRAM').value = '';
-  document.getElementById('filterStorage').value = '';
-
-  filterSKUs();
-  new bootstrap.Modal(document.getElementById('skuModal')).show();
-}
-
-// Select SKU by name
-function selectSkuByName(name) {
-  const selectedSku = azureVMPricing.find(s => s.name === name);
-  if (selectedSku && selectedRow !== null) {
-    matchedSkus[selectedRow] = selectedSku;
-    lastVmData[selectedRow].manualSku = selectedSku;
-    renderVMTable(lastVmData);
-    updateSummary();
-    bootstrap.Modal.getInstance(document.getElementById('skuModal')).hide();
-  }
-}
-
-// Assign SQL tag
-function assignSQLTag(index) {
-  selectedRow = index;
-  const vm = lastVmData[index];
-  const vmName = vm['Display Name'] || vm['VM'] || 'Unnamed';
-  const modalTitle = document.querySelector('#tagModal .modal-title');
-  if (modalTitle) {
-    modalTitle.textContent = `Select SQL License Tag for ${vmName}`;
-  }
-  new bootstrap.Modal(document.getElementById('tagModal')).show();
-}
-
-// Select SQL tag
-function selectSQLTag(tag) {
-  if (selectedRow !== null && (tag === 'SQL-Std' || tag === 'SQL-Ent')) {
-    lastVmData[selectedRow].sqlLicensed = true;
-    lastVmData[selectedRow].sqlLicenseType = tag;
-    renderVMTable(lastVmData);
-    updateSummary();
-    bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
-  }
-}
-
-// Clear SQL tag
-function clearSQLTag(index) {
-  lastVmData[index].sqlLicensed = false;
-  lastVmData[index].sqlLicenseType = null;
-  renderVMTable(lastVmData);
-  updateSummary();
-}
-
-// Render VM table
-function renderVMTable(vmData) {
-  if (!vmData || !vmData.length) return;
-  const tbody = document.querySelector('#vmTable tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  vmData.forEach((vm, index) => {
-    const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
-    const ram = parseFloat(vm['Memory'] || 0);
-    const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
-    const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
-    const sku = matchedSkus[index] || vm.manualSku;
-    const azureCostBreakdown = calculateAzureVMPrice(index);
-    const privatePrice = calculatePrivateCloudPrice(index);
-
-    const azureTooltip = sku
-      ? `Currency: ${currency}\n` +
-        `AZ_SKU: ${sku.name}\n` +
-        `CPUs: ${sku.vCPUs}\n` +
-        `RAM: ${sku.ram.toFixed(1)} GB\n` +
-        `Storage: ${sku.storage.toFixed(1)} GB\n` +
-        `Base VM Cost: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
-        `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${StorageModule.storageUnit})\n` +
-        `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
-        `Total: ${currency}$${azureCostBreakdown.total.toFixed(2)}`
-      : 'No AZ_SKU selected';
-
-    const cpuCost = cpu * (ataPricing.cpu || 0);
-    const ramCost = ram * (ataPricing.ram || 0);
-    const storageCost = storage * (ataPricing.storage || 0);
-    const baseCost = ataPricing.base || 0;
-    const octopusCost = os.includes('Windows') ? (ataPricing.octopus || 0) : 0;
-    const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
-    const privateTooltip = `CPU: A$${cpuCost.toFixed(2)} (${cpu} × A$${(ataPricing.cpu || 0).toFixed(2)})\n` +
-                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × A$${(ataPricing.ram || 0).toFixed(2)})\n` +
-                          `Storage: A$${storageCost.toFixed(2)} (${storage} ${StorageModule.storageUnit} × A$${(ataPricing.storage || 0).toFixed(2)})\n` +
-                          `Base Fee: A$${baseCost.toFixed(2)}\n` +
-                          `Octopus Fee: A$${octopusCost.toFixed(2)}\n` +
-                          `${sqlCost ? `SQL License (${vm.sqlLicenseType}): A$${sqlCost.toFixed(2)}\n` : ''}` +
-                          `Total: A$${privatePrice.toFixed(2)}`;
-
-    const tr = document.createElement('tr');
-    tr.title = `Azure: A$${azureCostBreakdown.total.toFixed(2)}\nPrivate: A$${privatePrice.toFixed(2)}`;
-    if (!sku) tr.classList.add('table-danger');
-
-    const tdName = document.createElement('td');
-    tdName.textContent = vm['Display Name'] || vm['VM'] || 'Unnamed';
-    tr.appendChild(tdName);
-
-    const tdCpu = document.createElement('td');
-    tdCpu.textContent = cpu;
-    tr.appendChild(tdCpu);
-
-    const tdRam = document.createElement('td');
-    tdRam.textContent = `${ram.toFixed(1)} GB`;
-    tr.appendChild(tdRam);
-
-    const tdStorage = document.createElement('td');
-    tdStorage.textContent = `${storage.toFixed(2)} ${StorageModule.storageUnit}`;
-    tr.appendChild(tdStorage);
-
-    const tdOs = document.createElement('td');
-    tdOs.textContent = os;
-    tr.appendChild(tdOs);
-
-    const tdSku = document.createElement('td');
-    tdSku.textContent = sku ? sku.name : 'No Match';
-    if (!sku) {
-      const em = document.createElement('em');
-      em.textContent = 'No Match';
-      tdSku.textContent = '';
-      tdSku.appendChild(em);
-    }
-    const adjBtn = document.createElement('button');
-    adjBtn.className = 'btn btn-sm btn-warning ms-2';
-    adjBtn.textContent = 'Adj';
-    adjBtn.onclick = () => openSkuPopup(index);
-    tdSku.appendChild(adjBtn);
-    tr.appendChild(tdSku);
-
-    const tdDiskType = document.createElement('td');
-    const diskSelect = document.createElement('select');
-    diskSelect.className = 'form-select form-select-sm';
-    diskSelect.innerHTML = `
-      <option value="Standard SSD" ${vm.diskType === 'Standard SSD' ? 'selected' : ''}>Standard SSD</option>
-      <option value="Premium SSD" ${vm.diskType === 'Premium SSD' ? 'selected' : ''}>Premium SSD</option>
-    `;
-    diskSelect.onchange = (e) => {
-      vm.diskType = e.target.value;
+    function clearSQLTag(index) {
+      lastVmData[index].sqlLicensed = false;
+      lastVmData[index].sqlLicenseType = null;
       renderVMTable(lastVmData);
       updateSummary();
-    };
-    tdDiskType.appendChild(diskSelect);
-    tr.appendChild(tdDiskType);
-
-    const tdAzure = document.createElement('td');
-    tdAzure.textContent = `A$${azureCostBreakdown.total.toFixed(2)}`;
-    tdAzure.setAttribute('data-bs-toggle', 'tooltip');
-    tdAzure.setAttribute('data-bs-placement', 'top');
-    tdAzure.setAttribute('title', azureTooltip);
-    tr.appendChild(tdAzure);
-
-    const tdPrivate = document.createElement('td');
-    tdPrivate.textContent = `A$${privatePrice.toFixed(2)}`;
-    tdPrivate.setAttribute('data-bs-toggle', 'tooltip');
-    tdPrivate.setAttribute('data-bs-placement', 'top');
-    tdPrivate.setAttribute('data-bs-title', privateTooltip);
-    tr.appendChild(tdPrivate);
-
-    const tdTag = document.createElement('td');
-    if (vm.sqlLicenseType) {
-      const span = document.createElement('span');
-      span.className = 'badge bg-success';
-      span.textContent = vm.sqlLicenseType;
-      const close = document.createElement('span');
-      close.style.cursor = 'pointer';
-      close.textContent = ' ×';
-      close.onclick = () => clearSQLTag(index);
-      span.appendChild(close);
-      tdTag.appendChild(span);
-      const addBtn = document.createElement('button');
-      addBtn.className = 'btn btn-sm btn-outline-primary ms-1';
-      addBtn.textContent = '+';
-      addBtn.onclick = () => assignSQLTag(index);
-      tdTag.appendChild(addBtn);
-    } else {
-      const btn = document.createElement('button');
-      btn.className = 'btn btn-sm btn-outline-primary';
-      btn.textContent = '+';
-      btn.onclick = () => assignSQLTag(index);
-      tdTag.appendChild(btn);
     }
-    tr.appendChild(tdTag);
 
-    tbody.appendChild(tr);
-  });
+    function renderVMTable(vmData) {
+      if (!vmData || !vmData.length) return;
+      const tbody = document.querySelector('#vmTable tbody');
+      tbody.innerHTML = '';
+      vmData.forEach((vm, index) => {
+        const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+        const ram = parseFloat(vm['Memory'] || 0);
+        const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+        const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
+        const azureSku = matchedSkus[index] || vm.manualSku;
+        const awsSku = matchedAwsSkus[index] || vm.manualAwsSku;
+        const azureCostBreakdown = calculateAzureVMPrice(index);
+        const awsCostBreakdown = calculateAwsVMPrice(index);
+        const privatePrice = calculatePrivateCloudPrice(index);
 
-  initializeTooltips();
-}
+        const azureTooltip = azureSku
+          ? `Currency: ${currency}\nAZ_SKU: ${azureSku.name}\nCPUs: ${azureSku.vCPUs}\nRAM: ${azureSku.ram.toFixed(1)} GB\nStorage: ${azureSku.storage.toFixed(1)} GB\nBase VM Cost: ${currency}${azureCostBreakdown.base.toFixed(2)}\nStorage (${vm.diskType || 'Standard SSD'}): ${currency}${azureCostBreakdown.storage.toFixed(2)} (${storage} ${StorageModule.storageUnit})\n${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}${azureCostBreakdown.sql.toFixed(2)}\n` : ''}Total: ${currency}${azureCostBreakdown.total.toFixed(2)}`
+          : 'No AZ_SKU selected';
+        const awsTooltip = awsSku
+          ? `Currency: ${currency}\nAWS_SKU: ${awsSku.name}\nCPUs: ${awsSku.vCPUs}\nRAM: ${awsSku.ram.toFixed(1)} GB\nStorage: ${awsSku.storage.toFixed(1)} GB\nBase VM Cost: ${currency}${awsCostBreakdown.base.toFixed(2)}\nStorage (${vm.awsDiskType || 'General Purpose SSD (gp3)'}): ${currency}${awsCostBreakdown.storage.toFixed(2)} (${storage} ${StorageModule.storageUnit})\n${awsCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}${awsCostBreakdown.sql.toFixed(2)}\n` : ''}Total: ${currency}${awsCostBreakdown.total.toFixed(2)}`
+          : 'No AWS_SKU selected';
+        const privateTooltip = `Currency: ${currency}\nCPUs: ${cpu}\nRAM: ${ram.toFixed(1)} GB\nStorage: ${storage.toFixed(2)} ${StorageModule.storageUnit}\n${vm.sqlLicensed ? `SQL License (${vm.sqlLicenseType}): ${currency}${calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType).toFixed(2)}\n` : ''}Total: ${currency}${privatePrice.toFixed(2)}`;
 
-// Toggle pricing editor visibility
-function togglePricingEditor() {
-  const editor = document.getElementById('pricingEditor');
-  editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
-}
+        const tr = document.createElement('tr');
+        tr.title = `Azure: A$${azureCostBreakdown.total.toFixed(2)}\nAWS: A$${awsCostBreakdown.total.toFixed(2)}\nPrivate: A$${privatePrice.toFixed(2)}`;
+        if (!azureSku || !awsSku) tr.classList.add('table-danger');
 
-// Update private cloud pricing
-function updateAta(key) {
-  const val = parseFloat(document.getElementById(keyMap[key]).value);
-  if (!isNaN(val) && val >= 0) {
-    ataPricing[key] = val;
-    renderVMTable(lastVmData);
-    updateSummary();
-  } else {
-    alert(`Invalid value for ${key}. Please enter a non-negative number.`);
-    document.getElementById(keyMap[key]).value = ataPricing[key] || 0;
-  }
-}
+        tr.innerHTML = `
+          <td>${vm['Display Name'] || vm['VM'] || 'Unnamed'}</td>
+          <td>${cpu}</td>
+          <td>${ram.toFixed(1)} GB</td>
+          <td>${storage.toFixed(2)} ${StorageModule.storageUnit}</td>
+          <td>${os}</td>
+          <td>${azureSku ? azureSku.name : '<em>No Match</em>'}<button class="btn btn-sm btn-warning ms-2" onclick="openSkuPopup(${index}, 'Azure')">Adj</button></td>
+          <td>${awsSku ? awsSku.name : '<em>No Match</em>'}<button class="btn btn-sm btn-warning ms-2" onclick="openSkuPopup(${index}, 'AWS')">Adj</button></td>
+          <td>
+            <select class="form-select form-select-sm" onchange="lastVmData[${index}].diskType = this.value.split('|')[0]; lastVmData[${index}].awsDiskType = this.value.split('|')[1]; renderVMTable(lastVmData); updateSummary();">
+              <option value="Standard SSD|General Purpose SSD (gp3)" ${vm.diskType === 'Standard SSD' ? 'selected' : ''}>Standard SSD (AWS: gp3)</option>
+              <option value="Premium SSD|Provisioned IOPS SSD (io2)" ${vm.diskType === 'Premium SSD' ? 'selected' : ''}>Premium SSD (AWS: io2)</option>
+            </select>
+          </td>
+          <td data-bs-toggle="tooltip" data-bs-placement="top" title="${azureTooltip}">A$${azureCostBreakdown.total.toFixed(2)}</td>
+          <td data-bs-toggle="tooltip" data-bs-placement="top" title="${awsTooltip}">A$${awsCostBreakdown.total.toFixed(2)}</td>
+          <td data-bs-toggle="tooltip" data-bs-placement="top" title="${privateTooltip}">A$${privatePrice.toFixed(2)}</td>
+          <td>
+            ${vm.sqlLicenseType 
+              ? `<span class="badge bg-success">${vm.sqlLicenseType}<span style="cursor:pointer;" onclick="clearSQLTag(${index})"> ×</span></span><button class="btn btn-sm btn-outline-primary ms-1" onclick="assignSQLTag(${index})">+</button>`
+              : `<button class="btn btn-sm btn-outline-primary" onclick="assignSQLTag(${index})">+</button>`
+            }
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
 
-const keyMap = {
-  base: 'baseFee',
-  cpu: 'cpuFee',
-  ram: 'ramFee',
-  storage: 'storageFee',
-  octopus: 'octopusFee',
-  'SQL-Std': 'sqlStdFee',
-  'SQL-Ent': 'sqlEntFee'
-};
+      initializeTooltips();
+    }
+
+    function updateSummary() {
+      const azureTotal = lastVmData.reduce((sum, _, i) => sum + calculateAzureVMPrice(i).total, 0);
+      const awsTotal = lastVmData.reduce((sum, _, i) => sum + calculateAwsVMPrice(i).total, 0);
+      const privateTotal = lastVmData.reduce((sum, _, i) => sum + calculatePrivateCloudPrice(i), 0);
+      document.getElementById('totalPrice').innerText = `A$${azureTotal.toFixed(2)}`;
+      document.getElementById('awsTotalPrice').innerText = `A$${awsTotal.toFixed(2)}`;
+      document.getElementById('ataPrice').innerText = `A$${privateTotal.toFixed(2)}`;
+    }
+
+    function escapeCsvValue(value) {
+      if (!value) return '';
+      return `"${value.toString().replace(/"/g, '""')}"`;
+    }
+
+    function downloadCsv() {
+      const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'AZ_SKU', 'AWS_SKU', 'Storage Tier', 'Azure Cost (A$)', 'Azure Storage Cost (A$)', 'AWS Cost (A$)', 'AWS Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
+      lastVmData.forEach((vm, i) => {
+        const azureCostBreakdown = calculateAzureVMPrice(i);
+        const awsCostBreakdown = calculateAwsVMPrice(i);
+        rows.push([
+          escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
+          vm['Num CPU'] || vm['CPUs'] || '',
+          vm['Memory'] || '',
+          `${vm['Provisioned Storage (GB)'] || ''} ${StorageModule.storageUnit}`,
+          (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
+          escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
+          escapeCsvValue(matchedAwsSkus[i]?.name || 'No Match'),
+          `${vm.diskType || 'Standard SSD'} (AWS: ${vm.awsDiskType || 'General Purpose SSD (gp3)'})`,
+          `A$${azureCostBreakdown.total.toFixed(2)}`,
+          `A$${azureCostBreakdown.storage.toFixed(2)}`,
+          `A$${awsCostBreakdown.total.toFixed(2)}`,
+          `A$${awsCostBreakdown.storage.toFixed(2)}`,
+          `A$${calculatePrivateCloudPrice(i).toFixed(2)}`,
+          escapeCsvValue(vm.sqlLicenseType || '')
+        ]);
+      });
+      const csvContent = rows.map(row => row.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'vm_pricing.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCSV(type) {
+      const headers = ['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'AZ_SKU', 'AWS_SKU', 'Storage Tier', type === 'azure' ? 'Azure Cost (A$)' : type === 'aws' ? 'AWS Cost (A$)' : 'Private Cloud Cost (A$)', 'Tag'];
+      const rows = [headers];
+      lastVmData.forEach((vm, i) => {
+        const azureCostBreakdown = calculateAzureVMPrice(i);
+        const awsCostBreakdown = calculateAwsVMPrice(i);
+        const privatePrice = calculatePrivateCloudPrice(i);
+        rows.push([
+          escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
+          vm['Num CPU'] || vm['CPUs'] || '',
+          vm['Memory'] || '',
+          `${vm['Provisioned Storage (GB)'] || ''} ${StorageModule.storageUnit}`,
+          (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
+          escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
+          escapeCsvValue(matchedAwsSkus[i]?.name || 'No Match'),
+          `${vm.diskType || 'Standard SSD'} (AWS: ${vm.awsDiskType || 'General Purpose SSD (gp3)'})`,
+          type === 'azure' ? `A$${azureCostBreakdown.total.toFixed(2)}` : type === 'aws' ? `A$${awsCostBreakdown.total.toFixed(2)}` : `A$${privatePrice.toFixed(2)}`,
+          escapeCsvValue(vm.sqlLicenseType || '')
+        ]);
+      });
+      const csvContent = rows.map(row => row.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vm_pricing_${type}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function initializeTooltips() {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      initializeTooltips();
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          lastVmData = results.data.map(vm => ({
+            ...vm,
+            diskType: 'Standard SSD',
+            awsDiskType: 'General Purpose SSD (gp3)',
+            provider: 'Azure',
+            manualSku: null,
+            manualAwsSku: null,
+            sqlLicensed: false,
+            sqlLicenseType: null
+          }));
+          matchedSkus = new Array(lastVmData.length).fill(null);
+          matchedAwsSkus = new Array(lastVmData.length).fill(null);
+          renderVMTable(lastVmData);
+          updateSummary();
+        }
+      });
+    });
+
+    window.onload = async () => {
+      await loadAzureVMPricingFromJson();
+      await loadAzureDiskPricing();
+      await loadAwsVMPricingFromJson();
+      await loadAwsDiskPricing();
+      await loadPrivateCloudPricing();
+      initializeTooltips();
+    };
   </script>
 </body>
 </html>
