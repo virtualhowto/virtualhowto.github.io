@@ -845,7 +845,7 @@ function filterSKUs() {
       <td>${s.name}</td>
       <td>${s.vCPUs}</td>
       <td>${s.ram.toFixed(1)} GB</td>
-      <td>${(s.storage / 1024).toFixed(1)} GB</td>
+      <td>${s.storage.toFixed(1)} GB</td>
       <td>A$${totalPrice.toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
     `;
@@ -922,7 +922,7 @@ function renderVMTable(vmData) {
         `SKU: ${sku.name}\n` +
         `CPUs: ${sku.vCPUs}\n` +
         `RAM: ${sku.ram.toFixed(1)} GB\n` +
-        `Storage: ${(sku.storage / 1024).toFixed(1)} GB\n` +
+        `Storage: ${sku.storage.toFixed(1)} GB\n` +
         `Base VM Cost: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
         `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${StorageModule.storageUnit})\n` +
         `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
