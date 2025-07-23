@@ -805,11 +805,11 @@ function filterSKUs() {
   const diskType = vm.diskType || 'Standard SSD';
   const os = vm['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
 
-  // Get filter inputs, defaulting to VM's values
+  // Get filter inputs
   const name = document.getElementById('filterName')?.value.toLowerCase() || '';
-  const cpuInput = document.getElementById('filterCPU')?.value || vm['Num CPU'] || '';
-  const ramInput = document.getElementById('filterRAM')?.value || vm['Memory'] || '';
-  const storageInput = document.getElementById('filterStorage')?.value || `${vm['Provisioned Storage (GB)'] || ''} ${StorageModule.storageUnit}`;
+  const cpuInput = document.getElementById('filterCPU')?.value || '';
+  const ramInput = document.getElementById('filterRAM')?.value || '';
+  const storageInput = document.getElementById('filterStorage')?.value || '';
 
   // Parse CPU
   const cpuValue = parseInt(cpuInput) || 0;
@@ -896,11 +896,11 @@ function openSkuPopup(index) {
     modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} ${StorageModule.storageUnit})`;
   }
 
-  // Pre-populate filter inputs with VM's values
+  // Clear filter inputs
   document.getElementById('filterName').value = '';
-  document.getElementById('filterCPU').value = cpu || '';
-  document.getElementById('filterRAM').value = ram ? `${ram.toFixed(1)} GB` : '';
-  document.getElementById('filterStorage').value = storage ? `${storage.toFixed(1)} ${StorageModule.storageUnit}` : '';
+  document.getElementById('filterCPU').value = '';
+  document.getElementById('filterRAM').value = '';
+  document.getElementById('filterStorage').value = '';
 
   filterSKUs();
   new bootstrap.Modal(document.getElementById('skuModal')).show();
@@ -939,6 +939,14 @@ function selectSQLTag(tag) {
     updateSummary();
     bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
   }
+}
+
+// Clear SQL tag
+function clearSQLTag(index) {
+  lastVmData[index].sqlLicensed = false;
+  lastVmData[index].sqlLicenseType = null;
+  renderVMTable(lastVmData);
+  updateSummary();
 }
 
 // Render VM table
@@ -1047,7 +1055,7 @@ function renderVMTable(vmData) {
     tdPrivate.textContent = `A$${privatePrice.toFixed(2)}`;
     tdPrivate.setAttribute('data-bs-toggle', 'tooltip');
     tdPrivate.setAttribute('data-bs-placement', 'top');
-    tdPrivate.setAttribute('title', privateTooltip);
+    tdPrivate.setAttribute('data-bs-title', privateTooltip);
     tr.appendChild(tdPrivate);
 
     const tdTag = document.createElement('td');
@@ -1055,12 +1063,12 @@ function renderVMTable(vmData) {
       const span = document.createElement('span');
       span.className = 'badge bg-success';
       span.textContent = vm.sqlLicenseType;
+      const close = document.createElement('span');
+      close.style.cursor = 'pointer';
+      close.textContent = ' ×';
+      close.onclick = () => clearSQLTag(index);
+      span.appendChild(close);
       tdTag.appendChild(span);
-      const addBtn = document.createElement('button');
-      addBtn.className = 'btn btn-sm btn-outline-primary ms-1';
-      addBtn.textContent = '+';
-      addBtn.onclick = () => assignSQLTag(index);
-      tdTag.appendChild(addBtn);
     } else {
       const btn = document.createElement('button');
       btn.className = 'btn btn-sm btn-outline-primary';
