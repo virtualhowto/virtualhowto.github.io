@@ -271,8 +271,10 @@ const currency = 'AUD';
 // Storage Matching and Selection Module
 const StorageModule = {
   storageUnit: 'GB',
-  defaultAzureStoragePricePerGB: 0.3,
+  standardSSDCostPerGB: 0.3,
+  premiumSSDCostPerGB: 0.45,
 
+  // Convert storage values to GiB for internal calculations
   convertToGiB(storage, unit) {
     if (isNaN(storage)) return 0;
     switch (unit.toLowerCase()) {
@@ -283,23 +285,31 @@ const StorageModule = {
         return storage / 1024;
       case 'mb':
         return storage / 1024;
+      case 'tb':
+        return storage * 1024;
       default:
         console.warn(`Unknown storage unit: ${unit}. Assuming GB.`);
         return storage;
     }
   },
 
+  // Calculate Azure storage cost based on VM storage requirements and disk type
   calculateAzureStorageCost(storage, diskType = 'Standard SSD', azureVMPricing) {
     const storageGiB = this.convertToGiB(parseFloat(storage) || 0, this.storageUnit);
     if (storageGiB <= 0) return 0;
-    const storageMB = storageGiB * 1024;
+    const storageMB = storageGiB * 1024; // Convert to MB for Azure SKU matching
+
+    // Find the smallest disk that meets or exceeds the storage requirement
     const disk = azureVMPricing
       .filter(d => d.storage >= storageMB)
       .sort((a, b) => a.storage - b.storage)[0];
-    return diskType === 'Standard SSD' ? storageGiB * this.defaultAzureStoragePricePerGB : 0;
+
+    const pricePerGB = diskType === 'Premium SSD' ? this.premiumSSDCostPerGB : this.standardSSDCostPerGB;
+    return storageGiB * pricePerGB;
   },
 
-  filterStorageSKUs(storageInput, azureVMPricing) {
+  // Filter SKUs by storage input
+  filterStorageSKUs(storageInput) {
     let storageValue = 0;
     let storageUnitFilter = 'GB';
     if (storageInput) {
@@ -310,6 +320,9 @@ const StorageModule = {
       } else if (storageInput.includes('mb')) {
         storageUnitFilter = 'MB';
         storageValue = parseFloat(storageInput.replace('mb', '').trim());
+      } else if (storageInput.includes('tb')) {
+        storageUnitFilter = 'TB';
+        storageValue = parseFloat(storageInput.replace('tb', '').trim());
       } else {
         storageValue = parseFloat(storageInput);
         if (!isNaN(storageValue)) {
@@ -318,10 +331,13 @@ const StorageModule = {
       }
       console.log(`Storage filter: ${storageValue} ${storageUnitFilter} detected`);
     }
-    const storageInMB = storageUnitFilter === 'GB' ? storageValue * 1024 : storageValue;
-    return { storageValue, storageUnitFilter, storageInMB };
+    const storageInMB = storageUnitFilter === 'GB' ? storageValue * 1024 : 
+                        storageUnitFilter === 'TB' ? storageValue * 1024 * 1024 : 
+                        storageValue;
+    return { storageInMB };
   },
 
+  // Update storage unit based on column mapping
   updateStorageUnit(columnMapping) {
     const storageHeader = columnMapping['Provisioned Storage (GB)'];
     if (storageHeader) {
@@ -330,6 +346,7 @@ const StorageModule = {
       else if (headerLower.includes('gib')) this.storageUnit = 'GiB';
       else if (headerLower.includes('gb')) this.storageUnit = 'GB';
       else if (headerLower.includes('mb')) this.storageUnit = 'MB';
+      else if (headerLower.includes('tb')) this.storageUnit = 'TB';
       else this.storageUnit = 'GB';
       console.log('Storage unit determined from selected column:', this.storageUnit);
     } else {
@@ -340,7 +357,7 @@ const StorageModule = {
 
   tuningParameters: {
     minStorageThresholdMB: 0,
-    storageMatchToleranceMB: 0,
+    storageMatchToleranceMB: 100, // Allow 100 MB tolerance for matching
     storagePricingTiers: {
       'Standard SSD': { pricePerGB: 0.3 },
       'Premium SSD': { pricePerGB: 0.45 }
@@ -783,9 +800,9 @@ function filterSKUs() {
     console.log(`RAM filter: ${ramValue} ${ramUnit} detected`);
   }
 
-  const { storageInMB } = StorageModule.filterStorageSKUs(storageInput, azureVMPricing);
+  const { storageInMB } = StorageModule.filterStorageSKUs(storageInput);
 
-  const filtered = azureVMPricing.filter(sku => {
+  let filtered = azureVMPricing.filter(sku => {
     const storageMatch = !storageInput || 
       Math.abs(sku.storage - storageInMB) <= StorageModule.tuningParameters.storageMatchToleranceMB;
     return (
@@ -796,19 +813,40 @@ function filterSKUs() {
     );
   });
 
+  // Sort by total cost (VM price + storage cost for selected disk type)
+  if (filtered.length && storageInput) {
+    const diskType = lastVmData[selectedRow]?.diskType || 'Standard SSD';
+    filtered = filtered.map(sku => {
+      const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+      const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
+      const storageCost = StorageModule.calculateAzureStorageCost(
+        StorageModule.convertToGiB(storageInMB / 1024, 'GB'),
+        diskType,
+        azureVMPricing
+      );
+      return { sku, totalCost: vmPrice + storageCost };
+    }).sort((a, b) => a.totalCost - b.totalCost).map(item => item.sku);
+  }
+
   const tbody = document.getElementById('skuTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
   filtered.forEach(s => {
     const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
-    const price = os === 'Windows' ? s.windowsPrice : s.linuxPrice;
+    const vmPrice = os === 'Windows' ? s.windowsPrice : s.linuxPrice;
+    const storageCost = StorageModule.calculateAzureStorageCost(
+      lastVmData[selectedRow]?.['Provisioned Storage (GB)'] || 0,
+      lastVmData[selectedRow]?.diskType || 'Standard SSD',
+      azureVMPricing
+    );
+    const totalPrice = vmPrice + storageCost;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.name}</td>
       <td>${s.vCPUs}</td>
       <td>${s.ram.toFixed(1)} GB</td>
       <td>${(s.storage / 1024).toFixed(1)} GB</td>
-      <td>A$${price.toFixed(2)}</td>
+      <td>A$${totalPrice.toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '')}')">✔</button></td>
     `;
     tbody.appendChild(tr);
