@@ -81,7 +81,7 @@
   </style>
 </head>
 <body class="bg-light">
-  <div class="sticky-header d-flex justify-content-between align-items-center">
+  <div class="sticky-header d-flex justify-content three align-items-center">
     <h4 class="mb-0">RVTools Matcher</h4>
     <div>
       <span class="summary-tile azure-tile" onclick="exportCSV('azure')" title="Click to export detailed Azure pricing breakdown">
@@ -181,7 +181,7 @@
               <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB)">
             </div>
             <div class="col">
-              <input type="text" id="filterStorage" class="form-control filter-input" placeholder="Filter by Storage (GB or MB)">
+              <input type="text" id="filterStorage" class="form-control filter-input" placeholder="Filter by Storage (GB)">
             </div>
           </div>
           <table class="table table-sm table-striped">
@@ -274,7 +274,6 @@ const StorageModule = {
   standardSSDCostPerGB: 0.3,
   premiumSSDCostPerGB: 0.45,
 
-  // Convert storage values to GiB for internal calculations
   convertToGiB(storage, unit) {
     if (isNaN(storage)) return 0;
     switch (unit.toLowerCase()) {
@@ -282,7 +281,6 @@ const StorageModule = {
       case 'gb':
         return storage;
       case 'mib':
-        return storage / 1024;
       case 'mb':
         return storage / 1024;
       case 'tb':
@@ -293,51 +291,47 @@ const StorageModule = {
     }
   },
 
-  // Calculate Azure storage cost based on VM storage requirements and disk type
   calculateAzureStorageCost(storage, diskType = 'Standard SSD', azureVMPricing) {
     const storageGiB = this.convertToGiB(parseFloat(storage) || 0, this.storageUnit);
     if (storageGiB <= 0) return 0;
-    const storageMB = storageGiB * 1024; // Convert to MB for Azure SKU matching
-
+    
     // Find the smallest disk that meets or exceeds the storage requirement
     const disk = azureVMPricing
-      .filter(d => d.storage >= storageMB / 1024) // Convert MB to GB
+      .filter(d => d.storage >= storageGiB)
       .sort((a, b) => a.storage - b.storage)[0];
 
     const pricePerGB = diskType === 'Premium SSD' ? this.premiumSSDCostPerGB : this.standardSSDCostPerGB;
     return storageGiB * pricePerGB;
   },
 
-  // Filter SKUs by storage input
   filterStorageSKUs(storageInput) {
     let storageValue = 0;
     let storageUnitFilter = 'GB';
     if (storageInput) {
-      storageInput = storageInput.trim().toLowerCase();
-      if (storageInput.includes('gb')) {
+      const cleanInput = storageInput.trim().toLowerCase();
+      if (cleanInput.includes('gb')) {
         storageUnitFilter = 'GB';
-        storageValue = parseFloat(storageInput.replace('gb', '').trim());
-      } else if (storageInput.includes('mb')) {
+        storageValue = parseFloat(cleanInput.replace('gb', '').trim());
+      } else if (cleanInput.includes('mb')) {
         storageUnitFilter = 'MB';
-        storageValue = parseFloat(storageInput.replace('mb', '').trim());
-      } else if (storageInput.includes('tb')) {
+        storageValue = parseFloat(cleanInput.replace('mb', '').trim());
+      } else if (cleanInput.includes('tb')) {
         storageUnitFilter = 'TB';
-        storageValue = parseFloat(storageInput.replace('tb', '').trim());
+        storageValue = parseFloat(cleanInput.replace('tb', '').trim());
       } else {
-        storageValue = parseFloat(storageInput);
+        storageValue = parseFloat(cleanInput);
         if (!isNaN(storageValue)) {
-          storageUnitFilter = storageValue >= 1024 ? 'MB' : 'GB';
+          storageUnitFilter = 'GB'; // Default to GB for numeric input
         }
       }
       console.log(`Storage filter: ${storageValue} ${storageUnitFilter} detected`);
     }
-    const storageInMB = storageUnitFilter === 'GB' ? storageValue * 1024 : 
-                        storageUnitFilter === 'TB' ? storageValue * 1024 * 1024 : 
-                        storageValue;
-    return { storageInMB };
+    const storageInGB = storageUnitFilter === 'GB' ? storageValue :
+                        storageUnitFilter === 'TB' ? storageValue * 1024 :
+                        storageValue / 1024;
+    return { storageInGB: isNaN(storageInGB) ? 0 : storageInGB };
   },
 
-  // Update storage unit based on column mapping
   updateStorageUnit(columnMapping) {
     const storageHeader = columnMapping['Provisioned Storage (GB)'];
     if (storageHeader) {
@@ -405,7 +399,12 @@ async function loadAzureVMPricingFromJson() {
     }));
     fullCatalog.length = 0;
     fullCatalog.push(...azureVMPricing);
-    console.log('Azure VM pricing loaded:', azureVMPricing);
+    console.log('Azure VM pricing loaded:', azureVMPricing.map(s => ({
+      name: s.name,
+      vCPUs: s.vCPUs,
+      ram: s.ram,
+      storage: s.storage
+    })));
   } catch (err) {
     console.error('Azure VM pricing load error:', err);
     alert(`Failed to load Azure VM pricing: ${err.message}. Ensure the file 'az_data-export.json' is accessible and valid.`);
@@ -703,7 +702,7 @@ function loadSheet(sheetName) {
 
     lastVmData = vmData.map(vm => ({
       'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
-      'Num CPU': vm[columnMapping['Num CPU']] || vm['CPUs'] || 0,
+      'Num CPU': parseInt(vm[columnMapping['Num CPU']] || vm['CPUs'] || 0),
       'Memory': parseFloat(vm[columnMapping['Memory']] || vm['Memory'] || 0),
       'Provisioned Storage (GB)': StorageModule.convertToGiB(
         parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
@@ -718,7 +717,7 @@ function loadSheet(sheetName) {
     matchedSkus = lastVmData.map(vm => matchClosestSku(vm, azureVMPricing));
 
     console.log('Mapped VM data:', lastVmData);
-    console.log('Matched SKUs:', matchedSkus);
+    console.log('Matched SKUs:', matchedSkus.map(sku => sku ? sku.name : 'No Match'));
     renderVMTable(lastVmData);
     updateSummary();
   } catch (err) {
@@ -736,31 +735,34 @@ function matchClosestSku(vm, azureVMPricing) {
   const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
   const diskType = vm.diskType || 'Standard SSD';
 
-  if (!cpu || !ram || !storage) return null; // Skip if critical data is missing
+  console.log(`Matching VM: CPU=${cpu}, RAM=${ram} GB, Storage=${storage} GB, OS=${os}`);
+
+  if (!cpu || !ram || !storage || isNaN(cpu) || isNaN(ram) || isNaN(storage)) {
+    console.warn(`Invalid VM data: CPU=${cpu}, RAM=${ram}, Storage=${storage}. No match.`);
+    return null;
+  }
 
   // Define tolerances for matching
   const tolerances = {
-    cpu: 2, // Allow ±2 CPUs
-    ram: 4, // Allow ±4 GB RAM
-    storage: StorageModule.tuningParameters.storageMatchToleranceMB / 1024 // Convert MB to GB
+    cpu: 4, // Allow ±4 CPUs
+    ram: 8, // Allow ±8 GB RAM
+    storage: 8 // Allow ±8 GB storage
   };
 
   // Score SKUs based on how closely they match VM specs
   const scoredSkus = azureVMPricing
     .filter(sku => {
-      // Filter SKUs that are within tolerance
-      return (
-        Math.abs(sku.vCPUs - cpu) <= tolerances.cpu &&
-        Math.abs(sku.ram - ram) <= tolerances.ram &&
-        Math.abs(sku.storage - storage) <= tolerances.storage
-      );
+      const ramMatch = Math.abs(sku.ram - ram) <= tolerances.ram;
+      const storageMatch = Math.abs(sku.storage - storage) <= tolerances.storage;
+      const cpuMatch = Math.abs(sku.vCPUs - cpu) <= tolerances.cpu;
+      return cpuMatch && ramMatch && storageMatch;
     })
     .map(sku => {
       // Calculate score based on absolute differences
-      const cpuDiff = Math.abs(sku.vCPUs - cpu);
-      const ramDiff = Math.abs(sku.ram - ram);
-      const storageDiff = Math.abs(sku.storage - storage);
-      const score = cpuDiff + ramDiff + storageDiff; // Lower score = better match
+      const cpuDiff = Math.abs(sku.vCPUs - cpu) / tolerances.cpu;
+      const ramDiff = Math.abs(sku.ram - ram) / tolerances.ram;
+      const storageDiff = Math.abs(sku.storage - storage) / tolerances.storage;
+      const score = cpuDiff + ramDiff + storageDiff; // Normalized score
 
       // Calculate total cost (VM price + storage cost)
       const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
@@ -769,6 +771,16 @@ function matchClosestSku(vm, azureVMPricing) {
 
       return { sku, score, totalCost };
     });
+
+  console.log(`Scored SKUs for VM (CPU=${cpu}, RAM=${ram}, Storage=${storage}):`, 
+    scoredSkus.map(s => ({
+      name: s.sku.name,
+      vCPUs: s.sku.vCPUs,
+      ram: s.sku.ram,
+      storage: s.sku.storage,
+      score: s.score.toFixed(2),
+      totalCost: s.totalCost.toFixed(2)
+    })));
 
   // Sort by score (ascending) and then by totalCost (ascending) for ties
   const bestMatch = scoredSkus.sort((a, b) => a.score - b.score || a.totalCost - b.totalCost)[0];
@@ -795,7 +807,7 @@ function calculatePrivateCloudPrice(index) {
   const vm = lastVmData[index];
   const cpu = parseInt(vm['Num CPU']) || 0;
   const ram = parseFloat(vm['Memory']) || 0;
-  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+  const storage = parseFloat(vm['Provisioned Storage (GB)']) || 0;
   const os = (vm['OS'] || '').toLowerCase();
   const octopus = os.includes('win') ? (ataPricing.octopus || 0) : 0;
   const sql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
@@ -836,15 +848,16 @@ function filterSKUs() {
   const storageInput = document.getElementById('filterStorage')?.value || '';
 
   const cpuValue = parseInt(cpuInput) || 0;
-  const ramValue = parseFloat(ramInput) || 0; // Parse as number, assume GB
+  const ramValue = parseFloat(ramInput) || 0; // Assume GB
   console.log(`RAM filter: ${ramValue} GB detected`);
 
-  const { storageInMB } = StorageModule.filterStorageSKUs(storageInput);
+  const { storageInGB } = StorageModule.filterStorageSKUs(storageInput);
+  console.log(`Storage filter: ${storageInGB} GB detected`);
 
   let filtered = azureVMPricing.filter(sku => {
     const ramMatch = !ramInput || Math.abs(sku.ram - ramValue) <= 0.5; // Relaxed tolerance
     const storageMatch = !storageInput || 
-      Math.abs(sku.storage - (storageInMB / 1024)) <= (StorageModule.tuningParameters.storageMatchToleranceMB / 1024);
+      Math.abs(sku.storage - storageInGB) <= (StorageModule.tuningParameters.storageMatchToleranceMB / 1024);
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
       (!cpuInput || sku.vCPUs === cpuValue) &&
@@ -853,13 +866,20 @@ function filterSKUs() {
     );
   });
 
+  console.log('Filtered SKUs:', filtered.map(s => ({
+    name: s.name,
+    vCPUs: s.vCPUs,
+    ram: s.ram,
+    storage: s.storage
+  })));
+
   if (filtered.length && storageInput) {
     const diskType = lastVmData[selectedRow]?.diskType || 'Standard SSD';
     filtered = filtered.map(sku => {
       const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
       const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
       const storageCost = StorageModule.calculateAzureStorageCost(
-        StorageModule.convertToGiB(storageInMB / 1024, 'GB'),
+        storageInGB,
         diskType,
         azureVMPricing
       );
@@ -999,7 +1019,7 @@ function renderVMTable(vmData) {
     tr.appendChild(tdRam);
 
     const tdStorage = document.createElement('td');
-    tdStorage.textContent = `${storage.toFixed(2)} ${StorageModule.storageUnit}`;
+    tdStorage.textContent = `${storage.toFixed(1)} ${StorageModule.storageUnit}`;
     tr.appendChild(tdStorage);
 
     const tdOs = document.createElement('td');
