@@ -443,7 +443,7 @@
     async function loadPrivateCloudPricing() {
       try {
         const res = await fetch('./cld-pricing.json');
-        if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load private cloud pricing. Ensure './cld-pricing.json' exists and is accessible.`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load private cloud pricing. Ensure './cld-pricing.json' exists in the same directory as pm.html.`);
         const data = await res.json();
         const requiredFields = ['base', 'cpu', 'ram', 'storage', 'octopus', 'SQL-Std', 'SQL-Ent'];
         const missingFields = requiredFields.filter(field => !(field in data) || data[field] == null);
@@ -460,7 +460,7 @@
         ataPricing = { ...data };
         populatePricingEditor();
         updateSummary();
-        console.log('Private cloud pricing loaded:', ataPricing);
+        console.log('Private cloud pricing loaded successfully:', ataPricing);
       } catch (err) {
         console.error('Private cloud pricing load error:', err);
         // Fallback to default pricing
@@ -473,10 +473,10 @@
           'SQL-Std': 390.07,
           'SQL-Ent': 1174.91
         };
-        console.log('Using default private cloud pricing:', ataPricing);
+        console.log('Using default private cloud pricing due to error:', ataPricing);
         populatePricingEditor();
         updateSummary();
-        alert(`Failed to load private cloud pricing: ${err.message}. Using default pricing values. Ensure './cld-pricing.json' exists in the same directory as index.html and contains all required fields: base, cpu, ram, storage, octopus, SQL-Std, SQL-Ent.`);
+        alert(`Failed to load private cloud pricing: ${err.message}. Using default pricing values. Please ensure './cld-pricing.json' exists in the same directory as pm.html and contains all required fields: base, cpu, ram, storage, octopus, SQL-Std, SQL-Ent.`);
       }
     }
 
@@ -753,18 +753,22 @@
           return;
         }
 
-        lastVmData = vmData.map(vm => {
+        lastVmData = vmData.map((vm, index) => {
           const cpu = parseInt(vm[columnMapping['Num CPU']] || vm['CPUs'] || 0);
           const ram = parseFloat(vm[columnMapping['Memory']] || vm['Memory'] || 0);
           const storage = StorageModule.convertToGiB(
             parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
             StorageModule.storageUnit
           );
+          const vmName = vm[columnMapping['Display Name']] || vm['VM'] || `Unknown VM ${index + 1}`;
+          if (!vm[columnMapping['Display Name']] && !vm['VM']) {
+            console.warn(`VM at index ${index} has no name: Display Name=${vm[columnMapping['Display Name']]}, VM=${vm['VM']}`);
+          }
           if (isNaN(cpu) || isNaN(ram) || isNaN(storage)) {
-            console.warn(`Invalid data for VM ${vm[columnMapping['Display Name']] || 'Unnamed'}: CPU=${cpu}, RAM=${ram}, Storage=${storage}`);
+            console.warn(`Invalid data for VM ${vmName}: CPU=${cpu}, RAM=${ram}, Storage=${storage}`);
           }
           return {
-            'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
+            'Display Name': vmName,
             'Num CPU': cpu,
             'Memory': ram,
             'Provisioned Storage (GB)': storage,
@@ -792,17 +796,13 @@
       const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
       const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
       const diskType = vm.diskType || 'Standard SSD';
+      const vmName = vm['Display Name'] || 'Unknown VM';
 
-      console.log(`Matching VM: ${vm['Display Name'] || 'Unnamed'}, CPU=${cpu}, RAM=${ram} GB, Storage=${storage} GB, OS=${os}`);
+      console.log(`Matching VM: ${vmName}, CPU=${cpu}, RAM=${ram} GB, Storage=${storage} GB, OS=${os}`);
 
       if (!cpu || !ram || !storage || isNaN(cpu) || isNaN(ram) || isNaN(storage)) {
-        console.warn(`Invalid VM data: CPU=${cpu}, RAM=${ram}, Storage=${storage}. Returning cheapest SKU.`);
-        return azureVMPricing
-          .map(sku => ({
-            sku,
-            totalCost: os === 'Windows' ? sku.windowsPrice : sku.linuxPrice
-          }))
-          .sort((a, b) => a.totalCost - b.totalCost)[0]?.sku || null;
+        console.warn(`Invalid VM data for ${vmName}: CPU=${cpu}, RAM=${ram}, Storage=${storage}. No SKU matched.`);
+        return null;
       }
 
       const tolerances = {
@@ -827,16 +827,11 @@
       const bestMatch = scoredSkus.sort((a, b) => a.score - b.score || a.totalCost - b.totalCost)[0];
 
       if (!bestMatch) {
-        console.warn(`No suitable SKU found for VM: ${vm['Display Name'] || 'Unnamed'}. Returning cheapest SKU.`);
-        return azureVMPricing
-          .map(sku => ({
-            sku,
-            totalCost: os === 'Windows' ? sku.windowsPrice : sku.linuxPrice
-          }))
-          .sort((a, b) => a.totalCost - b.totalCost)[0]?.sku || null;
+        console.warn(`No suitable SKU found for ${vmName}: CPU=${cpu}, RAM=${ram} GB, Storage=${storage} GB. No SKU matched.`);
+        return null;
       }
 
-      console.log(`Best match for ${vm['Display Name'] || 'Unnamed'}: ${bestMatch.sku.name}, Score=${bestMatch.score.toFixed(2)}, Cost=A$${bestMatch.totalCost.toFixed(2)}`);
+      console.log(`Best match for ${vmName}: ${bestMatch.sku.name}, Score=${bestMatch.score.toFixed(2)}, Cost=A$${bestMatch.totalCost.toFixed(2)}`);
       return bestMatch.sku;
     }
 
@@ -963,7 +958,7 @@
     function openSkuPopup(index) {
       selectedRow = index;
       const vm = lastVmData[index];
-      const vmName = vm['Display Name'] || vm['VM'] || 'Unnamed';
+      const vmName = vm['Display Name'] || 'Unknown VM';
       const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
       const ram = parseFloat(vm['Memory'] || 0);
       const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
@@ -1029,7 +1024,7 @@
         const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
         const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
         const sku = matchedSkus[index] || vm.manualSku;
-        const azureAcostBreakdown = calculateAzureVMPrice(index);
+        const azureCostBreakdown = calculateAzureVMPrice(index);
         const privatePrice = calculatePrivateCloudPrice(index);
 
         const azureTooltip = sku
@@ -1042,7 +1037,7 @@
             `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage} ${StorageModule.storageUnit})\n` +
             `${azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : ''}` +
             `Total: ${currency}$${azureCostBreakdown.total.toFixed(2)}`
-          : 'No SKU selected';
+          : 'No SKU matched';
 
         const cpuCost = cpu * (ataPricing.cpu || 0);
         const ramCost = ram * (ataPricing.ram || 0);
@@ -1063,7 +1058,7 @@
         if (!sku) tr.classList.add('table-danger');
 
         const tdName = document.createElement('td');
-        tdName.textContent = vm['Display Name'] || vm['VM'] || 'Unnamed';
+        tdName.textContent = vm['Display Name'] || 'Unknown VM';
         tr.appendChild(tdName);
 
         const tdCpu = document.createElement('td');
@@ -1083,12 +1078,12 @@
         tr.appendChild(tdOs);
 
         const tdSku = document.createElement('td');
-        tdSku.textContent = sku ? sku.name : 'No Match';
         if (!sku) {
           const em = document.createElement('em');
           em.textContent = 'No Match';
-          tdSku.textContent = '';
           tdSku.appendChild(em);
+        } else {
+          tdSku.textContent = sku.name;
         }
         const adjBtn = document.createElement('button');
         adjBtn.className = 'btn btn-sm btn-warning ms-2';
