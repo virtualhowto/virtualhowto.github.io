@@ -195,7 +195,7 @@
                 <th>CPUs</th>
                 <th>RAM (GB)</th>
                 <th>Storage (GB)</th>
-                <th>Price</th>
+                <th>Price (A$)</th>
                 <th>Select</th>
               </tr>
             </thead>
@@ -239,7 +239,7 @@
               <select id="mapMemory" class="form-select"></select>
             </div>
             <div class="col-md-6">
-              <label for="mapStorage" class="form-label">Provisioned Storage</label>
+              <label for="mapStorage" form-label">Provisioned Storage</label>
               <select id="mapStorage" class="form-select"></select>
             </div>
           </div>
@@ -363,8 +363,8 @@
           }
         }
         const storageInGB = storageUnitFilter === 'GB' ? storageValue :
-                            storageUnitFilter === 'TB' ? storageValue * 1024 :
-                            storageValue / 1024;
+                          storageUnitFilter === 'TB' ? storageValue * 1024 :
+                          storageValue / 1024;
         return { storageInGB: isNaN(storageInGB) ? 0 : storageInGB };
       },
 
@@ -418,10 +418,9 @@
           vCPUs: parseInt(item.numberOfCores) || 0,
           ram: parseFloat(item.memoryInMB) / 1024 || 0,
           storage: parseFloat(item.osDiskSizeInMB) / 1024 || 0,
-          retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
-          unitOfMeasure: '1 Hour',
           linuxPrice: parseFloat(item.linuxPrice) || 0,
-          windowsPrice: parseFloat(item.windowsPrice) || 0
+          windowsPrice: parseFloat(item.windowsPrice) || 0,
+          currency: item.currency || 'AUD'
         }));
         fullCatalog.length = 0;
         fullCatalog.push(...azureVMPricing);
@@ -429,7 +428,9 @@
           name: s.name,
           vCPUs: s.vCPUs,
           ram: s.ram,
-          storage: s.storage
+          storage: s.storage,
+          linuxPrice: s.linuxPrice,
+          windowsPrice: s.windowsPrice
         })));
       } catch (err) {
         console.error('Azure VM pricing load error:', err);
@@ -755,7 +756,7 @@
 
         lastVmData = vmData.map((vm, index) => {
           const cpu = parseInt(vm[columnMapping['Num CPU']] || vm['CPUs'] || 0);
-          const ram = parseFloat(vm[columnMapping['Memory']] || vm['Memory'] || 0);
+          const ram = parseFloat(vm[columnMapping['Memory']] || 0) / 1024; // Convert from MB to GB (common RVTools format)
           const storage = StorageModule.convertToGiB(
             parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
             StorageModule.storageUnit
@@ -916,16 +917,15 @@
       });
 
       if (filtered.length && (ramInput || storageInput)) {
-        const diskType = lastVmData[selectedRow]?.diskType || 'Standard SSD';
+        const vm = lastVmData[selectedRow];
+        const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+        const diskType = vm.diskType || 'Standard SSD';
+        const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
         filtered = filtered.map(sku => {
-          const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
           const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
-          const storageCost = StorageModule.calculateAzureStorageCost(
-            storageInGB,
-            diskType,
-            azureVMPricing
-          );
-          return { sku, totalCost: vmPrice + storageCost };
+          const storageCost = StorageModule.calculateAzureStorageCost(storage, diskType, azureVMPricing);
+          const totalCost = vmPrice + storageCost;
+          return { sku, totalCost };
         }).sort((a, b) => a.totalCost - b.totalCost).map(item => item.sku);
       }
 
@@ -933,11 +933,12 @@
       if (!tbody) return;
       tbody.innerHTML = '';
       filtered.forEach(s => {
-        const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+        const vm = lastVmData[selectedRow];
+        const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
         const vmPrice = os === 'Windows' ? s.windowsPrice : s.linuxPrice;
         const storageCost = StorageModule.calculateAzureStorageCost(
-          lastVmData[selectedRow]?.['Provisioned Storage (GB)'] || 0,
-          lastVmData[selectedRow]?.diskType || 'Standard SSD',
+          vm['Provisioned Storage (GB)'] || 0,
+          vm.diskType || 'Standard SSD',
           azureVMPricing
         );
         const totalPrice = vmPrice + storageCost;
