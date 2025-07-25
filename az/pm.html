@@ -443,18 +443,40 @@
     async function loadPrivateCloudPricing() {
       try {
         const res = await fetch('./cld-pricing.json');
-        if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load private cloud pricing`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load private cloud pricing. Ensure './cld-pricing.json' exists and is accessible.`);
         const data = await res.json();
         const requiredFields = ['base', 'cpu', 'ram', 'storage', 'octopus', 'SQL-Std', 'SQL-Ent'];
-        if (!requiredFields.every(field => field in data)) {
-          throw new Error('Invalid private cloud pricing data: missing required fields.');
+        const missingFields = requiredFields.filter(field => !(field in data) || data[field] == null);
+        if (missingFields.length > 0) {
+          console.error('Missing fields in cld-pricing.json:', missingFields);
+          throw new Error(`Invalid private cloud pricing data: missing fields: ${missingFields.join(', ')}.`);
         }
-        ataPricing = data;
+        // Validate that all fields are numbers
+        const invalidFields = requiredFields.filter(field => typeof data[field] !== 'number' || isNaN(data[field]));
+        if (invalidFields.length > 0) {
+          console.error('Invalid field types in cld-pricing.json:', invalidFields);
+          throw new Error(`Invalid private cloud pricing data: fields must be numbers: ${invalidFields.join(', ')}.`);
+        }
+        ataPricing = { ...data };
         populatePricingEditor();
         updateSummary();
+        console.log('Private cloud pricing loaded:', ataPricing);
       } catch (err) {
         console.error('Private cloud pricing load error:', err);
-        alert(`Failed to load private cloud pricing: ${err.message}. Ensure 'cld-pricing.json' is accessible and valid.`);
+        // Fallback to default pricing
+        ataPricing = {
+          base: 0,
+          cpu: 13.58,
+          ram: 33.18,
+          storage: 0.24,
+          octopus: 5,
+          'SQL-Std': 390.07,
+          'SQL-Ent': 1174.91
+        };
+        console.log('Using default private cloud pricing:', ataPricing);
+        populatePricingEditor();
+        updateSummary();
+        alert(`Failed to load private cloud pricing: ${err.message}. Using default pricing values. Ensure './cld-pricing.json' exists in the same directory as index.html and contains all required fields: base, cpu, ram, storage, octopus, SQL-Std, SQL-Ent.`);
       }
     }
 
@@ -841,7 +863,10 @@
       const os = (vm['OS'] || '').toLowerCase();
       const octopus = os.includes('win') ? (ataPricing.octopus || 0) : 0;
       const sql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
-      return (cpu * (ataPricing.cpu || 0)) + (ram * (ataPricing.ram || 0)) + (storage * (ataPricing.storage || 0)) + (ataPricing.base || 0) + octopus + sql;
+      const privatePrice = (cpu * (ataPricing.cpu || 0)) + (ram * (ataPricing.ram || 0)) + 
+                          (storage * (ataPricing.storage || 0)) + (ataPricing.base || 0) + octopus + sql;
+      console.log(`Calculated private cloud price for VM ${vm['Display Name'] || 'Unnamed'}: A$${privatePrice.toFixed(2)}`);
+      return privatePrice;
     }
 
     // Calculate SQL license cost
@@ -878,13 +903,13 @@
       const storageInput = document.getElementById('filterStorage')?.value || '';
 
       const cpuValue = parseInt(cpuInput) || 0;
-      const ramValue = parseFloat(ramInput) || 0; // Treat as GB
-      const { storageInGB } = StorageModule.filterStorageSKUs(storageInput); // Handles GB, MB, TB inputs
+      const ramValue = parseFloat(ramInput) || 0;
+      const { storageInGB } = StorageModule.filterStorageSKUs(storageInput);
 
       console.log(`Filtering SKUs: Name=${name}, CPU=${cpuValue}, RAM=${ramValue} GB, Storage=${storageInGB} GB`);
 
       let filtered = azureVMPricing.filter(sku => {
-        const ramMatch = !ramInput || Math.abs(sku.ram - ramValue) <= 0.5; // RAM in GB
+        const ramMatch = !ramInput || Math.abs(sku.ram - ramValue) <= 0.5;
         const storageMatch = !storageInput || 
           Math.abs(sku.storage - storageInGB) <= (StorageModule.tuningParameters.storageMatchToleranceMB / 1024);
         return (
@@ -946,7 +971,6 @@
       if (modalTitle) {
         modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} GB)`;
       }
-      // Pre-populate filter inputs with VM data (in GB)
       document.getElementById('filterCPU').value = cpu || '';
       document.getElementById('filterRAM').value = ram ? ram.toFixed(1) : '';
       document.getElementById('filterStorage').value = storage ? storage.toFixed(1) : '';
@@ -1005,7 +1029,7 @@
         const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
         const os = (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux';
         const sku = matchedSkus[index] || vm.manualSku;
-        const azureCostBreakdown = calculateAzureVMPrice(index);
+        const azureAcostBreakdown = calculateAzureVMPrice(index);
         const privatePrice = calculatePrivateCloudPrice(index);
 
         const azureTooltip = sku
