@@ -193,8 +193,8 @@
               <tr>
                 <th>Name</th>
                 <th>CPUs</th>
-                <th>RAM</th>
-                <th>Storage</th>
+                <th>RAM (GB)</th>
+                <th>Storage (GB)</th>
                 <th>Price</th>
                 <th>Select</th>
               </tr>
@@ -800,7 +800,7 @@
           const totalCost = vmPrice + storageCost;
           return { sku, score, totalCost };
         })
-        .filter(s => s.score < 3); // Filter out poor matches
+        .filter(s => s.score < 3);
 
       const bestMatch = scoredSkus.sort((a, b) => a.score - b.score || a.totalCost - b.totalCost)[0];
 
@@ -878,11 +878,13 @@
       const storageInput = document.getElementById('filterStorage')?.value || '';
 
       const cpuValue = parseInt(cpuInput) || 0;
-      const ramValue = parseFloat(ramInput) || 0;
-      const { storageInGB } = StorageModule.filterStorageSKUs(storageInput);
+      const ramValue = parseFloat(ramInput) || 0; // Treat as GB
+      const { storageInGB } = StorageModule.filterStorageSKUs(storageInput); // Handles GB, MB, TB inputs
+
+      console.log(`Filtering SKUs: Name=${name}, CPU=${cpuValue}, RAM=${ramValue} GB, Storage=${storageInGB} GB`);
 
       let filtered = azureVMPricing.filter(sku => {
-        const ramMatch = !ramInput || Math.abs(sku.ram - ramValue) <= 0.5;
+        const ramMatch = !ramInput || Math.abs(sku.ram - ramValue) <= 0.5; // RAM in GB
         const storageMatch = !storageInput || 
           Math.abs(sku.storage - storageInGB) <= (StorageModule.tuningParameters.storageMatchToleranceMB / 1024);
         return (
@@ -893,7 +895,7 @@
         );
       });
 
-      if (filtered.length && storageInput) {
+      if (filtered.length && (ramInput || storageInput)) {
         const diskType = lastVmData[selectedRow]?.diskType || 'Standard SSD';
         filtered = filtered.map(sku => {
           const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
@@ -942,8 +944,12 @@
       const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
       const modalTitle = document.querySelector('#skuModal .modal-title');
       if (modalTitle) {
-        modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} ${StorageModule.storageUnit})`;
+        modalTitle.textContent = `Select a Matching SKU (VM: ${vmName}, CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(1)} GB)`;
       }
+      // Pre-populate filter inputs with VM data (in GB)
+      document.getElementById('filterCPU').value = cpu || '';
+      document.getElementById('filterRAM').value = ram ? ram.toFixed(1) : '';
+      document.getElementById('filterStorage').value = storage ? storage.toFixed(1) : '';
       filterSKUs();
       new bootstrap.Modal(document.getElementById('skuModal')).show();
     }
