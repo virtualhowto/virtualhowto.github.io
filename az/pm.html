@@ -424,7 +424,7 @@ async function loadAzureVMPricingFromJson() {
     azureVMPricing = data.map(item => ({
       name: item.name,
       vCPUs: parseInt(item.numberOfCores) || 0,
-      ram: parseFloat(item.memoryInMB) / 1024 || 0, // Convert RAM from MB to GB
+      ram: parseFloat(item.memoryInMB) || 0, // Convert RAM from MB to GB
       storage: parseFloat(item.osDiskSizeInMB) / 1024 || 0, // Convert storage from MB to GB
       retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
       unitOfMeasure: '1 Hour',
