@@ -182,7 +182,7 @@
               <input type="text" id="filterRAM" class="form-control filter-input" placeholder="Filter by RAM (GB)">
             </div>
             <div class="col">
-              <input type="text" id="filterStorage" class="form-control filter-input" placeholder="Filter by Storage (GB or MB)">
+              <input type="text" id="filterStorage" class="form-control filter-input" placeholder="Filter by Storage (GB)">
             </div>
           </div>
           <table class="table table-sm table-striped">
@@ -325,11 +325,11 @@ const StorageModule = {
   calculateAzureStorageCost(storage, diskType = 'Standard SSD', azureVMPricing) {
     const storageGiB = this.convertToGiB(parseFloat(storage) || 0, this.storageUnit);
     if (storageGiB <= 0) return 0;
-    const storageMB = storageGiB * 1024; // Convert to MB for Azure SKU matching
+    const storageMB = storageGiB * 1024; // Convert to MB for Azure SKU matching (though we'll use GB internally)
 
     // Find the smallest disk that meets or exceeds the storage requirement
     const disk = azureVMPricing
-      .filter(d => d.storage >= storageMB)
+      .filter(d => d.storage >= storageGiB) // Compare in GB now
       .sort((a, b) => a.storage - b.storage)[0];
 
     const pricePerGB = diskType === 'Premium SSD' ? this.premiumSSDCostPerGB : this.standardSSDCostPerGB;
@@ -359,10 +359,10 @@ const StorageModule = {
       }
       console.log(`Storage filter: ${storageValue} ${storageUnitFilter} detected`);
     }
-    const storageInMB = storageUnitFilter === 'GB' ? storageValue * 1024 : 
-                        storageUnitFilter === 'TB' ? storageValue * 1024 * 1024 : 
+    const storageInGB = storageUnitFilter === 'MB' ? storageValue / 1024 : 
+                        storageUnitFilter === 'TB' ? storageValue * 1024 : 
                         storageValue;
-    return { storageInMB };
+    return { storageValue, storageUnitFilter, storageInGB };
   },
 
   // Update storage unit based on column mapping
@@ -424,14 +424,14 @@ async function loadAzureVMPricingFromJson() {
     azureVMPricing = data.map(item => ({
       name: item.name,
       vCPUs: parseInt(item.numberOfCores) || 0,
-      ram: parseFloat(item.memoryInMB) || 0,
-      storage: parseFloat(item.osDiskSizeInMB) || 0,
+      ram: parseFloat(item.memoryInMB) / 1024 || 0, // Convert RAM from MB to GB
+      storage: parseFloat(item.osDiskSizeInMB) / 1024 || 0, // Convert storage from MB to GB (since you confirmed it's in GB)
       retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
       unitOfMeasure: '1 Hour',
       linuxPrice: parseFloat(item.linuxPrice) || 0,
       windowsPrice: parseFloat(item.windowsPrice) || 0
     }));
-    console.log('Loaded Azure VM Pricing:', azureVMPricing);
+    console.log('Loaded Azure VM Pricing (storage and RAM in GB):', azureVMPricing);
     fullCatalog.length = 0;
     fullCatalog.push(...azureVMPricing);
   } catch (err) {
@@ -527,7 +527,7 @@ function downloadCsv() {
       escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
       vm['Num CPU'] || vm['CPUs'] || '',
       vm['Memory'] || '',
-      `${vm['Provisioned Storage (GB)'] || ''} ${StorageModule.storageUnit}`,
+      `${vm['Provisioned Storage (GB)'].toFixed(2)} GB`,
       (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
       escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
       vm.diskType || 'Standard SSD',
@@ -557,7 +557,7 @@ function exportCSV(type) {
       escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
       vm['Num CPU'] || vm['CPUs'] || '',
       vm['Memory'] || '',
-      `${vm['Provisioned Storage (GB)'] || ''} ${StorageModule.storageUnit}`,
+      `${vm['Provisioned Storage (GB)'].toFixed(2)} GB`,
       (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
       escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
       vm.diskType || 'Standard SSD',
@@ -741,20 +741,21 @@ function loadSheet(sheetName) {
       return;
     }
 
+    // Assume storage is in GB based on column name
     lastVmData = vmData.map(vm => ({
       'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
       'Num CPU': vm[columnMapping['Num CPU']] || vm['CPUs'] || 0,
       'Memory': parseFloat(vm[columnMapping['Memory']] || 0),
       'Provisioned Storage (GB)': StorageModule.convertToGiB(
         parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
-        StorageModule.storageUnit
+        'GB'
       ),
       'OS': vm[columnMapping['OS']] || vm['OS according to the configuration file'] || vm['OS'] || '',
       selected: false,
       diskType: 'Standard SSD'
     }));
 
-    console.log('Mapped VM data:', lastVmData);
+    console.log('Mapped VM data (storage in GB):', lastVmData);
     renderVMTable(lastVmData);
     updateSummary();
   } catch (err) {
@@ -787,21 +788,20 @@ function autoMatchSkus() {
     matchedSkus = lastVmData.map((vm, index) => {
       const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
       const ram = parseFloat(vm['Memory'] || 0);
-      const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+      const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0); // Already in GB
       if (isNaN(cpu) || isNaN(ram) || isNaN(storage)) {
-        console.warn(`Invalid data for VM ${vm['Display Name'] || index}: CPU=${vm['Num CPU']}, RAM=${vm['Memory']}, Storage=${vm['Provisioned Storage (GB)']}`);
+        console.warn(`Invalid data for VM ${vm['Display Name'] || index}: CPU=${vm['Num CPU']}, RAM=${vm['Memory']}, Storage=${vm['Provisioned Storage (GB)']} GB`);
         return null;
       }
-      const storageMB = storage * 1024;
       const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
-      console.log(`Matching VM ${vm['Display Name'] || index}: CPU=${cpu}, RAM=${ram} GB, Storage=${storage} GB (${storageMB} MB), OS=${os}`);
+      console.log(`Matching VM ${vm['Display Name'] || index}: CPU=${cpu}, RAM=${ram} GB, Storage=${storage} GB, OS=${os}`);
 
       // Filter SKUs within tolerance
       const filteredSkus = azureVMPricing.filter(sku => {
         const cpuMatch = Math.abs(sku.vCPUs - cpu) <= cpuTolerance;
-        const ramMatch = Math.abs(sku.ram - ram) <= ramTolerance;
-        const storageMatch = sku.storage >= storageMB;
-        console.log(`  Checking SKU ${sku.name}: CPU=${sku.vCPUs} (${cpuMatch}), RAM=${sku.ram} (${ramMatch}), Storage=${sku.storage} MB (${storageMatch})`);
+        const ramMatch = Math.abs(sku.ram - ram) <= ramTolerance; // Both in GB
+        const storageMatch = sku.storage >= storage; // Both in GB
+        console.log(`  Checking SKU ${sku.name}: CPU=${sku.vCPUs} (${cpuMatch}), RAM=${sku.ram} GB (${ramMatch}), Storage=${sku.storage} GB (${storageMatch})`);
         return cpuMatch && ramMatch && storageMatch;
       });
 
@@ -907,15 +907,15 @@ function filterSKUs() {
     console.log(`RAM filter: ${ramValue} ${ramUnit} detected`);
   }
 
-  const { storageInMB } = StorageModule.filterStorageSKUs(storageInput);
+  const { storageValue, storageUnitFilter, storageInGB } = StorageModule.filterStorageSKUs(storageInput);
 
   let filtered = azureVMPricing.filter(sku => {
     const storageMatch = !storageInput || 
-      Math.abs(sku.storage - storageInMB) <= StorageModule.tuningParameters.storageMatchToleranceMB;
+      Math.abs(sku.storage - storageInGB) <= (StorageModule.tuningParameters.storageMatchToleranceMB / 1024); // Tolerance in GB
     return (
       (!name || sku.name.toLowerCase().includes(name)) &&
       (!cpuInput || sku.vCPUs === cpuValue) &&
-      (!ramInput || Math.abs(sku.ram - ramValue) < 0.01) &&
+      (!ramInput || Math.abs(sku.ram - (ramValue * (ramUnit === 'MB' ? 1/1024 : 1))) < 0.01) &&
       storageMatch
     );
   });
@@ -926,11 +926,7 @@ function filterSKUs() {
     filtered = filtered.map(sku => {
       const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
       const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
-      const storageCost = StorageModule.calculateAzureStorageCost(
-        StorageModule.convertToGiB(storageInMB / 1024, 'GB'),
-        diskType,
-        azureVMPricing
-      );
+      const storageCost = StorageModule.calculateAzureStorageCost(storageValue * (storageUnitFilter === 'MB' ? 1/1024 : 1), diskType, azureVMPricing);
       return { sku, totalCost: vmPrice + storageCost };
     }).sort((a, b) => a.totalCost - b.totalCost).map(item => item.sku);
   }
@@ -941,18 +937,14 @@ function filterSKUs() {
   filtered.forEach(s => {
     const os = lastVmData[selectedRow]?.['OS']?.toLowerCase().includes('windows') ? 'Windows' : 'Linux';
     const vmPrice = os === 'Windows' ? s.windowsPrice : s.linuxPrice;
-    const storageCost = StorageModule.calculateAzureStorageCost(
-      lastVmData[selectedRow]?.['Provisioned Storage (GB)'] || 0,
-      lastVmData[selectedRow]?.diskType || 'Standard SSD',
-      azureVMPricing
-    );
+    const storageCost = StorageModule.calculateAzureStorageCost(lastVmData[selectedRow]?.['Provisioned Storage (GB)'] || 0, lastVmData[selectedRow]?.diskType || 'Standard SSD', azureVMPricing);
     const totalPrice = vmPrice + storageCost;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.name}</td>
       <td>${s.vCPUs}</td>
       <td>${s.ram.toFixed(1)} GB</td>
-      <td>${(s.storage / 1024).toFixed(1)} GB</td>
+      <td>${s.storage.toFixed(1)} GB</td>
       <td>A$${totalPrice.toFixed(2)}</td>
       <td><button class="btn btn-sm btn-success" onclick="selectSkuByName('${s.name.replace(/'/g, '\\\'')}')">✔</button></td>
     `;
@@ -970,7 +962,7 @@ function openSkuPopup(index) {
   const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
   const modalTitle = document.querySelector('#skuModal .modal-title');
   if (modalTitle) {
-    modalTitle.textContent = `Select a Matching SKU for ${vmName} (CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(2)} ${StorageModule.storageUnit})`;
+    modalTitle.textContent = `Select a Matching SKU for ${vmName} (CPU: ${cpu}, RAM: ${ram.toFixed(1)} GB, Storage: ${storage.toFixed(2)} GB)`;
   }
   filterSKUs();
   new bootstrap.Modal(document.getElementById('skuModal')).show();
@@ -1030,9 +1022,9 @@ function renderVMTable(vmData) {
         `SKU: ${sku.name}\n` +
         `CPUs: ${sku.vCPUs}\n` +
         `RAM: ${sku.ram.toFixed(1)} GB\n` +
-        `Storage: ${(sku.storage / 1024).toFixed(1)} GB\n` +
+        `Storage: ${sku.storage.toFixed(1)} GB\n` +
         `Base VM Cost: ${currency}$${azureCostBreakdown.base.toFixed(2)}\n` +
-        `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage.toFixed(2)} ${StorageModule.storageUnit})\n` +
+        `Storage (${vm.diskType || 'Standard SSD'}): ${currency}$${azureCostBreakdown.storage.toFixed(2)} (${storage.toFixed(2)} GB)\n` +
         (azureCostBreakdown.sql ? `SQL License (${vm.sqlLicenseType}): ${currency}$${azureCostBreakdown.sql.toFixed(2)}\n` : '') +
         `Total: ${currency}$${azureCostBreakdown.total.toFixed(2)}`
       : 'No SKU selected';
@@ -1045,7 +1037,7 @@ function renderVMTable(vmData) {
     const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
     const privateTooltip = `CPU: A$${cpuCost.toFixed(2)} (${cpu} × A$${ataPricing.cpu ? ataPricing.cpu.toFixed(2) : '0.00'})\n` +
                           `RAM: A$${ramCost.toFixed(2)} (${ram} GB × A$${ataPricing.ram ? ataPricing.ram.toFixed(2) : '0.00'})\n` +
-                          `Storage: A$${storageCost.toFixed(2)} (${storage} ${StorageModule.storageUnit} × A$${ataPricing.storage ? ataPricing.storage.toFixed(2) : '0.00'})\n` +
+                          `Storage: A$${storageCost.toFixed(2)} (${storage} GB × A$${ataPricing.storage ? ataPricing.storage.toFixed(2) : '0.00'})\n` +
                           `Base Fee: A$${baseCost.toFixed(2)}\n` +
                           `Octopus Fee: A$${octopusCost.toFixed(2)}\n` +
                           (sqlCost ? `SQL License (${vm.sqlLicenseType}): A$${sqlCost.toFixed(2)}\n` : '') +
@@ -1068,7 +1060,7 @@ function renderVMTable(vmData) {
     tr.appendChild(tdRam);
 
     const tdStorage = document.createElement('td');
-    tdStorage.textContent = `${storage.toFixed(2)} ${StorageModule.storageUnit}`;
+    tdStorage.textContent = `${storage.toFixed(2)} GB`;
     tr.appendChild(tdStorage);
 
     const tdOs = document.createElement('td');
