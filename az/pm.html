@@ -425,7 +425,7 @@ async function loadAzureVMPricingFromJson() {
       name: item.name,
       vCPUs: parseInt(item.numberOfCores) || 0,
       ram: parseFloat(item.memoryInMB) || 0, // Convert RAM from MB to GB
-      storage: parseFloat(item.osDiskSizeInMB) / 1024 || 0, // Convert storage from MB to GB
+      storage: parseFloat(item.osDiskSizeInMB) || 0, // Convert storage from MB to GB
       retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
       unitOfMeasure: '1 Hour',
       linuxPrice: parseFloat(item.linuxPrice) || 0,
