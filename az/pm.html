@@ -431,7 +431,7 @@ async function loadAzureVMPricingFromJson() {
       linuxPrice: parseFloat(item.linuxPrice) || 0,
       windowsPrice: parseFloat(item.windowsPrice) || 0
     }));
-    console.log('Loaded Azure VM Pricing (storage and RAM in GB):', azureVMPricing);
+    console.log('Loaded Azure VM Pricing (RAM in GB):', azureVMPricing.map(s => ({ name: s.name, ram: s.ram })));
     fullCatalog.length = 0;
     fullCatalog.push(...azureVMPricing);
   } catch (err) {
@@ -734,28 +734,33 @@ function loadSheet(sheetName) {
     }
 
     const vmData = XLSX.utils.sheet_to_json(sheet, { header: headers, range: headerRow + 1, blankrows: false, defval: '' });
-    console.log('Parsed VM data:', vmData);
+    console.log('Parsed VM data (raw):', vmData);
     spinner.style.display = 'none';
     if (!vmData.length) {
       alert('No data found in the selected sheet. Please ensure it contains VM data below the header row.');
       return;
     }
 
-    // Assume storage is in GB based on column name
-    lastVmData = vmData.map(vm => ({
-      'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
-      'Num CPU': vm[columnMapping['Num CPU']] || vm['CPUs'] || 0,
-      'Memory': parseFloat(vm[columnMapping['Memory']] || 0),
-      'Provisioned Storage (GB)': StorageModule.convertToGiB(
-        parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
-        'GB'
-      ),
-      'OS': vm[columnMapping['OS']] || vm['OS according to the configuration file'] || vm['OS'] || '',
-      selected: false,
-      diskType: 'Standard SSD'
-    }));
+    // Assume RAM is in GB based on column name 'Memory'
+    lastVmData = vmData.map(vm => {
+      const memoryRaw = vm[columnMapping['Memory']] || 0;
+      const memoryGB = parseFloat(memoryRaw); // Assuming input is in GB
+      console.log(`VM ${vm[columnMapping['Display Name'] || 'Unnamed']}: Raw Memory=${memoryRaw}, Parsed Memory=${memoryGB} GB`);
+      return {
+        'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
+        'Num CPU': vm[columnMapping['Num CPU']] || vm['CPUs'] || 0,
+        'Memory': memoryGB,
+        'Provisioned Storage (GB)': StorageModule.convertToGiB(
+          parseFloat(vm[columnMapping['Provisioned Storage (GB)']] || 0),
+          'GB'
+        ),
+        'OS': vm[columnMapping['OS']] || vm['OS according to the configuration file'] || vm['OS'] || '',
+        selected: false,
+        diskType: 'Standard SSD'
+      };
+    });
 
-    console.log('Mapped VM data (storage in GB):', lastVmData);
+    console.log('Mapped VM data (RAM in GB):', lastVmData.map(v => ({ name: v['Display Name'], memory: v['Memory'] })));
     renderVMTable(lastVmData);
     updateSummary();
   } catch (err) {
@@ -781,7 +786,7 @@ function autoMatchSkus() {
 
     if (!azureVMPricing.length) {
       console.error('No Azure SKUs available');
-      alert('No Azure SKUs loaded. Please ensure az_data-export.json is available.');
+      alert('No Azure SKUs loaded. Please ensure az_data-export.json is accessible.');
       return;
     }
 
@@ -818,7 +823,7 @@ function autoMatchSkus() {
       return bestSku;
     });
 
-    console.log('Matched SKUs:', matchedSkus);
+    console.log('Matched SKUs:', matchedSkus.map(s => s?.name));
     renderVMTable(lastVmData);
     updateSummary();
     bootstrap.Modal.getInstance(document.getElementById('autoMatchModal')).hide();
@@ -1002,7 +1007,7 @@ function clearSQLTag(index) {
 
 // Render VM table
 function renderVMTable(vmData) {
-  console.log('Rendering VM table with data:', vmData);
+  console.log('Rendering VM table with data:', vmData.map(v => ({ name: v['Display Name'], memory: v['Memory'] })));
   if (!vmData || !vmData.length) return;
   const tbody = document.querySelector('#vmTable tbody');
   if (!tbody) return;
