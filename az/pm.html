@@ -424,8 +424,8 @@ async function loadAzureVMPricingFromJson() {
     azureVMPricing = data.map(item => ({
       name: item.name,
       vCPUs: parseInt(item.numberOfCores) || 0,
-      ram: parseFloat(item.memoryInMB) || 0, // Convert RAM from MB to GB
-      storage: parseFloat(item.osDiskSizeInMB) || 0, // Convert storage from MB to GB
+      ram: parseFloat(item.memoryInMB)|| 0, // RAM in this json is in GB not MB
+      storage: parseFloat(item.osDiskSizeInMB) || 0, // RAM in this json is in GB not MB
       retailPrice: parseFloat((item.windowsPrice || item.linuxPrice) || 0),
       unitOfMeasure: '1 Hour',
       linuxPrice: parseFloat(item.linuxPrice) || 0,
@@ -741,10 +741,17 @@ function loadSheet(sheetName) {
       return;
     }
 
-    // Assume RAM is in GB based on column name 'Memory'
+    // Parse RAM with unit detection (GB or MB)
     lastVmData = vmData.map(vm => {
       const memoryRaw = vm[columnMapping['Memory']] || 0;
-      const memoryGB = parseFloat(memoryRaw); // Assuming input is in GB
+      let memoryGB = parseFloat(memoryRaw);
+      if (isNaN(memoryGB) && typeof memoryRaw === 'string') {
+        const match = memoryRaw.toLowerCase().match(/(\d+\.?\d*)\s*(mb|gb)/);
+        if (match) {
+          memoryGB = parseFloat(match[1]);
+          memoryGB = match[2] === 'mb' ? memoryGB / 1024 : memoryGB;
+        }
+      }
       console.log(`VM ${vm[columnMapping['Display Name'] || 'Unnamed']}: Raw Memory=${memoryRaw}, Parsed Memory=${memoryGB} GB`);
       return {
         'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
@@ -800,7 +807,7 @@ function autoMatchSkus() {
       const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
       console.log(`Matching VM ${vm['Display Name'] || index}: CPU=${cpu}, RAM=${ram} GB, OS=${os}`);
 
-      // Filter SKUs based only on CPU and RAM within tolerance
+      // Filter SKUs based on CPU and RAM within tolerance
       const filteredSkus = azureVMPricing.filter(sku => {
         const cpuMatch = Math.abs(sku.vCPUs - cpu) <= cpuTolerance;
         const ramMatch = Math.abs(sku.ram - ram) <= ramTolerance;
@@ -808,16 +815,31 @@ function autoMatchSkus() {
         return cpuMatch && ramMatch;
       });
 
-      // Sort by total cost (VM price + storage cost)
+      // Separate SKUs with "DC" from others
+      const dcSkus = filteredSkus.filter(sku => sku.name.toLowerCase().includes('dc'));
+      const nonDcSkus = filteredSkus.filter(sku => !sku.name.toLowerCase().includes('dc'));
+
+      // Sort DC SKUs by total cost
       const diskType = vm.diskType || 'Standard SSD';
-      const sortedSkus = filteredSkus.map(sku => {
+      const sortedDcSkus = dcSkus.map(sku => {
         const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
         const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
         const storageCost = StorageModule.calculateAzureStorageCost(storage, diskType, azureVMPricing);
         return { sku, totalCost: vmPrice + storageCost };
       }).sort((a, b) => a.totalCost - b.totalCost);
 
-      const bestSku = sortedSkus[0]?.sku;
+      // Sort non-DC SKUs by total cost
+      const sortedNonDcSkus = nonDcSkus.map(sku => {
+        const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
+        const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+        const storageCost = StorageModule.calculateAzureStorageCost(storage, diskType, azureVMPricing);
+        return { sku, totalCost: vmPrice + storageCost };
+      }).sort((a, b) => a.totalCost - b.totalCost);
+
+      // Combine, prioritizing DC SKUs
+      const allSortedSkus = [...sortedDcSkus, ...sortedNonDcSkus].map(item => item.sku);
+      const bestSku = allSortedSkus[0]; // Take the first (lowest cost, DC preferred)
+
       console.log(`  Best SKU for VM ${vm['Display Name'] || index}: ${bestSku ? bestSku.name : 'None'}`);
       vm.manualSku = bestSku;
       return bestSku;
