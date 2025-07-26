@@ -505,54 +505,129 @@ function toggleDarkMode() {
 }
 
 function downloadCsv() {
-  const rows = [['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type', 'Azure Cost (A$)', 'Azure Storage Cost (A$)', 'Private Cloud Cost (A$)', 'Tag']];
+  const rows = [[
+    'VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type',
+    'Azure Total Cost (A$)', 'Azure Base VM Cost (A$)', 'Azure Storage Cost (A$)', 'Azure SQL License Cost (A$)',
+    'Private Cloud Total Cost (A$)', 'Private Cloud CPU Cost (A$)', 'Private Cloud RAM Cost (A$)',
+    'Private Cloud Storage Cost (A$)', 'Private Cloud Base Fee (A$)', 'Private Cloud Octopus Fee (A$)',
+    'Private Cloud SQL License Cost (A$)', 'Tag'
+  ]];
   lastVmData.forEach((vm, i) => {
     const azureCostBreakdown = calculateAzureVMPrice(i);
+    const privatePrice = calculatePrivateCloudPrice(i);
+    const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+    const ram = parseFloat(vm['Memory'] || 0);
+    const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+    const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+    const cpuCost = cpu * (ataPricing.cpu || 0);
+    const ramCost = ram * (ataPricing.ram || 0);
+    const storageCost = storage * (ataPricing.storage || 0);
+    const baseCost = ataPricing.base || 0;
+    const octopusCost = os.toLowerCase().includes('windows') ? (ataPricing.octopus || 0) : 0;
+    const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
+
     rows.push([
       escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
-      vm['Num CPU'] || vm['CPUs'] || '',
-      vm['Memory'] || '',
-      `${vm['Provisioned Storage (GB)'].toFixed(2)} GB`,
-      (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
+      cpu || '',
+      `${ram.toFixed(1)} GB`,
+      `${storage.toFixed(2)} GB`,
+      os,
       escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
       vm.diskType || 'Standard SSD',
       `A$${azureCostBreakdown.total.toFixed(2)}`,
+      `A$${azureCostBreakdown.base.toFixed(2)}`,
       `A$${azureCostBreakdown.storage.toFixed(2)}`,
-      `A$${calculatePrivateCloudPrice(i).toFixed(2)}`,
+      `A$${azureCostBreakdown.sql.toFixed(2)}`,
+      `A$${privatePrice.toFixed(2)}`,
+      `A$${cpuCost.toFixed(2)}`,
+      `A$${ramCost.toFixed(2)}`,
+      `A$${storageCost.toFixed(2)}`,
+      `A$${baseCost.toFixed(2)}`,
+      `A$${octopusCost.toFixed(2)}`,
+      `A$${sqlCost.toFixed(2)}`,
       escapeCsvValue(vm.sqlLicenseType || '')
     ]);
   });
   const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
   const link = document.createElement('a');
   link.setAttribute('href', encodeURI(csvContent));
-  link.setAttribute('download', 'vm_cost_summary.csv');
+  link.setAttribute('download', 'vm_cost_summary_detailed.csv');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
 function exportCSV(type) {
-  const headers = ['VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type', type === 'azure' ? 'Azure Cost (A$)' : 'Private Cloud Cost (A$)', 'Tag'];
+  let headers, rowData;
+  if (type === 'azure') {
+    headers = [
+      'VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type',
+      'Azure Total Cost (A$)', 'Azure Base VM Cost (A$)', 'Azure Storage Cost (A$)', 'Azure SQL License Cost (A$)', 'Tag'
+    ];
+    rowData = (vm, i) => {
+      const azureCostBreakdown = calculateAzureVMPrice(i);
+      return [
+        escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
+        vm['Num CPU'] || vm['CPUs'] || '',
+        `${parseFloat(vm['Memory'] || 0).toFixed(1)} GB`,
+        `${parseFloat(vm['Provisioned Storage (GB)'] || 0).toFixed(2)} GB`,
+        (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux',
+        escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
+        vm.diskType || 'Standard SSD',
+        `A$${azureCostBreakdown.total.toFixed(2)}`,
+        `A$${azureCostBreakdown.base.toFixed(2)}`,
+        `A$${azureCostBreakdown.storage.toFixed(2)}`,
+        `A$${azureCostBreakdown.sql.toFixed(2)}`,
+        escapeCsvValue(vm.sqlLicenseType || '')
+      ];
+    };
+  } else {
+    headers = [
+      'VM Name', 'CPU', 'RAM', 'Storage', 'OS', 'SKU', 'Disk Type',
+      'Private Cloud Total Cost (A$)', 'Private Cloud CPU Cost (A$)', 'Private Cloud RAM Cost (A$)',
+      'Private Cloud Storage Cost (A$)', 'Private Cloud Base Fee (A$)', 'Private Cloud Octopus Fee (A$)',
+      'Private Cloud SQL License Cost (A$)', 'Tag'
+    ];
+    rowData = (vm, i) => {
+      const privatePrice = calculatePrivateCloudPrice(i);
+      const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
+      const ram = parseFloat(vm['Memory'] || 0);
+      const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+      const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+      const cpuCost = cpu * (ataPricing.cpu || 0);
+      const ramCost = ram * (ataPricing.ram || 0);
+      const storageCost = storage * (ataPricing.storage || 0);
+      const baseCost = ataPricing.base || 0;
+      const octopusCost = os.toLowerCase().includes('windows') ? (ataPricing.octopus || 0) : 0;
+      const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
+      return [
+        escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
+        cpu || '',
+        `${ram.toFixed(1)} GB`,
+        `${storage.toFixed(2)} GB`,
+        os,
+        escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
+        vm.diskType || 'Standard SSD',
+        `A$${privatePrice.toFixed(2)}`,
+        `A$${cpuCost.toFixed(2)}`,
+        `A$${ramCost.toFixed(2)}`,
+        `A$${storageCost.toFixed(2)}`,
+        `A$${baseCost.toFixed(2)}`,
+        `A$${octopusCost.toFixed(2)}`,
+        `A$${sqlCost.toFixed(2)}`,
+        escapeCsvValue(vm.sqlLicenseType || '')
+      ];
+    };
+  }
+
   const rows = [headers];
   lastVmData.forEach((vm, i) => {
-    const azureCostBreakdown = calculateAzureVMPrice(i);
-    const privatePrice = calculatePrivateCloudPrice(i);
-    rows.push([
-      escapeCsvValue(vm['Display Name'] || vm['VM'] || 'Unnamed'),
-      vm['Num CPU'] || vm['CPUs'] || '',
-      vm['Memory'] || '',
-      `${vm['Provisioned Storage (GB)'].toFixed(2)} GB`,
-      (vm['OS'] || vm['Guest OS'] || '').includes('Windows') ? 'Windows' : 'Linux',
-      escapeCsvValue(matchedSkus[i]?.name || 'No Match'),
-      vm.diskType || 'Standard SSD',
-      type === 'azure' ? `A$${azureCostBreakdown.total.toFixed(2)}` : `A$${privatePrice.toFixed(2)}`,
-      escapeCsvValue(vm.sqlLicenseType || '')
-    ]);
+    rows.push(rowData(vm, i));
   });
   const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
   const link = document.createElement('a');
   link.setAttribute('href', encodeURI(csvContent));
-  link.setAttribute('download', `vm_cost_${type}_summary.csv`);
+  link.setAttribute('download', `vm_cost_${type}_detailed.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -784,7 +859,6 @@ function autoMatchSkus() {
       const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
       console.log(`Matching VM ${vm['Display Name'] || index}: CPU=${cpu}, RAM=${ram} GB, OS=${os}`);
 
-      // Filter SKUs based on CPU and RAM within tolerance
       const filteredSkus = azureVMPricing.filter(sku => {
         const cpuMatch = Math.abs(sku.vCPUs - cpu) <= cpuTolerance;
         const ramMatch = Math.abs(sku.ram - ram) <= ramTolerance;
@@ -792,18 +866,14 @@ function autoMatchSkus() {
         return cpuMatch && ramMatch;
       });
 
-      // Separate SKUs with "DC" or "dc" from others
       const dcSkus = filteredSkus.filter(sku => sku.name.toLowerCase().includes('dc'));
       const nonDcSkus = filteredSkus.filter(sku => !sku.name.toLowerCase().includes('dc'));
 
-      // Select first DC SKU if available, otherwise sort non-DC SKUs by cost
       let bestSku = null;
       if (dcSkus.length > 0) {
-        // Prioritize DC SKUs, select the first one that matches
         bestSku = dcSkus[0];
         console.log(`  Selected DC SKU for VM ${vm['Display Name'] || index}: ${bestSku.name}`);
       } else if (nonDcSkus.length > 0) {
-        // Sort non-DC SKUs by total cost
         const diskType = vm.diskType || 'Standard SSD';
         const sortedNonDcSkus = nonDcSkus.map(sku => {
           const vmPrice = os === 'Windows' ? sku.windowsPrice : sku.linuxPrice;
