@@ -991,7 +991,7 @@ function loadSheet(sheetName) {
           memoryGB = match[2] === 'mb' ? memoryGB / 1024 : memoryGB;
         }
       }
-      console.log(`VM ${vm[columnMapping['Display Name'] || 'Unnamed']}: Raw Memory=${memoryRaw}, Parsed Memory=${memoryGB} GB`);
+      console.log(`VM ${vm[columnMapping['Display Name']] || 'Unnamed'}: Raw Memory=${memoryRaw}, Parsed Memory=${memoryGB} GB`);
       return {
         'Display Name': vm[columnMapping['Display Name']] || vm['VM'] || 'Unnamed',
         'Num CPU': vm[columnMapping['Num CPU']] || vm['CPUs'] || 0,
@@ -1112,7 +1112,7 @@ function calculatePrivateCloudPrice(index) {
   const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
   const os = (vm['OS'] || '').toLowerCase();
   const octopus = os.includes('win') ? (ataPricing.octopus || 0) : 0;
-  const sql = vm.sqlLicensed ? calculateSqlLicenseCost(cpu, vm.sqlLicenseType) : 0;
+  const sql = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
   return (cpu * (ataPricing.cpu || 0)) + (ram * (ataPricing.ram || 0)) + (storage * (ataPricing.storage || 0)) + (ataPricing.base || 0) + octopus + sql;
 }
 
@@ -1257,6 +1257,28 @@ function clearSQLTag(index) {
   updateSummary();
 }
 
+function calculateAzureCostBreakdown(index) {
+  const vm = lastVmData[index];
+  const sku = matchedSkus[index] || vm.manualSku;
+  const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
+  const diskType = vm.diskType || 'Standard SSD';
+  const sqlCost = vm.sqlLicensed ? calculateSqlLicenseCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
+  const storageCost = StorageModule.calculateAzureStorageCost(storage, diskType, azureVMPricing);
+  const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
+  const baseCost = sku ? (os === 'Windows' ? sku.windowsPrice : sku.linuxPrice) : 0;
+  const subtotal = baseCost + storageCost + sqlCost;
+  const networkPercentage = getNetworkPercentage() / 100;
+  const networkCost = subtotal * networkPercentage;
+  const total = subtotal + networkCost;
+  return { total, base: baseCost, storage: storageCost, sql: sqlCost, network: networkCost };
+}
+
+function calculateSqlCost(cpuCount, type = 'SQL-Std') {
+  const coreCount = Math.max(4, Math.ceil(parseInt(cpuCount) || 0) / 2) * 2;
+  const unitPrice = ataPricing[type] || 0;
+  return (coreCount / 2) * unitPrice;
+}
+
 function renderVMTable(vmData) {
   console.log('Rendering VM table with data:', vmData.map(v => ({ name: v['Display Name'], memory: v['Memory'] })));
   if (!vmData || !vmData.length) return;
@@ -1264,7 +1286,7 @@ function renderVMTable(vmData) {
   if (!tbody) return;
   tbody.innerHTML = '';
   vmData.forEach((vm, index) => {
-    const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0;
+    const cpu = parseInt(vm['Num CPU'] || vm['CPUs'] || 0);
     const ram = parseFloat(vm['Memory'] || 0);
     const storage = parseFloat(vm['Provisioned Storage (GB)'] || 0);
     const os = (vm['OS'] || vm['Guest OS'] || '').toLowerCase().includes('windows') ? 'Windows' : 'Linux';
@@ -1291,19 +1313,19 @@ function renderVMTable(vmData) {
     const octopusCost = os.toLowerCase().includes('windows') ? (ataPricing.octopus || 0) : 0;
     const sqlCost = vm.sqlLicensed ? calculateSqlCost(vm['Num CPU'], vm.sqlLicenseType) : 0;
     const privateTooltip = `CPU: A$${cpuCost.toFixed(2)} (${cpu} × ${currency}$${ataPricing.cpu ? ataPricing.cpu.toFixed(2) : '0.00'})\n` +
-${                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × ${currency}$${ataPricing.ram ? ataPricing.ram.toFixed(2) : '0.00'})\n` +
+                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × ${currency}$${ataPricing.ram ? ataPricing.ram.toFixed(2) : '0.00'})\n` +
                           `Storage: A$${storageCost.toFixed(2)} (${storage} GB × ${currency}$${ataPricing.storage ? ataPricing.storage.toFixed(2) : '0.00'})\n` +
                           `Base Fee: A$${baseCost.toFixed(2)}\n` +
                           `Octopus Fee: A$${octopusCost.toFixed(2)}\n` +
-                          (sqlCost ? `SQL License (${sqlCost.sqlLicenseType}): A$${sqlCost.toFixed(2)}\n` : '') +
+                          (sqlCost ? `SQL License (${vm.sqlLicenseType}): A$${sqlCost.toFixed(2)}\n` : '') +
                           `Total: A$${privatePrice.toFixed(2)}`;
 
     const tr = document.createElement('tr');
-    tr.title = `Azure: A$${azureCostBreakdown.total.toFixed(2)}\n${PrivateCloud: A$${privatePrice.toFixed(2)}`;
+    tr.title = `Azure: A$${azureCostBreakdown.total.toFixed(2)}\nPrivate Cloud: A$${privatePrice.toFixed(2)}`;
     if (!sku) tr.classList.add('table-danger');
 
     const tdName = document.createElement('td');
-    tdName.textContent = vm['display Name'] || vm['VM'] || 'Unnamed';
+    tdName.textContent = vm['Display Name'] || vm['VM'] || 'Unnamed';
     tr.appendChild(tdName);
 
     const tdCpu = document.createElement('td');
@@ -1333,7 +1355,7 @@ ${                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × ${curren
     const adjBtn = document.createElement('button');
     adjBtn.className = 'btn btn-sm btn-warning ms-2';
     adjBtn.textContent = 'Adj';
-    adjBtn.onclick = () => openSkusModal(index);
+    adjBtn.onclick = () => openSkuPopup(index);
     tdSkus.appendChild(adjBtn);
     tr.appendChild(tdSkus);
 
@@ -1342,7 +1364,7 @@ ${                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × ${curren
     diskSelect.className = 'form-select form-select-sm';
     diskSelect.innerHTML = `
       <option value="Standard SSD" ${vm.diskType === 'Standard SSD' ? 'selected' : ''}>Standard SSD</option>
-      <option value="0Premium SSD" ${vm.diskType === 'Premium SSD' ? 'selected' : ''}>Premium SSD</option>
+      <option value="Premium SSD" ${vm.diskType === 'Premium SSD' ? 'selected' : ''}>Premium SSD</option>
     `;
     diskSelect.onchange = (e) => {
       vm.diskType = e.target.value;
@@ -1353,13 +1375,14 @@ ${                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × ${curren
     tr.appendChild(tdDiskType);
 
     const tdAzure = document.createElement('td');
-    tdAzure.textContent = `A${currency}$${azureCostBreakdown.total.toFixed(2)}`;
+    tdAzure.textContent = `A$${azureCostBreakdown.total.toFixed(2)}`;
     tdAzure.setAttribute('data-bs-toggle', 'tooltip');
     tdAzure.setAttribute('data-bs-placement', 'top');
     tdAzure.setAttribute('title', azureTooltip);
     tr.appendChild(tdAzure);
 
-    const tdPrivate = document.createElement('td');    tdPrivate.textContent = `A$${privatePrice.toFixed(2)}`;
+    const tdPrivate = document.createElement('td');
+    tdPrivate.textContent = `A$${privatePrice.toFixed(2)}`;
     tdPrivate.setAttribute('data-bs-toggle', 'tooltip');
     tdPrivate.setAttribute('data-bs-placement', 'top');
     tdPrivate.setAttribute('title', privateTooltip);
@@ -1373,8 +1396,8 @@ ${                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × ${curren
       const closeSpan = document.createElement('span');
       closeSpan.style.cursor = 'pointer';
       closeSpan.textContent = ' ×';
-      closeSpan.onclick = () => clearSQLTag(closeSpan);
-      span.appendChild(closeSpan(closeSpan));
+      closeSpan.onclick = () => clearSQLTag(index);
+      span.appendChild(closeSpan);
       tdTag.appendChild(span);
     } else {
       const btn = document.createElement('button');
@@ -1388,9 +1411,10 @@ ${                          `RAM: A$${ramCost.toFixed(2)} (${ram} GB × ${curren
     tbody.appendChild(tr);
   });
 
+  // Initialize tooltips
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-  .slice.call(tooltipTriggerList.forEach(tooltipTriggerEl => {
-    new bootstrap.Tooltip(tooltipTriggerEl));
+  Array.from(tooltipTriggerList).forEach(tooltipTriggerEl => {
+    new bootstrap.Tooltip(tooltipTriggerEl);
   });
 }
 
@@ -1402,28 +1426,28 @@ function togglePricingEditor() {
 }
 
 function updateAta(key) {
-      const val = parseFloat(document.getElementById(keyMap[key]).value);
-      if (!isNaN(val) && val >= 0) {
-      ataPricing[key] = val;
-      renderVMTable(lastVmData);
-      updateSummary();
-    } else {
-      alert(`Invalid value for ${key}. Please enter a non-negative number.`);
-      document.getElementById(keyMap[key]).value = ataPricing[key] || 0;
-    }
+  const val = parseFloat(document.getElementById(keyMap[key]).value);
+  if (!isNaN(val) && val >= 0) {
+    ataPricing[key] = val;
+    renderVMTable(lastVmData);
+    updateSummary();
+  } else {
+    alert(`Invalid value for ${key}. Please enter a non-negative number.`);
+    document.getElementById(keyMap[key]).value = ataPricing[key] || 0;
+  }
 }
 
 const keyMap = {
-    base: 'baseFee',
-    cpu: 'cpuFee',
-    ram: 'ramFee',
-    storage: 'storageFee',
-    octopus: 'octopusFee',
-    'SQL-Std': 'sqlStdFee',
-    'SQL-Ent': 'sqlEntFee',
-    networkLow: 'networkLowFee',
-    networkMedium: 'networkMediumFee',
-    networkHigh: 'networkHighFee'
+  base: 'baseFee',
+  cpu: 'cpuFee',
+  ram: 'ramFee',
+  storage: 'storageFee',
+  octopus: 'octopusFee',
+  'SQL-Std': 'sqlStdFee',
+  'SQL-Ent': 'sqlEntFee',
+  networkLow: 'networkLowFee',
+  networkMedium: 'networkMediumFee',
+  networkHigh: 'networkHighFee'
 };
   </script>
 </body>
