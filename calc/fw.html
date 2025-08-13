@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FW Calculator</title>
+  <title>FW Decision Tree Wizard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     /* Atturra-inspired light theme with high contrast */
@@ -29,7 +29,7 @@
       color: var(--ink);
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     }
-    .container-narrow { max-width: 1100px; }
+    .container-narrow { max-width: 1200px; }
 
     /* Cards */
     .card {
@@ -42,15 +42,12 @@
     .card h5, .card h6 { color: #0f172a; }
 
     /* Buttons */
-    .btn-accent {
-      background: var(--primary);
-      border: 1px solid var(--primary);
-      color: #ffffff;
-      font-weight: 700;
-    }
+    .btn-primary { background: var(--primary); border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-600); border-color: var(--primary-600); }
+    .btn-outline-primary { border-color: var(--primary); color: var(--primary); }
+    .btn-outline-primary:hover { background: var(--primary); color: #fff; }
+    .btn-accent { background: var(--primary); border: 1px solid var(--primary); color: #ffffff; font-weight: 700; }
     .btn-accent:hover { background: var(--primary-600); border-color: var(--primary-600); }
-    .btn-outline-light { border-color: var(--accent); color: var(--accent); }
-    .btn-outline-light:hover { background: var(--accent); color: #fff; }
 
     /* Form elements */
     label.form-label { font-weight: 600; color: #111827; }
@@ -71,12 +68,13 @@
     .badge-good { background: rgba(217,119,6,0.10); color: var(--warn); border-color: rgba(217,119,6,0.30); }
     .link-like { color: var(--primary); text-decoration: none; cursor: pointer; }
     .link-like:hover { text-decoration: underline; }
-    .sticky-top-ish { position: sticky; top: 1rem; z-index: 10; }
-    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-    details[open] summary::after { content: "▲"; margin-left: 8px; font-size: 0.8rem; color: var(--muted); }
-    details summary::after { content: "▼"; margin-left: 8px; font-size: 0.8rem; color: var(--muted); }
-    summary { cursor: pointer; }
-    code { color: var(--accent); }
+
+    /* Progress */
+    .step-dot { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid var(--border); background: #fff; font-weight: 700; color: var(--muted); }
+    .step-dot.active { border-color: var(--primary); color: var(--primary); }
+    .step-dot.done { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .step-line { height: 2px; background: var(--border); flex: 1; margin: 0 8px; }
+    .step-line.active { background: var(--primary); }
 
     /* Tables */
     table.table { color: var(--ink); }
@@ -89,278 +87,91 @@
   <div class="container container-narrow py-4">
     <div class="d-flex align-items-start gap-3 flex-wrap mb-3">
       <div>
-        <h1 class="h3 mb-1" style="color:#0b3c5d">Firewall‑as‑a‑Service (FWaaS) Calculator</h1>
-        <div class="small-muted">Enter your requirements; we’ll amortize costs and recommend the best‑fit firewalls.</div>
+        <h1 class="h3 mb-1" style="color:#0b3c5d">Firewall Journey Wizard</h1>
+        <div class="small text-muted">Answer a few questions and we'll guide you to the best firewall fit.</div>
       </div>
-      <div class="ms-auto sticky-top-ish">
-        <button id="resetBtn" class="btn btn-outline-light btn-sm">Reset</button>
+      <div class="ms-auto">
+        <button id="resetBtn" class="btn btn-outline-primary btn-sm">Start over</button>
       </div>
     </div>
 
-    <!-- Inputs -->
-    <div class="row g-3 mb-3">
+    <div class="row g-3">
+      <!-- Wizard Panel -->
       <div class="col-lg-6">
-        <div class="card shadow-soft p-3 h-100">
-          <h5 class="mb-3">Requirements</h5>
-          <div class="row g-3">
-            <div class="col-6">
-              <label class="form-label">Total users</label>
-              <input id="users" type="number" min="1" class="form-control" placeholder="e.g. 250" value="150" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">Total Internet bandwidth (Mbps)</label>
-              <input id="bandwidth" type="number" min="10" step="10" class="form-control" placeholder="e.g. 500" value="500" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">Remote access VPN users (peak)</label>
-              <input id="vpnUsers" type="number" min="0" class="form-control" placeholder="e.g. 50" value="50" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">IPSec site‑to‑site tunnels</label>
-              <input id="ipsecTunnels" type="number" min="0" class="form-control" placeholder="e.g. 8" value="6" />
-            </div>
-          </div>
-          <hr class="my-3" />
-          <div class="row g-3">
-            <div class="col-6 form-check">
-              <input id="feat_url" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_url">URL filtering</label>
-            </div>
-            <div class="col-6 form-check">
-              <input id="feat_ssl" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_ssl">SSL inspection</label>
-            </div>
-            <div class="col-6 form-check">
-              <input id="feat_ids" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_ids">IDS/IPS</label>
-            </div>
-            <div class="col-6 form-check">
-              <input id="feat_managed" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_managed">Managed (FWaaS)</label>
+        <div class="card p-3">
+          <div class="d-flex align-items-center mb-3" id="progress"></div>
+          <div id="stepContainer" class="vstack gap-3"></div>
+          <div class="d-flex justify-content-between mt-3">
+            <button id="backBtn" class="btn btn-outline-primary" disabled>Back</button>
+            <div class="d-flex gap-2">
+              <button id="skipBtn" class="btn btn-outline-primary d-none">Skip</button>
+              <button id="nextBtn" class="btn btn-primary">Next</button>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Live Recommendations -->
       <div class="col-lg-6">
-        <div class="card shadow-soft p-3 h-100">
-          <h5 class="mb-3">Quote & Amortization</h5>
-          <div class="row g-3">
-            <div class="col-6">
-              <label class="form-label">Hardware / License cost (AUD)</label>
-              <input id="hwCost" type="number" min="0" class="form-control" placeholder="e.g. 12000" value="12000" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">Setup / Install cost (AUD)</label>
-              <input id="setupCost" type="number" min="0" class="form-control" placeholder="e.g. 2500" value="2500" />
-            </div>
-            <div class="col-4">
-              <label class="form-label">Annual interest %</label>
-              <input id="apr" type="number" min="0" step="0.1" class="form-control" placeholder="e.g. 6" value="5" />
-            </div>
-            <div class="col-4">
-              <label class="form-label">Term (years)</label>
-              <input id="termYears" type="number" min="1" class="form-control" placeholder="e.g. 3" value="3" />
-            </div>
-            <div class="col-4">
-              <label class="form-label">Ongoing support (monthly)</label>
-              <input id="supportMonthly" type="number" min="0" class="form-control" placeholder="e.g. 450" value="450" />
-            </div>
+        <div class="card p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="mb-0">Recommendations</h5>
+            <span class="pill">Updates as you answer</span>
           </div>
-          <div class="mt-3 small-muted">Amortization uses standard loan formula. If APR = 0, we split costs equally.</div>
-          <div class="mt-3"><button id="calcBtn" class="btn btn-accent w-100">Calculate & Match</button></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Results / Summary -->
-    <div class="row g-3 mb-4">
-      <div class="col-lg-5">
-        <div class="card shadow-soft p-3 h-100">
-          <h5 class="mb-2">Monthly Cost Summary</h5>
-          <div class="d-flex flex-column gap-2" id="summary">
-            <div><span class="dim">Amortized hardware</span> <span class="float-end metric" id="sum_hw">—</span></div>
-            <div><span class="dim">Amortized setup</span> <span class="float-end metric" id="sum_setup">—</span></div>
-            <div><span class="dim">Ongoing support</span> <span class="float-end metric" id="sum_support">—</span></div>
-            <hr/>
-            <div><span class="dim">Estimated FWaaS monthly</span> <span class="float-end metric" id="sum_total">—</span></div>
-          </div>
-          <details class="mt-3">
-            <summary>Show formula</summary>
-            <div class="small-muted mt-2">
-              MonthlyPayment = <code>P * r / (1 - (1 + r)^(-n))</code>, where
-              <ul>
-                <li><code>P</code> is principal (hardware or setup)</li>
-                <li><code>r</code> is monthly interest (APR/12)</li>
-                <li><code>n</code> is term in months</li>
-              </ul>
+          <div id="recPreview" class="vstack gap-3"></div>
+          <hr/>
+          <details>
+            <summary>Catalog (JSON) — optional</summary>
+            <div class="mt-2">
+              <textarea id="catalogJson" rows="8" class="form-control" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"></textarea>
+              <div class="d-flex gap-2 mt-2">
+                <button id="applyCatalog" class="btn btn-outline-primary btn-sm">Apply</button>
+                <a id="downloadCatalog" class="btn btn-outline-primary btn-sm" download="firewall_catalog.json">Download</a>
+              </div>
             </div>
           </details>
         </div>
       </div>
-      <div class="col-lg-7">
-        <div class="card shadow-soft p-3 h-100">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <h5 class="mb-0">Recommendations</h5>
-            <span class="pill">Auto‑matched to your requirements</span>
-          </div>
-          <div id="recs" class="vstack gap-3"></div>
-        </div>
-      </div>
     </div>
-
-    <!-- Catalog -->
-    <div class="card shadow-soft p-3 mb-4">
-      <div class="d-flex align-items-center justify-content-between">
-        <h5 class="mb-0">Firewall Catalog</h5>
-        <span class="small-muted">You can edit and re‑run matching</span>
-      </div>
-      <div class="table-responsive mt-3">
-        <table class="table table-striped align-middle" id="catalogTable">
-          <thead>
-            <tr>
-              <th>Vendor</th>
-              <th>Model</th>
-              <th>Max Users</th>
-              <th>Throughput (Gbps)</th>
-              <th>SSL/TLS (Gbps)</th>
-              <th>VPN Users</th>
-              <th>IPSec Tunnels</th>
-              <th>Features</th>
-              <th>Base Monthly (AUD)</th>
-              <th>Setup (AUD)</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="catalogBody"></tbody>
-        </table>
-      </div>
-      <details class="mt-2">
-        <summary>Add / Replace catalog (JSON)</summary>
-        <div class="row g-2 mt-2">
-          <div class="col-12">
-            <textarea id="catalogJson" rows="10" class="form-control" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"></textarea>
-          </div>
-          <div class="col-12 d-flex gap-2">
-            <button id="applyCatalog" class="btn btn-outline-light">Apply JSON</button>
-            <a id="downloadCatalog" class="btn btn-outline-light" download="firewall_catalog.json">Download JSON</a>
-          </div>
-        </div>
-      </details>
-    </div>
-
-    <div class="small-muted">Note: Specs and prices below are example placeholders for modeling only — replace with your catalog values.</div>
   </div>
 
   <script>
-    // ===== Amortization =====
-    function amortize(principal, annualRate, years) {
-      const monthlyRate = (annualRate / 100) / 12;
-      const n = years * 12;
-      if (!principal || principal <= 0 || !n) return 0;
-      if (monthlyRate === 0) return principal / n;
-      return principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -n));
-    }
-
-    // ===== Catalog (sample data; replace with your truth source) =====
+    // ===== Catalog (expanded; WatchGuard removed; more models per existing vendors) =====
     const defaultCatalog = [
-      {
-        vendor: 'Fortinet', model: 'FortiGate 100F',
-        maxUsers: 600, throughputGbps: 10, sslGbps: 1.2, vpnUsers: 200, ipsecTunnels: 200,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 850, setup: 1800
-      },
-      {
-        vendor: 'Palo Alto', model: 'PA-3220',
-        maxUsers: 1000, throughputGbps: 15.2, sslGbps: 2.0, vpnUsers: 400, ipsecTunnels: 400,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 1400, setup: 2400
-      },
-      {
-        vendor: 'Sophos', model: 'XGS 3300',
-        maxUsers: 500, throughputGbps: 34.9, sslGbps: 1.1, vpnUsers: 300, ipsecTunnels: 200,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 780, setup: 1600
-      },
-      {
-        vendor: 'Cisco', model: 'Secure Firewall 1120',
-        maxUsers: 250, throughputGbps: 2.5, sslGbps: 0.7, vpnUsers: 100, ipsecTunnels: 50,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 520, setup: 1400
-      },
-      {
-        vendor: 'WatchGuard', model: 'Firebox M390',
-        maxUsers: 700, throughputGbps: 18, sslGbps: 1.3, vpnUsers: 300, ipsecTunnels: 250,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 930, setup: 2000
-      },
-      {
-        vendor: 'Fortinet', model: 'FortiGate 60F',
-        maxUsers: 100, throughputGbps: 10, sslGbps: 0.75, vpnUsers: 50, ipsecTunnels: 20,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 220, setup: 900
-      }
+      // Fortinet
+      { vendor: 'Fortinet', model: 'FortiGate 40F', maxUsers: 60, throughputGbps: 5,   sslGbps: 0.6, vpnUsers: 25,  ipsecTunnels: 10,  features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 150, setup: 700 },
+      { vendor: 'Fortinet', model: 'FortiGate 60F', maxUsers: 100, throughputGbps: 10,  sslGbps: 0.75, vpnUsers: 50,  ipsecTunnels: 20,  features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 220, setup: 900 },
+      { vendor: 'Fortinet', model: 'FortiGate 100F',maxUsers: 600, throughputGbps: 10,  sslGbps: 1.2,  vpnUsers: 200, ipsecTunnels: 200, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 850, setup: 1800 },
+      { vendor: 'Fortinet', model: 'FortiGate 200F',maxUsers: 1200,throughputGbps: 20,  sslGbps: 2.4,  vpnUsers: 500, ipsecTunnels: 500, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 1250, setup: 2200 },
+      { vendor: 'Fortinet', model: 'FortiGate 400F',maxUsers: 4000,throughputGbps: 45,  sslGbps: 6.0,  vpnUsers: 2000,ipsecTunnels: 2000,features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 3200, setup: 3500 },
+
+      // Palo Alto
+      { vendor: 'Palo Alto', model: 'PA-440',       maxUsers: 250, throughputGbps: 5.2, sslGbps: 1.0, vpnUsers: 200, ipsecTunnels: 150, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 650, setup: 1400 },
+      { vendor: 'Palo Alto', model: 'PA-460',       maxUsers: 500, throughputGbps: 8.6, sslGbps: 1.9, vpnUsers: 400, ipsecTunnels: 300, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 900, setup: 1800 },
+      { vendor: 'Palo Alto', model: 'PA-3220',      maxUsers: 1000,throughputGbps: 15.2,sslGbps: 2.0, vpnUsers: 400, ipsecTunnels: 400, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 1400, setup: 2400 },
+      { vendor: 'Palo Alto', model: 'PA-5220',      maxUsers: 3000,throughputGbps: 35,  sslGbps: 5.0, vpnUsers: 1500,ipsecTunnels: 1000,features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 2800, setup: 3600 },
+
+      // Sophos
+      { vendor: 'Sophos',   model: 'XGS 116',       maxUsers: 80,  throughputGbps: 7,   sslGbps: 0.6, vpnUsers: 40,  ipsecTunnels: 20,  features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 180, setup: 700 },
+      { vendor: 'Sophos',   model: 'XGS 2100',      maxUsers: 300, throughputGbps: 32,  sslGbps: 1.1, vpnUsers: 200, ipsecTunnels: 150, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 620, setup: 1500 },
+      { vendor: 'Sophos',   model: 'XGS 3300',      maxUsers: 500, throughputGbps: 34.9,sslGbps: 1.1, vpnUsers: 300, ipsecTunnels: 200, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 780, setup: 1600 },
+      { vendor: 'Sophos',   model: 'XGS 4300',      maxUsers: 2000,throughputGbps: 80,  sslGbps: 5.0, vpnUsers: 1000,ipsecTunnels: 800, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 2100, setup: 3000 },
+
+      // Cisco
+      { vendor: 'Cisco',    model: 'Secure Firewall 1120', maxUsers: 250, throughputGbps: 2.5, sslGbps: 0.7, vpnUsers: 100, ipsecTunnels: 50,  features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 520, setup: 1400 },
+      { vendor: 'Cisco',    model: 'Secure Firewall 1140', maxUsers: 400, throughputGbps: 3.3, sslGbps: 1.0, vpnUsers: 250, ipsecTunnels: 100, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 720, setup: 1600 },
+      { vendor: 'Cisco',    model: 'Secure Firewall 2130', maxUsers: 1000,throughputGbps: 9,   sslGbps: 1.5, vpnUsers: 600, ipsecTunnels: 300, features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 1400, setup: 2200 },
+      { vendor: 'Cisco',    model: 'Secure Firewall 3110', maxUsers: 4000,throughputGbps: 45,  sslGbps: 6.0, vpnUsers: 2000,ipsecTunnels: 1200,features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true }, baseMonthly: 3200, setup: 3800 }
     ];
 
     let catalog = JSON.parse(localStorage.getItem('fwaas_catalog') || 'null') || defaultCatalog;
 
-    function saveCatalog() {
-      localStorage.setItem('fwaas_catalog', JSON.stringify(catalog, null, 2));
-    }
+    // ===== Utilities =====
+    function currency(n) { return n != null ? `A$${Number(n).toFixed(2)}` : 'A$0.00'; }
 
-    function currency(n) { return n ? `A$${n.toFixed(2)}` : 'A$0.00'; }
-
-    function renderCatalog() {
-      const body = document.getElementById('catalogBody');
-      body.innerHTML = '';
-      catalog.forEach((c, i) => {
-        const tr = document.createElement('tr');
-        const feats = [];
-        if (c.features?.urlFiltering) feats.push('URL');
-        if (c.features?.sslInspection) feats.push('SSL');
-        if (c.features?.idsIps) feats.push('IDS/IPS');
-        if (c.features?.managedAvailable) feats.push('Managed');
-        tr.innerHTML = `
-          <td>${c.vendor}</td>
-          <td>${c.model}</td>
-          <td>${c.maxUsers}</td>
-          <td>${c.throughputGbps}</td>
-          <td>${c.sslGbps}</td>
-          <td>${c.vpnUsers}</td>
-          <td>${c.ipsecTunnels}</td>
-          <td>${feats.join(', ')}</td>
-          <td>${currency(c.baseMonthly)}</td>
-          <td>${currency(c.setup)}</td>
-          <td><a class="link-like" data-idx="${i}" onclick="prefillFromCatalog(${i})">Use quote</a></td>
-        `;
-        body.appendChild(tr);
-      });
-
-      // JSON panel setup
-      const json = document.getElementById('catalogJson');
-      json.value = JSON.stringify(catalog, null, 2);
-      const dl = document.getElementById('downloadCatalog');
-      const blob = new Blob([json.value], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      dl.href = url;
-    }
-
-    function prefillFromCatalog(i) {
-      const item = catalog[i];
-      if (!item) return;
-      // Prefill costs (illustrative heuristic; adjust to your pricing model)
-      document.getElementById('hwCost').value = Math.round((item.baseMonthly * 24)); // assume ~24mo value
-      document.getElementById('setupCost').value = item.setup || 0;
-      document.getElementById('supportMonthly').value = Math.round(item.baseMonthly * 0.6 + 200); // managed uplift example
-      // Re-run calc
-      runCalc();
-      // Scroll to summary
-      document.getElementById('sum_total').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    // ===== Matching Logic =====
+    // Throughput adjustment for content inspection features
     function computeRequiredThroughputMbps(inputs) {
-      const { bandwidth, feat_ssl, feat_url, feat_ids } = inputs;
+      const { bandwidth = 0, feat_ssl, feat_url, feat_ids } = inputs;
       let factor = 1.0;
       if (feat_ssl) factor *= 1.5;    // SSL/TLS inspection tax
       if (feat_url) factor *= 1.15;   // URL filtering tax
@@ -370,11 +181,11 @@
 
     function meetsMinimums(c, inputs) {
       const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000; // Mbps -> Gbps
-      const tpOk = c.throughputGbps >= reqTpGbps * 1.10; // require 10% headroom
-      const sslOk = !inputs.feat_ssl || c.sslGbps >= (reqTpGbps * 0.8); // looser for SSL spec baselines
-      const usersOk = c.maxUsers >= inputs.users * 1.1; // 10% headroom
-      const vpnOk = c.vpnUsers >= inputs.vpnUsers;
-      const tunnelsOk = c.ipsecTunnels >= inputs.ipsecTunnels;
+      const tpOk = c.throughputGbps >= reqTpGbps * 1.10; // 10% headroom
+      const sslOk = !inputs.feat_ssl || c.sslGbps >= (reqTpGbps * 0.8); // tolerate some variance
+      const usersOk = c.maxUsers >= (inputs.users || 0) * 1.1;
+      const vpnOk = c.vpnUsers >= (inputs.vpnUsers || 0);
+      const tunnelsOk = c.ipsecTunnels >= (inputs.ipsecTunnels || 0);
       const urlOk = !inputs.feat_url || c.features?.urlFiltering;
       const idsOk = !inputs.feat_ids || c.features?.idsIps;
       const sslFeatOk = !inputs.feat_ssl || c.features?.sslInspection;
@@ -383,39 +194,37 @@
     }
 
     function scoreCandidate(c, inputs) {
-      const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000;
-      const tpHeadroom = Math.max(0, (c.throughputGbps - reqTpGbps) / Math.max(0.001, reqTpGbps));
-      const userHeadroom = Math.max(0, (c.maxUsers - inputs.users) / Math.max(1, inputs.users));
-      const vpnHeadroom = Math.max(0, (c.vpnUsers - inputs.vpnUsers) / Math.max(1, inputs.vpnUsers));
-      const tunnelHeadroom = Math.max(0, (c.ipsecTunnels - inputs.ipsecTunnels) / Math.max(1, inputs.ipsecTunnels));
+      const reqTpGbps = Math.max(0.001, computeRequiredThroughputMbps(inputs) / 1000);
+      const tpHeadroom = Math.max(0, (c.throughputGbps - reqTpGbps) / reqTpGbps);
+      const userHeadroom = Math.max(0, (c.maxUsers - (inputs.users||0)) / Math.max(1, (inputs.users||1)) );
+      const vpnHeadroom = Math.max(0, (c.vpnUsers - (inputs.vpnUsers||0)) / Math.max(1, (inputs.vpnUsers||1)) );
+      const tunnelHeadroom = Math.max(0, (c.ipsecTunnels - (inputs.ipsecTunnels||0)) / Math.max(1, (inputs.ipsecTunnels||1)) );
 
-      const price = (c.baseMonthly || 0) + (c.setup || 0) / 24; // normalize setup across ~24 months
+      const price = (c.baseMonthly || 0) + (c.setup || 0) / 24; // normalized
+      const budgetPenalty = inputs.budgetMonthly ? Math.max(0, (price - inputs.budgetMonthly) / Math.max(200, inputs.budgetMonthly)) : 0;
 
-      // Feature coverage bonus
       let featScore = 0;
       if (inputs.feat_url && c.features?.urlFiltering) featScore += 0.5;
       if (inputs.feat_ssl && c.features?.sslInspection) featScore += 0.6;
       if (inputs.feat_ids && c.features?.idsIps) featScore += 0.6;
       if (inputs.feat_managed && c.features?.managedAvailable) featScore += 0.4;
 
-      // Weighted scoring (tune as needed)
       const score = (
         tpHeadroom * 3.0 +
         userHeadroom * 1.6 +
         vpnHeadroom * 0.8 +
         tunnelHeadroom * 0.6 +
         featScore * 1.2
-      ) - (price / 3000); // price penalty scaling
+      ) - (price / 3000) - budgetPenalty;
 
       return score;
     }
 
     function rankMatches(inputs) {
       const candidates = catalog.filter(c => meetsMinimums(c, inputs));
-      const ranked = candidates
-        .map(c => ({ c, score: scoreCandidate(c, inputs) }))
-        .sort((a, b) => b.score - a.score);
-      return ranked.slice(0, 5); // top 5
+      const ranked = candidates.map(c => ({ c, score: scoreCandidate(c, inputs) }))
+                               .sort((a, b) => b.score - a.score);
+      return ranked.slice(0, 5);
     }
 
     function tierLabel(idx) {
@@ -424,31 +233,32 @@
       return '<span class="badge-tier badge-good">Good alternative</span>';
     }
 
-    function renderRecs(ranked) {
-      const recs = document.getElementById('recs');
-      recs.innerHTML = '';
+    function renderRecs(inputs) {
+      const recDiv = document.getElementById('recPreview');
+      const ranked = rankMatches(inputs);
+      recDiv.innerHTML = '';
       if (!ranked.length) {
-        recs.innerHTML = '<div class="small-muted">No exact matches. Try relaxing one or more requirements, or expand the catalog.</div>';
+        recDiv.innerHTML = '<div class="text-muted">Keep going — we\'ll show recommendations once we have enough info.</div>';
         return;
       }
       ranked.forEach((r, idx) => {
         const { c, score } = r;
-        const div = document.createElement('div');
         const scoreClass = score > 2 ? 'score-good' : score > 1 ? 'score-mid' : 'score-bad';
         const feats = [];
         if (c.features?.urlFiltering) feats.push('URL');
         if (c.features?.sslInspection) feats.push('SSL');
         if (c.features?.idsIps) feats.push('IDS/IPS');
         if (c.features?.managedAvailable) feats.push('Managed');
+        const div = document.createElement('div');
         div.className = 'p-3 rounded border';
         div.innerHTML = `
           <div class="d-flex align-items-start gap-2">
             <div class="flex-grow-1">
               <div class="d-flex align-items-center gap-2">
-                <h6 class="mb-0">${c.vendor} ${c.model}</h6>
+                <strong>${c.vendor} ${c.model}</strong>
                 ${tierLabel(idx)}
               </div>
-              <div class="small-muted">Score: <span class="${scoreClass}">${score.toFixed(2)}</span> · Features: ${feats.join(', ') || '—'}</div>
+              <div class="small text-muted">Score: <span class="${scoreClass}">${score.toFixed(2)}</span> · Features: ${feats.join(', ') || '—'}</div>
               <div class="mt-2 row g-2">
                 <div class="col-6 col-md-3">Users ≤ <strong>${c.maxUsers}</strong></div>
                 <div class="col-6 col-md-3">TP <strong>${c.throughputGbps} Gbps</strong></div>
@@ -459,76 +269,296 @@
                 <div class="col-6 col-md-3">Setup <strong>${currency(c.setup)}</strong></div>
               </div>
             </div>
-            <div class="text-end">
-              <button class="btn btn-sm btn-outline-light" onclick='prefillFromCatalog(${catalog.indexOf(c)})'>Use this for quote</button>
-            </div>
-          </div>
-        `;
-        recs.appendChild(div);
+          </div>`;
+        recDiv.appendChild(div);
       });
     }
 
-    // ===== Calculator Orchestration =====
-    function gatherInputs() {
-      return {
-        users: Number(document.getElementById('users').value || 0),
-        bandwidth: Number(document.getElementById('bandwidth').value || 0),
-        vpnUsers: Number(document.getElementById('vpnUsers').value || 0),
-        ipsecTunnels: Number(document.getElementById('ipsecTunnels').value || 0),
-        feat_url: document.getElementById('feat_url').checked,
-        feat_ssl: document.getElementById('feat_ssl').checked,
-        feat_ids: document.getElementById('feat_ids').checked,
-        feat_managed: document.getElementById('feat_managed').checked,
-        hwCost: Number(document.getElementById('hwCost').value || 0),
-        setupCost: Number(document.getElementById('setupCost').value || 0),
-        apr: Number(document.getElementById('apr').value || 0),
-        termYears: Number(document.getElementById('termYears').value || 0),
-        supportMonthly: Number(document.getElementById('supportMonthly').value || 0)
-      };
+    // ===== Decision Tree Engine =====
+    const state = {
+      answers: {
+        users: null,
+        bandwidth: null,
+        vpnRequired: null,
+        vpnUsers: 0,
+        s2sRequired: null,
+        ipsecTunnels: 0,
+        feat_url: null,
+        feat_ssl: null,
+        feat_ids: null,
+        feat_managed: null,
+        budgetMonthly: null
+      },
+      history: [], // stack of node ids for Back
+      current: null
+    };
+
+    const steps = [
+      { id: 'intro', label: 'Intro' },
+      { id: 'users', label: 'Users' },
+      { id: 'bandwidth', label: 'Bandwidth' },
+      { id: 'vpn', label: 'Remote VPN' },
+      { id: 's2s', label: 'Site-to-Site' },
+      { id: 'features', label: 'Features' },
+      { id: 'managed', label: 'Managed' },
+      { id: 'budget', label: 'Budget' },
+      { id: 'summary', label: 'Summary' }
+    ];
+
+    function renderProgress() {
+      const prog = document.getElementById('progress');
+      prog.innerHTML = '';
+      steps.forEach((s, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'step-dot' + (state.current === s.id ? ' active' : (state.history.includes(s.id) ? ' done' : ''));
+        dot.textContent = (i+1);
+        prog.appendChild(dot);
+        if (i < steps.length - 1) {
+          const line = document.createElement('div');
+          const active = state.history.includes(s.id) && (state.history.includes(steps[i+1].id) || state.current === steps[i+1].id);
+          line.className = 'step-line' + (active ? ' active' : '');
+          prog.appendChild(line);
+        }
+      });
     }
 
-    function runCalc() {
-      const x = gatherInputs();
-      // Amortization parts
-      const mHw = amortize(x.hwCost, x.apr, x.termYears);
-      const mSetup = amortize(x.setupCost, x.apr, x.termYears);
-      const total = mHw + mSetup + x.supportMonthly;
-      document.getElementById('sum_hw').textContent = currency(mHw);
-      document.getElementById('sum_setup').textContent = currency(mSetup);
-      document.getElementById('sum_support').textContent = currency(x.supportMonthly);
-      document.getElementById('sum_total').textContent = currency(total);
+    function html(strings, ...vals) { return strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), ''); }
 
-      // Matching
-      const ranked = rankMatches(x);
-      renderRecs(ranked);
+    const nodeRenderers = {
+      intro() {
+        return html`
+          <h5>Let\'s size your firewall</h5>
+          <p class="dim">We\'ll ask a handful of questions about your users, bandwidth and security features. You can skip things you don\'t know yet.</p>
+        `;
+      },
+      users() {
+        const v = state.answers.users ?? '';
+        return html`
+          <label class="form-label">How many users will rely on this firewall?</label>
+          <input id="inp_users" type="number" min="1" class="form-control" placeholder="e.g. 150" value="${v}">
+          <div class="dim mt-1">Include on‑site staff and typical concurrent remote users.</div>
+        `;
+      },
+      bandwidth() {
+        const v = state.answers.bandwidth ?? '';
+        return html`
+          <label class="form-label">What\'s your total Internet bandwidth (Mbps)?</label>
+          <input id="inp_bw" type="number" min="10" step="10" class="form-control" placeholder="e.g. 500" value="${v}">
+          <div class="dim mt-1">If unsure, use your access link rate (e.g., 500 Mbps).</div>
+        `;
+      },
+      vpn() {
+        const req = state.answers.vpnRequired;
+        const v = state.answers.vpnUsers ?? 0;
+        return html`
+          <label class="form-label">Do you need remote access VPN?</label>
+          <div class="d-flex gap-2 mb-2">
+            <button data-choose="yes" class="btn ${req===true?'btn-primary':'btn-outline-primary'}">Yes</button>
+            <button data-choose="no" class="btn ${req===false?'btn-primary':'btn-outline-primary'}">No</button>
+          </div>
+          ${req ? html`<label class="form-label">Peak concurrent VPN users</label>
+          <input id="inp_vpn" type="number" min="0" class="form-control" placeholder="e.g. 50" value="${v}">` : ''}
+        `;
+      },
+      s2s() {
+        const req = state.answers.s2sRequired;
+        const v = state.answers.ipsecTunnels ?? 0;
+        return html`
+          <label class="form-label">Do you need IPSec site‑to‑site tunnels?</label>
+          <div class="d-flex gap-2 mb-2">
+            <button data-choose="yes" class="btn ${req===true?'btn-primary':'btn-outline-primary'}">Yes</button>
+            <button data-choose="no" class="btn ${req===false?'btn-primary':'btn-outline-primary'}">No</button>
+          </div>
+          ${req ? html`<label class="form-label">How many tunnels?</label>
+          <input id="inp_tunnels" type="number" min="0" class="form-control" placeholder="e.g. 6" value="${v}">` : ''}
+        `;
+      },
+      features() {
+        const a = state.answers;
+        return html`
+          <label class="form-label">Which security features are required?</label>
+          <div class="form-check">
+            <input id="feat_url" class="form-check-input" type="checkbox" ${a.feat_url? 'checked':''}>
+            <label class="form-check-label" for="feat_url">URL Filtering</label>
+          </div>
+          <div class="form-check">
+            <input id="feat_ssl" class="form-check-input" type="checkbox" ${a.feat_ssl? 'checked':''}>
+            <label class="form-check-label" for="feat_ssl">SSL/TLS Inspection</label>
+          </div>
+          <div class="form-check">
+            <input id="feat_ids" class="form-check-input" type="checkbox" ${a.feat_ids? 'checked':''}>
+            <label class="form-check-label" for="feat_ids">IDS/IPS</label>
+          </div>
+        `;
+      },
+      managed() {
+        const a = state.answers;
+        return html`
+          <label class="form-label">Do you want it fully managed (FWaaS)?</label>
+          <div class="d-flex gap-2 mb-2">
+            <button data-choose="yes" class="btn ${a.feat_managed===true?'btn-primary':'btn-outline-primary'}">Yes</button>
+            <button data-choose="no" class="btn ${a.feat_managed===false?'btn-primary':'btn-outline-primary'}">No</button>
+          </div>
+          <div class="dim">Managed includes monitoring, updates, and policy changes.</div>
+        `;
+      },
+      budget() {
+        const v = state.answers.budgetMonthly ?? '';
+        return html`
+          <label class="form-label">Target monthly budget (A$)</label>
+          <input id="inp_budget" type="number" min="0" class="form-control" placeholder="Optional" value="${v}">
+          <div class="dim mt-1">We\'ll favor options within or near this budget.</div>
+        `;
+      },
+      summary() {
+        const a = state.answers;
+        return html`
+          <h5>Summary</h5>
+          <ul class="mb-3">
+            <li><strong>Users:</strong> ${a.users ?? '—'}</li>
+            <li><strong>Bandwidth:</strong> ${a.bandwidth ?? '—'} Mbps</li>
+            <li><strong>Remote VPN:</strong> ${a.vpnRequired? 'Yes, '+(a.vpnUsers||0)+' users':'No/Unknown'}</li>
+            <li><strong>Site‑to‑site:</strong> ${a.s2sRequired? (a.ipsecTunnels||0)+' tunnels':'No/Unknown'}</li>
+            <li><strong>Features:</strong> ${(a.feat_url?'URL, ':'')+(a.feat_ssl?'SSL, ':'')+(a.feat_ids?'IDS/IPS, ':'')+(a.feat_managed?'Managed':'') || '—'}</li>
+            <li><strong>Budget:</strong> ${a.budgetMonthly? currency(a.budgetMonthly):'—'}</li>
+          </ul>
+          <div class="dim">Refine any step using the Back button, or Start over to reset the journey.</div>
+        `;
+      }
+    };
+
+    // Node flow control
+    function nextNode(currentId) {
+      const a = state.answers;
+      switch(currentId) {
+        case null: return 'intro';
+        case 'intro': return 'users';
+        case 'users': return 'bandwidth';
+        case 'bandwidth': return 'vpn';
+        case 'vpn': return (a.vpnRequired ? 's2s' : 's2s');
+        case 's2s': return 'features';
+        case 'features': return 'managed';
+        case 'managed': return 'budget';
+        case 'budget': return 'summary';
+        case 'summary': return 'summary';
+        default: return 'summary';
+      }
     }
 
-    // ===== Events =====
-    document.getElementById('calcBtn').addEventListener('click', runCalc);
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      localStorage.removeItem('fwaas_catalog');
-      catalog = JSON.parse(JSON.stringify(defaultCatalog));
-      renderCatalog();
-      runCalc();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    function prevNode() {
+      // Pop current, return previous
+      state.history.pop();
+      return state.history[state.history.length - 1] || 'intro';
+    }
+
+    function go(id, push=true) {
+      if (push && state.current) state.history.push(state.current);
+      state.current = id;
+      renderProgress();
+      const container = document.getElementById('stepContainer');
+      container.innerHTML = nodeRenderers[id]();
+
+      // Toggle buttons
+      document.getElementById('backBtn').disabled = (id === 'intro');
+      document.getElementById('skipBtn').classList.toggle('d-none', id === 'summary');
+      document.getElementById('nextBtn').textContent = (id === 'summary') ? 'Finish' : 'Next';
+
+      // Attach per-node interactions
+      attachNodeHandlers(id);
+      // Update recs live
+      renderRecs(state.answers);
+    }
+
+    function attachNodeHandlers(id) {
+      const c = document.getElementById('stepContainer');
+      if (id === 'users') {
+        const el = c.querySelector('#inp_users');
+        el?.addEventListener('input', () => { state.answers.users = Number(el.value||0); renderRecs(state.answers); });
+      }
+      if (id === 'bandwidth') {
+        const el = c.querySelector('#inp_bw');
+        el?.addEventListener('input', () => { state.answers.bandwidth = Number(el.value||0); renderRecs(state.answers); });
+      }
+      if (id === 'vpn') {
+        c.querySelectorAll('button[data-choose]').forEach(b => b.addEventListener('click', () => {
+          const yes = b.getAttribute('data-choose') === 'yes';
+          state.answers.vpnRequired = yes; go('vpn', false); // re-render to show/hide input
+        }));
+        const el = c.querySelector('#inp_vpn');
+        el?.addEventListener('input', () => { state.answers.vpnUsers = Number(el.value||0); renderRecs(state.answers); });
+      }
+      if (id === 's2s') {
+        c.querySelectorAll('button[data-choose]').forEach(b => b.addEventListener('click', () => {
+          const yes = b.getAttribute('data-choose') === 'yes';
+          state.answers.s2sRequired = yes; go('s2s', false);
+        }));
+        const el = c.querySelector('#inp_tunnels');
+        el?.addEventListener('input', () => { state.answers.ipsecTunnels = Number(el.value||0); renderRecs(state.answers); });
+      }
+      if (id === 'features') {
+        const u = c.querySelector('#feat_url');
+        const s = c.querySelector('#feat_ssl');
+        const i = c.querySelector('#feat_ids');
+        u?.addEventListener('change', () => { state.answers.feat_url = !!u.checked; renderRecs(state.answers); });
+        s?.addEventListener('change', () => { state.answers.feat_ssl = !!s.checked; renderRecs(state.answers); });
+        i?.addEventListener('change', () => { state.answers.feat_ids = !!i.checked; renderRecs(state.answers); });
+      }
+      if (id === 'managed') {
+        c.querySelectorAll('button[data-choose]').forEach(b => b.addEventListener('click', () => {
+          const yes = b.getAttribute('data-choose') === 'yes';
+          state.answers.feat_managed = yes; go('managed', false);
+          renderRecs(state.answers);
+        }));
+      }
+      if (id === 'budget') {
+        const el = c.querySelector('#inp_budget');
+        el?.addEventListener('input', () => { state.answers.budgetMonthly = Number(el.value||0) || null; renderRecs(state.answers); });
+      }
+    }
+
+    // Navigation buttons
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      const nxt = nextNode(state.current);
+      if (state.current !== 'summary') go(nxt);
+    });
+    document.getElementById('backBtn').addEventListener('click', () => {
+      const prev = prevNode();
+      go(prev, false);
+    });
+    document.getElementById('skipBtn').addEventListener('click', () => {
+      const nxt = nextNode(state.current);
+      go(nxt);
     });
 
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.answers = { users:null, bandwidth:null, vpnRequired:null, vpnUsers:0, s2sRequired:null, ipsecTunnels:0, feat_url:null, feat_ssl:null, feat_ids:null, feat_managed:null, budgetMonthly:null };
+      state.history = []; state.current = null;
+      go(nextNode(null), false);
+    });
+
+    // Catalog editing
+    function renderCatalogBox() {
+      const json = document.getElementById('catalogJson');
+      json.value = JSON.stringify(catalog, null, 2);
+      const dl = document.getElementById('downloadCatalog');
+      const blob = new Blob([json.value], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      dl.href = url;
+    }
     document.getElementById('applyCatalog').addEventListener('click', () => {
       try {
         const parsed = JSON.parse(document.getElementById('catalogJson').value);
-        if (!Array.isArray(parsed)) throw new Error('Catalog JSON must be an array of firewall objects');
+        if (!Array.isArray(parsed)) throw new Error('Catalog JSON must be an array');
         catalog = parsed;
-        saveCatalog();
-        renderCatalog();
-        runCalc();
-      } catch (e) {
-        alert('Invalid JSON: ' + e.message);
-      }
+        localStorage.setItem('fwaas_catalog', JSON.stringify(catalog));
+        renderCatalogBox();
+        renderRecs(state.answers);
+      } catch (e) { alert('Invalid JSON: ' + e.message); }
     });
 
-    // Initial render
-    renderCatalog();
-    runCalc();
+    // Init
+    renderCatalogBox();
+    go(nextNode(null), false);
   </script>
 </body>
 </html>
