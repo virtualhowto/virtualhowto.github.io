@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FW Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a; /* slate-900 */
+      --card: #111827; /* gray-900 */
+      --muted: #9ca3af; /* gray-400 */
+      --accent: #22d3ee; /* cyan-400 */
+      --good: #22c55e;  /* green-500 */
+      --warn: #f59e0b;  /* amber-500 */
+      --bad: #ef4444;   /* red-500 */
+    }
+    body { background: linear-gradient(180deg, #0b1024, #0f172a); color: #e5e7eb; }
+    .container-narrow { max-width: 1100px; }
+    .card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; }
+    .card h5, .card h6 { color: #f8fafc; }
+    .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--muted); }
+    .btn-accent { background: var(--accent); border: none; color: #0b1024; font-weight: 700; }
+    .btn-accent:hover { filter: brightness(0.95); }
+    .form-check-label { user-select: none; }
+    .dim { color: var(--muted); font-size: 0.9rem; }
+    .metric { font-weight: 700; }
+    .score-good { color: var(--good); }
+    .score-mid { color: var(--warn); }
+    .score-bad { color: var(--bad); }
+    .badge-tier { border-radius: 10px; padding: 4px 10px; }
+    .badge-best { background: rgba(34,197,94,0.15); color: #34d399; border: 1px solid rgba(34,197,94,0.35); }
+    .badge-better { background: rgba(34,211,238,0.15); color: #22d3ee; border: 1px solid rgba(34,211,238,0.35); }
+    .badge-good { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); }
+    .table-dark td, .table-dark th { background: transparent !important; }
+    .small-muted { font-size: 0.85rem; color: var(--muted); }
+    .link-like { color: var(--accent); text-decoration: none; cursor: pointer; }
+    .sticky-top-ish { position: sticky; top: 1rem; z-index: 10; }
+    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    details[open] summary::after { content: "▲"; margin-left: 8px; font-size: 0.8rem; }
+    details summary::after { content: "▼"; margin-left: 8px; font-size: 0.8rem; }
+    summary { cursor: pointer; }
+    code { color: #a7f3d0; }
+  </style>
+</head>
+<body>
+  <div class="container container-narrow py-4">
+    <div class="d-flex align-items-start gap-3 flex-wrap mb-3">
+      <div>
+        <h1 class="h3 mb-1">Firewall‑as‑a‑Service (FWaaS) Calculator</h1>
+        <div class="small-muted">Enter your requirements; we’ll amortize costs and recommend the best‑fit firewalls.</div>
+      </div>
+      <div class="ms-auto sticky-top-ish">
+        <button id="resetBtn" class="btn btn-outline-light btn-sm">Reset</button>
+      </div>
+    </div>
+
+    <!-- Inputs -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-6">
+        <div class="card shadow-soft p-3 h-100">
+          <h5 class="mb-3">Requirements</h5>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Total users</label>
+              <input id="users" type="number" min="1" class="form-control" placeholder="e.g. 250" value="150" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">Total Internet bandwidth (Mbps)</label>
+              <input id="bandwidth" type="number" min="10" step="10" class="form-control" placeholder="e.g. 500" value="500" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">Remote access VPN users (peak)</label>
+              <input id="vpnUsers" type="number" min="0" class="form-control" placeholder="e.g. 50" value="50" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">IPSec site‑to‑site tunnels</label>
+              <input id="ipsecTunnels" type="number" min="0" class="form-control" placeholder="e.g. 8" value="6" />
+            </div>
+          </div>
+          <hr class="my-3" />
+          <div class="row g-3">
+            <div class="col-6 form-check">
+              <input id="feat_url" class="form-check-input" type="checkbox" checked>
+              <label class="form-check-label" for="feat_url">URL filtering</label>
+            </div>
+            <div class="col-6 form-check">
+              <input id="feat_ssl" class="form-check-input" type="checkbox" checked>
+              <label class="form-check-label" for="feat_ssl">SSL inspection</label>
+            </div>
+            <div class="col-6 form-check">
+              <input id="feat_ids" class="form-check-input" type="checkbox" checked>
+              <label class="form-check-label" for="feat_ids">IDS/IPS</label>
+            </div>
+            <div class="col-6 form-check">
+              <input id="feat_managed" class="form-check-input" type="checkbox" checked>
+              <label class="form-check-label" for="feat_managed">Managed (FWaaS)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card shadow-soft p-3 h-100">
+          <h5 class="mb-3">Quote & Amortization</h5>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Hardware / License cost (AUD)</label>
+              <input id="hwCost" type="number" min="0" class="form-control" placeholder="e.g. 12000" value="12000" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">Setup / Install cost (AUD)</label>
+              <input id="setupCost" type="number" min="0" class="form-control" placeholder="e.g. 2500" value="2500" />
+            </div>
+            <div class="col-4">
+              <label class="form-label">Annual interest %</label>
+              <input id="apr" type="number" min="0" step="0.1" class="form-control" placeholder="e.g. 6" value="5" />
+            </div>
+            <div class="col-4">
+              <label class="form-label">Term (years)</label>
+              <input id="termYears" type="number" min="1" class="form-control" placeholder="e.g. 3" value="3" />
+            </div>
+            <div class="col-4">
+              <label class="form-label">Ongoing support (monthly)</label>
+              <input id="supportMonthly" type="number" min="0" class="form-control" placeholder="e.g. 450" value="450" />
+            </div>
+          </div>
+          <div class="mt-3 small-muted">Amortization uses standard loan formula. If APR = 0, we split costs equally.</div>
+          <div class="mt-3"><button id="calcBtn" class="btn btn-accent w-100">Calculate & Match</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results / Summary -->
+    <div class="row g-3 mb-4">
+      <div class="col-lg-5">
+        <div class="card shadow-soft p-3 h-100">
+          <h5 class="mb-2">Monthly Cost Summary</h5>
+          <div class="d-flex flex-column gap-2" id="summary">
+            <div><span class="dim">Amortized hardware</span> <span class="float-end metric" id="sum_hw">—</span></div>
+            <div><span class="dim">Amortized setup</span> <span class="float-end metric" id="sum_setup">—</span></div>
+            <div><span class="dim">Ongoing support</span> <span class="float-end metric" id="sum_support">—</span></div>
+            <hr/>
+            <div><span class="dim">Estimated FWaaS monthly</span> <span class="float-end metric" id="sum_total">—</span></div>
+          </div>
+          <details class="mt-3">
+            <summary>Show formula</summary>
+            <div class="small-muted mt-2">
+              MonthlyPayment = <code>P * r / (1 - (1 + r)^(-n))</code>, where
+              <ul>
+                <li><code>P</code> is principal (hardware or setup)</li>
+                <li><code>r</code> is monthly interest (APR/12)</li>
+                <li><code>n</code> is term in months</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="card shadow-soft p-3 h-100">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="mb-0">Recommendations</h5>
+            <span class="pill">Auto‑matched to your requirements</span>
+          </div>
+          <div id="recs" class="vstack gap-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Catalog -->
+    <div class="card shadow-soft p-3 mb-4">
+      <div class="d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Firewall Catalog</h5>
+        <span class="small-muted">You can edit and re‑run matching</span>
+      </div>
+      <div class="table-responsive mt-3">
+        <table class="table table-dark table-striped align-middle" id="catalogTable">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>Model</th>
+              <th>Max Users</th>
+              <th>Throughput (Gbps)</th>
+              <th>SSL/TLS (Gbps)</th>
+              <th>VPN Users</th>
+              <th>IPSec Tunnels</th>
+              <th>Features</th>
+              <th>Base Monthly (AUD)</th>
+              <th>Setup (AUD)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="catalogBody"></tbody>
+        </table>
+      </div>
+      <details class="mt-2">
+        <summary>Add / Replace catalog (JSON)</summary>
+        <div class="row g-2 mt-2">
+          <div class="col-12">
+            <textarea id="catalogJson" rows="10" class="form-control" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"></textarea>
+          </div>
+          <div class="col-12 d-flex gap-2">
+            <button id="applyCatalog" class="btn btn-outline-light">Apply JSON</button>
+            <a id="downloadCatalog" class="btn btn-outline-light" download="firewall_catalog.json">Download JSON</a>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="small-muted">Note: Specs and prices below are example placeholders for modeling only — replace with your catalog values.</div>
+  </div>
+
+  <script>
+    // ===== Amortization =====
+    function amortize(principal, annualRate, years) {
+      const monthlyRate = (annualRate / 100) / 12;
+      const n = years * 12;
+      if (!principal || principal <= 0 || !n) return 0;
+      if (monthlyRate === 0) return principal / n;
+      return principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -n));
+    }
+
+    // ===== Catalog (sample data; replace with your truth source) =====
+    const defaultCatalog = [
+      {
+        vendor: 'Fortinet', model: 'FortiGate 100F',
+        maxUsers: 600, throughputGbps: 10, sslGbps: 1.2, vpnUsers: 200, ipsecTunnels: 200,
+        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
+        baseMonthly: 850, setup: 1800
+      },
+      {
+        vendor: 'Palo Alto', model: 'PA-3220',
+        maxUsers: 1000, throughputGbps: 15.2, sslGbps: 2.0, vpnUsers: 400, ipsecTunnels: 400,
+        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
+        baseMonthly: 1400, setup: 2400
+      },
+      {
+        vendor: 'Sophos', model: 'XGS 3300',
+        maxUsers: 500, throughputGbps: 34.9, sslGbps: 1.1, vpnUsers: 300, ipsecTunnels: 200,
+        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
+        baseMonthly: 780, setup: 1600
+      },
+      {
+        vendor: 'Cisco', model: 'Secure Firewall 1120',
+        maxUsers: 250, throughputputGbps: 2.5, throughputGbps: 2.5, sslGbps: 0.7, vpnUsers: 100, ipsecTunnels: 50,
+        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
+        baseMonthly: 520, setup: 1400
+      },
+      {
+        vendor: 'WatchGuard', model: 'Firebox M390',
+        maxUsers: 700, throughputGbps: 18, sslGbps: 1.3, vpnUsers: 300, ipsecTunnels: 250,
+        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
+        baseMonthly: 930, setup: 2000
+      },
+      {
+        vendor: 'Fortinet', model: 'FortiGate 60F',
+        maxUsers: 100, throughputGbps: 10, sslGbps: 0.75, vpnUsers: 50, ipsecTunnels: 20,
+        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
+        baseMonthly: 220, setup: 900
+      }
+    ];
+
+    let catalog = JSON.parse(localStorage.getItem('fwaas_catalog') || 'null') || defaultCatalog;
+
+    function saveCatalog() {
+      localStorage.setItem('fwaas_catalog', JSON.stringify(catalog, null, 2));
+    }
+
+    function currency(n) { return n ? `A$${n.toFixed(2)}` : 'A$0.00'; }
+
+    function renderCatalog() {
+      const body = document.getElementById('catalogBody');
+      body.innerHTML = '';
+      catalog.forEach((c, i) => {
+        const tr = document.createElement('tr');
+        const feats = [];
+        if (c.features?.urlFiltering) feats.push('URL');
+        if (c.features?.sslInspection) feats.push('SSL');
+        if (c.features?.idsIps) feats.push('IDS/IPS');
+        if (c.features?.managedAvailable) feats.push('Managed');
+        tr.innerHTML = `
+          <td>${c.vendor}</td>
+          <td>${c.model}</td>
+          <td>${c.maxUsers}</td>
+          <td>${c.throughputGbps}</td>
+          <td>${c.sslGbps}</td>
+          <td>${c.vpnUsers}</td>
+          <td>${c.ipsecTunnels}</td>
+          <td>${feats.join(', ')}</td>
+          <td>${currency(c.baseMonthly)}</td>
+          <td>${currency(c.setup)}</td>
+          <td><a class="link-like" data-idx="${i}" onclick="prefillFromCatalog(${i})">Use quote</a></td>
+        `;
+        body.appendChild(tr);
+      });
+
+      // JSON panel setup
+      const json = document.getElementById('catalogJson');
+      json.value = JSON.stringify(catalog, null, 2);
+      const dl = document.getElementById('downloadCatalog');
+      const blob = new Blob([json.value], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      dl.href = url;
+    }
+
+    function prefillFromCatalog(i) {
+      const item = catalog[i];
+      if (!item) return;
+      // Prefill costs
+      document.getElementById('hwCost').value = Math.round((item.baseMonthly * 24)); // example: assume 24mo worth of license/hw bundled
+      document.getElementById('setupCost').value = item.setup || 0;
+      document.getElementById('supportMonthly').value = Math.round(item.baseMonthly * 0.6 + 200); // illustrative managed uplift
+      // Re-run calc
+      runCalc();
+      // Scroll to summary
+      document.getElementById('sum_total').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ===== Matching Logic =====
+    function computeRequiredThroughputMbps(inputs) {
+      const { bandwidth, feat_ssl, feat_url, feat_ids } = inputs;
+      let factor = 1.0;
+      if (feat_ssl) factor *= 1.5;    // SSL/TLS inspection tax
+      if (feat_url) factor *= 1.15;   // URL filtering tax
+      if (feat_ids) factor *= 1.35;   // IDS/IPS tax
+      return bandwidth * factor;
+    }
+
+    function meetsMinimums(c, inputs) {
+      const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000; // Mbps -> Gbps
+      const sslReqGbps = inputs.feat_ssl ? Math.min(reqTpGbps, c.sslGbps) : reqTpGbps;
+      const tpOk = c.throughputGbps >= reqTpGbps * 1.10; // require 10% headroom
+      const sslOk = inputs.feat_ssl ? c.sslGbps >= (reqTpGbps * 0.8) : true; // looser for SSL spec
+      const usersOk = c.maxUsers >= inputs.users * 1.1; // 10% headroom
+      const vpnOk = c.vpnUsers >= inputs.vpnUsers;
+      const tunnelsOk = c.ipsecTunnels >= inputs.ipsecTunnels;
+      const urlOk = !inputs.feat_url || c.features?.urlFiltering;
+      const idsOk = !inputs.feat_ids || c.features?.idsIps;
+      const sslFeatOk = !inputs.feat_ssl || c.features?.sslInspection;
+      const managedOk = !inputs.feat_managed || c.features?.managedAvailable;
+      return tpOk && sslOk && usersOk && vpnOk && tunnelsOk && urlOk && idsOk && sslFeatOk && managedOk;
+    }
+
+    function scoreCandidate(c, inputs) {
+      const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000;
+      const tpHeadroom = Math.max(0, (c.throughputGbps - reqTpGbps) / reqTpGbps); // >=0
+      const userHeadroom = Math.max(0, (c.maxUsers - inputs.users) / Math.max(1, inputs.users));
+      const vpnHeadroom = Math.max(0, (c.vpnUsers - inputs.vpnUsers) / Math.max(1, inputs.vpnUsers));
+      const tunnelHeadroom = Math.max(0, (c.ipsecTunnels - inputs.ipsecTunnels) / Math.max(1, inputs.ipsecTunnels));
+
+      const price = (c.baseMonthly || 0) + (c.setup || 0) / 24; // normalize setup across 24 months
+
+      // Feature coverage bonus
+      let featScore = 0;
+      if (inputs.feat_url && c.features?.urlFiltering) featScore += 0.5;
+      if (inputs.feat_ssl && c.features?.sslInspection) featScore += 0.6;
+      if (inputs.feat_ids && c.features?.idsIps) featScore += 0.6;
+      if (inputs.feat_managed && c.features?.managedAvailable) featScore += 0.4;
+
+      // Weighted scoring (tune as needed)
+      const score = (
+        tpHeadroom * 3.0 +
+        userHeadroom * 1.6 +
+        vpnHeadroom * 0.8 +
+        tunnelHeadroom * 0.6 +
+        featScore * 1.2
+      ) - (price / 3000); // price penalty scaling
+
+      return score;
+    }
+
+    function rankMatches(inputs) {
+      const candidates = catalog.filter(c => meetsMinimums(c, inputs));
+      const ranked = candidates
+        .map(c => ({ c, score: scoreCandidate(c, inputs) }))
+        .sort((a, b) => b.score - a.score);
+      return ranked.slice(0, 5); // top 5
+    }
+
+    function tierLabel(idx) {
+      if (idx === 0) return '<span class="badge-tier badge-best">Best fit</span>';
+      if (idx <= 2) return '<span class="badge-tier badge-better">Better option</span>';
+      return '<span class="badge-tier badge-good">Good alternative</span>';
+    }
+
+    function renderRecs(ranked) {
+      const recs = document.getElementById('recs');
+      recs.innerHTML = '';
+      if (!ranked.length) {
+        recs.innerHTML = '<div class="small-muted">No exact matches. Try relaxing one or more requirements, or expand the catalog.</div>';
+        return;
+      }
+      ranked.forEach((r, idx) => {
+        const { c, score } = r;
+        const div = document.createElement('div');
+        const scoreClass = score > 2 ? 'score-good' : score > 1 ? 'score-mid' : 'score-bad';
+        const feats = [];
+        if (c.features?.urlFiltering) feats.push('URL');
+        if (c.features?.sslInspection) feats.push('SSL');
+        if (c.features?.idsIps) feats.push('IDS/IPS');
+        if (c.features?.managedAvailable) feats.push('Managed');
+        div.className = 'p-3 rounded border';
+        div.innerHTML = `
+          <div class="d-flex align-items-start gap-2">
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center gap-2">
+                <h6 class="mb-0">${c.vendor} ${c.model}</h6>
+                ${tierLabel(idx)}
+              </div>
+              <div class="small-muted">Score: <span class="${scoreClass}">${score.toFixed(2)}</span> · Features: ${feats.join(', ') || '—'}</div>
+              <div class="mt-2 row g-2">
+                <div class="col-6 col-md-3">Users ≤ <strong>${c.maxUsers}</strong></div>
+                <div class="col-6 col-md-3">TP <strong>${c.throughputGbps} Gbps</strong></div>
+                <div class="col-6 col-md-3">SSL <strong>${c.sslGbps} Gbps</strong></div>
+                <div class="col-6 col-md-3">VPN Users <strong>${c.vpnUsers}</strong></div>
+                <div class="col-6 col-md-3">IPSec <strong>${c.ipsecTunnels}</strong></div>
+                <div class="col-6 col-md-3">Base Monthly <strong>${currency(c.baseMonthly)}</strong></div>
+                <div class="col-6 col-md-3">Setup <strong>${currency(c.setup)}</strong></div>
+              </div>
+            </div>
+            <div class="text-end">
+              <button class="btn btn-sm btn-outline-light" onclick='prefillFromCatalog(${catalog.indexOf(c)})'>Use this for quote</button>
+            </div>
+          </div>
+        `;
+        recs.appendChild(div);
+      });
+    }
+
+    // ===== Calculator Orchestration =====
+    function gatherInputs() {
+      return {
+        users: Number(document.getElementById('users').value || 0),
+        bandwidth: Number(document.getElementById('bandwidth').value || 0),
+        vpnUsers: Number(document.getElementById('vpnUsers').value || 0),
+        ipsecTunnels: Number(document.getElementById('ipsecTunnels').value || 0),
+        feat_url: document.getElementById('feat_url').checked,
+        feat_ssl: document.getElementById('feat_ssl').checked,
+        feat_ids: document.getElementById('feat_ids').checked,
+        feat_managed: document.getElementById('feat_managed').checked,
+        hwCost: Number(document.getElementById('hwCost').value || 0),
+        setupCost: Number(document.getElementById('setupCost').value || 0),
+        apr: Number(document.getElementById('apr').value || 0),
+        termYears: Number(document.getElementById('termYears').value || 0),
+        supportMonthly: Number(document.getElementById('supportMonthly').value || 0)
+      };
+    }
+
+    function runCalc() {
+      const x = gatherInputs();
+      // Amortization parts
+      const mHw = amortize(x.hwCost, x.apr, x.termYears);
+      const mSetup = amortize(x.setupCost, x.apr, x.termYears);
+      const total = mHw + mSetup + x.supportMonthly;
+      document.getElementById('sum_hw').textContent = currency(mHw);
+      document.getElementById('sum_setup').textContent = currency(mSetup);
+      document.getElementById('sum_support').textContent = currency(x.supportMonthly);
+      document.getElementById('sum_total').textContent = currency(total);
+
+      // Matching
+      const ranked = rankMatches(x);
+      renderRecs(ranked);
+    }
+
+    // ===== Events =====
+    document.getElementById('calcBtn').addEventListener('click', runCalc);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      localStorage.removeItem('fwaas_catalog');
+      catalog = JSON.parse(JSON.stringify(defaultCatalog));
+      renderCatalog();
+      runCalc();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('applyCatalog').addEventListener('click', () => {
+      try {
+        const parsed = JSON.parse(document.getElementById('catalogJson').value);
+        if (!Array.isArray(parsed)) throw new Error('Catalog JSON must be an array of firewall objects');
+        catalog = parsed;
+        saveCatalog();
+        renderCatalog();
+        runCalc();
+      } catch (e) {
+        alert('Invalid JSON: ' + e.message);
+      }
+    });
+
+    // Initial render
+    renderCatalog();
+    runCalc();
+  </script>
+</body>
+</html>
