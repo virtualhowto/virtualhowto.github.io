@@ -1,534 +1,323 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FW Calculator</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Hypervisor & Cloud Platform Comparison</title>
   <style>
-    /* Atturra-inspired light theme with high contrast */
-    :root {
-      --bg: #f5f7fb;          /* soft page background */
-      --card: #ffffff;         /* card background */
-      --ink: #1f2937;          /* primary text */
-      --muted: #6b7280;        /* secondary text */
-      --border: #e5e7eb;       /* subtle borders */
-      --primary: #00a3ad;      /* Atturra teal */
-      --primary-600: #008c95;  /* darker hover */
-      --accent: #0b3c5d;       /* navy accent */
-      --good: #16a34a;         /* green */
-      --warn: #d97706;         /* amber */
-      --bad: #dc2626;          /* red */
-      --pill: #eef2f7;         /* light pill */
-      --table-stripe: #fafbfe; /* zebra stripe */
+    :root{
+      --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+      --ok:#10b981; --warn:#f59e0b; --bad:#ef4444; --chip:#1f2937; --header:#0e1526;
+      --border:#1f2937; --hover:#0d1423; --banner:#0b162b;
     }
-
-    html, body { height: 100%; }
-    body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    }
-    .container-narrow { max-width: 1100px; }
-
-    /* Cards */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 6px 18px rgba(11, 60, 93, 0.06);
-      color: var(--ink);
-    }
-    .card h5, .card h6 { color: #0f172a; }
-
-    /* Buttons */
-    .btn-accent {
-      background: var(--primary);
-      border: 1px solid var(--primary);
-      color: #ffffff;
-      font-weight: 700;
-    }
-    .btn-accent:hover { background: var(--primary-600); border-color: var(--primary-600); }
-    .btn-outline-light { border-color: var(--accent); color: var(--accent); }
-    .btn-outline-light:hover { background: var(--accent); color: #fff; }
-
-    /* Form elements */
-    label.form-label { font-weight: 600; color: #111827; }
-    .form-control { color: var(--ink); background: #fff; border-color: var(--border); }
-    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 .2rem rgba(0,163,173,.15); }
-    .form-check-input:checked { background-color: var(--primary); border-color: var(--primary); }
-
-    /* Helpers */
-    .pill { font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--pill); color: var(--muted); border: 1px solid var(--border); }
-    .dim { color: var(--muted); font-size: 0.92rem; }
-    .metric { font-weight: 700; color: #0f172a; }
-    .score-good { color: var(--good); }
-    .score-mid { color: var(--warn); }
-    .score-bad { color: var(--bad); }
-    .badge-tier { border-radius: 12px; padding: 4px 10px; font-weight: 600; border: 1px solid var(--border); }
-    .badge-best { background: rgba(0,163,173,0.12); color: var(--primary); border-color: rgba(0,163,173,0.35); }
-    .badge-better { background: rgba(11,60,93,0.08); color: var(--accent); border-color: rgba(11,60,93,0.25); }
-    .badge-good { background: rgba(217,119,6,0.10); color: var(--warn); border-color: rgba(217,119,6,0.30); }
-    .link-like { color: var(--primary); text-decoration: none; cursor: pointer; }
-    .link-like:hover { text-decoration: underline; }
-    .sticky-top-ish { position: sticky; top: 1rem; z-index: 10; }
-    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-    details[open] summary::after { content: "▲"; margin-left: 8px; font-size: 0.8rem; color: var(--muted); }
-    details summary::after { content: "▼"; margin-left: 8px; font-size: 0.8rem; color: var(--muted); }
-    summary { cursor: pointer; }
-    code { color: var(--accent); }
-
-    /* Tables */
-    table.table { color: var(--ink); }
-    .table thead th { background: #f3f6fb; color: #0f172a; border-bottom: 1px solid var(--border); }
-    .table tbody tr:nth-child(odd) { background: var(--table-stripe); }
-    .table tbody tr:hover { background: #f0f7f9; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0b1020,#0a0f1a 60%,#070b14);color:var(--text)}
+    header{padding:24px 18px 8px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
+    h1{margin:0;font-size:clamp(22px,3.2vw,34px);letter-spacing:.3px}
+    .tag{font-size:12px;opacity:.85}
+    .banner{margin:10px 16px 0;background:var(--banner);border:1px solid #1d2a47;color:#cbd5e1;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.35}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin:12px 16px 0}
+    .field{display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+    .field input,.field select{all:unset;color:var(--text)}
+    .wrap{padding:12px 16px 30px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{position:sticky;top:0;background:var(--header);color:#cbd5e1;font-weight:700;text-align:left;padding:12px;border-bottom:1px solid #1f2737}
+    tbody tr{transition:background .15s}
+    tbody tr:hover{background:var(--hover)}
+    td{padding:12px;vertical-align:top;border-bottom:1px solid #172033}
+    .platform{display:flex;gap:12px;align-items:center}
+    .logo{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:#0e1930;border:1px solid #1f2c48}
+    .logo svg{width:18px;height:18px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{background:var(--chip);border:1px solid #23314a;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:12px}
+    .proscons{display:grid;gap:6px;margin:0;padding-left:18px}
+    .proscons li{margin:0}
+    .veeam{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+    .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+    .rate{display:inline-flex;gap:2px;align-items:center}
+    .star{font-size:14px;opacity:.6}
+    .star.fill{opacity:1}
+    .footer{padding:14px;color:var(--muted);text-align:center;font-size:12px}
+    .count{color:#93c5fd}
+    @media (max-width:1250px){.col-hide-lg{display:none}}
+    @media (max-width:1100px){.col-hide-md{display:none}}
+    @media (max-width:900px){.col-hide-sm{display:none}td,th{padding:10px}}
   </style>
 </head>
 <body>
-  <div class="container container-narrow py-4">
-    <div class="d-flex align-items-start gap-3 flex-wrap mb-3">
-      <div>
-        <h1 class="h3 mb-1" style="color:#0b3c5d">Firewall‑as‑a‑Service (FWaaS) Calculator</h1>
-        <div class="small-muted">Enter your requirements; we’ll amortize costs and recommend the best‑fit firewalls.</div>
-      </div>
-      <div class="ms-auto sticky-top-ish">
-        <button id="resetBtn" class="btn btn-outline-light btn-sm">Reset</button>
-      </div>
+  <header>
+    <div>
+      <h1>Hypervisor & Cloud Platform Comparison</h1>
+      <div class="tag">Pros/Cons • Effort to Transition & Implement • Estimated Time (incl. PM) • <strong>Mgmt/Upkeep (3–5y)</strong> • Veeam • <strong>Support Models</strong> • <strong>Vendor Satisfaction</strong></div>
     </div>
+  </header>
 
-    <!-- Inputs -->
-    <div class="row g-3 mb-3">
-      <div class="col-lg-6">
-        <div class="card shadow-soft p-3 h-100">
-          <h5 class="mb-3">Requirements</h5>
-          <div class="row g-3">
-            <div class="col-6">
-              <label class="form-label">Total users</label>
-              <input id="users" type="number" min="1" class="form-control" placeholder="e.g. 250" value="150" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">Total Internet bandwidth (Mbps)</label>
-              <input id="bandwidth" type="number" min="10" step="10" class="form-control" placeholder="e.g. 500" value="500" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">Remote access VPN users (peak)</label>
-              <input id="vpnUsers" type="number" min="0" class="form-control" placeholder="e.g. 50" value="50" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">IPSec site‑to‑site tunnels</label>
-              <input id="ipsecTunnels" type="number" min="0" class="form-control" placeholder="e.g. 8" value="6" />
-            </div>
-          </div>
-          <hr class="my-3" />
-          <div class="row g-3">
-            <div class="col-6 form-check">
-              <input id="feat_url" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_url">URL filtering</label>
-            </div>
-            <div class="col-6 form-check">
-              <input id="feat_ssl" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_ssl">SSL inspection</label>
-            </div>
-            <div class="col-6 form-check">
-              <input id="feat_ids" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_ids">IDS/IPS</label>
-            </div>
-            <div class="col-6 form-check">
-              <input id="feat_managed" class="form-check-input" type="checkbox" checked>
-              <label class="form-check-label" for="feat_managed">Managed (FWaaS)</label>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="banner">
+    <strong>Note:</strong> All estimates are based on a small implementation (2–3 nodes, or the platform minimum where required).
+    Cloud solution estimates are based on a <em>standard small tenant with simple networking</em>.
+  </div>
 
-      <div class="col-lg-6">
-        <div class="card shadow-soft p-3 h-100">
-          <h5 class="mb-3">Quote & Amortization</h5>
-          <div class="row g-3">
-            <div class="col-6">
-              <label class="form-label">Hardware / License cost (AUD)</label>
-              <input id="hwCost" type="number" min="0" class="form-control" placeholder="e.g. 12000" value="12000" />
-            </div>
-            <div class="col-6">
-              <label class="form-label">Setup / Install cost (AUD)</label>
-              <input id="setupCost" type="number" min="0" class="form-control" placeholder="e.g. 2500" value="2500" />
-            </div>
-            <div class="col-4">
-              <label class="form-label">Annual interest %</label>
-              <input id="apr" type="number" min="0" step="0.1" class="form-control" placeholder="e.g. 6" value="5" />
-            </div>
-            <div class="col-4">
-              <label class="form-label">Term (years)</label>
-              <input id="termYears" type="number" min="1" class="form-control" placeholder="e.g. 3" value="3" />
-            </div>
-            <div class="col-4">
-              <label class="form-label">Ongoing support (monthly)</label>
-              <input id="supportMonthly" type="number" min="0" class="form-control" placeholder="e.g. 450" value="450" />
-            </div>
-          </div>
-          <div class="mt-3 small-muted">Amortization uses standard loan formula. If APR = 0, we split costs equally.</div>
-          <div class="mt-3"><button id="calcBtn" class="btn btn-accent w-100">Calculate & Match</button></div>
-        </div>
-      </div>
+  <div class="controls">
+    <label class="field" title="Search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input id="q" placeholder="Search platform, pro, con…" />
+    </label>
+    <label class="field" title="Filter by transition effort">
+      <select id="effortTransitionFilter">
+        <option value="">Transition: Any</option>
+        <option>Low</option>
+        <option>Medium</option>
+        <option>High</option>
+      </select>
+    </label>
+    <label class="field" title="Filter by implementation effort">
+      <select id="effortImplementFilter">
+        <option value="">Implement: Any</option>
+        <option>Low</option>
+        <option>Medium</option>
+        <option>High</option>
+      </select>
+    </label>
+    <label class="field" title="Filter by Veeam support">
+      <select id="veeamFilter">
+        <option value="">Veeam: Any</option>
+        <option value="Yes">Yes</option>
+        <option value="Partial">Partial</option>
+        <option value="No">No</option>
+      </select>
+    </label>
+    <label class="field" title="Min satisfaction">
+      <select id="satisfactionMin">
+        <option value="">Satisfaction ≥ Any</option>
+        <option value="3">3★</option>
+        <option value="3.5">3.5★</option>
+        <option value="4">4★</option>
+        <option value="4.5">4.5★</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <table id="grid" aria-describedby="comparison table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Pros</th>
+            <th>Cons</th>
+            <th class="col-hide-sm">Effort to Transition</th>
+            <th class="col-hide-sm">Effort to Implement</th>
+            <th class="col-hide-md">Estimated Time (incl. PM)</th>
+            <th class="col-hide-md">Mgmt/Upkeep (3–5y)</th>
+            <th>Veeam Support</th>
+            <th class="col-hide-lg">Support Model</th>
+            <th>Vendor Satisfaction</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="footer"><span class="count" id="count"></span> shown • Satisfaction is indicative — adjust for your org.</div>
     </div>
-
-    <!-- Results / Summary -->
-    <div class="row g-3 mb-4">
-      <div class="col-lg-5">
-        <div class="card shadow-soft p-3 h-100">
-          <h5 class="mb-2">Monthly Cost Summary</h5>
-          <div class="d-flex flex-column gap-2" id="summary">
-            <div><span class="dim">Amortized hardware</span> <span class="float-end metric" id="sum_hw">—</span></div>
-            <div><span class="dim">Amortized setup</span> <span class="float-end metric" id="sum_setup">—</span></div>
-            <div><span class="dim">Ongoing support</span> <span class="float-end metric" id="sum_support">—</span></div>
-            <hr/>
-            <div><span class="dim">Estimated FWaaS monthly</span> <span class="float-end metric" id="sum_total">—</span></div>
-          </div>
-          <details class="mt-3">
-            <summary>Show formula</summary>
-            <div class="small-muted mt-2">
-              MonthlyPayment = <code>P * r / (1 - (1 + r)^(-n))</code>, where
-              <ul>
-                <li><code>P</code> is principal (hardware or setup)</li>
-                <li><code>r</code> is monthly interest (APR/12)</li>
-                <li><code>n</code> is term in months</li>
-              </ul>
-            </div>
-          </details>
-        </div>
-      </div>
-      <div class="col-lg-7">
-        <div class="card shadow-soft p-3 h-100">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <h5 class="mb-0">Recommendations</h5>
-            <span class="pill">Auto‑matched to your requirements</span>
-          </div>
-          <div id="recs" class="vstack gap-3"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Catalog -->
-    <div class="card shadow-soft p-3 mb-4">
-      <div class="d-flex align-items-center justify-content-between">
-        <h5 class="mb-0">Firewall Catalog</h5>
-        <span class="small-muted">You can edit and re‑run matching</span>
-      </div>
-      <div class="table-responsive mt-3">
-        <table class="table table-striped align-middle" id="catalogTable">
-          <thead>
-            <tr>
-              <th>Vendor</th>
-              <th>Model</th>
-              <th>Max Users</th>
-              <th>Throughput (Gbps)</th>
-              <th>SSL/TLS (Gbps)</th>
-              <th>VPN Users</th>
-              <th>IPSec Tunnels</th>
-              <th>Features</th>
-              <th>Base Monthly (AUD)</th>
-              <th>Setup (AUD)</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="catalogBody"></tbody>
-        </table>
-      </div>
-      <details class="mt-2">
-        <summary>Add / Replace catalog (JSON)</summary>
-        <div class="row g-2 mt-2">
-          <div class="col-12">
-            <textarea id="catalogJson" rows="10" class="form-control" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"></textarea>
-          </div>
-          <div class="col-12 d-flex gap-2">
-            <button id="applyCatalog" class="btn btn-outline-light">Apply JSON</button>
-            <a id="downloadCatalog" class="btn btn-outline-light" download="firewall_catalog.json">Download JSON</a>
-          </div>
-        </div>
-      </details>
-    </div>
-
-    <div class="small-muted">Note: Specs and prices below are example placeholders for modeling only — replace with your catalog values.</div>
   </div>
 
   <script>
-    // ===== Amortization =====
-    function amortize(principal, annualRate, years) {
-      const monthlyRate = (annualRate / 100) / 12;
-      const n = years * 12;
-      if (!principal || principal <= 0 || !n) return 0;
-      if (monthlyRate === 0) return principal / n;
-      return principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -n));
+  // --- Helpers ------------------------------------------------------------
+  function stars(score){
+    const max = 5; const s = [];
+    for(let i=1;i<=max;i++){
+      const filled = i<=Math.floor(score) ? 'fill' : (i-0.5<=score? 'fill' : '');
+      s.push(`<span class='star ${filled}'>★</span>`);
     }
+    return `<span class='rate' title='${score.toFixed(1)} / 5'>${s.join('')}</span>`;
+  }
 
-    // ===== Catalog (sample data; replace with your truth source) =====
-    const defaultCatalog = [
-      {
-        vendor: 'Fortinet', model: 'FortiGate 100F',
-        maxUsers: 600, throughputGbps: 10, sslGbps: 1.2, vpnUsers: 200, ipsecTunnels: 200,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 850, setup: 1800
-      },
-      {
-        vendor: 'Palo Alto', model: 'PA-3220',
-        maxUsers: 1000, throughputGbps: 15.2, sslGbps: 2.0, vpnUsers: 400, ipsecTunnels: 400,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 1400, setup: 2400
-      },
-      {
-        vendor: 'Sophos', model: 'XGS 3300',
-        maxUsers: 500, throughputGbps: 34.9, sslGbps: 1.1, vpnUsers: 300, ipsecTunnels: 200,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 780, setup: 1600
-      },
-      {
-        vendor: 'Cisco', model: 'Secure Firewall 1120',
-        maxUsers: 250, throughputGbps: 2.5, sslGbps: 0.7, vpnUsers: 100, ipsecTunnels: 50,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 520, setup: 1400
-      },
-      {
-        vendor: 'WatchGuard', model: 'Firebox M390',
-        maxUsers: 700, throughputGbps: 18, sslGbps: 1.3, vpnUsers: 300, ipsecTunnels: 250,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 930, setup: 2000
-      },
-      {
-        vendor: 'Fortinet', model: 'FortiGate 60F',
-        maxUsers: 100, throughputGbps: 10, sslGbps: 0.75, vpnUsers: 50, ipsecTunnels: 20,
-        features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
-        baseMonthly: 220, setup: 900
-      }
-    ];
+  function veeamPill(val){
+    let cls = 'ok', text = val;
+    if(val.startsWith('Partial')) cls='warn';
+    if(val.startsWith('No')) cls='bad';
+    const symbol = cls==='ok'?'✔':(cls==='warn'?'◐':'✖');
+    return `<span class='veeam ${cls}'>${symbol} ${text}</span>`
+  }
 
-    let catalog = JSON.parse(localStorage.getItem('fwaas_catalog') || 'null') || defaultCatalog;
+  // --- Data ---------------------------------------------------------------
+  const DATA = [
+    { platform: 'VMware vSphere/ESXi', logo: 'vmw',
+      pros: ['Market leader with mature ecosystem','Advanced features (vMotion, DRS, HA, vSAN)','Broad hardware & OS compatibility','Extensive third-party integration','Strong enterprise support & documentation'],
+      cons: ['High licensing & support costs','Complex licensing model','Requires vCenter & ecosystem buy-in','May be overkill for small deployments','Vendor lock-in risk'],
+      effortTransition: 'High', effortImplement: 'Medium', timeEstimate: '20-30 days',
+      mgmtUpkeep: 'Medium — ~8–12 hrs/month; vCenter/ESXi patching; mature logging/monitoring (Aria/vROps optional).',
+      veeam: 'Yes - Full VM backup & replication support',
+      supportModel: 'Broadcom/VMware Enterprise Support (24x7, TAM optional)', satisfaction: 4.3 },
 
-    function saveCatalog() {
-      localStorage.setItem('fwaas_catalog', JSON.stringify(catalog, null, 2));
-    }
+    { platform: 'Microsoft Hyper-V', logo: 'ms',
+      pros: ['Included with Windows Server licensing','Deep Microsoft ecosystem integration','Live migration & replica features','Cost-effective for Windows-first shops','Suitable from SMB to enterprise'],
+      cons: ['Fewer advanced features vs VMware','Less hardware vendor support breadth','UI historically less polished','Smaller ecosystem','Feature updates can lag'],
+      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '10-15 days',
+      mgmtUpkeep: 'Medium — ~6–10 hrs/month; Cluster-Aware Updating; Windows/Azure Monitor for logging.',
+      veeam: 'Yes - Full VM backup & replication support',
+      supportModel: 'Microsoft Unified/Premier Support, Partner support', satisfaction: 4.2 },
 
-    function currency(n) { return n ? `A$${n.toFixed(2)}` : 'A$0.00'; }
+    { platform: 'OpenShift Virtualization (KVM-based)', logo: 'ocp',
+      pros: ['Built into OpenShift/Kubernetes','KVM-based hypervisor under the hood','Ideal for container + VM workloads','Hybrid cloud friendly','Great for GitOps/CI/CD','Open source with Red Hat backing'],
+      cons: ['Requires OpenShift expertise','Not ideal for VM-only environments','Performance overhead vs bare-metal hypervisors','Smaller ecosystem than VMware/Hyper-V','Troubleshooting can be complex'],
+      effortTransition: 'High', effortImplement: 'High', timeEstimate: '25-40 days',
+      mgmtUpkeep: 'High — ~12–20 hrs/month; cluster/operator updates; Prometheus/Grafana + EFK maintenance.',
+      veeam: 'Yes - VM backups via KVM; container backups via Kasten K10',
+      supportModel: 'Red Hat Enterprise Support (SLA tiers), Partners', satisfaction: 4.1 },
 
-    function renderCatalog() {
-      const body = document.getElementById('catalogBody');
-      body.innerHTML = '';
-      catalog.forEach((c, i) => {
-        const tr = document.createElement('tr');
-        const feats = [];
-        if (c.features?.urlFiltering) feats.push('URL');
-        if (c.features?.sslInspection) feats.push('SSL');
-        if (c.features?.idsIps) feats.push('IDS/IPS');
-        if (c.features?.managedAvailable) feats.push('Managed');
-        tr.innerHTML = `
-          <td>${c.vendor}</td>
-          <td>${c.model}</td>
-          <td>${c.maxUsers}</td>
-          <td>${c.throughputGbps}</td>
-          <td>${c.sslGbps}</td>
-          <td>${c.vpnUsers}</td>
-          <td>${c.ipsecTunnels}</td>
-          <td>${feats.join(', ')}</td>
-          <td>${currency(c.baseMonthly)}</td>
-          <td>${currency(c.setup)}</td>
-          <td><a class="link-like" data-idx="${i}" onclick="prefillFromCatalog(${i})">Use quote</a></td>
-        `;
-        body.appendChild(tr);
-      });
+    { platform: 'HPE Virtual Machine Environment (VME)', logo: 'hpe',
+      pros: ['Simplified deployment & management','Supports some non-HPE hardware','Integrated monitoring via Ops Management Platform','Optimized for HPE infrastructure','Lower operational complexity'],
+      cons: ['Smaller community & awareness','Limited advanced features','Innovation cadence may lag leaders','Best fit for HPE-centric estates','Less proven at massive scale'],
+      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '12-18 days',
+      mgmtUpkeep: 'Medium — ~6–9 hrs/month; integrated updates; Ops Mgmt Platform monitoring.',
+      veeam: 'Yes - When based on VMware/Hyper-V underneath',
+      supportModel: 'HPE Support (Foundation/Proactive/TAM), Partners', satisfaction: 4.0 },
 
-      // JSON panel setup
-      const json = document.getElementById('catalogJson');
-      json.value = JSON.stringify(catalog, null, 2);
-      const dl = document.getElementById('downloadCatalog');
-      const blob = new Blob([json.value], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      dl.href = url;
-    }
+    { platform: 'Proxmox VE', logo: 'pmx',
+      pros: ['Open source; free core','KVM + LXC with strong ZFS support','Web-based, simple admin experience','Large & active community','Great value for labs & SMB'],
+      cons: ['Enterprise support requires subscription','Lower enterprise adoption vs leaders','Fewer built-in orchestration features','ZFS learning curve','HA often needs careful design'],
+      effortTransition: 'Medium', effortImplement: 'Medium', timeEstimate: '15-25 days',
+      mgmtUpkeep: 'Medium — ~8–12 hrs/month; manual Proxmox/kernel updates; external monitoring common.',
+      veeam: 'Partial - KVM-level/agent-based; no native Proxmox integration',
+      supportModel: 'Proxmox subscription (enterprise repo) + community', satisfaction: 3.8 },
 
-    function prefillFromCatalog(i) {
-      const item = catalog[i];
-      if (!item) return;
-      // Prefill costs (illustrative heuristic; adjust to your pricing model)
-      document.getElementById('hwCost').value = Math.round((item.baseMonthly * 24)); // assume ~24mo value
-      document.getElementById('setupCost').value = item.setup || 0;
-      document.getElementById('supportMonthly').value = Math.round(item.baseMonthly * 0.6 + 200); // managed uplift example
-      // Re-run calc
-      runCalc();
-      // Scroll to summary
-      document.getElementById('sum_total').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    { platform: 'Azure Local (Azure Stack HCI)', logo: 'azl',
+      pros: ['Hyperconverged Hyper-V + Storage Spaces Direct','Azure Arc integration for policy, updates, Defender','Subscription model; consistent with Azure ops','Validated hardware for predictable performance','Good path for Windows/SQL workloads on-prem'],
+      cons: ['Requires Azure Local/Stack HCI-validated hardware','Networking/storage design can be complex','Per-core subscription licensing costs','Smaller third-party ecosystem vs VMware','Feature gaps for niche use cases'],
+      effortTransition: 'Medium', effortImplement: 'Medium', timeEstimate: '15-25 days',
+      mgmtUpkeep: 'Medium — ~6–10 hrs/month; CAU + Azure Arc policies/Monitor reduce toil.',
+      veeam: 'Yes - Treated as Hyper-V VMs; supported by Veeam B&R',
+      supportModel: 'Microsoft Unified + Azure Support; OEM for hardware', satisfaction: 4.2 },
 
-    // ===== Matching Logic =====
-    function computeRequiredThroughputMbps(inputs) {
-      const { bandwidth, feat_ssl, feat_url, feat_ids } = inputs;
-      let factor = 1.0;
-      if (feat_ssl) factor *= 1.5;    // SSL/TLS inspection tax
-      if (feat_url) factor *= 1.15;   // URL filtering tax
-      if (feat_ids) factor *= 1.35;   // IDS/IPS tax
-      return bandwidth * factor;
-    }
+    { platform: 'Microsoft Azure (IaaS VMs)', logo: 'azu',
+      pros: ['Global scale, rich PaaS integration','Azure Update Manager, Azure Monitor/Log Analytics','Strong Windows/AD/SQL alignment','Hybrid with Azure Arc','Broad marketplace & ecosystem'],
+      cons: ['Egress/network costs','Shared responsibility complexity','Performance variance by SKU/region','Learning curve for RBAC/Policy','Lock-in risk via managed services'],
+      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
+      mgmtUpkeep: 'Medium — ~8–12 hrs/month; Update Manager; Azure Monitor/LA; policy drift control via Arc/Policy.',
+      veeam: 'Yes — Veeam Backup for Microsoft Azure',
+      supportModel: 'Azure Support plans (Developer/Standard/Professional Direct) + Microsoft Unified', satisfaction: 4.2 },
 
-    function meetsMinimums(c, inputs) {
-      const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000; // Mbps -> Gbps
-      const tpOk = c.throughputGbps >= reqTpGbps * 1.10; // require 10% headroom
-      const sslOk = !inputs.feat_ssl || c.sslGbps >= (reqTpGbps * 0.8); // looser for SSL spec baselines
-      const usersOk = c.maxUsers >= inputs.users * 1.1; // 10% headroom
-      const vpnOk = c.vpnUsers >= inputs.vpnUsers;
-      const tunnelsOk = c.ipsecTunnels >= inputs.ipsecTunnels;
-      const urlOk = !inputs.feat_url || c.features?.urlFiltering;
-      const idsOk = !inputs.feat_ids || c.features?.idsIps;
-      const sslFeatOk = !inputs.feat_ssl || c.features?.sslInspection;
-      const managedOk = !inputs.feat_managed || c.features?.managedAvailable;
-      return tpOk && sslOk && usersOk && vpnOk && tunnelsOk && urlOk && idsOk && sslFeatOk && managedOk;
-    }
+    { platform: 'AWS (EC2 on Nitro)', logo: 'aws',
+      pros: ['Nitro hypervisor performance & isolation','Largest service catalog & regions','Automation via SSM, CloudFormation, CDK','CloudWatch/CloudTrail observability','Strong Linux ecosystem'],
+      cons: ['Egress costs & data gravity','IAM/VPC complexity at scale','Service sprawl increases ops overhead','Quota/limits planning required','Potential lock-in via managed services'],
+      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
+      mgmtUpkeep: 'Medium — ~8–12 hrs/month; Patch Manager via SSM; CloudWatch/CloudTrail & Config upkeep.',
+      veeam: 'Yes — Veeam Backup for AWS',
+      supportModel: 'AWS Support (Developer/Business/Enterprise) + TAM', satisfaction: 4.3 },
 
-    function scoreCandidate(c, inputs) {
-      const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000;
-      const tpHeadroom = Math.max(0, (c.throughputGbps - reqTpGbps) / Math.max(0.001, reqTpGbps));
-      const userHeadroom = Math.max(0, (c.maxUsers - inputs.users) / Math.max(1, inputs.users));
-      const vpnHeadroom = Math.max(0, (c.vpnUsers - inputs.vpnUsers) / Math.max(1, inputs.vpnUsers));
-      const tunnelHeadroom = Math.max(0, (c.ipsecTunnels - inputs.ipsecTunnels) / Math.max(1, inputs.ipsecTunnels));
+    { platform: 'Google Cloud (Compute Engine)', logo: 'gcp',
+      pros: ['Live Migration on hosts, strong networking','Ops suite (Cloud Monitoring/Logging), Config Controller','Sustained-use & committed-use discounts','Great Kubernetes/GKE integration','Global Private Service Connect options'],
+      cons: ['Smaller enterprise footprint than AWS/Azure in some regions','Quota management quirks','Service naming/uniqueness learning curve','Marketplace smaller than peers','Lock-in via managed services possible'],
+      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
+      mgmtUpkeep: 'Medium — ~8–12 hrs/month; OS patching via OS Config; Cloud Ops for logs/metrics.',
+      veeam: 'Yes — Veeam Backup for Google Cloud',
+      supportModel: 'Google Cloud Support (Standard/Enhanced/Premium)', satisfaction: 4.2 },
 
-      const price = (c.baseMonthly || 0) + (c.setup || 0) / 24; // normalize setup across ~24 months
+    { platform: 'Oracle Cloud Infrastructure (OCI)', logo: 'oci',
+      pros: ['High-performance bare metal & networking','Strong for Oracle DB/Apps licensing','Predictable pricing in some SKUs','Cloud Guard & Logging Analytics','FastConnect & DR options'],
+      cons: ['Smaller service catalog vs AWS/Azure','Fewer regions than hyperscale peers','Ecosystem & skills availability more limited','Console/workflow familiarity curve','Lock-in for Oracle workloads possible'],
+      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
+      mgmtUpkeep: 'Medium — ~8–12 hrs/month; OS Management Service; Logging/Monitoring upkeep.',
+      veeam: 'Yes — Veeam Backup for OCI',
+      supportModel: 'Oracle Premier Support (24×7), My Oracle Support', satisfaction: 4.1 },
 
-      // Feature coverage bonus
-      let featScore = 0;
-      if (inputs.feat_url && c.features?.urlFiltering) featScore += 0.5;
-      if (inputs.feat_ssl && c.features?.sslInspection) featScore += 0.6;
-      if (inputs.feat_ids && c.features?.idsIps) featScore += 0.6;
-      if (inputs.feat_managed && c.features?.managedAvailable) featScore += 0.4;
+    { platform: 'Atturra Cloud (Managed)', logo: 'att',
+      pros: ['Australian data residency & locality','Managed service with tailored SLAs','Design/operations handled by provider','Connectivity options to on-prem','Flexible sizing for SMB/Enterprise'],
+      cons: ['Smaller global ecosystem','Region availability limited','Dependency on provider roadmap','Potential constraints vs hyperscalers','Migration planning still required'],
+      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '10-20 days',
+      mgmtUpkeep: 'Low — ~4–6 hrs/month; provider handles patching/monitoring with agreed SLAs/KPIs.',
+      veeam: 'Yes — Via Cloud Connect / underlying hypervisor integrations',
+      supportModel: 'Atturra Managed Service (SLA tiers, optional TAM)', satisfaction: 4.1 },
 
-      // Weighted scoring (tune as needed)
-      const score = (
-        tpHeadroom * 3.0 +
-        userHeadroom * 1.6 +
-        vpnHeadroom * 0.8 +
-        tunnelHeadroom * 0.6 +
-        featScore * 1.2
-      ) - (price / 3000); // price penalty scaling
+    { platform: 'Macquarie Cloud Services (MCS)', logo: 'mcs',
+      pros: ['AU data residency & compliance focus','Managed IaaS/Private Cloud & connectivity','Strong enterprise support reputation locally','Flexible migration & run services','Good fit for regulated workloads in AU'],
+      cons: ['Smaller global footprint','Ecosystem narrower than hyperscalers','Pricing can vary by bespoke SLA','Feature depth depends on chosen stack','Vendor dependency for roadmap'],
+      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '10-20 days',
+      mgmtUpkeep: 'Low — ~4–6 hrs/month; managed ops with agreed SLAs and service reporting.',
+      veeam: 'Yes — Cloud Connect / provider-managed backups',
+      supportModel: 'MCS Managed Services (SLA tiers, TAM/CSA options)', satisfaction: 4.2 }
+  ];
 
-      return score;
-    }
+  // --- Icons --------------------------------------------------------------
+  const icons = {
+    vmw: `<svg viewBox='0 0 24 24' fill='none' stroke='#60a5fa' stroke-width='2'><rect x='3' y='3' width='8' height='8' rx='2'/><rect x='13' y='13' width='8' height='8' rx='2'/></svg>`,
+    ms: `<svg viewBox='0 0 24 24'><rect width='10' height='10' x='2' y='2' fill='#ef4444'/><rect width='10' height='10' x='12' y='2' fill='#f59e0b'/><rect width='10' height='10' x='2' y='12' fill='#22c55e'/><rect width='10' height='10' x='12' y='12' fill='#3b82f6'/></svg>`,
+    ocp: `<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='#ef4444'/><path d='M5 12h14' stroke='white' stroke-width='2'/></svg>`,
+    hpe: `<svg viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='4' fill='#34d399' stroke='#065f46' stroke-width='1'/></svg>`,
+    pmx: `<svg viewBox='0 0 24 24'><path d='M4 6l8 12 8-12' fill='none' stroke='#fbbf24' stroke-width='2'/></svg>`,
+    azl: `<svg viewBox='0 0 24 24'><path d='M6 18h12a4 4 0 0 0 0-8 5 5 0 0 0-9.5-1.7A4.5 4.5 0 0 0 6 18z' fill='#3b82f6'/><path d='M8 19h8' stroke='#93c5fd' stroke-width='2'/></svg>`,
+    azu: `<svg viewBox='0 0 24 24'><path d='M4 18l7-14 4 8h5l-6 6H4z' fill='#3b82f6'/></svg>`,
+    aws: `<svg viewBox='0 0 24 24'><text x='3' y='14' font-size='10' fill='#fbbf24'>aws</text><path d='M4 16c6 4 10 4 16 0' fill='none' stroke='#f59e0b' stroke-width='2'/></svg>`,
+    gcp: `<svg viewBox='0 0 24 24'><circle cx='8' cy='12' r='4' fill='#ea4335'/><circle cx='16' cy='12' r='4' fill='#34a853'/><circle cx='12' cy='8' r='4' fill='#4285f4'/></svg>`,
+    oci: `<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='8' fill='none' stroke='#ef4444' stroke-width='2'/></svg>`,
+    att: `<svg viewBox='0 0 24 24'><path d='M6 18h12a4 4 0 0 0 0-8 5 5 0 0 0-9.5-1.7A4.5 4.5 0 0 0 6 18z' fill='#22d3ee'/><text x='7' y='13' font-size='6' fill='#0f172a'>A</text></svg>`,
+    mcs: `<svg viewBox='0 0 24 24'><rect x='5' y='6' width='14' height='10' rx='2' fill='#22c55e'/><text x='8' y='13' font-size='6' fill='#0f172a'>M</text></svg>`
+  };
 
-    function rankMatches(inputs) {
-      const candidates = catalog.filter(c => meetsMinimums(c, inputs));
-      const ranked = candidates
-        .map(c => ({ c, score: scoreCandidate(c, inputs) }))
-        .sort((a, b) => b.score - a.score);
-      return ranked.slice(0, 5); // top 5
-    }
+  const tbody = document.querySelector('#grid tbody');
+  const countEl = document.getElementById('count');
 
-    function tierLabel(idx) {
-      if (idx === 0) return '<span class="badge-tier badge-best">Best fit</span>';
-      if (idx <= 2) return '<span class="badge-tier badge-better">Better option</span>';
-      return '<span class="badge-tier badge-good">Good alternative</span>';
-    }
+  function starsCell(score){
+    return `${stars(score)} <span style="opacity:.7;font-size:12px;">(${score.toFixed(1)})</span>`;
+  }
 
-    function renderRecs(ranked) {
-      const recs = document.getElementById('recs');
-      recs.innerHTML = '';
-      if (!ranked.length) {
-        recs.innerHTML = '<div class="small-muted">No exact matches. Try relaxing one or more requirements, or expand the catalog.</div>';
-        return;
-      }
-      ranked.forEach((r, idx) => {
-        const { c, score } = r;
-        const div = document.createElement('div');
-        const scoreClass = score > 2 ? 'score-good' : score > 1 ? 'score-mid' : 'score-bad';
-        const feats = [];
-        if (c.features?.urlFiltering) feats.push('URL');
-        if (c.features?.sslInspection) feats.push('SSL');
-        if (c.features?.idsIps) feats.push('IDS/IPS');
-        if (c.features?.managedAvailable) feats.push('Managed');
-        div.className = 'p-3 rounded border';
-        div.innerHTML = `
-          <div class="d-flex align-items-start gap-2">
-            <div class="flex-grow-1">
-              <div class="d-flex align-items-center gap-2">
-                <h6 class="mb-0">${c.vendor} ${c.model}</h6>
-                ${tierLabel(idx)}
+  function render(rows){
+    tbody.innerHTML = rows.map(r=>`
+      <tr>
+        <td>
+          <div class='platform'>
+            <span class='logo'>${icons[r.logo]||''}</span>
+            <div>
+              <div>${r.platform}</div>
+              <div class='chips'>
+                <span class='chip'>Transition: ${r.effortTransition}</span>
+                <span class='chip'>Implement: ${r.effortImplement}</span>
+                <span class='chip'>${r.timeEstimate}</span>
               </div>
-              <div class="small-muted">Score: <span class="${scoreClass}">${score.toFixed(2)}</span> · Features: ${feats.join(', ') || '—'}</div>
-              <div class="mt-2 row g-2">
-                <div class="col-6 col-md-3">Users ≤ <strong>${c.maxUsers}</strong></div>
-                <div class="col-6 col-md-3">TP <strong>${c.throughputGbps} Gbps</strong></div>
-                <div class="col-6 col-md-3">SSL <strong>${c.sslGbps} Gbps</strong></div>
-                <div class="col-6 col-md-3">VPN Users <strong>${c.vpnUsers}</strong></div>
-                <div class="col-6 col-md-3">IPSec <strong>${c.ipsecTunnels}</strong></div>
-                <div class="col-6 col-md-3">Base Monthly <strong>${currency(c.baseMonthly)}</strong></div>
-                <div class="col-6 col-md-3">Setup <strong>${currency(c.setup)}</strong></div>
-              </div>
-            </div>
-            <div class="text-end">
-              <button class="btn btn-sm btn-outline-light" onclick='prefillFromCatalog(${catalog.indexOf(c)})'>Use this for quote</button>
             </div>
           </div>
-        `;
-        recs.appendChild(div);
-      });
-    }
+        </td>
+        <td><ul class='proscons'>${r.pros.map(p=>`<li>${p}</li>`).join('')}</ul></td>
+        <td><ul class='proscons'>${r.cons.map(c=>`<li>${c}</li>`).join('')}</ul></td>
+        <td class='col-hide-sm'><strong>${r.effortTransition}</strong></td>
+        <td class='col-hide-sm'><strong>${r.effortImplement}</strong></td>
+        <td class='col-hide-md'>${r.timeEstimate}</td>
+        <td class='col-hide-md'>${r.mgmtUpkeep}</td>
+        <td>${veeamPill(r.veeam)}</td>
+        <td class='col-hide-lg'>${r.supportModel}</td>
+        <td>${starsCell(r.satisfaction)}</td>
+      </tr>`).join('');
+    countEl.textContent = `${rows.length} platforms`;
+  }
 
-    // ===== Calculator Orchestration =====
-    function gatherInputs() {
-      return {
-        users: Number(document.getElementById('users').value || 0),
-        bandwidth: Number(document.getElementById('bandwidth').value || 0),
-        vpnUsers: Number(document.getElementById('vpnUsers').value || 0),
-        ipsecTunnels: Number(document.getElementById('ipsecTunnels').value || 0),
-        feat_url: document.getElementById('feat_url').checked,
-        feat_ssl: document.getElementById('feat_ssl').checked,
-        feat_ids: document.getElementById('feat_ids').checked,
-        feat_managed: document.getElementById('feat_managed').checked,
-        hwCost: Number(document.getElementById('hwCost').value || 0),
-        setupCost: Number(document.getElementById('setupCost').value || 0),
-        apr: Number(document.getElementById('apr').value || 0),
-        termYears: Number(document.getElementById('termYears').value || 0),
-        supportMonthly: Number(document.getElementById('supportMonthly').value || 0)
-      };
-    }
-
-    function runCalc() {
-      const x = gatherInputs();
-      // Amortization parts
-      const mHw = amortize(x.hwCost, x.apr, x.termYears);
-      const mSetup = amortize(x.setupCost, x.apr, x.termYears);
-      const total = mHw + mSetup + x.supportMonthly;
-      document.getElementById('sum_hw').textContent = currency(mHw);
-      document.getElementById('sum_setup').textContent = currency(mSetup);
-      document.getElementById('sum_support').textContent = currency(x.supportMonthly);
-      document.getElementById('sum_total').textContent = currency(total);
-
-      // Matching
-      const ranked = rankMatches(x);
-      renderRecs(ranked);
-    }
-
-    // ===== Events =====
-    document.getElementById('calcBtn').addEventListener('click', runCalc);
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      localStorage.removeItem('fwaas_catalog');
-      catalog = JSON.parse(JSON.stringify(defaultCatalog));
-      renderCatalog();
-      runCalc();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  function filter(){
+    const q = document.getElementById('q').value.toLowerCase().trim();
+    const effT = document.getElementById('effortTransitionFilter').value;
+    const effI = document.getElementById('effortImplementFilter').value;
+    const vee = document.getElementById('veeamFilter').value;
+    const sMin = parseFloat(document.getElementById('satisfactionMin').value || '0');
+    const result = DATA.filter(r=>{
+      const text = [r.platform, ...r.pros, ...r.cons, r.effortTransition, r.effortImplement, r.timeEstimate, r.mgmtUpkeep, r.veeam, r.supportModel].join(' ').toLowerCase();
+      const qok = !q || text.includes(q);
+      const tOk = !effT || r.effortTransition===effT;
+      const iOk = !effI || r.effortImplement===effI;
+      const vOk = !vee || (vee==='Yes'&&r.veeam.startsWith('Yes')) || (vee==='Partial'&&r.veeam.startsWith('Partial')) || (vee==='No'&&r.veeam.startsWith('No'));
+      const sOk = isNaN(sMin) || r.satisfaction >= sMin;
+      return qok && tOk && iOk && vOk && sOk;
     });
+    render(result);
+  }
 
-    document.getElementById('applyCatalog').addEventListener('click', () => {
-      try {
-        const parsed = JSON.parse(document.getElementById('catalogJson').value);
-        if (!Array.isArray(parsed)) throw new Error('Catalog JSON must be an array of firewall objects');
-        catalog = parsed;
-        saveCatalog();
-        renderCatalog();
-        runCalc();
-      } catch (e) {
-        alert('Invalid JSON: ' + e.message);
-      }
-    });
+  ['q','effortTransitionFilter','effortImplementFilter','veeamFilter','satisfactionMin'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', filter);
+    el.addEventListener('change', filter);
+  });
 
-    // Initial render
-    renderCatalog();
-    runCalc();
+  // Initial render
+  render(DATA);
   </script>
 </body>
 </html>
