@@ -6,48 +6,90 @@
   <title>FW Calculator</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    /* Atturra-inspired light theme with high contrast */
     :root {
-      --bg: #0f172a; /* slate-900 */
-      --card: #111827; /* gray-900 */
-      --muted: #9ca3af; /* gray-400 */
-      --accent: #22d3ee; /* cyan-400 */
-      --good: #22c55e;  /* green-500 */
-      --warn: #f59e0b;  /* amber-500 */
-      --bad: #ef4444;   /* red-500 */
+      --bg: #f5f7fb;          /* soft page background */
+      --card: #ffffff;         /* card background */
+      --ink: #1f2937;          /* primary text */
+      --muted: #6b7280;        /* secondary text */
+      --border: #e5e7eb;       /* subtle borders */
+      --primary: #00a3ad;      /* Atturra teal */
+      --primary-600: #008c95;  /* darker hover */
+      --accent: #0b3c5d;       /* navy accent */
+      --good: #16a34a;         /* green */
+      --warn: #d97706;         /* amber */
+      --bad: #dc2626;          /* red */
+      --pill: #eef2f7;         /* light pill */
+      --table-stripe: #fafbfe; /* zebra stripe */
     }
-    body { background: linear-gradient(180deg, #0b1024, #0f172a); color: #e5e7eb; }
+
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
     .container-narrow { max-width: 1100px; }
-    .card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; }
-    .card h5, .card h6 { color: #f8fafc; }
-    .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--muted); }
-    .btn-accent { background: var(--accent); border: none; color: #0b1024; font-weight: 700; }
-    .btn-accent:hover { filter: brightness(0.95); }
-    .form-check-label { user-select: none; }
-    .dim { color: var(--muted); font-size: 0.9rem; }
-    .metric { font-weight: 700; }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(11, 60, 93, 0.06);
+      color: var(--ink);
+    }
+    .card h5, .card h6 { color: #0f172a; }
+
+    /* Buttons */
+    .btn-accent {
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .btn-accent:hover { background: var(--primary-600); border-color: var(--primary-600); }
+    .btn-outline-light { border-color: var(--accent); color: var(--accent); }
+    .btn-outline-light:hover { background: var(--accent); color: #fff; }
+
+    /* Form elements */
+    label.form-label { font-weight: 600; color: #111827; }
+    .form-control { color: var(--ink); background: #fff; border-color: var(--border); }
+    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 .2rem rgba(0,163,173,.15); }
+    .form-check-input:checked { background-color: var(--primary); border-color: var(--primary); }
+
+    /* Helpers */
+    .pill { font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--pill); color: var(--muted); border: 1px solid var(--border); }
+    .dim { color: var(--muted); font-size: 0.92rem; }
+    .metric { font-weight: 700; color: #0f172a; }
     .score-good { color: var(--good); }
     .score-mid { color: var(--warn); }
     .score-bad { color: var(--bad); }
-    .badge-tier { border-radius: 10px; padding: 4px 10px; }
-    .badge-best { background: rgba(34,197,94,0.15); color: #34d399; border: 1px solid rgba(34,197,94,0.35); }
-    .badge-better { background: rgba(34,211,238,0.15); color: #22d3ee; border: 1px solid rgba(34,211,238,0.35); }
-    .badge-good { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); }
-    .table-dark td, .table-dark th { background: transparent !important; }
-    .small-muted { font-size: 0.85rem; color: var(--muted); }
-    .link-like { color: var(--accent); text-decoration: none; cursor: pointer; }
+    .badge-tier { border-radius: 12px; padding: 4px 10px; font-weight: 600; border: 1px solid var(--border); }
+    .badge-best { background: rgba(0,163,173,0.12); color: var(--primary); border-color: rgba(0,163,173,0.35); }
+    .badge-better { background: rgba(11,60,93,0.08); color: var(--accent); border-color: rgba(11,60,93,0.25); }
+    .badge-good { background: rgba(217,119,6,0.10); color: var(--warn); border-color: rgba(217,119,6,0.30); }
+    .link-like { color: var(--primary); text-decoration: none; cursor: pointer; }
+    .link-like:hover { text-decoration: underline; }
     .sticky-top-ish { position: sticky; top: 1rem; z-index: 10; }
-    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
-    details[open] summary::after { content: "▲"; margin-left: 8px; font-size: 0.8rem; }
-    details summary::after { content: "▼"; margin-left: 8px; font-size: 0.8rem; }
+    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    details[open] summary::after { content: "▲"; margin-left: 8px; font-size: 0.8rem; color: var(--muted); }
+    details summary::after { content: "▼"; margin-left: 8px; font-size: 0.8rem; color: var(--muted); }
     summary { cursor: pointer; }
-    code { color: #a7f3d0; }
+    code { color: var(--accent); }
+
+    /* Tables */
+    table.table { color: var(--ink); }
+    .table thead th { background: #f3f6fb; color: #0f172a; border-bottom: 1px solid var(--border); }
+    .table tbody tr:nth-child(odd) { background: var(--table-stripe); }
+    .table tbody tr:hover { background: #f0f7f9; }
   </style>
 </head>
 <body>
   <div class="container container-narrow py-4">
     <div class="d-flex align-items-start gap-3 flex-wrap mb-3">
       <div>
-        <h1 class="h3 mb-1">Firewall‑as‑a‑Service (FWaaS) Calculator</h1>
+        <h1 class="h3 mb-1" style="color:#0b3c5d">Firewall‑as‑a‑Service (FWaaS) Calculator</h1>
         <div class="small-muted">Enter your requirements; we’ll amortize costs and recommend the best‑fit firewalls.</div>
       </div>
       <div class="ms-auto sticky-top-ish">
@@ -174,7 +216,7 @@
         <span class="small-muted">You can edit and re‑run matching</span>
       </div>
       <div class="table-responsive mt-3">
-        <table class="table table-dark table-striped align-middle" id="catalogTable">
+        <table class="table table-striped align-middle" id="catalogTable">
           <thead>
             <tr>
               <th>Vendor</th>
@@ -242,7 +284,7 @@
       },
       {
         vendor: 'Cisco', model: 'Secure Firewall 1120',
-        maxUsers: 250, throughputputGbps: 2.5, throughputGbps: 2.5, sslGbps: 0.7, vpnUsers: 100, ipsecTunnels: 50,
+        maxUsers: 250, throughputGbps: 2.5, sslGbps: 0.7, vpnUsers: 100, ipsecTunnels: 50,
         features: { urlFiltering: true, sslInspection: true, idsIps: true, managedAvailable: true },
         baseMonthly: 520, setup: 1400
       },
@@ -306,10 +348,10 @@
     function prefillFromCatalog(i) {
       const item = catalog[i];
       if (!item) return;
-      // Prefill costs
-      document.getElementById('hwCost').value = Math.round((item.baseMonthly * 24)); // example: assume 24mo worth of license/hw bundled
+      // Prefill costs (illustrative heuristic; adjust to your pricing model)
+      document.getElementById('hwCost').value = Math.round((item.baseMonthly * 24)); // assume ~24mo value
       document.getElementById('setupCost').value = item.setup || 0;
-      document.getElementById('supportMonthly').value = Math.round(item.baseMonthly * 0.6 + 200); // illustrative managed uplift
+      document.getElementById('supportMonthly').value = Math.round(item.baseMonthly * 0.6 + 200); // managed uplift example
       // Re-run calc
       runCalc();
       // Scroll to summary
@@ -328,9 +370,8 @@
 
     function meetsMinimums(c, inputs) {
       const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000; // Mbps -> Gbps
-      const sslReqGbps = inputs.feat_ssl ? Math.min(reqTpGbps, c.sslGbps) : reqTpGbps;
       const tpOk = c.throughputGbps >= reqTpGbps * 1.10; // require 10% headroom
-      const sslOk = inputs.feat_ssl ? c.sslGbps >= (reqTpGbps * 0.8) : true; // looser for SSL spec
+      const sslOk = !inputs.feat_ssl || c.sslGbps >= (reqTpGbps * 0.8); // looser for SSL spec baselines
       const usersOk = c.maxUsers >= inputs.users * 1.1; // 10% headroom
       const vpnOk = c.vpnUsers >= inputs.vpnUsers;
       const tunnelsOk = c.ipsecTunnels >= inputs.ipsecTunnels;
@@ -343,12 +384,12 @@
 
     function scoreCandidate(c, inputs) {
       const reqTpGbps = computeRequiredThroughputMbps(inputs) / 1000;
-      const tpHeadroom = Math.max(0, (c.throughputGbps - reqTpGbps) / reqTpGbps); // >=0
+      const tpHeadroom = Math.max(0, (c.throughputGbps - reqTpGbps) / Math.max(0.001, reqTpGbps));
       const userHeadroom = Math.max(0, (c.maxUsers - inputs.users) / Math.max(1, inputs.users));
       const vpnHeadroom = Math.max(0, (c.vpnUsers - inputs.vpnUsers) / Math.max(1, inputs.vpnUsers));
       const tunnelHeadroom = Math.max(0, (c.ipsecTunnels - inputs.ipsecTunnels) / Math.max(1, inputs.ipsecTunnels));
 
-      const price = (c.baseMonthly || 0) + (c.setup || 0) / 24; // normalize setup across 24 months
+      const price = (c.baseMonthly || 0) + (c.setup || 0) / 24; // normalize setup across ~24 months
 
       // Feature coverage bonus
       let featScore = 0;
