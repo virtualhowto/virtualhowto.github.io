@@ -1,323 +1,357 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hypervisor & Cloud Platform Comparison</title>
-  <style>
-    :root{
-      --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
-      --ok:#10b981; --warn:#f59e0b; --bad:#ef4444; --chip:#1f2937; --header:#0e1526;
-      --border:#1f2937; --hover:#0d1423; --banner:#0b162b;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0b1020,#0a0f1a 60%,#070b14);color:var(--text)}
-    header{padding:24px 18px 8px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
-    h1{margin:0;font-size:clamp(22px,3.2vw,34px);letter-spacing:.3px}
-    .tag{font-size:12px;opacity:.85}
-    .banner{margin:10px 16px 0;background:var(--banner);border:1px solid #1d2a47;color:#cbd5e1;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.35}
-    .controls{display:flex;gap:10px;flex-wrap:wrap;margin:12px 16px 0}
-    .field{display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
-    .field input,.field select{all:unset;color:var(--text)}
-    .wrap{padding:12px 16px 30px}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    table{width:100%;border-collapse:separate;border-spacing:0}
-    thead th{position:sticky;top:0;background:var(--header);color:#cbd5e1;font-weight:700;text-align:left;padding:12px;border-bottom:1px solid #1f2737}
-    tbody tr{transition:background .15s}
-    tbody tr:hover{background:var(--hover)}
-    td{padding:12px;vertical-align:top;border-bottom:1px solid #172033}
-    .platform{display:flex;gap:12px;align-items:center}
-    .logo{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:#0e1930;border:1px solid #1f2c48}
-    .logo svg{width:18px;height:18px}
-    .chips{display:flex;flex-wrap:wrap;gap:6px}
-    .chip{background:var(--chip);border:1px solid #23314a;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:12px}
-    .proscons{display:grid;gap:6px;margin:0;padding-left:18px}
-    .proscons li{margin:0}
-    .veeam{display:inline-flex;align-items:center;gap:6px;font-weight:600}
-    .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
-    .rate{display:inline-flex;gap:2px;align-items:center}
-    .star{font-size:14px;opacity:.6}
-    .star.fill{opacity:1}
-    .footer{padding:14px;color:var(--muted);text-align:center;font-size:12px}
-    .count{color:#93c5fd}
-    @media (max-width:1250px){.col-hide-lg{display:none}}
-    @media (max-width:1100px){.col-hide-md{display:none}}
-    @media (max-width:900px){.col-hide-sm{display:none}td,th{padding:10px}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hypervisor & Cloud – Risk Matrix (5×5)</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#0c1224; --grid:#1e2a44; --axis:#94a3b8; --text:#e5e7eb;
+    --muted:#9fb0c9; --note:#0b162b; --accent:#22d3ee;
+    --cat-onprem:#60a5fa; --cat-hyp:#f59e0b; --cat-msp:#22c55e;
+    --hot5:#ef4444; --hot4:#f97316; --hot3:#facc15; --hot2:#84cc16; --hot1:#22c55e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1a 60%,#070b14);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  header{padding:18px 16px 8px}
+  h1{margin:0 0 6px 0;font-size:clamp(22px,3vw,30px)}
+  .tag{color:var(--muted);font-size:13px}
+  .note{margin:10px 16px;background:var(--note);border:1px solid #1d2a47;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.35}
+  .wrap{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:12px 16px;align-items:start}
+  .card{background:var(--panel);border:1px solid #1b2540;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .pad{padding:12px}
+  .controls{display:grid;gap:10px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid #223357;background:#0e1930;color:#dbeafe;border-radius:999px;padding:7px 10px;font-size:12px}
+  .swatch{width:14px;height:14px;border-radius:4px}
+  .btn{all:unset;background:var(--accent);color:#03202b;font-weight:700;padding:8px 10px;border-radius:10px;cursor:pointer}
+  .small{font-size:12px;color:var(--muted)}
+  .gridwrap{position:relative;aspect-ratio:1/1;max-width:100%;}
+  svg{width:100%;height:auto;display:block}
+  .tick{font-size:11px;fill:var(--axis)}
+  .label{font-size:11px;fill:#e5e7eb;pointer-events:none}
+  .pt{cursor:pointer;transition:transform .15s ease}
+  .pt:hover{transform:scale(1.08)}
+  .tooltip{position:absolute;pointer-events:none;background:#0b1224;border:1px solid #233458;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.25;color:#e5e7eb;box-shadow:0 10px 24px rgba(0,0,0,.35);min-width:220px;z-index:5;display:none}
+  .legend{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+  .heat{height:10px;border-radius:6px}
+  .divider{height:1px;background:#1e2a44;margin:10px 0}
+  .list{max-height:340px;overflow:auto}
+  .list table{width:100%;border-collapse:collapse}
+  .list th,.list td{padding:8px;border-bottom:1px solid #1e2a44;text-align:left;font-size:12px}
+  .ctrl{display:flex;gap:8px;align-items:center}
+  input[type=range]{width:120px}
+  @media (max-width:980px){.wrap{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
   <header>
-    <div>
-      <h1>Hypervisor & Cloud Platform Comparison</h1>
-      <div class="tag">Pros/Cons • Effort to Transition & Implement • Estimated Time (incl. PM) • <strong>Mgmt/Upkeep (3–5y)</strong> • Veeam • <strong>Support Models</strong> • <strong>Vendor Satisfaction</strong></div>
-    </div>
+    <h1>Risk Matrix (Likelihood × Impact)</h1>
+    <div class="tag">5×5 qualitative heatmap with all hypervisors and clouds from the comparison.</div>
   </header>
 
-  <div class="banner">
+  <div class="note">
     <strong>Note:</strong> All estimates are based on a small implementation (2–3 nodes, or the platform minimum where required).
-    Cloud solution estimates are based on a <em>standard small tenant with simple networking</em>.
-  </div>
-
-  <div class="controls">
-    <label class="field" title="Search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input id="q" placeholder="Search platform, pro, con…" />
-    </label>
-    <label class="field" title="Filter by transition effort">
-      <select id="effortTransitionFilter">
-        <option value="">Transition: Any</option>
-        <option>Low</option>
-        <option>Medium</option>
-        <option>High</option>
-      </select>
-    </label>
-    <label class="field" title="Filter by implementation effort">
-      <select id="effortImplementFilter">
-        <option value="">Implement: Any</option>
-        <option>Low</option>
-        <option>Medium</option>
-        <option>High</option>
-      </select>
-    </label>
-    <label class="field" title="Filter by Veeam support">
-      <select id="veeamFilter">
-        <option value="">Veeam: Any</option>
-        <option value="Yes">Yes</option>
-        <option value="Partial">Partial</option>
-        <option value="No">No</option>
-      </select>
-    </label>
-    <label class="field" title="Min satisfaction">
-      <select id="satisfactionMin">
-        <option value="">Satisfaction ≥ Any</option>
-        <option value="3">3★</option>
-        <option value="3.5">3.5★</option>
-        <option value="4">4★</option>
-        <option value="4.5">4.5★</option>
-      </select>
-    </label>
+    Cloud solution estimates are based on a <em>standard small tenant with simple networking</em>. Scores are indicative—tune them below for your environment.
   </div>
 
   <div class="wrap">
-    <div class="card">
-      <table id="grid" aria-describedby="comparison table">
-        <thead>
-          <tr>
-            <th>Platform</th>
-            <th>Pros</th>
-            <th>Cons</th>
-            <th class="col-hide-sm">Effort to Transition</th>
-            <th class="col-hide-sm">Effort to Implement</th>
-            <th class="col-hide-md">Estimated Time (incl. PM)</th>
-            <th class="col-hide-md">Mgmt/Upkeep (3–5y)</th>
-            <th>Veeam Support</th>
-            <th class="col-hide-lg">Support Model</th>
-            <th>Vendor Satisfaction</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="footer"><span class="count" id="count"></span> shown • Satisfaction is indicative — adjust for your org.</div>
+    <!-- Matrix -->
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between; margin-bottom:8px">
+        <div class="row">
+          <span class="chip"><span class="swatch" style="background:var(--cat-onprem)"></span>On-Prem Hypervisor</span>
+          <span class="chip"><span class="swatch" style="background:var(--cat-hyp)"></span>Hyperscaler Cloud</span>
+          <span class="chip"><span class="swatch" style="background:var(--cat-msp)"></span>Local MSP / Managed</span>
+        </div>
+        <div class="row">
+          <label class="chip"><input id="cb-onprem" type="checkbox" checked style="accent-color:var(--cat-onprem)"/> On-Prem</label>
+          <label class="chip"><input id="cb-hyp" type="checkbox" checked style="accent-color:var(--cat-hyp)"/> Hyperscaler</label>
+          <label class="chip"><input id="cb-msp" type="checkbox" checked style="accent-color:var(--cat-msp)"/> MSP</label>
+        </div>
+      </div>
+
+      <div class="gridwrap" id="gridwrap">
+        <div class="tooltip" id="tip"></div>
+        <svg viewBox="0 0 520 520" role="img" aria-label="Risk matrix 5 by 5">
+          <!-- Heat squares -->
+          <defs>
+            <linearGradient id="heat1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot1)"/><stop offset="100%" stop-color="var(--hot2)"/>
+            </linearGradient>
+            <linearGradient id="heat2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot2)"/><stop offset="100%" stop-color="var(--hot3)"/>
+            </linearGradient>
+            <linearGradient id="heat3" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot3)"/><stop offset="100%" stop-color="var(--hot4)"/>
+            </linearGradient>
+            <linearGradient id="heat4" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot4)"/><stop offset="100%" stop-color="var(--hot5)"/>
+            </linearGradient>
+          </defs>
+          <!-- Draw 5x5 grid -->
+          <g transform="translate(40,20)">
+            <!-- cells -->
+            <script type="application/ecmascript"><![CDATA[
+              // This inline script is intentionally left empty, actual JS is below.
+            ]]></script>
+            <!-- We draw rectangles in JS -->
+          </g>
+          <!-- Axes labels -->
+          <g class="ticks" transform="translate(40,20)"></g>
+          <text class="tick" x="14" y="275" transform="rotate(-90,14,275)">Likelihood (1 → 5)</text>
+          <text class="tick" x="260" y="510">Impact (1 → 5)</text>
+          <!-- Points layer -->
+          <g id="points" transform="translate(40,20)"></g>
+        </svg>
+
+        <div class="legend">
+          <div class="heat" style="background:var(--hot1)"></div>
+          <div class="heat" style="background:var(--hot2)"></div>
+          <div class="heat" style="background:var(--hot3)"></div>
+          <div class="heat" style="background:var(--hot4)"></div>
+          <div class="heat" style="background:var(--hot5)"></div>
+        </div>
+        <div class="small">Heat indicates combined risk zone (low → high). Positions use a simple 1–5 scale per axis.</div>
+      </div>
+    </div>
+
+    <!-- Tuning panel -->
+    <div class="card pad">
+      <h3 style="margin:0 0 8px 0;font-size:16px">Tune Scores</h3>
+      <div class="small" style="margin-bottom:8px">Adjust Likelihood & Impact (1–5). Changes update the matrix immediately.</div>
+      <div class="list">
+        <table>
+          <thead><tr><th>Platform</th><th>Category</th><th>Likeli.</th><th>Impact</th></tr></thead>
+          <tbody id="tbl"></tbody>
+        </table>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <button class="btn" id="reset">Reset to defaults</button>
+        <span class="small">Tip: Toggle categories above to focus the view.</span>
+      </div>
     </div>
   </div>
 
-  <script>
-  // --- Helpers ------------------------------------------------------------
-  function stars(score){
-    const max = 5; const s = [];
-    for(let i=1;i<=max;i++){
-      const filled = i<=Math.floor(score) ? 'fill' : (i-0.5<=score? 'fill' : '');
-      s.push(`<span class='star ${filled}'>★</span>`);
+<script>
+/* ----------------- Data ----------------- */
+const CATS = {
+  ONPREM: { key:'onprem', color:getCSS('--cat-onprem') },
+  HYP:    { key:'hyp',    color:getCSS('--cat-hyp')    },
+  MSP:    { key:'msp',    color:getCSS('--cat-msp')    },
+};
+
+const DATA_DEFAULT = [
+  // On-prem hypervisors
+  { name:'VMware vSphere/ESXi', cat:'onprem', likelihood:2, impact:3 },
+  { name:'Microsoft Hyper-V',   cat:'onprem', likelihood:2, impact:3 },
+  { name:'OpenShift Virtualization (KVM)', cat:'onprem', likelihood:4, impact:4 },
+  { name:'HPE VME',             cat:'onprem', likelihood:2, impact:2 },
+  { name:'Proxmox VE',          cat:'onprem', likelihood:3, impact:3 },
+  { name:'Azure Local (Azure Stack HCI)', cat:'onprem', likelihood:3, impact:3 },
+
+  // Hyperscalers
+  { name:'Microsoft Azure (IaaS VMs)', cat:'hyp', likelihood:2, impact:3 },
+  { name:'AWS (EC2 on Nitro)',         cat:'hyp', likelihood:2, impact:3 },
+  { name:'Google Cloud (Compute Engine)', cat:'hyp', likelihood:2, impact:3 },
+  { name:'Oracle Cloud Infrastructure (OCI)', cat:'hyp', likelihood:2, impact:3 },
+
+  // Local MSP / Managed Clouds
+  { name:'Atturra Cloud (Managed)',    cat:'msp', likelihood:2, impact:2 },
+  { name:'Macquarie Cloud Services',   cat:'msp', likelihood:2, impact:2 },
+];
+
+/* Notes on baseline:
+   - Likelihood reflects probability of risk events in small deployments (skills gaps, patching cadence, misconfig, quota, cost overrun).
+   - Impact reflects consequence on availability/cost/compliance if events occur.
+   - OpenShift Virt is higher due to cluster/operator complexity for mixed VM+container setups.
+   - Proxmox slightly higher due to enterprise support/integration variability.
+   - Hyperscalers sit mid-impact from cost/network/compliance drift; MSPs trend lower impact with managed ops for small tenants.
+*/
+
+/* ----------------- Helpers ----------------- */
+function getCSS(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+/* ----------------- Matrix drawing ----------------- */
+const W = 440, H = 440, PAD = 0; // inner drawing area (svg group already translated)
+const cellW = W/5, cellH = H/5;
+
+const gBase   = document.querySelector('svg g[transform="translate(40,20)"]');
+const gTicks  = document.querySelector('svg g.ticks');
+const gPoints = document.getElementById('points');
+const tip     = document.getElementById('tip');
+
+function drawHeat(){
+  // clear
+  while(gBase.firstChild) gBase.removeChild(gBase.firstChild);
+  // draw 5x5 cells with gradient choice by row/col
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const x=c*cellW, y=(4-r)*cellH; // origin bottom-left logically
+      const level = Math.max(r,c)+1; // simple gradient escalation toward top-right
+      const fill = level>=5 ? 'url(#heat4)' : level>=4 ? 'url(#heat3)' : level>=3 ? 'url(#heat2)' : 'url(#heat1)';
+      const rect = rectSVG(x,y,cellW,cellH,{fill,stroke:getCSS('--grid')});
+      gBase.appendChild(rect);
     }
-    return `<span class='rate' title='${score.toFixed(1)} / 5'>${s.join('')}</span>`;
   }
-
-  function veeamPill(val){
-    let cls = 'ok', text = val;
-    if(val.startsWith('Partial')) cls='warn';
-    if(val.startsWith('No')) cls='bad';
-    const symbol = cls==='ok'?'✔':(cls==='warn'?'◐':'✖');
-    return `<span class='veeam ${cls}'>${symbol} ${text}</span>`
+  // grid lines
+  for(let i=0;i<=5;i++){
+    gBase.appendChild(lineSVG(0,i*cellH, W,i*cellH, {stroke:getCSS('--grid')}));
+    gBase.appendChild(lineSVG(i*cellW,0, i*cellW,H, {stroke:getCSS('--grid')}));
   }
-
-  // --- Data ---------------------------------------------------------------
-  const DATA = [
-    { platform: 'VMware vSphere/ESXi', logo: 'vmw',
-      pros: ['Market leader with mature ecosystem','Advanced features (vMotion, DRS, HA, vSAN)','Broad hardware & OS compatibility','Extensive third-party integration','Strong enterprise support & documentation'],
-      cons: ['High licensing & support costs','Complex licensing model','Requires vCenter & ecosystem buy-in','May be overkill for small deployments','Vendor lock-in risk'],
-      effortTransition: 'High', effortImplement: 'Medium', timeEstimate: '20-30 days',
-      mgmtUpkeep: 'Medium — ~8–12 hrs/month; vCenter/ESXi patching; mature logging/monitoring (Aria/vROps optional).',
-      veeam: 'Yes - Full VM backup & replication support',
-      supportModel: 'Broadcom/VMware Enterprise Support (24x7, TAM optional)', satisfaction: 4.3 },
-
-    { platform: 'Microsoft Hyper-V', logo: 'ms',
-      pros: ['Included with Windows Server licensing','Deep Microsoft ecosystem integration','Live migration & replica features','Cost-effective for Windows-first shops','Suitable from SMB to enterprise'],
-      cons: ['Fewer advanced features vs VMware','Less hardware vendor support breadth','UI historically less polished','Smaller ecosystem','Feature updates can lag'],
-      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '10-15 days',
-      mgmtUpkeep: 'Medium — ~6–10 hrs/month; Cluster-Aware Updating; Windows/Azure Monitor for logging.',
-      veeam: 'Yes - Full VM backup & replication support',
-      supportModel: 'Microsoft Unified/Premier Support, Partner support', satisfaction: 4.2 },
-
-    { platform: 'OpenShift Virtualization (KVM-based)', logo: 'ocp',
-      pros: ['Built into OpenShift/Kubernetes','KVM-based hypervisor under the hood','Ideal for container + VM workloads','Hybrid cloud friendly','Great for GitOps/CI/CD','Open source with Red Hat backing'],
-      cons: ['Requires OpenShift expertise','Not ideal for VM-only environments','Performance overhead vs bare-metal hypervisors','Smaller ecosystem than VMware/Hyper-V','Troubleshooting can be complex'],
-      effortTransition: 'High', effortImplement: 'High', timeEstimate: '25-40 days',
-      mgmtUpkeep: 'High — ~12–20 hrs/month; cluster/operator updates; Prometheus/Grafana + EFK maintenance.',
-      veeam: 'Yes - VM backups via KVM; container backups via Kasten K10',
-      supportModel: 'Red Hat Enterprise Support (SLA tiers), Partners', satisfaction: 4.1 },
-
-    { platform: 'HPE Virtual Machine Environment (VME)', logo: 'hpe',
-      pros: ['Simplified deployment & management','Supports some non-HPE hardware','Integrated monitoring via Ops Management Platform','Optimized for HPE infrastructure','Lower operational complexity'],
-      cons: ['Smaller community & awareness','Limited advanced features','Innovation cadence may lag leaders','Best fit for HPE-centric estates','Less proven at massive scale'],
-      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '12-18 days',
-      mgmtUpkeep: 'Medium — ~6–9 hrs/month; integrated updates; Ops Mgmt Platform monitoring.',
-      veeam: 'Yes - When based on VMware/Hyper-V underneath',
-      supportModel: 'HPE Support (Foundation/Proactive/TAM), Partners', satisfaction: 4.0 },
-
-    { platform: 'Proxmox VE', logo: 'pmx',
-      pros: ['Open source; free core','KVM + LXC with strong ZFS support','Web-based, simple admin experience','Large & active community','Great value for labs & SMB'],
-      cons: ['Enterprise support requires subscription','Lower enterprise adoption vs leaders','Fewer built-in orchestration features','ZFS learning curve','HA often needs careful design'],
-      effortTransition: 'Medium', effortImplement: 'Medium', timeEstimate: '15-25 days',
-      mgmtUpkeep: 'Medium — ~8–12 hrs/month; manual Proxmox/kernel updates; external monitoring common.',
-      veeam: 'Partial - KVM-level/agent-based; no native Proxmox integration',
-      supportModel: 'Proxmox subscription (enterprise repo) + community', satisfaction: 3.8 },
-
-    { platform: 'Azure Local (Azure Stack HCI)', logo: 'azl',
-      pros: ['Hyperconverged Hyper-V + Storage Spaces Direct','Azure Arc integration for policy, updates, Defender','Subscription model; consistent with Azure ops','Validated hardware for predictable performance','Good path for Windows/SQL workloads on-prem'],
-      cons: ['Requires Azure Local/Stack HCI-validated hardware','Networking/storage design can be complex','Per-core subscription licensing costs','Smaller third-party ecosystem vs VMware','Feature gaps for niche use cases'],
-      effortTransition: 'Medium', effortImplement: 'Medium', timeEstimate: '15-25 days',
-      mgmtUpkeep: 'Medium — ~6–10 hrs/month; CAU + Azure Arc policies/Monitor reduce toil.',
-      veeam: 'Yes - Treated as Hyper-V VMs; supported by Veeam B&R',
-      supportModel: 'Microsoft Unified + Azure Support; OEM for hardware', satisfaction: 4.2 },
-
-    { platform: 'Microsoft Azure (IaaS VMs)', logo: 'azu',
-      pros: ['Global scale, rich PaaS integration','Azure Update Manager, Azure Monitor/Log Analytics','Strong Windows/AD/SQL alignment','Hybrid with Azure Arc','Broad marketplace & ecosystem'],
-      cons: ['Egress/network costs','Shared responsibility complexity','Performance variance by SKU/region','Learning curve for RBAC/Policy','Lock-in risk via managed services'],
-      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
-      mgmtUpkeep: 'Medium — ~8–12 hrs/month; Update Manager; Azure Monitor/LA; policy drift control via Arc/Policy.',
-      veeam: 'Yes — Veeam Backup for Microsoft Azure',
-      supportModel: 'Azure Support plans (Developer/Standard/Professional Direct) + Microsoft Unified', satisfaction: 4.2 },
-
-    { platform: 'AWS (EC2 on Nitro)', logo: 'aws',
-      pros: ['Nitro hypervisor performance & isolation','Largest service catalog & regions','Automation via SSM, CloudFormation, CDK','CloudWatch/CloudTrail observability','Strong Linux ecosystem'],
-      cons: ['Egress costs & data gravity','IAM/VPC complexity at scale','Service sprawl increases ops overhead','Quota/limits planning required','Potential lock-in via managed services'],
-      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
-      mgmtUpkeep: 'Medium — ~8–12 hrs/month; Patch Manager via SSM; CloudWatch/CloudTrail & Config upkeep.',
-      veeam: 'Yes — Veeam Backup for AWS',
-      supportModel: 'AWS Support (Developer/Business/Enterprise) + TAM', satisfaction: 4.3 },
-
-    { platform: 'Google Cloud (Compute Engine)', logo: 'gcp',
-      pros: ['Live Migration on hosts, strong networking','Ops suite (Cloud Monitoring/Logging), Config Controller','Sustained-use & committed-use discounts','Great Kubernetes/GKE integration','Global Private Service Connect options'],
-      cons: ['Smaller enterprise footprint than AWS/Azure in some regions','Quota management quirks','Service naming/uniqueness learning curve','Marketplace smaller than peers','Lock-in via managed services possible'],
-      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
-      mgmtUpkeep: 'Medium — ~8–12 hrs/month; OS patching via OS Config; Cloud Ops for logs/metrics.',
-      veeam: 'Yes — Veeam Backup for Google Cloud',
-      supportModel: 'Google Cloud Support (Standard/Enhanced/Premium)', satisfaction: 4.2 },
-
-    { platform: 'Oracle Cloud Infrastructure (OCI)', logo: 'oci',
-      pros: ['High-performance bare metal & networking','Strong for Oracle DB/Apps licensing','Predictable pricing in some SKUs','Cloud Guard & Logging Analytics','FastConnect & DR options'],
-      cons: ['Smaller service catalog vs AWS/Azure','Fewer regions than hyperscale peers','Ecosystem & skills availability more limited','Console/workflow familiarity curve','Lock-in for Oracle workloads possible'],
-      effortTransition: 'High', effortImplement: 'Low', timeEstimate: '15-30 days',
-      mgmtUpkeep: 'Medium — ~8–12 hrs/month; OS Management Service; Logging/Monitoring upkeep.',
-      veeam: 'Yes — Veeam Backup for OCI',
-      supportModel: 'Oracle Premier Support (24×7), My Oracle Support', satisfaction: 4.1 },
-
-    { platform: 'Atturra Cloud (Managed)', logo: 'att',
-      pros: ['Australian data residency & locality','Managed service with tailored SLAs','Design/operations handled by provider','Connectivity options to on-prem','Flexible sizing for SMB/Enterprise'],
-      cons: ['Smaller global ecosystem','Region availability limited','Dependency on provider roadmap','Potential constraints vs hyperscalers','Migration planning still required'],
-      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '10-20 days',
-      mgmtUpkeep: 'Low — ~4–6 hrs/month; provider handles patching/monitoring with agreed SLAs/KPIs.',
-      veeam: 'Yes — Via Cloud Connect / underlying hypervisor integrations',
-      supportModel: 'Atturra Managed Service (SLA tiers, optional TAM)', satisfaction: 4.1 },
-
-    { platform: 'Macquarie Cloud Services (MCS)', logo: 'mcs',
-      pros: ['AU data residency & compliance focus','Managed IaaS/Private Cloud & connectivity','Strong enterprise support reputation locally','Flexible migration & run services','Good fit for regulated workloads in AU'],
-      cons: ['Smaller global footprint','Ecosystem narrower than hyperscalers','Pricing can vary by bespoke SLA','Feature depth depends on chosen stack','Vendor dependency for roadmap'],
-      effortTransition: 'Medium', effortImplement: 'Low', timeEstimate: '10-20 days',
-      mgmtUpkeep: 'Low — ~4–6 hrs/month; managed ops with agreed SLAs and service reporting.',
-      veeam: 'Yes — Cloud Connect / provider-managed backups',
-      supportModel: 'MCS Managed Services (SLA tiers, TAM/CSA options)', satisfaction: 4.2 }
-  ];
-
-  // --- Icons --------------------------------------------------------------
-  const icons = {
-    vmw: `<svg viewBox='0 0 24 24' fill='none' stroke='#60a5fa' stroke-width='2'><rect x='3' y='3' width='8' height='8' rx='2'/><rect x='13' y='13' width='8' height='8' rx='2'/></svg>`,
-    ms: `<svg viewBox='0 0 24 24'><rect width='10' height='10' x='2' y='2' fill='#ef4444'/><rect width='10' height='10' x='12' y='2' fill='#f59e0b'/><rect width='10' height='10' x='2' y='12' fill='#22c55e'/><rect width='10' height='10' x='12' y='12' fill='#3b82f6'/></svg>`,
-    ocp: `<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='#ef4444'/><path d='M5 12h14' stroke='white' stroke-width='2'/></svg>`,
-    hpe: `<svg viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='4' fill='#34d399' stroke='#065f46' stroke-width='1'/></svg>`,
-    pmx: `<svg viewBox='0 0 24 24'><path d='M4 6l8 12 8-12' fill='none' stroke='#fbbf24' stroke-width='2'/></svg>`,
-    azl: `<svg viewBox='0 0 24 24'><path d='M6 18h12a4 4 0 0 0 0-8 5 5 0 0 0-9.5-1.7A4.5 4.5 0 0 0 6 18z' fill='#3b82f6'/><path d='M8 19h8' stroke='#93c5fd' stroke-width='2'/></svg>`,
-    azu: `<svg viewBox='0 0 24 24'><path d='M4 18l7-14 4 8h5l-6 6H4z' fill='#3b82f6'/></svg>`,
-    aws: `<svg viewBox='0 0 24 24'><text x='3' y='14' font-size='10' fill='#fbbf24'>aws</text><path d='M4 16c6 4 10 4 16 0' fill='none' stroke='#f59e0b' stroke-width='2'/></svg>`,
-    gcp: `<svg viewBox='0 0 24 24'><circle cx='8' cy='12' r='4' fill='#ea4335'/><circle cx='16' cy='12' r='4' fill='#34a853'/><circle cx='12' cy='8' r='4' fill='#4285f4'/></svg>`,
-    oci: `<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='8' fill='none' stroke='#ef4444' stroke-width='2'/></svg>`,
-    att: `<svg viewBox='0 0 24 24'><path d='M6 18h12a4 4 0 0 0 0-8 5 5 0 0 0-9.5-1.7A4.5 4.5 0 0 0 6 18z' fill='#22d3ee'/><text x='7' y='13' font-size='6' fill='#0f172a'>A</text></svg>`,
-    mcs: `<svg viewBox='0 0 24 24'><rect x='5' y='6' width='14' height='10' rx='2' fill='#22c55e'/><text x='8' y='13' font-size='6' fill='#0f172a'>M</text></svg>`
-  };
-
-  const tbody = document.querySelector('#grid tbody');
-  const countEl = document.getElementById('count');
-
-  function starsCell(score){
-    return `${stars(score)} <span style="opacity:.7;font-size:12px;">(${score.toFixed(1)})</span>`;
+  // ticks
+  const ticks = document.querySelector('g.ticks');
+  while(ticks.firstChild) ticks.removeChild(ticks.firstChild);
+  for(let i=1;i<=5;i++){
+    const tx = 40 + (i-0.5)*cellW, ty = 20 + H + 16;
+    ticks.appendChild(textSVG(i, tx, ty, 'tick'));
+    const ly = 20 + (H-(i-0.5)*cellH);
+    ticks.appendChild(textSVG(i, 40 - 16, ly, 'tick'));
   }
+}
 
-  function render(rows){
-    tbody.innerHTML = rows.map(r=>`
-      <tr>
-        <td>
-          <div class='platform'>
-            <span class='logo'>${icons[r.logo]||''}</span>
-            <div>
-              <div>${r.platform}</div>
-              <div class='chips'>
-                <span class='chip'>Transition: ${r.effortTransition}</span>
-                <span class='chip'>Implement: ${r.effortImplement}</span>
-                <span class='chip'>${r.timeEstimate}</span>
-              </div>
-            </div>
-          </div>
-        </td>
-        <td><ul class='proscons'>${r.pros.map(p=>`<li>${p}</li>`).join('')}</ul></td>
-        <td><ul class='proscons'>${r.cons.map(c=>`<li>${c}</li>`).join('')}</ul></td>
-        <td class='col-hide-sm'><strong>${r.effortTransition}</strong></td>
-        <td class='col-hide-sm'><strong>${r.effortImplement}</strong></td>
-        <td class='col-hide-md'>${r.timeEstimate}</td>
-        <td class='col-hide-md'>${r.mgmtUpkeep}</td>
-        <td>${veeamPill(r.veeam)}</td>
-        <td class='col-hide-lg'>${r.supportModel}</td>
-        <td>${starsCell(r.satisfaction)}</td>
-      </tr>`).join('');
-    countEl.textContent = `${rows.length} platforms`;
-  }
+function rectSVG(x,y,w,h,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h);
+  Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,v));
+  return el;
+}
+function lineSVG(x1,y1,x2,y2,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+  el.setAttribute('x1',x1); el.setAttribute('y1',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+  Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,v));
+  return el;
+}
+function textSVG(str,x,y,cls){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','text');
+  el.setAttribute('x',x); el.setAttribute('y',y);
+  el.setAttribute('text-anchor','middle');
+  if(cls) el.setAttribute('class',cls);
+  el.textContent=String(str);
+  return el;
+}
 
-  function filter(){
-    const q = document.getElementById('q').value.toLowerCase().trim();
-    const effT = document.getElementById('effortTransitionFilter').value;
-    const effI = document.getElementById('effortImplementFilter').value;
-    const vee = document.getElementById('veeamFilter').value;
-    const sMin = parseFloat(document.getElementById('satisfactionMin').value || '0');
-    const result = DATA.filter(r=>{
-      const text = [r.platform, ...r.pros, ...r.cons, r.effortTransition, r.effortImplement, r.timeEstimate, r.mgmtUpkeep, r.veeam, r.supportModel].join(' ').toLowerCase();
-      const qok = !q || text.includes(q);
-      const tOk = !effT || r.effortTransition===effT;
-      const iOk = !effI || r.effortImplement===effI;
-      const vOk = !vee || (vee==='Yes'&&r.veeam.startsWith('Yes')) || (vee==='Partial'&&r.veeam.startsWith('Partial')) || (vee==='No'&&r.veeam.startsWith('No'));
-      const sOk = isNaN(sMin) || r.satisfaction >= sMin;
-      return qok && tOk && iOk && vOk && sOk;
-    });
-    render(result);
-  }
+/* ----------------- Points ----------------- */
+let DATA = JSON.parse(JSON.stringify(DATA_DEFAULT));
 
-  ['q','effortTransitionFilter','effortImplementFilter','veeamFilter','satisfactionMin'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.addEventListener('input', filter);
-    el.addEventListener('change', filter);
+function posFor(likelihood, impact){
+  const x = (likelihood-1)*cellW + cellW/2;
+  const y = (impact-1)*cellH + cellH/2;
+  // SVG group uses bottom-left origin remap: invert y
+  return { x, y: H - y };
+}
+
+function colorFor(cat){
+  if(cat==='onprem') return CATS.ONPREM.color;
+  if(cat==='hyp')    return CATS.HYP.color;
+  return CATS.MSP.color;
+}
+
+function drawPoints(){
+  while(gPoints.firstChild) gPoints.removeChild(gPoints.firstChild);
+  const showOnprem = document.getElementById('cb-onprem').checked;
+  const showHyp    = document.getElementById('cb-hyp').checked;
+  const showMSP    = document.getElementById('cb-msp').checked;
+
+  DATA.forEach((d,i)=>{
+    if((d.cat==='onprem'&&!showOnprem)||(d.cat==='hyp'&&!showHyp)||(d.cat==='msp'&&!showMSP)) return;
+    const {x,y} = posFor(d.likelihood, d.impact);
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('transform',`translate(${x},${y})`);
+    g.setAttribute('class','pt');
+    // marker
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('r', 9);
+    circle.setAttribute('fill', colorFor(d.cat));
+    circle.setAttribute('stroke', '#0b1224');
+    circle.setAttribute('stroke-width', 2);
+    g.appendChild(circle);
+    // short label (initials)
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('class','label');
+    label.setAttribute('text-anchor','middle');
+    label.setAttribute('dy','.35em');
+    label.textContent = shortName(d.name);
+    g.appendChild(label);
+
+    g.addEventListener('mousemove', (e)=>showTip(e,d));
+    g.addEventListener('mouseleave', hideTip);
+    gPoints.appendChild(g);
   });
+}
 
-  // Initial render
-  render(DATA);
-  </script>
+function shortName(name){
+  // Compact codes for labels
+  const map = {
+    'VMware vSphere/ESXi':'VMW','Microsoft Hyper-V':'HV','OpenShift Virtualization (KVM)':'OCP',
+    'HPE VME':'HPE','Proxmox VE':'PMX','Azure Local (Azure Stack HCI)':'AZL',
+    'Microsoft Azure (IaaS VMs)':'AZR','AWS (EC2 on Nitro)':'AWS','Google Cloud (Compute Engine)':'GCP',
+    'Oracle Cloud Infrastructure (OCI)':'OCI','Atturra Cloud (Managed)':'ATT','Macquarie Cloud Services':'MCS'
+  };
+  return map[name] || name.split(' ').map(w=>w[0]).join('').slice(0,3).toUpperCase();
+}
+
+function showTip(evt,d){
+  const t = document.getElementById('tip');
+  t.style.display='block';
+  t.innerHTML = `<strong>${d.name}</strong><br/>
+    Category: ${d.cat==='onprem'?'On-Prem Hypervisor':d.cat==='hyp'?'Hyperscaler Cloud':'Local MSP / Managed'}<br/>
+    Likelihood: <strong>${d.likelihood}</strong> / 5<br/>
+    Impact: <strong>${d.impact}</strong> / 5`;
+  const wrap = document.getElementById('gridwrap').getBoundingClientRect();
+  const x = evt.clientX - wrap.left + 12;
+  const y = evt.clientY - wrap.top + 12;
+  t.style.left = x+'px'; t.style.top = y+'px';
+}
+function hideTip(){ const t=document.getElementById('tip'); t.style.display='none'; }
+
+/* ----------------- Tuning table ----------------- */
+function buildTable(){
+  const tb = document.getElementById('tbl');
+  tb.innerHTML='';
+  DATA.forEach((d,idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.name}</td>
+      <td>${d.cat==='onprem'?'On-Prem':d.cat==='hyp'?'Hyperscaler':'MSP'}</td>
+      <td class="ctrl">
+        <input type="range" min="1" max="5" step="1" value="${d.likelihood}" data-idx="${idx}" data-field="likelihood"/>
+        <span>${d.likelihood}</span>
+      </td>
+      <td class="ctrl">
+        <input type="range" min="1" max="5" step="1" value="${d.impact}" data-idx="${idx}" data-field="impact"/>
+        <span>${d.impact}</span>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('input[type=range]').forEach(r=>{
+    r.addEventListener('input', (e)=>{
+      const idx = +e.target.dataset.idx;
+      const field = e.target.dataset.field;
+      DATA[idx][field] = clamp(+e.target.value,1,5);
+      e.target.nextElementSibling.textContent = DATA[idx][field];
+      drawPoints();
+    });
+  });
+}
+
+/* ----------------- Init ----------------- */
+function init(){
+  drawHeat();
+  drawPoints();
+  buildTable();
+  document.getElementById('cb-onprem').addEventListener('change', drawPoints);
+  document.getElementById('cb-hyp').addEventListener('change', drawPoints);
+  document.getElementById('cb-msp').addEventListener('change', drawPoints);
+  document.getElementById('reset').addEventListener('click', ()=>{
+    DATA = JSON.parse(JSON.stringify(DATA_DEFAULT));
+    buildTable(); drawPoints();
+  });
+}
+init();
+</script>
 </body>
 </html>
