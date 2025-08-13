@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hypervisor & Cloud – Risk Matrix (No-Overlap)</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#0c1224; --grid:#1e2a44; --axis:#94a3b8; --text:#e5e7eb;
+    --muted:#9fb0c9; --note:#0b162b; --accent:#22d3ee;
+    --cat-onprem:#60a5fa; --cat-hyp:#f59e0b; --cat-msp:#22c55e;
+    --hot5:#ef4444; --hot4:#f97316; --hot3:#facc15; --hot2:#84cc16; --hot1:#22c55e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1a 60%,#070b14);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  header{padding:18px 16px 8px}
+  h1{margin:0 0 6px 0;font-size:clamp(22px,3vw,30px)}
+  .tag{color:var(--muted);font-size:13px}
+  .note{margin:10px 16px;background:var(--note);border:1px solid #1d2a47;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.35}
+  .wrap{display:grid;grid-template-columns:1fr 350px;gap:16px;padding:12px 16px;align-items:start}
+  .card{background:var(--panel);border:1px solid #1b2540;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .pad{padding:12px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid #223357;background:#0e1930;color:#dbeafe;border-radius:999px;padding:7px 10px;font-size:12px}
+  .swatch{width:14px;height:14px;border-radius:4px}
+  .btn{all:unset;background:var(--accent);color:#03202b;font-weight:700;padding:8px 10px;border-radius:10px;cursor:pointer}
+  .small{font-size:12px;color:var(--muted)}
+  .gridwrap{position:relative;aspect-ratio:1/1;max-width:100%;}
+  svg{width:100%;height:auto;display:block}
+  .tick{font-size:11px;fill:var(--axis)}
+  .label{font-size:10px;fill:#0b1224;font-weight:800;pointer-events:none}
+  .pt{cursor:pointer;transition:transform .15s ease}
+  .pt:hover{transform:scale(1.08)}
+  .tooltip{position:absolute;pointer-events:none;background:#0b1224;border:1px solid #233458;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.25;color:#e5e7eb;box-shadow:0 10px 24px rgba(0,0,0,.35);min-width:220px;z-index:5;display:none}
+  .legend{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+  .heat{height:10px;border-radius:6px}
+  .divider{height:1px;background:#1e2a44;margin:10px 0}
+  .list{max-height:360px;overflow:auto}
+  .list table{width:100%;border-collapse:collapse}
+  .list th,.list td{padding:8px;border-bottom:1px solid #1e2a44;text-align:left;font-size:12px}
+  .ctrl{display:flex;gap:8px;align-items:center}
+  input[type=range]{width:120px}
+  @media (max-width:980px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Risk Matrix (Implementation vs Operational)</h1>
+    <div class="tag">5×5 qualitative heatmap. Positions derive from: <strong>X = Effort to Implement</strong>, <strong>Y = Mgmt/Upkeep (3–5y)</strong>. Automatic no-overlap placement.</div>
+  </header>
+
+  <div class="note">
+    <strong>Note:</strong> All estimates are based on a small implementation (2–3 nodes, or the platform minimum where required).
+    Cloud solution estimates are based on a <em>standard small tenant with simple networking</em>. Scores are indicative—tune them below for your environment.
+  </div>
+
+  <div class="wrap">
+    <!-- Matrix -->
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between; margin-bottom:8px">
+        <div class="row">
+          <span class="chip"><span class="swatch" style="background:var(--cat-onprem)"></span>On-Prem Hypervisor</span>
+          <span class="chip"><span class="swatch" style="background:var(--cat-hyp)"></span>Hyperscaler Cloud</span>
+          <span class="chip"><span class="swatch" style="background:var(--cat-msp)"></span>Local MSP / Managed</span>
+        </div>
+        <div class="row">
+          <label class="chip"><input id="cb-onprem" type="checkbox" checked style="accent-color:var(--cat-onprem)"/> On-Prem</label>
+          <label class="chip"><input id="cb-hyp" type="checkbox" checked style="accent-color:var(--cat-hyp)"/> Hyperscaler</label>
+          <label class="chip"><input id="cb-msp" type="checkbox" checked style="accent-color:var(--cat-msp)"/> MSP</label>
+          <button class="btn" id="resolve">Resolve Overlaps</button>
+        </div>
+      </div>
+
+      <div class="gridwrap" id="gridwrap">
+        <div class="tooltip" id="tip"></div>
+        <svg viewBox="0 0 520 520" role="img" aria-label="Risk matrix 5 by 5">
+          <!-- Heat squares -->
+          <defs>
+            <linearGradient id="heat1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot1)"/><stop offset="100%" stop-color="var(--hot2)"/>
+            </linearGradient>
+            <linearGradient id="heat2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot2)"/><stop offset="100%" stop-color="var(--hot3)"/>
+            </linearGradient>
+            <linearGradient id="heat3" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot3)"/><stop offset="100%" stop-color="var(--hot4)"/>
+            </linearGradient>
+            <linearGradient id="heat4" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--hot4)"/><stop offset="100%" stop-color="var(--hot5)"/>
+            </linearGradient>
+          </defs>
+          <g id="grid" transform="translate(40,20)"></g>
+          <g class="ticks" transform="translate(40,20)"></g>
+          <text class="tick" x="14" y="275" transform="rotate(-90,14,275)">Operational (Mgmt/Upkeep) 1 → 5</text>
+          <text class="tick" x="260" y="510">Implementation Effort 1 → 5</text>
+          <g id="points" transform="translate(40,20)"></g>
+        </svg>
+
+        <div class="legend">
+          <div class="heat" style="background:var(--hot1)"></div>
+          <div class="heat" style="background:var(--hot2)"></div>
+          <div class="heat" style="background:var(--hot3)"></div>
+          <div class="heat" style="background:var(--hot4)"></div>
+          <div class="heat" style="background:var(--hot5)"></div>
+        </div>
+        <div class="small">Heat indicates combined risk zone (low → high). Axes use 1–5 bands.</div>
+      </div>
+    </div>
+
+    <!-- Tuning panel -->
+    <div class="card pad">
+      <h3 style="margin:0 0 8px 0;font-size:16px">Tune & Review</h3>
+      <div class="small" style="margin-bottom:8px">Adjust Effort to Implement (X) & Mgmt/Upkeep (Y). Changes update the matrix & collision resolution.</div>
+      <div class="list">
+        <table>
+          <thead><tr><th>Platform</th><th>Category</th><th>Implement</th><th>Mgmt</th></tr></thead>
+          <tbody id="tbl"></tbody>
+        </table>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <button class="btn" id="reset">Reset to defaults</button>
+        <span class="small">Tip: Use category toggles to focus view. Click “Resolve Overlaps” after big changes.</span>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ----------------- Inputs from your comparison table -----------------
+   We'll map:
+     Effort to Implement: Low=2, Medium=3, High=4  (1 & 5 reserved for extremes)
+     Mgmt/Upkeep (3–5y):  Low=2, Medium=3, High=4
+   You can tweak below in DEFAULTS if you want different baselines.
+--------------------------------------------------------------------- */
+
+const DEFAULTS = [
+  // On-Prem Hypervisors
+  { name:'VMware vSphere/ESXi', cat:'onprem', implement:'Medium', mgmt:'Medium' },
+  { name:'Microsoft Hyper-V',   cat:'onprem', implement:'Low',    mgmt:'Medium' },
+  { name:'OpenShift Virtualization (KVM)', cat:'onprem', implement:'High',   mgmt:'High' },
+  { name:'HPE VME',             cat:'onprem', implement:'Low',    mgmt:'Medium' },
+  { name:'Proxmox VE',          cat:'onprem', implement:'Medium', mgmt:'Medium' },
+  { name:'Azure Local (Azure Stack HCI)', cat:'onprem', implement:'Medium', mgmt:'Medium' },
+
+  // Hyperscalers (standard small tenant w/ simple networking)
+  { name:'Microsoft Azure (IaaS VMs)', cat:'hyp', implement:'Low', mgmt:'Medium' },
+  { name:'AWS (EC2 on Nitro)',         cat:'hyp', implement:'Low', mgmt:'Medium' },
+  { name:'Google Cloud (Compute Engine)', cat:'hyp', implement:'Low', mgmt:'Medium' },
+  { name:'Oracle Cloud Infrastructure (OCI)', cat:'hyp', implement:'Low', mgmt:'Medium' },
+
+  // Local MSP / Managed Clouds
+  { name:'Atturra Cloud (Managed)',    cat:'msp', implement:'Low', mgmt:'Low' },
+  { name:'Macquarie Cloud Services',   cat:'msp', implement:'Low', mgmt:'Low' },
+];
+
+/* ----------------- Mapping helpers ----------------- */
+const mapBand = (s)=>{
+  const k = String(s||'').toLowerCase();
+  if(k.startsWith('low')) return 2;
+  if(k.startsWith('high')) return 4;
+  return 3; // Medium default
+};
+
+const CATS = {
+  ONPREM: { key:'onprem', color:getCSS('--cat-onprem') },
+  HYP:    { key:'hyp',    color:getCSS('--cat-hyp')    },
+  MSP:    { key:'msp',    color:getCSS('--cat-msp')    },
+};
+
+/* ----------------- Visual constants ----------------- */
+function getCSS(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+const W = 440, H = 440; // inner draw area
+const cellW = W/5, cellH = H/5;
+const RADIUS = 11;       // circle radius
+const MIN_DIST = 2*RADIUS + 4; // required spacing between centers
+
+/* ----------------- Build base grid ----------------- */
+const gBase   = document.getElementById('grid');
+const gTicks  = document.querySelector('g.ticks');
+const gPoints = document.getElementById('points');
+const tip     = document.getElementById('tip');
+
+drawHeat();
+
+function drawHeat(){
+  // cells
+  while(gBase.firstChild) gBase.removeChild(gBase.firstChild);
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const x=c*cellW, y=(4-r)*cellH;
+      const level = Math.max(r,c)+1;
+      const fill = level>=5 ? 'url(#heat4)' : level>=4 ? 'url(#heat3)' : level>=3 ? 'url(#heat2)' : 'url(#heat1)';
+      const rect = rectSVG(x,y,cellW,cellH,{fill,stroke:getCSS('--grid')});
+      gBase.appendChild(rect);
+    }
+  }
+  // grid lines
+  for(let i=0;i<=5;i++){
+    gBase.appendChild(lineSVG(0,i*cellH, W,i*cellH, {stroke:getCSS('--grid')}));
+    gBase.appendChild(lineSVG(i*cellW,0, i*cellW,H, {stroke:getCSS('--grid')}));
+  }
+  // ticks
+  while(gTicks.firstChild) gTicks.removeChild(gTicks.firstChild);
+  for(let i=1;i<=5;i++){
+    const tx = 40 + (i-0.5)*cellW, ty = 20 + H + 16;
+    gTicks.appendChild(textSVG(i, tx, ty, 'tick'));
+    const ly = 20 + (H-(i-0.5)*cellH);
+    gTicks.appendChild(textSVG(i, 40 - 16, ly, 'tick'));
+  }
+}
+
+function rectSVG(x,y,w,h,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h);
+  Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,v));
+  return el;
+}
+function lineSVG(x1,y1,x2,y2,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+  el.setAttribute('x1',x1); el.setAttribute('y1',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+  Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,v));
+  return el;
+}
+function textSVG(str,x,y,cls){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','text');
+  el.setAttribute('x',x); el.setAttribute('y',y);
+  el.setAttribute('text-anchor','middle');
+  if(cls) el.setAttribute('class',cls);
+  el.textContent=String(str);
+  return el;
+}
+
+/* ----------------- Data & placement ----------------- */
+let DATA = DEFAULTS.map(d => ({
+  ...d,
+  xBand: mapBand(d.implement),
+  yBand: mapBand(d.mgmt),
+  // positions will be set later
+}));
+
+function bandToCenterX(band){ return (band-1)*cellW + cellW/2; }
+function bandToCenterY(band){ return H - ((band-1)*cellH + cellH/2); }
+
+function initPositions(){
+  DATA.forEach(d=>{
+    // start at band center with tiny jitter to reduce perfect overlap before relaxation
+    const jitter = ()=> (Math.random()-0.5)*6;
+    d.x = bandToCenterX(d.xBand) + jitter();
+    d.y = bandToCenterY(d.yBand) + jitter();
+  });
+}
+
+/* Simple repulsion-based overlap resolver */
+function resolveOverlaps(iterations=200){
+  for(let k=0;k<iterations;k++){
+    let moved = false;
+    for(let i=0;i<DATA.length;i++){
+      for(let j=i+1;j<DATA.length;j++){
+        const a = DATA[i], b = DATA[j];
+        // skip hidden categories
+        if(!isVisible(a) && !isVisible(b)) continue;
+        // Only repel if at least one of a/b is visible (so hidden points don't affect)
+        if(!isVisible(a) && isVisible(b)) continue;
+        if(isVisible(a) && !isVisible(b)) continue;
+
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.hypot(dx,dy) || 0.0001;
+        if(dist < MIN_DIST){
+          const overlap = (MIN_DIST - dist)/2;
+          const ux = dx/dist, uy = dy/dist;
+          a.x -= ux * overlap;
+          a.y -= uy * overlap;
+          b.x += ux * overlap;
+          b.y += uy * overlap;
+          // keep within cell bounds (by their 1x1 band box)
+          confineToBand(a);
+          confineToBand(b);
+          moved = true;
+        }
+      }
+    }
+    if(!moved) break; // early exit if stable
+  }
+}
+
+function confineToBand(d){
+  const minX = (d.xBand-1)*cellW + RADIUS;
+  const maxX = d.xBand*cellW - RADIUS;
+  const minY = H - d.yBand*cellH + RADIUS;
+  const maxY = H - (d.yBand-1)*cellH - RADIUS;
+  d.x = Math.max(minX, Math.min(maxX, d.x));
+  d.y = Math.max(minY, Math.min(maxY, d.y));
+}
+
+function colorFor(cat){
+  if(cat==='onprem') return getCSS('--cat-onprem');
+  if(cat==='hyp')    return getCSS('--cat-hyp');
+  return getCSS('--cat-msp');
+}
+
+function shortName(name){
+  const map = {
+    'VMware vSphere/ESXi':'VMW','Microsoft Hyper-V':'HV','OpenShift Virtualization (KVM)':'OCP',
+    'HPE VME':'HPE','Proxmox VE':'PMX','Azure Local (Azure Stack HCI)':'AZL',
+    'Microsoft Azure (IaaS VMs)':'AZR','AWS (EC2 on Nitro)':'AWS','Google Cloud (Compute Engine)':'GCP',
+    'Oracle Cloud Infrastructure (OCI)':'OCI','Atturra Cloud (Managed)':'ATT','Macquarie Cloud Services':'MCS'
+  };
+  return map[name] || name.split(' ').map(w=>w[0]).join('').slice(0,3).toUpperCase();
+}
+
+/* ----------------- Draw points ----------------- */
+function isVisible(d){
+  const onprem = document.getElementById('cb-onprem').checked;
+  const hyp    = document.getElementById('cb-hyp').checked;
+  const msp    = document.getElementById('cb-msp').checked;
+  if(d.cat==='onprem' && !onprem) return false;
+  if(d.cat==='hyp' && !hyp) return false;
+  if(d.cat==='msp' && !msp) return false;
+  return true;
+}
+
+function drawPoints(){
+  while(gPoints.firstChild) gPoints.removeChild(gPoints.firstChild);
+  DATA.forEach(d=>{
+    if(!isVisible(d)) return;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('transform',`translate(${d.x},${d.y})`);
+    g.setAttribute('class','pt');
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('r', RADIUS);
+    circle.setAttribute('fill', colorFor(d.cat));
+    circle.setAttribute('stroke', '#0b1224');
+    circle.setAttribute('stroke-width', 2);
+    g.appendChild(circle);
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('class','label');
+    label.setAttribute('text-anchor','middle');
+    label.setAttribute('dy','.35em');
+    label.textContent = shortName(d.name);
+    g.appendChild(label);
+
+    g.addEventListener('mousemove', (e)=>showTip(e,d));
+    g.addEventListener('mouseleave', hideTip);
+    gPoints.appendChild(g);
+  });
+}
+
+/* ----------------- Tooltip ----------------- */
+function showTip(evt,d){
+  const t = document.getElementById('tip');
+  t.style.display='block';
+  t.innerHTML = `<strong>${d.name}</strong><br/>
+    Category: ${d.cat==='onprem'?'On-Prem Hypervisor':d.cat==='hyp'?'Hyperscaler Cloud':'Local MSP / Managed'}<br/>
+    Implement band (X): <strong>${d.xBand}</strong> / 5 &nbsp;|&nbsp; Mgmt band (Y): <strong>${d.yBand}</strong> / 5`;
+  const wrap = document.getElementById('gridwrap').getBoundingClientRect();
+  const x = evt.clientX - wrap.left + 12;
+  const y = evt.clientY - wrap.top + 12;
+  t.style.left = x+'px'; t.style.top = y+'px';
+}
+function hideTip(){ document.getElementById('tip').style.display='none'; }
+
+/* ----------------- Tuning table ----------------- */
+function buildTable(){
+  const tb = document.getElementById('tbl');
+  tb.innerHTML='';
+  DATA.forEach((d,idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.name}</td>
+      <td>${d.cat==='onprem'?'On-Prem':d.cat==='hyp'?'Hyperscaler':'MSP'}</td>
+      <td class="ctrl">
+        <input type="range" min="1" max="5" step="1" value="${d.xBand}" data-idx="${idx}" data-field="xBand"/>
+        <span>${d.xBand}</span>
+      </td>
+      <td class="ctrl">
+        <input type="range" min="1" max="5" step="1" value="${d.yBand}" data-idx="${idx}" data-field="yBand"/>
+        <span>${d.yBand}</span>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('input[type=range]').forEach(r=>{
+    r.addEventListener('input', (e)=>{
+      const idx = +e.target.dataset.idx;
+      const field = e.target.dataset.field;
+      DATA[idx][field] = Math.max(1, Math.min(5, +e.target.value));
+      e.target.nextElementSibling.textContent = DATA[idx][field];
+      // Re-center inside the new band and then resolve overlaps
+      DATA[idx].x = bandToCenterX(DATA[idx].xBand);
+      DATA[idx].y = bandToCenterY(DATA[idx].yBand);
+      resolveOverlaps(150);
+      drawPoints();
+    });
+  });
+}
+
+/* ----------------- Init & events ----------------- */
+function init(){
+  // Convert bands to initial positions
+  initPositions();
+  // Initial overlap resolution + draw
+  resolveOverlaps(200);
+  drawPoints();
+  buildTable();
+
+  document.getElementById('cb-onprem').addEventListener('change', ()=>{ resolveOverlaps(120); drawPoints(); });
+  document.getElementById('cb-hyp').addEventListener('change', ()=>{ resolveOverlaps(120); drawPoints(); });
+  document.getElementById('cb-msp').addEventListener('change', ()=>{ resolveOverlaps(120); drawPoints(); });
+
+  document.getElementById('resolve').addEventListener('click', ()=>{ resolveOverlaps(220); drawPoints(); });
+
+  document.getElementById('reset').addEventListener('click', ()=>{
+    DATA = DEFAULTS.map(d=>({
+      ...d,
+      xBand: mapBand(d.implement),
+      yBand: mapBand(d.mgmt),
+    }));
+    initPositions();
+    resolveOverlaps(220);
+    drawPoints();
+    buildTable();
+  });
+}
+
+init();
+</script>
+</body>
+</html>
