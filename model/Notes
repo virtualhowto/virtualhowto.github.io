@@ -1,0 +1,20 @@
+secv3.html - AI Prompt
+“Build a single-file HTML app called Security Maturity Model Capability Mapping that lets me map Essential 8 controls to maturity levels (0–3). Requirements:
+
+Layout: header, toolbox panel, maturity matrix table, summary panel (list + chart), notes panel, and a top toolbar with buttons.
+
+Toolbox: Accept an inline default array of tools { name, description }. Show as draggable pills with a search filter. Also allow uploading a tools.json (same shape) to replace the toolbox. Show hover tooltips with descriptions.
+
+Matrix: 8 rows (Application Control, Patch Applications, Configure Macros, Application Hardening, Restrict Admin Privileges, Patch OS, Multi-Factor Auth, Backups) and four columns (Maturity Level 0–3). Each data cell is droppable. Clicking a cell selects that maturity for the row; dropping a tool creates a removable pill inside the selected cell (no duplicates within a cell). Clicking a column header selects that maturity level for all rows.
+
+State: Auto-save selections, attached tools, and notes to localStorage. Provide Export JSON and Import JSON for full state (including toolDescriptions and notes). Provide Clear All.
+
+Summary: For each control, display selected level + description and list the attached tools with their descriptions. Include a Chart.js bar chart of maturity levels (0–3).
+
+Export: Button to export to PDF via html2pdf.js (clone or otherwise avoid exporting the live tooltip).
+
+Accessibility/UX: Sticky table header, responsive layout, helpful titles/tooltips, modern but dependency-light styling. Avoid external frameworks; only use Chart.js and html2pdf.js via CDN.
+
+Code quality: Plain HTML/CSS/JS in one file; well-structured, readable, no build step.
+
+Deliver the complete, runnable HTML file.”
