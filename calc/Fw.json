@@ -1,0 +1,544 @@
+[
+  {
+    "vendor": "Fortinet",
+    "model": "FortiGate 40F",
+    "maxUsers": 60,
+    "throughputGbps": 5,
+    "sslGbps": 0.6,
+    "vpnUsers": 25,
+    "ipsecTunnels": 10,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 150,
+    "setup": 600
+  },
+  {
+    "vendor": "Fortinet",
+    "model": "FortiGate 60F",
+    "maxUsers": 100,
+    "throughputGbps": 10,
+    "sslGbps": 0.75,
+    "vpnUsers": 50,
+    "ipsecTunnels": 20,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 220,
+    "setup": 800
+  },
+  {
+    "vendor": "Fortinet",
+    "model": "FortiGate 100F",
+    "maxUsers": 600,
+    "throughputGbps": 10,
+    "sslGbps": 1.2,
+    "vpnUsers": 200,
+    "ipsecTunnels": 200,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 850,
+    "setup": 1600
+  },
+  {
+    "vendor": "Fortinet",
+    "model": "FortiGate 200F",
+    "maxUsers": 1200,
+    "throughputGbps": 20,
+    "sslGbps": 2.4,
+    "vpnUsers": 500,
+    "ipsecTunnels": 500,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 1250,
+    "setup": 2000
+  },
+  {
+    "vendor": "Fortinet",
+    "model": "FortiGate 400F",
+    "maxUsers": 4000,
+    "throughputGbps": 45,
+    "sslGbps": 6,
+    "vpnUsers": 2000,
+    "ipsecTunnels": 2000,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 3200,
+    "setup": 3000
+  },
+  {
+    "vendor": "Fortinet",
+    "model": "FortiGate VM01",
+    "type": "virtual",
+    "vCPUs": 2,
+    "memoryGB": 4,
+    "throughputGbps": 1,
+    "sslGbps": 0.3,
+    "vpnUsers": 50,
+    "ipsecTunnels": 50,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 200,
+    "setup": 500
+  },
+  {
+    "vendor": "Fortinet",
+    "model": "FortiGate VM04",
+    "type": "virtual",
+    "vCPUs": 4,
+    "memoryGB": 8,
+    "throughputGbps": 4,
+    "sslGbps": 1,
+    "vpnUsers": 200,
+    "ipsecTunnels": 200,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 600,
+    "setup": 1000
+  },
+  {
+    "vendor": "Palo Alto",
+    "model": "PA-220",
+    "maxUsers": 50,
+    "throughputGbps": 0.6,
+    "sslGbps": 0.25,
+    "vpnUsers": 20,
+    "ipsecTunnels": 20,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 120,
+    "setup": 900
+  },
+  {
+    "vendor": "Palo Alto",
+    "model": "PA-440",
+    "maxUsers": 250,
+    "throughputGbps": 5.2,
+    "sslGbps": 1,
+    "vpnUsers": 200,
+    "ipsecTunnels": 150,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 650,
+    "setup": 1400
+  },
+  {
+    "vendor": "Palo Alto",
+    "model": "PA-460",
+    "maxUsers": 500,
+    "throughputGbps": 8.6,
+    "sslGbps": 1.9,
+    "vpnUsers": 400,
+    "ipsecTunnels": 300,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 900,
+    "setup": 1700
+  },
+  {
+    "vendor": "Palo Alto",
+    "model": "PA-3220",
+    "maxUsers": 1000,
+    "throughputGbps": 15.2,
+    "sslGbps": 2,
+    "vpnUsers": 400,
+    "ipsecTunnels": 400,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 1400,
+    "setup": 2300
+  },
+  {
+    "vendor": "Palo Alto",
+    "model": "PA-5220",
+    "maxUsers": 3000,
+    "throughputGbps": 35,
+    "sslGbps": 5,
+    "vpnUsers": 1500,
+    "ipsecTunnels": 1000,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 2800,
+    "setup": 3600
+  },
+  {
+    "vendor": "Palo Alto",
+    "model": "VM-50",
+    "type": "virtual",
+    "vCPUs": 2,
+    "memoryGB": 4,
+    "throughputGbps": 1,
+    "sslGbps": 0.25,
+    "vpnUsers": 100,
+    "ipsecTunnels": 50,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 250,
+    "setup": 1200
+  },
+  {
+    "vendor": "Palo Alto",
+    "model": "VM-300",
+    "type": "virtual",
+    "vCPUs": 4,
+    "memoryGB": 8,
+    "throughputGbps": 3,
+    "sslGbps": 1,
+    "vpnUsers": 500,
+    "ipsecTunnels": 200,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 800,
+    "setup": 1800
+  },
+  {
+    "vendor": "Cisco",
+    "model": "Secure Firewall 1120",
+    "maxUsers": 250,
+    "throughputGbps": 2.5,
+    "sslGbps": 0.7,
+    "vpnUsers": 100,
+    "ipsecTunnels": 50,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 520,
+    "setup": 1500
+  },
+  {
+    "vendor": "Cisco",
+    "model": "Secure Firewall 1140",
+    "maxUsers": 400,
+    "throughputGbps": 3.3,
+    "sslGbps": 1,
+    "vpnUsers": 250,
+    "ipsecTunnels": 100,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 720,
+    "setup": 1700
+  },
+  {
+    "vendor": "Cisco",
+    "model": "Secure Firewall 2130",
+    "maxUsers": 1000,
+    "throughputGbps": 9,
+    "sslGbps": 1.5,
+    "vpnUsers": 600,
+    "ipsecTunnels": 300,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 1400,
+    "setup": 2200
+  },
+  {
+    "vendor": "Cisco",
+    "model": "Secure Firewall 3110",
+    "maxUsers": 4000,
+    "throughputGbps": 45,
+    "sslGbps": 6,
+    "vpnUsers": 2000,
+    "ipsecTunnels": 1200,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 3200,
+    "setup": 3600
+  },
+  {
+    "vendor": "Cisco",
+    "model": "Secure Firewall Threat Defense Virtual (FTDv10)",
+    "type": "virtual",
+    "vCPUs": 2,
+    "memoryGB": 4,
+    "throughputGbps": 1,
+    "sslGbps": 0.3,
+    "vpnUsers": 100,
+    "ipsecTunnels": 50,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 220,
+    "setup": 1000
+  },
+  {
+    "vendor": "Cisco",
+    "model": "Secure Firewall Threat Defense Virtual (FTDv30)",
+    "type": "virtual",
+    "vCPUs": 4,
+    "memoryGB": 8,
+    "throughputGbps": 3,
+    "sslGbps": 1,
+    "vpnUsers": 300,
+    "ipsecTunnels": 200,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 700,
+    "setup": 1500
+  },
+  {
+    "vendor": "Check Point",
+    "model": "Quantum 6200",
+    "maxUsers": 1000,
+    "throughputGbps": 11,
+    "sslGbps": 2,
+    "vpnUsers": 400,
+    "ipsecTunnels": 400,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 1300,
+    "setup": 2600
+  },
+  {
+    "vendor": "Check Point",
+    "model": "Quantum 16200",
+    "maxUsers": 6000,
+    "throughputGbps": 60,
+    "sslGbps": 8,
+    "vpnUsers": 3000,
+    "ipsecTunnels": 2000,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 4200,
+    "setup": 5000
+  },
+  {
+    "vendor": "Check Point",
+    "model": "CloudGuard Virtual FW (vSEC-S)",
+    "type": "virtual",
+    "vCPUs": 2,
+    "memoryGB": 4,
+    "throughputGbps": 1.5,
+    "sslGbps": 0.5,
+    "vpnUsers": 150,
+    "ipsecTunnels": 100,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 280,
+    "setup": 1500
+  },
+  {
+    "vendor": "Check Point",
+    "model": "CloudGuard Virtual FW (vSEC-M)",
+    "type": "virtual",
+    "vCPUs": 4,
+    "memoryGB": 8,
+    "throughputGbps": 3.5,
+    "sslGbps": 1,
+    "vpnUsers": 400,
+    "ipsecTunnels": 300,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 850,
+    "setup": 2000
+  },
+  {
+    "vendor": "Meraki",
+    "model": "MX68",
+    "maxUsers": 50,
+    "throughputGbps": 0.45,
+    "sslGbps": 0.2,
+    "vpnUsers": 25,
+    "ipsecTunnels": 50,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": false,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 150,
+    "setup": 400
+  },
+  {
+    "vendor": "Meraki",
+    "model": "MX450",
+    "maxUsers": 10000,
+    "throughputGbps": 6,
+    "sslGbps": 2.5,
+    "vpnUsers": 5000,
+    "ipsecTunnels": 4000,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": false,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 4000,
+    "setup": 4500
+  },
+  {
+    "vendor": "Meraki",
+    "model": "vMX-M (Small)",
+    "type": "virtual",
+    "vCPUs": 2,
+    "memoryGB": 4,
+    "throughputGbps": 0.5,
+    "sslGbps": 0.2,
+    "vpnUsers": 50,
+    "ipsecTunnels": 100,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": false,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 180,
+    "setup": 300
+  },
+  {
+    "vendor": "Meraki",
+    "model": "vMX-L (Large)",
+    "type": "virtual",
+    "vCPUs": 4,
+    "memoryGB": 8,
+    "throughputGbps": 1,
+    "sslGbps": 0.4,
+    "vpnUsers": 200,
+    "ipsecTunnels": 200,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": false,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 500,
+    "setup": 600
+  },
+  {
+    "vendor": "Sophos",
+    "model": "XGS 87",
+    "maxUsers": 50,
+    "throughputGbps": 3,
+    "sslGbps": 0.3,
+    "vpnUsers": 25,
+    "ipsecTunnels": 25,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 140,
+    "setup": 700
+  },
+  {
+    "vendor": "Sophos",
+    "model": "XGS 5500",
+    "maxUsers": 6000,
+    "throughputGbps": 120,
+    "sslGbps": 10,
+    "vpnUsers": 3000,
+    "ipsecTunnels": 2000,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true,
+      "idsIps": true,
+      "managedAvailable": true
+    },
+    "baseMonthly": 3900,
+    "setup": 4200
+  },
+  {
+    "vendor": "Sophos",
+    "model": "XG Firewall Virtual (XG-VM1)",
+    "type": "virtual",
+    "vCPUs": 2,
+    "memoryGB": 4,
+    "throughputGbps": 1,
+    "sslGbps": 0.3,
+    "vpnUsers": 100,
+    "ipsecTunnels": 50,
+    "features": {
+      "urlFiltering": true,
+      "sslInspection": true
