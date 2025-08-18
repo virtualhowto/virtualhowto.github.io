@@ -1,0 +1,504 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Maturity Model Capability Mapping (Improved)</title>
+  <style>
+    :root{
+      --bg:#f4f7fb; --panel:#ffffff; --ink:#1e2a38; --muted:#556271; --accent:#0a7acb;
+      --accent-soft:#e6f2ff; --border:#d9e2ec; --pill:#ebf5ff; --danger:#e53e3e; --success:#0e9f6e;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    header{background-color:var(--ink);color:#fff;padding:20px;text-align:center}
+    header h1{margin:0;font-weight:700}
+    .container{max-width:1100px;margin:20px auto;padding:0 16px}
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .toolbar-left,.toolbar-right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn{padding:10px 14px;border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+    .btn.success{background:var(--success);border-color:var(--success);color:#fff}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .hint{color:var(--muted);font-size:13px}
+
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+
+    #tools-wrap{display:flex;flex-direction:column;gap:10px}
+    #tool-search{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px}
+    #tools{display:flex;flex-wrap:wrap;gap:8px}
+
+    .tool{padding:8px 12px;background:var(--pill);border:1px solid #b8dbff;border-radius:999px;cursor:grab;user-select:none}
+    .tool[aria-grabbed="true"]{outline:2px solid var(--accent)}
+
+    .chart{overflow-x:auto}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    th,td{border:1px solid var(--border);padding:10px;text-align:center}
+    th{background:#f0f4f8;position:sticky;top:0;z-index:1}
+    td:first-child, th:first-child{background:#f7fafc;text-align:left;font-weight:600;min-width:220px}
+    tr:nth-child(even) td{background:#fcfdff}
+    td.dropcell{vertical-align:top;min-height:56px}
+
+    .selected-cell{background-color:var(--accent-soft)!important;box-shadow:inset 0 0 0 2px #bfe1ff}
+    .pill{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 8px;margin-top:6px;border:1px solid #b8dbff;border-radius:8px;background:#ebf5ff}
+    .pill button{border:none;background:transparent;cursor:pointer}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+    .hover-tooltip{position:fixed;background:#1f2937;color:white;padding:8px 10px;border-radius:6px;font-size:13px;max-width:260px;pointer-events:none;opacity:.95;z-index:1000;display:none}
+
+    .legend{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+    .legend .swatch{width:14px;height:14px;border-radius:4px;background:var(--accent-soft);border:1px solid #bfe1ff}
+
+    details summary{cursor:pointer;font-weight:600}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Security Maturity Model Capability Mapping</h1>
+    <div class="hint">Drag security tools onto maturity cells, click a cell to select the current level for that control. Auto‑saved locally.</div>
+  </header>
+
+  <div class="container">
+    <div class="toolbar panel" role="region" aria-label="Global actions">
+      <div class="toolbar-left">
+        <button class="btn primary" id="btn-export-pdf">Export to PDF</button>
+        <button class="btn" id="btn-export-json" title="Download current selections & tooling as JSON">Export JSON</button>
+        <label class="btn" for="import-json-input" title="Import a previously exported JSON file">Import JSON<input id="import-json-input" type="file" accept="application/json" style="display:none"></label>
+        <button class="btn danger" id="btn-clear">Clear All</button>
+      </div>
+      <div class="toolbar-right">
+        <label class="btn" for="tools-file">Load tools.json<input id="tools-file" type="file" accept="application/json" style="display:none"></label>
+        <span class="hint">or use defaults below</span>
+      </div>
+    </div>
+
+    <div class="panel" id="tools-wrap">
+      <input id="tool-search" type="search" placeholder="Search tools… (e.g., EDR, WAF, backup)" aria-label="Filter tools" />
+      <div id="tools" aria-label="Security tools" role="list"></div>
+    </div>
+
+    <div class="panel chart" id="matrix">
+      <div class="legend" style="margin-bottom:10px">
+        <span class="swatch"></span> Selected maturity cell
+      </div>
+      <details style="margin-bottom:10px">
+        <summary>Quick-set maturity by column</summary>
+        <div class="hint">Click a column header to set that maturity level for all controls (you can still override per-row).</div>
+      </details>
+      <table id="maturity-table" aria-label="Maturity matrix">
+        <thead>
+          <tr>
+            <th scope="col">Control</th>
+            <th scope="col" data-level="0" class="col-header">Maturity Level 0</th>
+            <th scope="col" data-level="1" class="col-header">Maturity Level 1</th>
+            <th scope="col" data-level="2" class="col-header">Maturity Level 2</th>
+            <th scope="col" data-level="3" class="col-header">Maturity Level 3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Application Control</td>
+            <td class="dropcell" data-level="0">None</td>
+            <td class="dropcell" data-level="1">Allowlisting</td>
+            <td class="dropcell" data-level="2">Policy-based</td>
+            <td class="dropcell" data-level="3">Enforced + Memory Protections</td>
+          </tr>
+          <tr>
+            <td>Patch Applications</td>
+            <td class="dropcell" data-level="0">Unpatched</td>
+            <td class="dropcell" data-level="1">Ad hoc</td>
+            <td class="dropcell" data-level="2">Routine</td>
+            <td class="dropcell" data-level="3">Automated + Tested</td>
+          </tr>
+          <tr>
+            <td>Configure Macros</td>
+            <td class="dropcell" data-level="0">Unrestricted</td>
+            <td class="dropcell" data-level="1">Warning-based</td>
+            <td class="dropcell" data-level="2">Blocked</td>
+            <td class="dropcell" data-level="3">Signed + Audited</td>
+          </tr>
+          <tr>
+            <td>Application Hardening</td>
+            <td class="dropcell" data-level="0">Open</td>
+            <td class="dropcell" data-level="1">Baseline</td>
+            <td class="dropcell" data-level="2">Hardened</td>
+            <td class="dropcell" data-level="3">Policy-audited</td>
+          </tr>
+          <tr>
+            <td>Restrict Admin Privileges</td>
+            <td class="dropcell" data-level="0">Everyone Admin</td>
+            <td class="dropcell" data-level="1">Limited</td>
+            <td class="dropcell" data-level="2">Audited</td>
+            <td class="dropcell" data-level="3">Just-in-Time</td>
+          </tr>
+          <tr>
+            <td>Patch OS</td>
+            <td class="dropcell" data-level="0">Unpatched</td>
+            <td class="dropcell" data-level="1">Manual</td>
+            <td class="dropcell" data-level="2">Routine</td>
+            <td class="dropcell" data-level="3">Central + Automated</td>
+          </tr>
+          <tr>
+            <td>Multi-Factor Auth</td>
+            <td class="dropcell" data-level="0">None</td>
+            <td class="dropcell" data-level="1">External Only</td>
+            <td class="dropcell" data-level="2">Critical Only</td>
+            <td class="dropcell" data-level="3">Org-wide</td>
+          </tr>
+          <tr>
+            <td>Backups</td>
+            <td class="dropcell" data-level="0">None</td>
+            <td class="dropcell" data-level="1">Basic</td>
+            <td class="dropcell" data-level="2">Tested</td>
+            <td class="dropcell" data-level="3">Immutable</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel grid" id="summary">
+      <div>
+        <h3>Summary of Selections</h3>
+        <ul id="summary-list" style="text-align:left"></ul>
+      </div>
+      <div>
+        <canvas id="summaryChart" style="width:100%;height:320px"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Notes</h3>
+      <textarea id="notes" rows="5" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px" placeholder="Project notes, assumptions, scope decisions…"></textarea>
+    </div>
+  </div>
+
+  <div class="hover-tooltip" id="tooltip" role="tooltip"></div>
+
+  <script>
+    // ----------------------- Data -----------------------
+    const DEFAULT_TOOLS = [
+      { name: "EDR/XDR", description: "Endpoint detection & response with behavioral analytics." },
+      { name: "SIEM", description: "Centralized security event logging, correlation and alerting." },
+      { name: "SOAR", description: "Playbook-driven automated response and case management." },
+      { name: "Patch Manager", description: "Automated patch deployment and compliance reporting." },
+      { name: "MFA/SSO", description: "Strong identity controls and conditional access." },
+      { name: "Privileged Access Mgmt", description: "JIT elevation, vaulting and session recording." },
+      { name: "WAF/CDN", description: "App-layer protection, bot control and DDoS mitigation." },
+      { name: "Secure Email Gateway", description: "Phishing, malware and BEC protections." },
+      { name: "Backup & DR", description: "Immutable backups, recovery testing and retention policies." },
+      { name: "App Allowlisting", description: "Only approved binaries/scripts can execute." }
+    ];
+
+    const DESCRIPTIONS = {
+      "None":"No control or process in place.",
+      "Allowlisting":"Only approved applications can run.",
+      "Policy-based":"Controls are applied based on defined policies.",
+      "Enforced + Memory Protections":"Strict controls with additional memory exploit protections.",
+      "Unpatched":"Software is outdated and unpatched.",
+      "Ad hoc":"Patches are applied irregularly.",
+      "Routine":"Patches are applied on a regular schedule.",
+      "Automated + Tested":"Patches are deployed automatically and tested for safety.",
+      "Unrestricted":"Macros can run without restrictions.",
+      "Warning-based":"Users are warned before running macros.",
+      "Blocked":"Macros are blocked by default.",
+      "Signed + Audited":"Only signed macros are allowed with audit trails.",
+      "Open":"Applications run without restrictions.",
+      "Baseline":"Basic security settings are applied.",
+      "Hardened":"Applications are configured to minimize vulnerabilities.",
+      "Policy-audited":"Application settings are enforced and regularly reviewed.",
+      "Everyone Admin":"All users have administrator rights.",
+      "Limited":"Admin privileges are restricted to necessary personnel.",
+      "Audited":"Admin actions are logged and reviewed.",
+      "Just-in-Time":"Temporary admin rights granted as needed.",
+      "Manual":"Updates are applied manually.",
+      "Central + Automated":"Updates are deployed through centralized automation.",
+      "External Only":"MFA is used for external access only.",
+      "Critical Only":"MFA is required for critical systems.",
+      "Org-wide":"MFA is enforced across the entire organization.",
+      "Basic":"Basic backup routines in place.",
+      "Tested":"Backups are routinely tested for restoration.",
+      "Immutable":"Backups cannot be modified once written."
+    };
+
+    // ------------------- State & Persistence -------------------
+    let toolDescriptions = {}; // name -> description
+    const STORAGE_KEY = 'smm_v2_state';
+
+    function saveState(){
+      const rows = [...document.querySelectorAll('#maturity-table tbody tr')];
+      const matrix = rows.map(row=>{
+        const control = row.cells[0].textContent.trim();
+        let level = 0;
+        for(let i=1;i<row.cells.length;i++){
+          if(row.cells[i].classList.contains('selected-cell')){ level = Number(row.cells[i].dataset.level); break; }
+        }
+        const tools = [];
+        for(let i=1;i<row.cells.length;i++){
+          if(row.cells[i].classList.contains('selected-cell')){
+            row.cells[i].querySelectorAll('.pill[data-tool]')?.forEach(p=>tools.push(p.dataset.tool));
+          }
+        }
+        return {control, level, tools};
+      });
+      const notes = document.getElementById('notes').value || '';
+      const payload = { matrix, toolDescriptions };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({payload, notes}));
+    }
+
+    function loadState(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      try{
+        const {payload, notes} = JSON.parse(raw);
+        if(payload?.toolDescriptions){ toolDescriptions = payload.toolDescriptions; renderToolbox(); }
+        if(Array.isArray(payload?.matrix)){
+          payload.matrix.forEach(row=>{
+            const tr = [...document.querySelectorAll('#maturity-table tbody tr')].find(r=>r.cells[0].textContent.trim()===row.control);
+            if(!tr) return;
+            const cell = [...tr.querySelectorAll('.dropcell')].find(c=>Number(c.dataset.level)===Number(row.level));
+            if(cell){ selectCell(cell); }
+            (row.tools||[]).forEach(name=>{
+              if(cell) addToolPill(cell, name);
+            });
+          });
+          updateSummary();
+        }
+        document.getElementById('notes').value = notes || '';
+      }catch(e){ console.warn('Failed to load saved state', e); }
+    }
+
+    // ------------------- Toolbox Rendering -------------------
+    function renderToolbox(filter=''){
+      const wrap = document.getElementById('tools');
+      wrap.innerHTML='';
+      Object.entries(toolDescriptions)
+        .filter(([name])=>name.toLowerCase().includes(filter.toLowerCase()))
+        .sort((a,b)=>a[0].localeCompare(b[0]))
+        .forEach(([name,desc])=>{
+          const div = document.createElement('div');
+          div.className='tool';
+          div.textContent=name;
+          div.setAttribute('role','listitem');
+          div.setAttribute('draggable','true');
+          div.dataset.name = name;
+          div.title = desc;
+          div.addEventListener('dragstart', e=>{
+            e.dataTransfer.setData('text/plain', name);
+            e.currentTarget.setAttribute('aria-grabbed','true');
+          });
+          div.addEventListener('dragend', e=>e.currentTarget.removeAttribute('aria-grabbed'));
+          addTooltipHandlers(div, ()=>`<strong>${name}</strong><br>${desc}`);
+          wrap.appendChild(div);
+        });
+    }
+
+    function initTools(defaults=DEFAULT_TOOLS){
+      toolDescriptions = {};
+      defaults.forEach(t=>toolDescriptions[t.name]=t.description||'');
+      renderToolbox();
+    }
+
+    // ------------------- Tooltip helpers -------------------
+    const tooltip = document.getElementById('tooltip');
+    function addTooltipHandlers(el, htmlGetter){
+      el.addEventListener('mouseenter', (e)=>{
+        tooltip.innerHTML = htmlGetter();
+        tooltip.style.display='block';
+        positionTooltip(e);
+      });
+      el.addEventListener('mousemove', positionTooltip);
+      el.addEventListener('mouseleave', ()=>{ tooltip.style.display='none'; });
+    }
+    function positionTooltip(e){
+      const pad=12; const x = e.clientX + pad; const y = e.clientY + pad;
+      tooltip.style.left = x+'px'; tooltip.style.top = y+'px';
+    }
+
+    // ------------------- Matrix interactions -------------------
+    function selectCell(cell){
+      const row = cell.parentElement; [...row.querySelectorAll('.dropcell')].forEach(c=>c.classList.remove('selected-cell'));
+      cell.classList.add('selected-cell');
+    }
+
+    function addToolPill(targetCell, name){
+      // avoid duplicates in the same cell
+      if([...targetCell.querySelectorAll('.pill[data-tool]')].some(p=>p.dataset.tool===name)) return;
+      const pill = document.createElement('div'); pill.className='pill'; pill.dataset.tool=name; pill.title = toolDescriptions[name]||'';
+      const label = document.createElement('span'); label.textContent = name;
+      const btn = document.createElement('button'); btn.setAttribute('aria-label',`Remove ${name}`); btn.textContent='✖';
+      btn.addEventListener('click', ()=>{ pill.remove(); updateSummary(); saveState(); });
+      pill.append(label, btn);
+      addTooltipHandlers(pill, ()=>`<strong>${name}</strong><br>${toolDescriptions[name]||''}`);
+      targetCell.appendChild(pill);
+    }
+
+    function setColumnForAll(level){
+      document.querySelectorAll('#maturity-table tbody tr').forEach(tr=>{
+        const cell = tr.querySelector(`.dropcell[data-level="${level}"]`);
+        if(cell) selectCell(cell);
+      });
+      updateSummary(); saveState();
+    }
+
+    function wireMatrix(){
+      // Column header quick-set
+      document.querySelectorAll('.col-header').forEach(th=>{
+        th.style.cursor='pointer';
+        th.title='Click to set this maturity level for all controls';
+        th.addEventListener('click', ()=> setColumnForAll(Number(th.dataset.level)));
+      });
+
+      // Drag/drop & click for each cell
+      document.querySelectorAll('td.dropcell').forEach(cell=>{
+        cell.addEventListener('dragover', e=>e.preventDefault());
+        cell.addEventListener('drop', e=>{
+          e.preventDefault();
+          const name = e.dataTransfer.getData('text/plain');
+          if(!name) return;
+          // Auto-select the cell on first tool drop
+          if(!cell.classList.contains('selected-cell')) selectCell(cell);
+          addToolPill(cell, name);
+          updateSummary(); saveState();
+        });
+        cell.addEventListener('click', ()=>{ selectCell(cell); updateSummary(); saveState(); });
+        // Tooltips for baseline text
+        addTooltipHandlers(cell, ()=>{
+          const txt = cell.childNodes[0]?.nodeValue?.trim()||'';
+          return txt?`<strong>${txt}</strong><br>${DESCRIPTIONS[txt]||''}`: 'Drop tools here';
+        });
+      });
+    }
+
+    // ------------------- Summary & Charts -------------------
+    function updateSummary(){
+      const rows = document.querySelectorAll('#maturity-table tbody tr');
+      const list = document.getElementById('summary-list');
+      list.innerHTML='';
+      const labels=[]; const chartData=[];
+
+      rows.forEach(row=>{
+        const control = row.cells[0].textContent.trim();
+        let level = 0; let selectedLabel=''; let selectedCell=null;
+        for(let i=1;i<row.cells.length;i++){
+          const c = row.cells[i];
+          if(c.classList.contains('selected-cell')){ level = Number(c.dataset.level); selectedLabel = c.childNodes[0].nodeValue.trim(); selectedCell=c; break; }
+        }
+        labels.push(control); chartData.push(level);
+
+        const tools = [...(selectedCell?.querySelectorAll('.pill[data-tool]')||[])].map(p=>{
+          const name = p.dataset.tool; const desc = toolDescriptions[name]||''; return `<li><strong>${name}:</strong> <em>${desc}</em></li>`;
+        }).join('');
+
+        const li = document.createElement('li');
+        const small = DESCRIPTIONS[selectedLabel]||'';
+        li.innerHTML = `<strong>${control}:</strong> ${selectedLabel}<small style="display:block;color:#555;margin-top:6px">${small}</small><ul>${tools}</ul>`;
+        list.appendChild(li);
+      });
+
+      renderSummaryChart(labels, chartData);
+    }
+
+    function renderSummaryChart(labels,data){
+      const ctx = document.getElementById('summaryChart').getContext('2d');
+      if(window.summaryChart instanceof Chart) window.summaryChart.destroy();
+      window.summaryChart = new Chart(ctx, {
+        type:'bar',
+        data:{ labels, datasets:[{ label:'Maturity Level (0–3)', data, backgroundColor:'rgba(10,122,203,0.25)', borderColor:'#0a7acb', borderWidth:1 }]},
+        options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:3, ticks:{ stepSize:1 } } }, plugins:{ legend:{ display:false } } }
+      });
+    }
+
+    // ------------------- Export / Import -------------------
+    function exportToPDF(){
+      const element = document.body.cloneNode(true);
+      // remove the floating tooltip in export clone
+      const t = element.querySelector('#tooltip'); if(t) t.remove();
+      const opt = { margin:0, filename:'Security-Maturity-Model.pdf', image:{ type:'jpeg', quality:0.98 }, html2canvas:{ scale:2, useCORS:true }, jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' }, pagebreak:{ mode:['avoid-all'] } };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function download(filename, data){
+      const blob = new Blob([data], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function exportJSON(){
+      const rows = [...document.querySelectorAll('#maturity-table tbody tr')];
+      const matrix = rows.map(row=>{
+        const control = row.cells[0].textContent.trim();
+        let level = 0; let tools=[]; let selectedCell=null;
+        for(let i=1;i<row.cells.length;i++){
+          const c = row.cells[i];
+          if(c.classList.contains('selected-cell')){ level = Number(c.dataset.level); selectedCell=c; break; }
+        }
+        if(selectedCell) tools = [...selectedCell.querySelectorAll('.pill[data-tool]')].map(p=>p.dataset.tool);
+        return {control, level, tools};
+      });
+      const notes = document.getElementById('notes').value||'';
+      download('smm-export.json', JSON.stringify({ matrix, toolDescriptions, notes }, null, 2));
+    }
+
+    function importJSONFile(file){
+      const reader = new FileReader();
+      reader.onload = () =>{
+        try{
+          const data = JSON.parse(reader.result);
+          if(data.toolDescriptions){ toolDescriptions = data.toolDescriptions; renderToolbox(); }
+          // Clear selections
+          document.querySelectorAll('.dropcell').forEach(c=>{ c.classList.remove('selected-cell'); c.querySelectorAll('.pill').forEach(p=>p.remove()); });
+          if(Array.isArray(data.matrix)){
+            data.matrix.forEach(item=>{
+              const tr = [...document.querySelectorAll('#maturity-table tbody tr')].find(r=>r.cells[0].textContent.trim()===item.control);
+              if(!tr) return;
+              const cell = tr.querySelector(`.dropcell[data-level="${item.level}"]`);
+              if(cell){ selectCell(cell); (item.tools||[]).forEach(name=> addToolPill(cell,name)); }
+            });
+          }
+          if(typeof data.notes === 'string') document.getElementById('notes').value = data.notes;
+          updateSummary(); saveState();
+        }catch(e){ alert('Failed to import JSON: '+e.message); }
+      };
+      reader.readAsText(file);
+    }
+
+    // ------------------- Event wiring -------------------
+    document.getElementById('btn-export-pdf').addEventListener('click', exportToPDF);
+    document.getElementById('btn-export-json').addEventListener('click', exportJSON);
+    document.getElementById('import-json-input').addEventListener('change', e=>{ const f=e.target.files[0]; if(f) importJSONFile(f); e.target.value=''; });
+    document.getElementById('btn-clear').addEventListener('click', ()=>{
+      if(!confirm('Clear all selections, tools and notes?')) return;
+      document.querySelectorAll('.dropcell').forEach(c=>{ c.classList.remove('selected-cell'); c.querySelectorAll('.pill').forEach(p=>p.remove()); });
+      document.getElementById('notes').value='';
+      updateSummary(); saveState();
+    });
+
+    document.getElementById('tools-file').addEventListener('change', e=>{
+      const f=e.target.files[0]; if(!f) return; const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const arr = JSON.parse(reader.result);
+          if(Array.isArray(arr)) initTools(arr); else throw new Error('tools.json should be an array of {name, description}');
+          saveState();
+        }catch(err){ alert('Failed to parse tools.json: '+err.message); }
+      }; reader.readAsText(f); e.target.value='';
+    });
+
+    document.getElementById('tool-search').addEventListener('input', e=> renderToolbox(e.target.value));
+
+    // Auto-save on notes change
+    document.getElementById('notes').addEventListener('input', ()=> saveState());
+
+    // Init
+    initTools();
+    wireMatrix();
+    updateSummary();
+    loadState();
+  </script>
+</body>
+</html>
