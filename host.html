@@ -23,7 +23,7 @@
   .kv .item{background:#1d2630;border-radius:8px;padding:8px}
   .stat{background:var(--panel2);border:1px solid var(--accent);border-radius:10px;padding:12px}
   .note{color:var(--ink-d);font-size:.9rem}
-  .hidden{display:none !important}
+  .d-none{display:none !important}
   table{width:100%}
   th,td{padding:8px;border-bottom:1px solid #36434f}
   th{color:#f6d8a5}
@@ -165,7 +165,7 @@
       <div class="modal-content" style="background:#152028;color:#e9ecef">
         <div class="modal-header">
           <h5 class="modal-title">📊 Column Mapping & Units</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <!-- Sheet selectors -->
@@ -192,7 +192,7 @@
                 </div>
                 <div class="col-6">
                   <label class="form-label">CPU (vCPU)</label>
-                  <select id="map_vm_cpu" class="form-select"></select>
+                  <select id="map_vm_cpu" class="form-select"></></select>
                 </div>
                 <div class="col-8">
                   <label class="form-label">Memory</label>
@@ -267,393 +267,379 @@
     </div>
   </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-/* ------------------ Utilities ------------------ */
-const $ = id => document.getElementById(id);
-const num = v => (v===null||v===undefined||v==='')?0:(isFinite(+v)?+v:0);
-const fmt0 = v => String(Math.round(v));
-const fmt2 = v => Number(v).toFixed(2);
+  <!-- Bootstrap bundle (Popper + plugins, including Modal/Backdrop) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-const Unit = {
-  // return multiplier to convert given unit to GB
-  toGB(u){
-    switch((u||'GB').toUpperCase()){
-      case 'MB': return 1/1024;
-      case 'MIB': return 1/1024;
-      case 'GB': return 1;
-      case 'GIB': return 1.073741824; // 2^30 / 10^9
-      default: return 1;
-    }
-  }
-};
+  <!-- App Script -->
+  <script>
+  // ---------- Utilities ----------
+  const $ = id => document.getElementById(id);
+  const num = v => (v===null||v===undefined||v==='')?0:(isFinite(+v)?+v:0);
+  const fmt0 = v => String(Math.round(v));
+  const fmt2 = v => Number(v).toFixed(2);
 
-/* ------------------ State ------------------ */
-let workbook=null, vInfoRows=[], hostRowsRaw=[], hostRows=[];
-let haveVHost=false;
-
-const LSKEY = 'rvtools_host_mapper_v1';
-const state = {
-  map: {
-    vinfoSheet:'', vhostSheet:'',
-    vm:{name:'', cpu:'', mem:'', storage:'', os:''},
-    host:{name:'', threads:'', cores:'', sockets:'', cps:'', mem:''},
-    units:{ vmMem:'MB', vmStorage:'GB', hostMem:'GB' }
-  }
-};
-
-function loadState(){
-  try{
-    const s = JSON.parse(localStorage.getItem(LSKEY)||'{}');
-    if(s && s.map) Object.assign(state.map, s.map);
-  }catch{}
-}
-function saveState(){
-  localStorage.setItem(LSKEY, JSON.stringify({map:state.map}));
-}
-
-/* ------------------ File handling ------------------ */
-const dropZone=$('dropZone'), fileInput=$('fileInput');
-dropZone.addEventListener('click', ()=>fileInput.click());
-dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('dragover')});
-dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e=>{
-  e.preventDefault(); dropZone.classList.remove('dragover');
-  const f=e.dataTransfer.files?.[0]; if(f) readFile(f);
-});
-fileInput.addEventListener('change', e=>{
-  const f=e.target.files?.[0]; if(f) readFile(f);
-});
-
-function readFile(file){
-  const r=new FileReader();
-  r.onload=ev=>{
-    try{
-      workbook=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-      openMapper();
-    }catch(err){alert('Could not read workbook.'); console.error(err);}
-  };
-  r.readAsArrayBuffer(file);
-}
-
-/* ------------------ Mapper ------------------ */
-const mapperModal=new bootstrap.Modal($('#mapperModal'));
-
-function openMapper(){
-  if(!workbook) return;
-
-  // Populate sheet selects
-  const sheets=workbook.SheetNames||[];
-  const options = s => s.map(n=>`<option value="${n}">${n}</option>`).join('');
-  $('sheet_vinfo').innerHTML = options(sheets);
-  $('sheet_vhost').innerHTML = '<option value="">(none)</option>'+options(sheets);
-
-  // Default to existing state or best guesses
-  const guess = (arr, ...needles)=>{
-    const lower=arr.map(x=>x.toLowerCase());
-    for(const nd of needles){
-      const i=lower.findIndex(x=>x.includes(nd.toLowerCase()));
-      if(i>=0) return arr[i];
-    }
-    return arr[0]||'';
-  };
-
-  $('sheet_vinfo').value = state.map.vinfoSheet && sheets.includes(state.map.vinfoSheet)
-    ? state.map.vinfoSheet : guess(sheets,'vinfo');
-
-  $('sheet_vhost').value = state.map.vhostSheet && sheets.includes(state.map.vhostSheet)
-    ? state.map.vhostSheet : (sheets.find(x=>x.toLowerCase().includes('vhost'))||'');
-
-  // Build header lists
-  const headersOf = (sheetName)=>{
-    if(!sheetName) return [];
-    const sh=workbook.Sheets[sheetName];
-    if(!sh || !sh['!ref']) return [];
-    const range=XLSX.utils.decode_range(sh['!ref']);
-    for(let r=range.s.r;r<=range.e.r;r++){
-      const arr=XLSX.utils.sheet_to_json(sh,{header:1,range:r})[0]||[];
-      const heads=arr.filter(h=>h!=null && String(h).trim()!=='');
-      if(heads.length) return heads.map(String);
-    }
-    return [];
-  };
-
-  const vinfoHeads=headersOf($('sheet_vinfo').value);
-  const vhostHeads=headersOf($('sheet_vhost').value);
-
-  const fillSelect=(elId, heads, patterns=[], current='')=>{
-    const el=$(elId); el.innerHTML = '<option value="">(choose)</option>' + heads.map(h=>`<option>${h}</option>`).join('');
-    let pick=current && heads.includes(current) ? current : '';
-    if(!pick){
-      for(const p of patterns){
-        const match=heads.find(h=>h.toLowerCase()===p.toLowerCase()) ||
-                    heads.find(h=>h.toLowerCase().includes(p.toLowerCase()));
-        if(match){ pick=match; break; }
+  const Unit = {
+    // convert to GB
+    toGB(u){
+      switch((u||'GB').toUpperCase()){
+        case 'MB': return 1/1024;
+        case 'MIB': return 1/1024;     // MiB -> GB (approx)
+        case 'GB': return 1;
+        case 'GIB': return 1.073741824; // GiB -> GB
+        default: return 1;
       }
     }
-    el.value = pick || '';
   };
 
-  // vInfo mapping
-  fillSelect('map_vm_name', vinfoHeads, ['vm','name','display name'], state.map.vm.name);
-  fillSelect('map_vm_cpu', vinfoHeads, ['num vcpus','cpus','vcpu','numcpu','cpu'], state.map.vm.cpu);
-  fillSelect('map_vm_mem', vinfoHeads, ['memory (mb)','mem (mb)','memorymb','configured memory','memory'], state.map.vm.mem);
-  fillSelect('map_vm_storage', vinfoHeads, ['provisioned (gb)','provisioned gb','provisioned mib','provisioned (mib)','provisionedmb','capacity','storage'], state.map.vm.storage);
-  fillSelect('map_vm_os', vinfoHeads, ['os','guest os','operating system'], state.map.vm.os);
+  // ---------- State ----------
+  let workbook=null, vInfoRows=[], hostRowsRaw=[], hostRows=[];
+  let haveVHost=false;
 
-  // Load unit picks
-  $('unit_vm_mem').value = state.map.units.vmMem || 'MB';
-  $('unit_vm_storage').value = state.map.units.vmStorage || 'GB';
-
-  // vHost mapping
-  fillSelect('map_h_name', vhostHeads, ['host','esx host','hostname','name'], state.map.host.name);
-  fillSelect('map_h_threads', vhostHeads, ['logical cpus','cpu threads','threads','logical cpu'], state.map.host.threads);
-  fillSelect('map_h_cores', vhostHeads, ['cpu cores','cores','numcpucore','total cpu cores'], state.map.host.cores);
-  fillSelect('map_h_sockets', vhostHeads, ['cpu packages','sockets','numcpupkgs','packages'], state.map.host.sockets);
-  fillSelect('map_h_cps', vhostHeads, ['cores per socket','cpu cores per socket','numcpucoreshares','numcpucorespersocket','numcpucorepersocket'], state.map.host.cps);
-  fillSelect('map_h_mem', vhostHeads, ['memory (gb)','memory (mb)','mem (gb)','mem (mb)','memorygb','memorymb','mem'], state.map.host.mem);
-  $('unit_h_mem').value = state.map.units.hostMem || 'GB';
-
-  mapperModal.show();
-}
-
-// Update header lists when sheet selection changes
-$('sheet_vinfo').addEventListener('change', openMapper);
-$('sheet_vhost').addEventListener('change', openMapper);
-
-$('btnPreviewParse').addEventListener('click', ()=>{
-  applyMappingToState(false);
-  parseSheets(true);
-});
-$('btnApplyMapping').addEventListener('click', ()=>{
-  applyMappingToState(true);
-  parseSheets(false);
-});
-
-function applyMappingToState(persist){
-  state.map.vinfoSheet = $('sheet_vinfo').value;
-  state.map.vhostSheet = $('sheet_vhost').value;
-  state.map.vm = {
-    name:$('map_vm_name').value, cpu:$('map_vm_cpu').value,
-    mem:$('map_vm_mem').value, storage:$('map_vm_storage').value, os:$('map_vm_os').value
-  };
-  state.map.host = {
-    name:$('map_h_name').value, threads:$('map_h_threads').value, cores:$('map_h_cores').value,
-    sockets:$('map_h_sockets').value, cps:$('map_h_cps').value, mem:$('map_h_mem').value
-  };
-  state.map.units = {
-    vmMem:$('unit_vm_mem').value, vmStorage:$('unit_vm_storage').value, hostMem:$('unit_h_mem').value
-  };
-  if(persist) saveState();
-}
-
-function sheetToRows(sheetName){
-  if(!sheetName) return [];
-  const sh=workbook.Sheets[sheetName]; if(!sh) return [];
-  const range=XLSX.utils.decode_range(sh['!ref']);
-  // find header row
-  let headerRow=range.s.r, headers=[];
-  for(let r=range.s.r;r<=range.e.r;r++){
-    const row=XLSX.utils.sheet_to_json(sh,{header:1,range:r})[0]||[];
-    const heads=row.filter(h=>h!=null && String(h).trim()!=='');
-    if(heads.length){ headerRow=r; headers=heads.map(String); break; }
-  }
-  if(!headers.length) return [];
-  return XLSX.utils.sheet_to_json(sh,{header:headers,range:headerRow+1,defval:'',blankrows:false});
-}
-
-function parseSheets(previewOnly){
-  // vInfo
-  vInfoRows = [];
-  const vinfo = sheetToRows(state.map.vinfoSheet);
-  if(!vinfo.length){
-    alert('No data found in vInfo sheet selection.'); return;
-  }
-
-  const uMem = Unit.toGB(state.map.units.vmMem);
-  const uStg = Unit.toGB(state.map.units.vmStorage);
-
-  vInfoRows = vinfo.map(row=>{
-    const vmName = row[state.map.vm.name] ?? '';
-    const vcpu   = num(row[state.map.vm.cpu]);
-    let memGB=0, stgGB=0;
-
-    const memRaw = row[state.map.vm.mem];
-    memGB = num(memRaw) * uMem;
-
-    const stgRaw = row[state.map.vm.storage];
-    stgGB = num(stgRaw) * uStg;
-
-    const os = state.map.vm.os ? String(row[state.map.vm.os]||'') : '';
-    return { name: vmName||'Unnamed', vcpu, memGB, stgGB, os };
-  });
-
-  // host
-  hostRowsRaw = [];
-  haveVHost = !!state.map.vhostSheet;
-  if(state.map.vhostSheet){
-    const vhost = sheetToRows(state.map.vhostSheet);
-    const uHostMem = Unit.toGB(state.map.units.hostMem);
-    hostRowsRaw = vhost.map(r=>{
-      const name = r[state.map.host.name] ?? '';
-      const threads = num(r[state.map.host.threads]);
-      const cores = num(r[state.map.host.cores]);
-      const sockets = num(r[state.map.host.sockets]);
-      const cps = num(r[state.map.host.cps]);
-      const memGB = num(r[state.map.host.mem]) * uHostMem;
-
-      // derive pcpu
-      let pcpu = 0;
-      if(threads) pcpu = threads;
-      else if(cores) pcpu = cores;
-      else if(sockets && cps) pcpu = sockets*cps;
-
-      return { name: name||`host-${Math.random().toString(36).slice(2,6)}`, pcpu, memGB, sockets, cps };
-    });
-  }
-
-  if(previewOnly){
-    alert('Preview parsed successfully. Click Apply to use these mappings.');
-    return;
-  }
-
-  mapperModal.hide();
-  renderSummaries();
-  recalcAll();
-}
-
-/* ------------------ Rendering ------------------ */
-function renderSummaries(){
-  // VM Summary
-  let vmCount=0, sumvCPU=0, sumMem=0, sumProv=0;
-  for(const vm of vInfoRows){
-    const hasAny = vm.name || vm.vcpu || vm.memGB;
-    if(hasAny) vmCount++;
-    sumvCPU+=vm.vcpu;
-    sumMem+=vm.memGB;
-    sumProv+=vm.stgGB;
-  }
-  $('vm_total').textContent=fmt0(vmCount);
-  $('vm_vcpu').textContent=fmt0(sumvCPU);
-  $('vm_mem').textContent=fmt2(sumMem);
-  $('vm_prov').textContent=fmt2(sumProv);
-  $('vmPanel').classList.remove('d-none');
-
-  // Hosts list with optional HT x2 later
-  hostRows = [...hostRowsRaw]; // copy; HT x2 is applied in capacity step
-  const totalHosts = hostRows.length;
-  let totalPCPU=0,totalMem=0,totalSockets=0;
-  for(const h of hostRows){ totalPCPU+=h.pcpu; totalMem+=h.memGB; totalSockets+=num(h.sockets); }
-  if(totalHosts>0){
-    $('h_total').textContent=fmt0(totalHosts);
-    $('h_pcpu').textContent=fmt0(totalPCPU);
-    $('h_mem').textContent=fmt2(totalMem);
-    $('h_sock').textContent=fmt0(totalSockets);
-    $('hostPanel').classList.remove('d-none');
-
-    // table
-    const tb=$('hostTbody'); tb.innerHTML='';
-    for(const h of hostRows){
-      const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${h.name}</td><td>${fmt0(h.pcpu)}</td><td>${fmt2(h.memGB)}</td><td>${h.sockets||''}</td><td>${h.cps||''}</td>`;
-      tb.appendChild(tr);
+  const LSKEY = 'rvtools_host_mapper_v1';
+  const state = {
+    map: {
+      vinfoSheet:'', vhostSheet:'',
+      vm:{name:'', cpu:'', mem:'', storage:'', os:''},
+      host:{name:'', threads:'', cores:'', sockets:'', cps:'', mem:''},
+      units:{ vmMem:'MB', vmStorage:'GB', hostMem:'GB' }
     }
-    $('hostTableWrap').classList.remove('d-none');
-    $('templatePanel').classList.add('d-none');
-  } else {
-    $('hostPanel').classList.add('d-none');
-    $('hostTableWrap').classList.add('d-none');
-    $('templatePanel').classList.remove('d-none');
+  };
+  function loadState(){
+    try{ const s=JSON.parse(localStorage.getItem(LSKEY)||'{}'); if(s && s.map) Object.assign(state.map, s.map); }catch{}
   }
+  function saveState(){ localStorage.setItem(LSKEY, JSON.stringify({map:state.map})); }
 
-  $('controls').classList.remove('d-none');
-  $('results').classList.remove('d-none');
-}
-
-/* ------------------ Calculator ------------------ */
-['cpuOC','memOC','hostOH','vmOH','haHosts','htx2'].forEach(id=>{
-  $(id).addEventListener('input', recalcAll);
-  $(id).addEventListener('change', recalcAll);
-});
-$('applyTemplate').addEventListener('click', ()=>{
-  const pcpu=Math.max(1,num($('tpl_pcpu').value));
-  const mem =Math.max(1,num($('tpl_mem').value));
-  const cnt =Math.max(0,num($('tpl_count').value));
-  hostRows=[];
-  for(let i=0;i<cnt;i++){ hostRows.push({name:`template-${i+1}`, pcpu, memGB:mem, sockets:'', cps:''}); }
-  renderSummaries();
-  recalcAll();
-});
-$('openMapperBtn').addEventListener('click', openMapper);
-
-function recalcAll(){
-  // Inputs
-  const cpuOC=Math.max(1, num($('cpuOC').value));
-  const memOC=Math.max(1, num($('memOC').value));
-  const hostOH=Math.min(100,Math.max(0,num($('hostOH').value)))/100;
-  const vmOH=Math.min(100,Math.max(0,num($('vmOH').value)))/100;
-  const ha=Math.max(0,num($('haHosts').value));
-  const htx2=$('htx2').checked;
-
-  // VM demand
-  let req_vcpu=0, req_mem=0;
-  for(const vm of vInfoRows){ req_vcpu+=vm.vcpu; req_mem+=vm.memGB; }
-  req_mem *= (1+vmOH);
-  $('req_vcpu').textContent=fmt0(req_vcpu);
-  $('req_mem').textContent=fmt2(req_mem);
-
-  // Hosts with optional HT x2 if logical missing
-  const hasLogical = hostRows.some(h=>h.pcpu && h.pcpu !== (num(h.sockets)*num(h.cps)));
-  const inv = hostRows.map(h=>{
-    let pcpu=h.pcpu;
-    if(!hasLogical && htx2 && h.sockets && h.cps && pcpu===h.sockets*h.cps){ pcpu*=2; }
-    return {...h, pcpu};
+  // ---------- File handling ----------
+  const dropZone=$('dropZone'), fileInput=$('fileInput');
+  dropZone.addEventListener('click', ()=>fileInput.click());
+  dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('dragover')});
+  dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e=>{
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    const f=e.dataTransfer.files?.[0]; if(f) readFile(f);
+  });
+  fileInput.addEventListener('change', e=>{
+    const f=e.target.files?.[0]; if(f) readFile(f);
   });
 
-  // HA removal (largest N by each metric independently; conservative)
-  const cpuSorted=[...inv].sort((a,b)=>b.pcpu-a.pcpu);
-  const memSorted=[...inv].sort((a,b)=>b.memGB-a.memGB);
-  const cpuAvail=cpuSorted.slice(ha), memAvail=memSorted.slice(ha);
-
-  let cap_vcpu = cpuAvail.reduce((s,h)=>s + (h.pcpu * cpuOC * (1-hostOH)),0);
-  let cap_mem  = memAvail.reduce((s,h)=>s + (h.memGB * memOC * (1-hostOH)),0);
-
-  $('cap_vcpu').textContent=fmt0(cap_vcpu);
-  $('cap_mem').textContent=fmt2(cap_mem);
-
-  // Headroom/shortfall
-  const cpuHead=cap_vcpu-req_vcpu, memHead=cap_mem-req_mem;
-  $('asIsCpu').innerHTML = cpuHead>=0
-    ? `<span class="ok">CPU OK</span> — Headroom: ${fmt0(cpuHead)} vCPU`
-    : `<span class="bad">CPU SHORTFALL</span> — Need ${fmt0(Math.abs(cpuHead))} vCPU`;
-  $('asIsMem').innerHTML = memHead>=0
-    ? `<span class="ok">MEM OK</span> — Headroom: ${fmt2(memHead)} GB`
-    : `<span class="bad">MEM SHORTFALL</span> — Need ${fmt2(Math.abs(memHead))} GB`;
-
-  // Required hosts (avg template)
-  let avg_pcpu=0, avg_mem=0;
-  if(inv.length){
-    avg_pcpu = inv.reduce((s,h)=>s+h.pcpu,0)/inv.length;
-    avg_mem  = inv.reduce((s,h)=>s+h.memGB,0)/inv.length;
-  }else{
-    avg_pcpu = Math.max(1,num($('tpl_pcpu').value));
-    avg_mem  = Math.max(1,num($('tpl_mem').value));
+  function readFile(file){
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        workbook=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+        openMapper(); // lazy instantiate modal inside
+      }catch(err){alert('Could not read workbook.'); console.error(err);}
+    };
+    r.readAsArrayBuffer(file);
   }
-  const perHostCpuCap=avg_pcpu*cpuOC*(1-hostOH);
-  const perHostMemCap=avg_mem*memOC*(1-hostOH);
 
-  const need_cpu_based = perHostCpuCap? Math.ceil(req_vcpu/perHostCpuCap):0;
-  const need_mem_based = perHostMemCap? Math.ceil(req_mem/perHostMemCap):0;
-  const baseNeed=Math.max(need_cpu_based, need_mem_based);
-  const need_final=baseNeed + ha;
+  // ---------- Mapper ----------
+  function openMapper(){
+    if(!workbook) return;
 
-  $('need_cpu_based').textContent=fmt0(need_cpu_based);
-  $('need_mem_based').textContent=fmt0(need_mem_based);
-  $('need_final').textContent=fmt0(need_final);
-}
+    // Populate sheet selects
+    const sheets=workbook.SheetNames||[];
+    const options = s => s.map(n=>`<option value="${n}">${n}</option>`).join('');
+    $('sheet_vinfo').innerHTML = options(sheets);
+    $('sheet_vhost').innerHTML = '<option value="">(none)</option>'+options(sheets);
 
-/* ------------------ Init ------------------ */
-loadState();
-</script>
+    const guess = (arr, ...needles)=>{
+      const lower=arr.map(x=>x.toLowerCase());
+      for(const nd of needles){
+        const i=lower.findIndex(x=>x.includes(nd.toLowerCase()));
+        if(i>=0) return arr[i];
+      }
+      return arr[0]||'';
+    };
+
+    $('sheet_vinfo').value = state.map.vinfoSheet && sheets.includes(state.map.vinfoSheet)
+      ? state.map.vinfoSheet : guess(sheets,'vinfo');
+    $('sheet_vhost').value = state.map.vhostSheet && sheets.includes(state.map.vhostSheet)
+      ? state.map.vhostSheet : (sheets.find(x=>x.toLowerCase().includes('vhost'))||'');
+
+    const headersOf = (sheetName)=>{
+      if(!sheetName) return [];
+      const sh=workbook.Sheets[sheetName];
+      if(!sh || !sh['!ref']) return [];
+      const range=XLSX.utils.decode_range(sh['!ref']);
+      for(let r=range.s.r;r<=range.e.r;r++){
+        const arr=XLSX.utils.sheet_to_json(sh,{header:1,range:r})[0]||[];
+        const heads=arr.filter(h=>h!=null && String(h).trim()!=='');
+        if(heads.length) return heads.map(String);
+      }
+      return [];
+    };
+
+    const vinfoHeads=headersOf($('sheet_vinfo').value);
+    const vhostHeads=headersOf($('sheet_vhost').value);
+
+    const fillSelect=(elId, heads, patterns=[], current='')=>{
+      const el=$(elId); el.innerHTML = '<option value="">(choose)</option>' + heads.map(h=>`<option>${h}</option>`).join('');
+      let pick=current && heads.includes(current) ? current : '';
+      if(!pick){
+        for(const p of patterns){
+          const match=heads.find(h=>h.toLowerCase()===p.toLowerCase()) ||
+                      heads.find(h=>h.toLowerCase().includes(p.toLowerCase()));
+          if(match){ pick=match; break; }
+        }
+      }
+      el.value = pick || '';
+    };
+
+    // vInfo mapping
+    fillSelect('map_vm_name', vinfoHeads, ['vm','name','display name'], state.map.vm.name);
+    fillSelect('map_vm_cpu', vinfoHeads, ['num vcpus','cpus','vcpu','numcpu','cpu'], state.map.vm.cpu);
+    fillSelect('map_vm_mem', vinfoHeads, ['memory (mb)','mem (mb)','memorymb','configured memory','memory'], state.map.vm.mem);
+    fillSelect('map_vm_storage', vinfoHeads, ['provisioned (gb)','provisioned gb','provisioned mib','provisioned (mib)','provisionedmb','capacity','storage'], state.map.vm.storage);
+    fillSelect('map_vm_os', vinfoHeads, ['os','guest os','operating system'], state.map.vm.os);
+
+    $('unit_vm_mem').value = state.map.units.vmMem || 'MB';
+    $('unit_vm_storage').value = state.map.units.vmStorage || 'GB';
+
+    // vHost mapping
+    fillSelect('map_h_name', vhostHeads, ['host','esx host','hostname','name'], state.map.host.name);
+    fillSelect('map_h_threads', vhostHeads, ['logical cpus','cpu threads','threads','logical cpu'], state.map.host.threads);
+    fillSelect('map_h_cores', vhostHeads, ['cpu cores','cores','numcpucore','total cpu cores'], state.map.host.cores);
+    fillSelect('map_h_sockets', vhostHeads, ['cpu packages','sockets','numcpupkgs','packages'], state.map.host.sockets);
+    fillSelect('map_h_cps', vhostHeads, ['cores per socket','cpu cores per socket','numcpucorespersocket'], state.map.host.cps);
+    fillSelect('map_h_mem', vhostHeads, ['memory (gb)','memory (mb)','mem (gb)','mem (mb)','memorygb','memorymb','mem'], state.map.host.mem);
+    $('unit_h_mem').value = state.map.units.hostMem || 'GB';
+
+    // Show modal (lazy get/create so no “before initialization”)
+    const modalEl = $('mapperModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  }
+
+  // React to sheet select changes
+  $('sheet_vinfo').addEventListener('change', openMapper);
+  $('sheet_vhost').addEventListener('change', openMapper);
+
+  $('btnPreviewParse').addEventListener('click', ()=>{
+    applyMappingToState(false);
+    parseSheets(true);
+  });
+  $('btnApplyMapping').addEventListener('click', ()=>{
+    applyMappingToState(true);
+    parseSheets(false);
+    // modal auto-closes via data-bs-dismiss on the button
+  });
+
+  function applyMappingToState(persist){
+    state.map.vinfoSheet = $('sheet_vinfo').value;
+    state.map.vhostSheet = $('sheet_vhost').value;
+    state.map.vm = {
+      name:$('map_vm_name').value, cpu:$('map_vm_cpu').value,
+      mem:$('map_vm_mem').value, storage:$('map_vm_storage').value, os:$('map_vm_os').value
+    };
+    state.map.host = {
+      name:$('map_h_name').value, threads:$('map_h_threads').value, cores:$('map_h_cores').value,
+      sockets:$('map_h_sockets').value, cps:$('map_h_cps').value, mem:$('map_h_mem').value
+    };
+    state.map.units = {
+      vmMem:$('unit_vm_mem').value, vmStorage:$('unit_vm_storage').value, hostMem:$('unit_h_mem').value
+    };
+    if(persist) saveState();
+  }
+
+  function sheetToRows(sheetName){
+    if(!sheetName) return [];
+    const sh=workbook.Sheets[sheetName]; if(!sh) return [];
+    const range=XLSX.utils.decode_range(sh['!ref']);
+    // find header row
+    let headerRow=range.s.r, headers=[];
+    for(let r=range.s.r;r<=range.e.r;r++){
+      const row=XLSX.utils.sheet_to_json(sh,{header:1,range:r})[0]||[];
+      const heads=row.filter(h=>h!=null && String(h).trim()!=='');
+      if(heads.length){ headerRow=r; headers=heads.map(String); break; }
+    }
+    if(!headers.length) return [];
+    return XLSX.utils.sheet_to_json(sh,{header:headers,range:headerRow+1,defval:'',blankrows:false});
+  }
+
+  function parseSheets(previewOnly){
+    // vInfo
+    vInfoRows = [];
+    const vinfo = sheetToRows(state.map.vinfoSheet);
+    if(!vinfo.length){
+      alert('No data found in vInfo sheet selection.'); return;
+    }
+
+    const uMem = Unit.toGB(state.map.units.vmMem);
+    const uStg = Unit.toGB(state.map.units.vmStorage);
+
+    vInfoRows = vinfo.map(row=>{
+      const vmName = row[state.map.vm.name] ?? '';
+      const vcpu   = num(row[state.map.vm.cpu]);
+      const memGB  = num(row[state.map.vm.mem]) * uMem;
+      const stgGB  = num(row[state.map.vm.storage]) * uStg;
+      const os     = state.map.vm.os ? String(row[state.map.vm.os]||'') : '';
+      return { name: vmName||'Unnamed', vcpu, memGB, stgGB, os };
+    });
+
+    // vHost (optional)
+    hostRowsRaw = [];
+    haveVHost = !!state.map.vhostSheet;
+    if(state.map.vhostSheet){
+      const vhost = sheetToRows(state.map.vhostSheet);
+      const uHostMem = Unit.toGB(state.map.units.hostMem);
+      hostRowsRaw = vhost.map(r=>{
+        const name = r[state.map.host.name] ?? '';
+        const threads = num(r[state.map.host.threads]);
+        const cores = num(r[state.map.host.cores]);
+        const sockets = num(r[state.map.host.sockets]);
+        const cps = num(r[state.map.host.cps]);
+        const memGB = num(r[state.map.host.mem]) * uHostMem;
+
+        // derive pcpu
+        let pcpu = 0;
+        if(threads) pcpu = threads;
+        else if(cores) pcpu = cores;
+        else if(sockets && cps) pcpu = sockets*cps;
+
+        return { name: name||`host-${Math.random().toString(36).slice(2,6)}`, pcpu, memGB, sockets, cps };
+      });
+    }
+
+    if(previewOnly){
+      alert('Preview parsed successfully. Click Apply to use these mappings.');
+      return;
+    }
+
+    renderSummaries();
+    recalcAll();
+  }
+
+  // ---------- Rendering ----------
+  function renderSummaries(){
+    // VM Summary
+    let vmCount=0, sumvCPU=0, sumMem=0, sumProv=0;
+    for(const vm of vInfoRows){
+      const hasAny = vm.name || vm.vcpu || vm.memGB;
+      if(hasAny) vmCount++;
+      sumvCPU+=vm.vcpu;
+      sumMem+=vm.memGB;
+      sumProv+=vm.stgGB;
+    }
+    $('vm_total').textContent=fmt0(vmCount);
+    $('vm_vcpu').textContent=fmt0(sumvCPU);
+    $('vm_mem').textContent=fmt2(sumMem);
+    $('vm_prov').textContent=fmt2(sumProv);
+    $('vmPanel').classList.remove('d-none');
+
+    // Hosts list
+    hostRows = [...hostRowsRaw];
+    const totalHosts = hostRows.length;
+    let totalPCPU=0,totalMem=0,totalSockets=0;
+    for(const h of hostRows){ totalPCPU+=h.pcpu; totalMem+=h.memGB; totalSockets+=num(h.sockets); }
+    if(totalHosts>0){
+      $('h_total').textContent=fmt0(totalHosts);
+      $('h_pcpu').textContent=fmt0(totalPCPU);
+      $('h_mem').textContent=fmt2(totalMem);
+      $('h_sock').textContent=fmt0(totalSockets);
+      $('hostPanel').classList.remove('d-none');
+
+      const tb=$('hostTbody'); tb.innerHTML='';
+      for(const h of hostRows){
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${h.name}</td><td>${fmt0(h.pcpu)}</td><td>${fmt2(h.memGB)}</td><td>${h.sockets||''}</td><td>${h.cps||''}</td>`;
+        tb.appendChild(tr);
+      }
+      $('hostTableWrap').classList.remove('d-none');
+      $('templatePanel').classList.add('d-none');
+    } else {
+      $('hostPanel').classList.add('d-none');
+      $('hostTableWrap').classList.add('d-none');
+      $('templatePanel').classList.remove('d-none');
+    }
+
+    $('controls').classList.remove('d-none');
+    $('results').classList.remove('d-none');
+  }
+
+  // ---------- Calculator ----------
+  ['cpuOC','memOC','hostOH','vmOH','haHosts','htx2'].forEach(id=>{
+    $(id).addEventListener('input', recalcAll);
+    $(id).addEventListener('change', recalcAll);
+  });
+  $('applyTemplate').addEventListener('click', ()=>{
+    const pcpu=Math.max(1,num($('tpl_pcpu').value));
+    const mem =Math.max(1,num($('tpl_mem').value));
+    const cnt =Math.max(0,num($('tpl_count').value));
+    hostRows=[];
+    for(let i=0;i<cnt;i++){ hostRows.push({name:`template-${i+1}`, pcpu, memGB:mem, sockets:'', cps:''}); }
+    renderSummaries();
+    recalcAll();
+  });
+  $('openMapperBtn').addEventListener('click', openMapper);
+
+  function recalcAll(){
+    const cpuOC=Math.max(1, num($('cpuOC').value));
+    const memOC=Math.max(1, num($('memOC').value));
+    const hostOH=Math.min(100,Math.max(0,num($('hostOH').value)))/100;
+    const vmOH=Math.min(100,Math.max(0,num($('vmOH').value)))/100;
+    const ha=Math.max(0,num($('haHosts').value));
+    const htx2=$('htx2').checked;
+
+    // VM demand
+    let req_vcpu=0, req_mem=0;
+    for(const vm of vInfoRows){ req_vcpu+=vm.vcpu; req_mem+=vm.memGB; }
+    req_mem *= (1+vmOH);
+    $('req_vcpu').textContent=fmt0(req_vcpu);
+    $('req_mem').textContent=fmt2(req_mem);
+
+    // Hosts with optional HT x2 if logical missing
+    const hasLogical = hostRows.some(h=>h.pcpu && h.pcpu !== (num(h.sockets)*num(h.cps)));
+    const inv = hostRows.map(h=>{
+      let pcpu=h.pcpu;
+      if(!hasLogical && htx2 && h.sockets && h.cps && pcpu===h.sockets*h.cps){ pcpu*=2; }
+      return {...h, pcpu};
+    });
+
+    // HA removal (largest N by metric; conservative)
+    const cpuSorted=[...inv].sort((a,b)=>b.pcpu-a.pcpu);
+    const memSorted=[...inv].sort((a,b)=>b.memGB-a.memGB);
+    const cpuAvail=cpuSorted.slice(ha), memAvail=memSorted.slice(ha);
+
+    let cap_vcpu = cpuAvail.reduce((s,h)=>s + (h.pcpu * cpuOC * (1-hostOH)),0);
+    let cap_mem  = memAvail.reduce((s,h)=>s + (h.memGB * memOC * (1-hostOH)),0);
+
+    $('cap_vcpu').textContent=fmt0(cap_vcpu);
+    $('cap_mem').textContent=fmt2(cap_mem);
+
+    // Headroom/shortfall
+    const cpuHead=cap_vcpu-req_vcpu, memHead=cap_mem-req_mem;
+    $('asIsCpu').innerHTML = cpuHead>=0
+      ? `<span class="ok">CPU OK</span> — Headroom: ${fmt0(cpuHead)} vCPU`
+      : `<span class="bad">CPU SHORTFALL</span> — Need ${fmt0(Math.abs(cpuHead))} vCPU`;
+    $('asIsMem').innerHTML = memHead>=0
+      ? `<span class="ok">MEM OK</span> — Headroom: ${fmt2(memHead)} GB`
+      : `<span class="bad">MEM SHORTFALL</span> — Need ${fmt2(Math.abs(memHead))} GB`;
+
+    // Required hosts (avg template)
+    let avg_pcpu=0, avg_mem=0;
+    if(inv.length){
+      avg_pcpu = inv.reduce((s,h)=>s+h.pcpu,0)/inv.length;
+      avg_mem  = inv.reduce((s,h)=>s+h.memGB,0)/inv.length;
+    }else{
+      avg_pcpu = Math.max(1,num($('tpl_pcpu').value));
+      avg_mem  = Math.max(1,num($('tpl_mem').value));
+    }
+    const perHostCpuCap=avg_pcpu*cpuOC*(1-hostOH);
+    const perHostMemCap=avg_mem*memOC*(1-hostOH);
+
+    const need_cpu_based = perHostCpuCap? Math.ceil(req_vcpu/perHostCpuCap):0;
+    const need_mem_based = perHostMemCap? Math.ceil(req_mem/perHostMemCap):0;
+    const baseNeed=Math.max(need_cpu_based, need_mem_based);
+    const need_final=baseNeed + ha;
+
+    $('need_cpu_based').textContent=fmt0(need_cpu_based);
+    $('need_mem_based').textContent=fmt0(need_mem_based);
+    $('need_final').textContent=fmt0(need_final);
+  }
+
+  // ---------- Init ----------
+  loadState();
+  </script>
 </body>
 </html>
