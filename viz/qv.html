@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Infrastructure Diagram Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .controls {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 1px solid #e9ecef;
+            overflow-y: auto;
+        }
+        
+        .diagram-area {
+            flex: 1;
+            padding: 30px;
+            background: white;
+            position: relative;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        .control-group h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        
+        .btn-group {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+        }
+        
+        .btn-secondary:hover {
+            background: #d5dbdb;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        #canvas {
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            background: #fdfdfd;
+            cursor: crosshair;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .toolbar button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .export-btn {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
+        }
+        
+        .clear-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .clear-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+        }
+        
+        .preset-diagrams {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: 1fr;
+        }
+        
+        .preset-btn {
+            padding: 15px;
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .preset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.3);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f6f3;
+            border-left: 4px solid #27ae60;
+            border-radius: 0 8px 8px 0;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ AI Infrastructure Diagram Generator</h1>
+            <p>Create professional technical infrastructure diagrams with AI assistance</p>
+        </div>
+        
+        <div class="content">
+            <div class="controls">
+                <div class="control-group">
+                    <h3>Quick Start Templates</h3>
+                    <div class="preset-diagrams">
+                        <button class="preset-btn" onclick="generateDiagram('compute')">🖥️ Compute Infrastructure</button>
+                        <button class="preset-btn" onclick="generateDiagram('storage')">💾 Storage Architecture</button>
+                        <button class="preset-btn" onclick="generateDiagram('rack')">🏢 Rack Layout</button>
+                        <button class="preset-btn" onclick="generateDiagram('network')">🌐 Network Topology</button>
+                        <button class="preset-btn" onclick="generateDiagram('hybrid')">☁️ Hybrid Cloud</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Custom Configuration</h3>
+                    <div class="input-group">
+                        <label for="diagramTitle">Diagram Title</label>
+                        <input type="text" id="diagramTitle" placeholder="Enter diagram title">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="requirements">Requirements</label>
+                        <textarea id="requirements" placeholder="Describe your infrastructure requirements..."></textarea>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="scale">Scale</label>
+                        <select id="scale">
+                            <option value="small">Small (1-10 servers)</option>
+                            <option value="medium">Medium (10-100 servers)</option>
+                            <option value="large">Large (100+ servers)</option>
+                            <option value="enterprise">Enterprise Scale</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="generateCustomDiagram()">Generate Custom Diagram</button>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Diagram Elements</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="addElement('server')">🖥️ Add Server</button>
+                        <button class="btn btn-secondary" onclick="addElement('storage')">💾 Add Storage</button>
+                        <button class="btn btn-secondary" onclick="addElement('switch')">🔀 Add Switch</button>
+                        <button class="btn btn-secondary" onclick="addElement('firewall')">🛡️ Add Firewall</button>
+                        <button class="btn btn-secondary" onclick="addElement('loadbalancer')">⚖️ Load Balancer</button>
+                        <button class="btn btn-secondary" onclick="addElement('router')">📡 Add Router</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="diagram-area">
+                <div class="toolbar">
+                    <button class="export-btn" onclick="exportDiagram()">📥 Export PNG</button>
+                    <button class="export-btn" onclick="exportSVG()">📄 Export SVG</button>
+                    <button class="clear-btn" onclick="clearCanvas()">🗑️ Clear Canvas</button>
+                </div>
+                
+                <canvas id="canvas" width="1000" height="600"></canvas>
+                
+                <div class="status" id="status">
+                    Ready to generate your infrastructure diagram. Select a template or configure custom requirements above.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let elements = [];
+        let selectedElement = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        // Infrastructure element definitions
+        const elementTypes = {
+            server: { width: 80, height: 60, color: '#3498db', icon: '🖥️', label: 'Server' },
+            storage: { width: 100, height: 40, color: '#e74c3c', icon: '💾', label: 'Storage' },
+            switch: { width: 60, height: 40, color: '#f39c12', icon: '🔀', label: 'Switch' },
+            firewall: { width: 70, height: 50, color: '#e67e22', icon: '🛡️', label: 'Firewall' },
+            loadbalancer: { width: 90, height: 45, color: '#9b59b6', icon: '⚖️', label: 'Load Balancer' },
+            router: { width: 75, height: 45, color: '#1abc9c', icon: '📡', label: 'Router' }
+        };
+
+        // Predefined diagram templates
+        const diagramTemplates = {
+            compute: {
+                title: 'Compute Infrastructure',
+                elements: [
+                    { type: 'loadbalancer', x: 500, y: 50, label: 'Load Balancer' },
+                    { type: 'server', x: 350, y: 150, label: 'Web Server 1' },
+                    { type: 'server', x: 500, y: 150, label: 'Web Server 2' },
+                    { type: 'server', x: 650, y: 150, label: 'Web Server 3' },
+                    { type: 'server', x: 425, y: 250, label: 'App Server 1' },
+                    { type: 'server', x: 575, y: 250, label: 'App Server 2' },
+                    { type: 'server', x: 500, y: 350, label: 'Database Server' },
+                    { type: 'switch', x: 500, y: 450, label: 'Core Switch' }
+                ]
+            },
+            storage: {
+                title: 'Storage Architecture',
+                elements: [
+                    { type: 'server', x: 200, y: 100, label: 'Storage Controller 1' },
+                    { type: 'server', x: 400, y: 100, label: 'Storage Controller 2' },
+                    { type: 'storage', x: 150, y: 200, label: 'SAN Array 1' },
+                    { type: 'storage', x: 300, y: 200, label: 'SAN Array 2' },
+                    { type: 'storage', x: 450, y: 200, label: 'SAN Array 3' },
+                    { type: 'storage', x: 300, y: 300, label: 'Backup Storage' },
+                    { type: 'switch', x: 300, y: 400, label: 'FC Switch' },
+                    { type: 'server', x: 600, y: 250, label: 'Backup Server' }
+                ]
+            },
+            rack: {
+                title: 'Rack Layout Diagram',
+                elements: [
+                    { type: 'switch', x: 100, y: 50, label: 'TOR Switch' },
+                    { type: 'server', x: 100, y: 110, label: 'Server 1U' },
+                    { type: 'server', x: 100, y: 170, label: 'Server 2U' },
+                    { type: 'server', x: 100, y: 230, label: 'Server 3U' },
+                    { type: 'storage', x: 100, y: 290, label: 'Storage 4U' },
+                    { type: 'server', x: 100, y: 350, label: 'Server 5U' },
+                    { type: 'switch', x: 300, y: 50, label: 'TOR Switch' },
+                    { type: 'server', x: 300, y: 110, label: 'Server 1U' },
+                    { type: 'server', x: 300, y: 170, label: 'Server 2U' },
+                    { type: 'storage', x: 300, y: 230, label: 'Storage 3U' }
+                ]
+            },
+            network: {
+                title: 'Network Topology',
+                elements: [
+                    { type: 'router', x: 500, y: 50, label: 'Core Router' },
+                    { type: 'switch', x: 300, y: 150, label: 'Access Switch 1' },
+                    { type: 'switch', x: 700, y: 150, label: 'Access Switch 2' },
+                    { type: 'firewall', x: 500, y: 150, label: 'Firewall' },
+                    { type: 'server', x: 200, y: 250, label: 'Server A' },
+                    { type: 'server', x: 400, y: 250, label: 'Server B' },
+                    { type: 'server', x: 600, y: 250, label: 'Server C' },
+                    { type: 'server', x: 800, y: 250, label: 'Server D' }
+                ]
+            },
+            hybrid: {
+                title: 'Hybrid Cloud Architecture',
+                elements: [
+                    { type: 'router', x: 500, y: 50, label: 'Edge Router' },
+                    { type: 'firewall', x: 500, y: 120, label: 'Firewall' },
+                    { type: 'loadbalancer', x: 350, y: 200, label: 'On-Prem LB' },
+                    { type: 'loadbalancer', x: 650, y: 200, label: 'Cloud LB' },
+                    { type: 'server', x: 250, y: 300, label: 'On-Prem App' },
+                    { type: 'server', x: 450, y: 300, label: 'On-Prem DB' },
+                    { type: 'server', x: 550, y: 300, label: 'Cloud App' },
+                    { type: 'server', x: 750, y: 300, label: 'Cloud DB' },
+                    { type: 'storage', x: 350, y: 400, label: 'Local Storage' },
+                    { type: 'storage', x: 650, y: 400, label: 'Cloud Storage' }
+                ]
+            }
+        };
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function drawElement(element) {
+            const type = elementTypes[element.type];
+            const x = element.x - type.width / 2;
+            const y = element.y - type.height / 2;
+            
+            // Draw shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(x + 3, y + 3, type.width, type.height);
+            
+            // Draw element background
+            ctx.fillStyle = type.color;
+            ctx.fillRect(x, y, type.width, type.height);
+            
+            // Draw border
+            ctx.strokeStyle = selectedElement === element ? '#2c3e50' : '#34495e';
+            ctx.lineWidth = selectedElement === element ? 3 : 1;
+            ctx.strokeRect(x, y, type.width, type.height);
+            
+            // Draw icon
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'white';
+            ctx.fillText(type.icon, element.x, element.y - 5);
+            
+            // Draw label
+            ctx.font = '12px sans-serif';
+            ctx.fillStyle = '#2c3e50';
+            const label = element.label || type.label;
+            ctx.fillText(label, element.x, element.y + 25);
+        }
+
+        function drawConnections() {
+            ctx.strokeStyle = '#7f8c8d';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            
+            // Simple connection logic - connect elements that are vertically or horizontally aligned
+            for (let i = 0; i < elements.length - 1; i++) {
+                for (let j = i + 1; j < elements.length; j++) {
+                    const el1 = elements[i];
+                    const el2 = elements[j];
+                    const dx = Math.abs(el1.x - el2.x);
+                    const dy = Math.abs(el1.y - el2.y);
+                    
+                    if ((dx < 50 && dy > 50 && dy < 200) || (dy < 50 && dx > 50 && dx < 300)) {
+                        ctx.beginPath();
+                        ctx.moveTo(el1.x, el1.y);
+                        ctx.lineTo(el2.x, el2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            ctx.setLineDash([]);
+        }
+
+        function redraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#ecf0f1';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            drawConnections();
+            elements.forEach(drawElement);
+            
+            // Draw title if set
+            const title = document.getElementById('diagramTitle').value;
+            if (title) {
+                ctx.font = 'bold 24px sans-serif';
+                ctx.fillStyle = '#2c3e50';
+                ctx.textAlign = 'center';
+                ctx.fillText(title, canvas.width / 2, 30);
+            }
+        }
+
+        function generateDiagram(type) {
+            const template = diagramTemplates[type];
+            if (template) {
+                elements = template.elements.map(el => ({...el}));
+                document.getElementById('diagramTitle').value = template.title;
+                redraw();
+                updateStatus(`Generated ${template.title} diagram with ${elements.length} components.`);
+            }
+        }
+
+        function generateCustomDiagram() {
+            const title = document.getElementById('diagramTitle').value;
+            const requirements = document.getElementById('requirements').value;
+            const scale = document.getElementById('scale').value;
+            
+            if (!requirements) {
+                updateStatus('Please enter your requirements to generate a custom diagram.');
+                return;
+            }
+            
+            // AI-like logic to generate diagram based on requirements
+            elements = [];
+            let x = 200, y = 100;
+            
+            if (requirements.toLowerCase().includes('web') || requirements.toLowerCase().includes('http')) {
+                elements.push({ type: 'loadbalancer', x: x + 150, y: y, label: 'Load Balancer' });
+                elements.push({ type: 'server', x: x, y: y + 100, label: 'Web Server 1' });
+                elements.push({ type: 'server', x: x + 150, y: y + 100, label: 'Web Server 2' });
+                elements.push({ type: 'server', x: x + 300, y: y + 100, label: 'Web Server 3' });
+                y += 200;
+            }
+            
+            if (requirements.toLowerCase().includes('database') || requirements.toLowerCase().includes('db')) {
+                elements.push({ type: 'server', x: x + 150, y: y, label: 'Database Server' });
+                y += 100;
+            }
+            
+            if (requirements.toLowerCase().includes('storage') || requirements.toLowerCase().includes('backup')) {
+                elements.push({ type: 'storage', x: x + 150, y: y, label: 'Storage Array' });
+                y += 100;
+            }
+            
+            if (requirements.toLowerCase().includes('network') || requirements.toLowerCase().includes('switch')) {
+                elements.push({ type: 'switch', x: x + 150, y: y, label: 'Core Switch' });
+                y += 100;
+            }
+            
+            if (requirements.toLowerCase().includes('security') || requirements.toLowerCase().includes('firewall')) {
+                elements.push({ type: 'firewall', x: x + 150, y: y, label: 'Security Appliance' });
+            }
+            
+            redraw();
+            updateStatus(`Generated custom diagram based on requirements. Added ${elements.length} components.`);
+        }
+
+        function addElement(type) {
+            const x = 100 + Math.random() * (canvas.width - 200);
+            const y = 100 + Math.random() * (canvas.height - 200);
+            elements.push({ type, x, y, label: elementTypes[type].label });
+            redraw();
+            updateStatus(`Added ${elementTypes[type].label} to the diagram.`);
+        }
+
+        function getElementAt(x, y) {
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                const type = elementTypes[el.type];
+                if (x >= el.x - type.width/2 && x <= el.x + type.width/2 &&
+                    y >= el.y - type.height/2 && y <= el.y + type.height/2) {
+                    return el;
+                }
+            }
+            return null;
+        }
+
+        function exportDiagram() {
+            const link = document.createElement('a');
+            link.download = 'infrastructure-diagram.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            updateStatus('Diagram exported as PNG file.');
+        }
+
+        function exportSVG() {
+            // Create SVG content
+            let svgContent = `<svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">`;
+            
+            elements.forEach(el => {
+                const type = elementTypes[el.type];
+                const x = el.x - type.width / 2;
+                const y = el.y - type.height / 2;
+                
+                svgContent += `<rect x="${x}" y="${y}" width="${type.width}" height="${type.height}" fill="${type.color}" stroke="#34495e"/>`;
+                svgContent += `<text x="${el.x}" y="${el.y + 5}" text-anchor="middle" font-family="Arial" font-size="12" fill="white">${type.icon}</text>`;
+                svgContent += `<text x="${el.x}" y="${el.y + 25}" text-anchor="middle" font-family="Arial" font-size="10" fill="#2c3e50">${el.label || type.label}</text>`;
+            });
+            
+            svgContent += '</svg>';
+            
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'infrastructure-diagram.svg';
+            link.click();
+            updateStatus('Diagram exported as SVG file.');
+        }
+
+        function clearCanvas() {
+            elements = [];
+            redraw();
+            updateStatus('Canvas cleared. Ready for new diagram.');
+        }
+
+        // Mouse event handlers
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            selectedElement = getElementAt(x, y);
+            if (selectedElement) {
+                isDragging = true;
+                dragOffset.x = x - selectedElement.x;
+                dragOffset.y = y - selectedElement.y;
+                canvas.style.cursor = 'grabbing';
+            }
+            redraw();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (isDragging && selectedElement) {
+                selectedElement.x = x - dragOffset.x;
+                selectedElement.y = y - dragOffset.y;
+                redraw();
+            } else {
+                const element = getElementAt(x, y);
+                canvas.style.cursor = element ? 'grab' : 'default';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'default';
+        });
+
+        canvas.addEventListener('dblclick', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const element = getElementAt(x, y);
+            if (element) {
+                const newLabel = prompt('Enter new label:', element.label);
+                if (newLabel !== null) {
+                    element.label = newLabel;
+                    redraw();
+                }
+            }
+        });
+
+        // Initialize
+        redraw();
+        updateStatus('Infrastructure Diagram Generator ready. Select a template or add custom elements.');
+    </script>
+</body>
+</html>
