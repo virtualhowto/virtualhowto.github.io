@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Infrastructure Diagram Generator</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
+  .container{max-width:1400px;margin:0 auto;background:rgba(255,255,255,.95);border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,.1);overflow:hidden}
+  .header{background:linear-gradient(45deg,#2c3e50,#3498db);color:#fff;padding:30px;text-align:center}
+  .header h1{font-size:2.2em;margin-bottom:10px;font-weight:300}
+  .content{display:flex;min-height:660px}
+  .controls{width:380px;background:#f8f9fa;padding:22px;border-right:1px solid #e9ecef;overflow-y:auto}
+  .diagram-area{flex:1;padding:22px;background:#fff;position:relative}
+  .control-group{margin-bottom:22px}
+  .control-group h3{color:#2c3e50;margin-bottom:12px;font-size:1.08em;font-weight:700}
+  .btn-group{display:grid;gap:10px}
+  .btn{padding:11px 14px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:all .25s ease;text-align:left;font-size:13px}
+  .btn-primary{background:linear-gradient(45deg,#3498db,#2980b9);color:#fff}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(52,152,219,.35)}
+  .btn-secondary{background:#ecf0f1;color:#2c3e50;border:1px solid #bdc3c7}
+  .btn-secondary:hover{background:#dfe6e9}
+  .btn-danger{background:linear-gradient(45deg,#e74c3c,#c0392b);color:#fff}
+  .btn-success{background:linear-gradient(45deg,#27ae60,#2ecc71);color:#fff}
+  .btn-warning{background:linear-gradient(45deg,#f39c12,#d35400);color:#fff}
+  .input-group{margin-bottom:12px}
+  .input-group label{display:block;margin-bottom:6px;color:#2c3e50;font-weight:600}
+  .input-group input,.input-group select,.input-group textarea{width:100%;padding:10px;border:1px solid #bdc3c7;border-radius:6px;font-size:14px}
+  .input-group textarea{resize:vertical;min-height:74px}
+  #canvas{border:2px solid #ecf0f1;border-radius:10px;background:#fdfdfd;cursor:crosshair}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:12px;background:#f8f9fa;border-radius:8px;border:1px solid #e9ecef}
+  .toolbar .btn{padding:8px 10px;font-size:12px}
+  .preset-diagrams{display:grid;gap:10px;grid-template-columns:1fr}
+  .preset-btn{padding:13px;background:linear-gradient(45deg,#9b59b6,#8e44ad);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:all .25s ease}
+  .preset-btn:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(155,89,182,.35)}
+  .status{margin-top:14px;padding:12px;background:#e8f6f3;border-left:4px solid #27ae60;border-radius:0 8px 8px 0;color:#2c3e50}
+  .muted{font-size:12px;color:#6c757d}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .inline{display:inline-flex;align-items:center;gap:6px}
+  .sep{height:1px;background:#e9ecef;margin:12px 0}
+  .kbd{background:#eee;border:1px solid #ccc;border-bottom-color:#bbb;border-radius:4px;padding:0 6px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+
+  /* Cart */
+  .cart{background:#fff;border:1px solid #e9ecef;border-radius:10px;padding:10px}
+  .cart table{width:100%;border-collapse:collapse;font-size:12px}
+  .cart th,.cart td{border-bottom:1px solid #eef2f4;padding:6px 4px;text-align:right}
+  .cart th{text-align:right;color:#2c3e50;font-weight:700;background:#f7f9fb}
+  .cart td:first-child,.cart th:first-child{text-align:left}
+  .cart tfoot td{font-weight:700}
+  .cart input[type="number"]{width:70px;padding:6px;border:1px solid #bdc3c7;border-radius:6px;text-align:right}
+  .cart .total{font-size:14px}
+  .cart .unit{opacity:.75}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🏗️ AI Infrastructure Diagram Generator</h1>
+    <p>Versioned JSON (v1.2) • Groups/Annotations/Connections • Auto Layout • Pricing Cart</p>
+  </div>
+
+  <div class="content">
+    <div class="controls">
+      <div class="control-group">
+        <h3>Quick Start Templates</h3>
+        <p class="muted">Loads <code>templates/&lt;name&gt;.json</code> if present; falls back to built-ins.</p>
+        <div class="preset-diagrams">
+          <button class="preset-btn" onclick="loadTemplate('compute')">🖥️ Compute Infrastructure</button>
+          <button class="preset-btn" onclick="loadTemplate('storage')">💾 Storage Architecture</button>
+          <button class="preset-btn" onclick="loadTemplate('rack')">🏢 Rack Layout</button>
+          <button class="preset-btn" onclick="loadTemplate('network')">🌐 Network Topology</button>
+          <button class="preset-btn" onclick="loadTemplate('hybrid')">☁️ Hybrid Cloud</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Custom Configuration</h3>
+        <div class="input-group">
+          <label for="diagramTitle">Diagram Title</label>
+          <input type="text" id="diagramTitle" placeholder="Enter diagram title">
+        </div>
+        <div class="input-group">
+          <label for="requirements">Requirements</label>
+          <textarea id="requirements" placeholder="Describe your infrastructure requirements..."></textarea>
+        </div>
+        <div class="input-group">
+          <label for="scale">Scale</label>
+          <select id="scale">
+            <option value="small">Small (1–10 servers)</option>
+            <option value="medium">Medium (10–100 servers)</option>
+            <option value="large">Large (100+ servers)</option>
+            <option value="enterprise">Enterprise Scale</option>
+          </select>
+        </div>
+        <div class="inline" style="margin:6px 0 10px 0;">
+          <input type="checkbox" id="snap" checked>
+          <label for="snap" class="muted">Snap to 50px grid</label>
+        </div>
+        <div class="row">
+          <button class="btn btn-primary" onclick="generateCustomDiagram()">Generate Custom</button>
+          <button class="btn btn-warning" onclick="autoLayout()">Auto Layout</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Diagram Elements</h3>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="addElement('server', true)">🖥️ Add Server</button>
+          <button class="btn btn-secondary" onclick="addElement('storage')">💾 Add Storage</button>
+          <button class="btn btn-secondary" onclick="addElement('switch')">🔀 Add Switch</button>
+          <button class="btn btn-secondary" onclick="addElement('firewall')">🛡️ Add Firewall</button>
+          <button class="btn btn-secondary" onclick="addElement('loadbalancer')">⚖️ Load Balancer</button>
+          <button class="btn btn-secondary" onclick="addElement('router')">📡 Add Router</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Groups / Annotations / Connections</h3>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="addGroup('group')">🧩 Add Group</button>
+          <button class="btn btn-secondary" onclick="addGroup('swimlane')">🏊 Add Swimlane</button>
+          <button class="btn btn-secondary" onclick="addAnnotation('label')">🔖 Add Label</button>
+          <button class="btn btn-secondary" onclick="addAnnotation('note')">📝 Add Note</button>
+          <button id="connectBtn" class="btn btn-secondary" onclick="toggleConnectMode()">🔗 Start Connect</button>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button class="btn btn-secondary" onclick="cycleConnectionStyle()">↔️ Style: <span id="connStyleText">straight</span></button>
+          <button class="btn btn-secondary" onclick="toggleDashed()">— — Dashed: <span id="dashedText">off</span></button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Pricing Model</h3>
+        <div class="input-group">
+          <label>Currency</label>
+          <select id="currency" onchange="savePricingConfig(); recalcCart();">
+            <option value="AUD" selected>AUD</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div class="row">
+          <div class="input-group" style="flex:1;">
+            <label>Price / vCPU (monthly)</label>
+            <input id="priceVcpu" type="number" min="0" step="0.01" value="25" oninput="savePricingConfig(); recalcCart();" />
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label>Price / GB RAM (monthly)</label>
+            <input id="priceRam" type="number" min="0" step="0.01" value="8" oninput="savePricingConfig(); recalcCart();" />
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label>Price / GB Storage (monthly)</label>
+            <input id="priceStorage" type="number" min="0" step="0.001" value="0.15" oninput="savePricingConfig(); recalcCart();" />
+          </div>
+        </div>
+        <p class="muted">Defaults shown. Adjust to your rate card (per VM per month).</p>
+      </div>
+
+      <div class="control-group">
+        <h3>Pricing Cart</h3>
+        <div class="cart" id="cart"></div>
+        <div class="row" style="margin-top:8px;">
+          <button class="btn btn-success" onclick="exportCartCSV()">📄 Export Cart CSV</button>
+          <button class="btn btn-danger" onclick="deleteSelected()">🗑️ Delete Selected</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Templates (JSON)</h3>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="triggerImport()">📂 Import Template (JSON)</button>
+          <button class="btn btn-success" onclick="exportTemplate()">💾 Export Current as JSON</button>
+        </div>
+        <input type="file" id="fileInput" accept="application/json" style="display:none"/>
+        <div class="sep"></div>
+        <p class="muted"><b>Schema Version:</b> 1.2 — adds <i>pricing</i> + per-server <i>sizing</i> to 1.1 features.</p>
+      </div>
+
+      <div class="sep"></div>
+      <p class="muted">Double-click elements/notes/labels/groups to rename text. Double-click a connection to edit its label. <span class="kbd">Esc</span> cancels connecting.</p>
+    </div>
+
+    <div class="diagram-area">
+      <div class="toolbar">
+        <button class="btn btn-success" onclick="exportDiagram()">📥 Export PNG</button>
+        <button class="btn btn-success" onclick="exportSVG()">📄 Export SVG</button>
+        <button class="btn btn-danger" onclick="clearCanvas()">🧹 Clear</button>
+      </div>
+      <canvas id="canvas" width="1000" height="660"></canvas>
+      <div class="status" id="status">Ready. Load a template or build your own. Use <span class="kbd">Esc</span> to cancel connecting.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * JSON Schema (v1.2)
+ * {
+ *   "version": "1.2",
+ *   "title": "Diagram Title",
+ *   "canvas": {"width":1000,"height":640},
+ *   "pricing": {
+ *     "currency":"AUD",
+ *     "rates": {"vcpu":25,"ramGB":8,"storageGB":0.15}
+ *   },
+ *   "elements": [
+ *     {"id":"el-1","type":"server","x":350,"y":150,"label":"Web 1",
+ *      "sizing":{"vcpu":4,"ramGB":16,"storageGB":200}}
+ *   ],
+ *   "groups":[...],
+ *   "annotations":[...],
+ *   "connections":[...]
+ * }
+ */
+
+const SCHEMA_VERSION = "1.2";
+const templatesBasePath = 'templates/';
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let elements = [];     // {id,type,x,y,label,sizing?}
+let groups = [];
+let annotations = [];
+let connections = [];
+
+let selected = null;
+let isDragging = false;
+let dragOffset = {x:0,y:0};
+
+let connectMode = false;
+let connectPendingFrom = null;
+let currentConnStyle = 'straight';
+let currentConnDashed = false;
+
+let pricing = {
+  currency: localStorage.getItem('diagram.currency') || 'AUD',
+  rates: {
+    vcpu: parseFloat(localStorage.getItem('diagram.price.vcpu')) || 25,
+    ramGB: parseFloat(localStorage.getItem('diagram.price.ram')) || 8,
+    storageGB: parseFloat(localStorage.getItem('diagram.price.storage')) || 0.15
+  }
+};
+
+document.getElementById('currency').value = pricing.currency;
+document.getElementById('priceVcpu').value = pricing.rates.vcpu;
+document.getElementById('priceRam').value = pricing.rates.ramGB;
+document.getElementById('priceStorage').value = pricing.rates.storageGB;
+
+const elementTypes = {
+  server:       { width:80, height:60, color:'#3498db', icon:'🖥️', label:'Server' },
+  storage:      { width:100,height:40, color:'#e74c3c', icon:'💾', label:'Storage' },
+  switch:       { width:60, height:40, color:'#f39c12', icon:'🔀', label:'Switch' },
+  firewall:     { width:70, height:50, color:'#e67e22', icon:'🛡️', label:'Firewall' },
+  loadbalancer: { width:90, height:45, color:'#9b59b6', icon:'⚖️', label:'Load Balancer' },
+  router:       { width:75, height:45, color:'#1abc9c', icon:'📡', label:'Router' }
+};
+
+// Built-in fallbacks (no sizing, we add defaults during normalize)
+const builtinTemplates = {
+  compute: { title:'Compute Infrastructure', elements:[
+    { type:'loadbalancer', x:500, y:50,  label:'Load Balancer' },
+    { type:'server', x:350, y:150, label:'Web 1' },
+    { type:'server', x:500, y:150, label:'Web 2' },
+    { type:'server', x:650, y:150, label:'Web 3' },
+    { type:'server', x:425, y:250, label:'App 1' },
+    { type:'server', x:575, y:250, label:'App 2' },
+    { type:'server', x:500, y:360, label:'Database' },
+    { type:'switch', x:500, y:450, label:'Core Switch' }
+  ]},
+  storage: { title:'Storage Architecture', elements:[
+    { type:'server',  x:200,y:100, label:'Storage Ctrl 1' },
+    { type:'server',  x:400,y:100, label:'Storage Ctrl 2' },
+    { type:'storage', x:150,y:200, label:'SAN Array 1' },
+    { type:'storage', x:300,y:200, label:'SAN Array 2' },
+    { type:'storage', x:450,y:200, label:'SAN Array 3' },
+    { type:'storage', x:300,y:300, label:'Backup Storage' },
+    { type:'switch',  x:300,y:400, label:'FC Switch' },
+    { type:'server',  x:600,y:250, label:'Backup Server' }
+  ]},
+  rack: { title:'Rack Layout Diagram', elements:[
+    { type:'switch', x:100,y:50, label:'TOR Switch' },
+    { type:'server', x:100,y:110, label:'Server 1U' },
+    { type:'server', x:100,y:170, label:'Server 2U' },
+    { type:'server', x:100,y:230, label:'Server 3U' },
+    { type:'storage',x:100,y:290, label:'Storage 4U' },
+    { type:'server', x:100,y:350, label:'Server 5U' },
+    { type:'switch', x:300,y:50, label:'TOR Switch' },
+    { type:'server', x:300,y:110, label:'Server 1U' },
+    { type:'server', x:300,y:170, label:'Server 2U' },
+    { type:'storage',x:300,y:230, label:'Storage 3U' }
+  ]},
+  network: { title:'Network Topology', elements:[
+    { type:'router', x:500,y:50, label:'Core Router' },
+    { type:'switch', x:300,y:150, label:'Access Switch 1' },
+    { type:'switch', x:700,y:150, label:'Access Switch 2' },
+    { type:'firewall', x:500,y:150, label:'Firewall' },
+    { type:'server', x:200,y:250, label:'Server A' },
+    { type:'server', x:400,y:250, label:'Server B' },
+    { type:'server', x:600,y:250, label:'Server C' },
+    { type:'server', x:800,y:250, label:'Server D' }
+  ]},
+  hybrid: { title:'Hybrid Cloud Architecture', elements:[
+    { type:'router', x:500,y:50, label:'Edge Router' },
+    { type:'firewall', x:500,y:120, label:'Firewall' },
+    { type:'loadbalancer', x:350,y:200, label:'On-Prem LB' },
+    { type:'loadbalancer', x:650,y:200, label:'Cloud LB' },
+    { type:'server', x:250,y:300, label:'On-Prem App' },
+    { type:'server', x:450,y:300, label:'On-Prem DB' },
+    { type:'server', x:550,y:300, label:'Cloud App' },
+    { type:'server', x:750,y:300, label:'Cloud DB' },
+    { type:'storage', x:350,y:400, label:'Local Storage' },
+    { type:'storage', x:650,y:400, label:'Cloud Storage' }
+  ]}
+};
+
+// ---------- Utilities ----------
+function updateStatus(msg){ document.getElementById('status').textContent = msg; }
+function genId(prefix){ return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`; }
+function snapVal(v){ return document.getElementById('snap').checked ? Math.round(v/50)*50 : v; }
+function getElementById(id){ return elements.find(e=>e.id===id); }
+function symbol(){ return pricing.currency==='AUD' ? 'A$' : (pricing.currency==='USD' ? '$' : '€'); }
+function fmt(n){ return `${symbol()}${Number(n).toFixed(2)}`; }
+
+// ---------- Pricing state ----------
+function savePricingConfig(){
+  pricing.currency = document.getElementById('currency').value;
+  pricing.rates.vcpu = parseFloat(document.getElementById('priceVcpu').value)||0;
+  pricing.rates.ramGB = parseFloat(document.getElementById('priceRam').value)||0;
+  pricing.rates.storageGB = parseFloat(document.getElementById('priceStorage').value)||0;
+  localStorage.setItem('diagram.currency', pricing.currency);
+  localStorage.setItem('diagram.price.vcpu', pricing.rates.vcpu);
+  localStorage.setItem('diagram.price.ram', pricing.rates.ramGB);
+  localStorage.setItem('diagram.price.storage', pricing.rates.storageGB);
+}
+
+function ensureServerSizing(el){
+  if(el.type!=='server') return;
+  if(!el.sizing) el.sizing = { vcpu:2, ramGB:8, storageGB:50 };
+  if(!Number.isFinite(el.sizing.vcpu)) el.sizing.vcpu = 2;
+  if(!Number.isFinite(el.sizing.ramGB)) el.sizing.ramGB = 8;
+  if(!Number.isFinite(el.sizing.storageGB)) el.sizing.storageGB = 50;
+}
+
+function promptServerSizing(el){
+  ensureServerSizing(el);
+  const vcpu = parseInt(prompt('vCPU for "'+(el.label||'Server')+'":', el.sizing.vcpu),10);
+  if(Number.isFinite(vcpu) && vcpu>=0) el.sizing.vcpu = vcpu;
+  const ram  = parseFloat(prompt('RAM (GB):', el.sizing.ramGB));
+  if(Number.isFinite(ram) && ram>=0) el.sizing.ramGB = ram;
+  const sto  = parseFloat(prompt('Storage (GB):', el.sizing.storageGB));
+  if(Number.isFinite(sto) && sto>=0) el.sizing.storageGB = sto;
+}
+
+function lineItemPrice(el){
+  if(el.type!=='server') return 0;
+  ensureServerSizing(el);
+  const r = pricing.rates;
+  return el.sizing.vcpu*r.vcpu + el.sizing.ramGB*r.ramGB + el.sizing.storageGB*r.storageGB;
+}
+
+function buildCart(){
+  const cart = document.getElementById('cart');
+  const servers = elements.filter(e=>e.type==='server');
+  let total = 0;
+  servers.forEach(ensureServerSizing);
+  let rows = servers.map((el,i)=>{
+    const price = lineItemPrice(el); total += price;
+    return `
+      <tr data-id="${el.id}">
+        <td>${el.label || 'Server'}</td>
+        <td><input type="number" min="0" step="1" value="${el.sizing.vcpu}" data-field="vcpu" /></td>
+        <td><input type="number" min="0" step="0.5" value="${el.sizing.ramGB}" data-field="ramGB" /></td>
+        <td><input type="number" min="0" step="1" value="${el.sizing.storageGB}" data-field="storageGB" /></td>
+        <td class="unit">${fmt(pricing.rates.vcpu)}</td>
+        <td class="unit">${fmt(pricing.rates.ramGB)}</td>
+        <td class="unit">${fmt(pricing.rates.storageGB)}</td>
+        <td><b>${fmt(price)}</b></td>
+      </tr>
+    `;
+  }).join('');
+  cart.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Server</th>
+          <th>vCPU</th>
+          <th>RAM (GB)</th>
+          <th>Storage (GB)</th>
+          <th>$/vCPU</th>
+          <th>$/GB RAM</th>
+          <th>$/GB Storage</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>${rows || '<tr><td colspan="8" style="text-align:center;color:#6c757d;">No servers yet</td></tr>'}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="7" class="total">Total (monthly)</td>
+          <td class="total">${fmt(total)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+  // Wire inputs
+  cart.querySelectorAll('tbody tr').forEach(tr=>{
+    const id = tr.getAttribute('data-id');
+    tr.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const el = getElementById(id);
+        if(!el) return;
+        ensureServerSizing(el);
+        const field = inp.getAttribute('data-field');
+        const val = parseFloat(inp.value)||0;
+        el.sizing[field] = val;
+        recalcCart();
+      });
+    });
+  });
+}
+
+function recalcCart(){
+  buildCart();
+  redraw();
+}
+
+function exportCartCSV(){
+  const servers = elements.filter(e=>e.type==='server');
+  if(!servers.length){ updateStatus('Cart is empty.'); return; }
+  const lines = [['Server','vCPU','RAM_GB','Storage_GB','Price_per_vCPU','Price_per_GB_RAM','Price_per_GB_Storage','Subtotal']];
+  for(const el of servers){
+    ensureServerSizing(el);
+    lines.push([
+      el.label||'Server',
+      el.sizing.vcpu,
+      el.sizing.ramGB,
+      el.sizing.storageGB,
+      pricing.rates.vcpu,
+      pricing.rates.ramGB,
+      pricing.rates.storageGB,
+      lineItemPrice(el).toFixed(2)
+    ]);
+  }
+  const csv = lines.map(r=>r.map(v=>String(v).includes(',')?`"${String(v).replace(/"/g,'""')}"`:v).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'pricing-cart.csv';
+  link.click();
+  updateStatus('Exported cart as CSV.');
+}
+
+// ---------- Drawing ----------
+function drawGrid(){
+  ctx.strokeStyle = '#ecf0f1'; ctx.lineWidth = 1;
+  for(let x=0;x<canvas.width;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for(let y=0;y<canvas.height;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+}
+
+function drawGroups(){
+  for(const g of groups){
+    ctx.save();
+    ctx.fillStyle = g.kind==='swimlane' ? 'rgba(52,152,219,0.07)' : 'rgba(155,89,182,0.07)';
+    ctx.strokeStyle = g.kind==='swimlane' ? '#3498db' : '#9b59b6';
+    ctx.lineWidth = 2;
+    ctx.fillRect(g.x, g.y, g.w, g.h);
+    ctx.strokeRect(g.x, g.y, g.w, g.h);
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(g.label || (g.kind==='swimlane'?'Swimlane':'Group'), g.x+8, g.y+18);
+    if(selected && selected.kind==='group' && selected.id===g.id){
+      ctx.setLineDash([6,4]); ctx.strokeStyle = '#2c3e50';
+      ctx.strokeRect(g.x-3,g.y-3,g.w+6,g.h+6);
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+}
+
+function drawElement(el){
+  const t = elementTypes[el.type]; if(!t) return;
+  const x = el.x - t.width/2, y = el.y - t.height/2;
+
+  ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(x+3,y+3,t.width,t.height);
+  ctx.fillStyle=t.color; ctx.fillRect(x,y,t.width,t.height);
+  ctx.strokeStyle = (selected && selected.kind==='element' && selected.id===el.id) ? '#2c3e50' : '#34495e';
+  ctx.lineWidth = (selected && selected.kind==='element' && selected.id===el.id) ? 3 : 1;
+  ctx.strokeRect(x,y,t.width,t.height);
+
+  ctx.font='20px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#fff';
+  ctx.fillText(t.icon, el.x, el.y-5);
+  ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50';
+  ctx.fillText(el.label || t.label, el.x, el.y+25);
+
+  // Tiny price tag for servers
+  if(el.type==='server'){
+    const p = lineItemPrice(el);
+    ctx.font='11px sans-serif'; ctx.fillStyle='#2c3e50';
+    ctx.fillText(fmt(p), el.x, y + t.height + 12);
+  }
+}
+
+function drawAnnotation(a){
+  ctx.save();
+  if(a.kind==='label'){
+    ctx.font = `bold ${a.size||14}px sans-serif`;
+    ctx.textAlign='left'; ctx.fillStyle='#2c3e50';
+    ctx.fillText(a.text||'Label', a.x, a.y);
+    if(selected && selected.kind==='annotation' && selected.id===a.id){
+      const w = ctx.measureText(a.text||'Label').width;
+      ctx.setLineDash([5,3]); ctx.strokeStyle='#2c3e50';
+      ctx.strokeRect(a.x-4, a.y-(a.size||14), w+8, (a.size||14)+6);
+      ctx.setLineDash([]);
+    }
+  } else {
+    const w=a.w||160, h=a.h||90;
+    ctx.fillStyle='rgba(241,196,15,0.2)'; ctx.strokeStyle='#f39c12'; ctx.lineWidth=2;
+    ctx.fillRect(a.x,a.y,w,h); ctx.strokeRect(a.x,a.y,w,h);
+    ctx.fillStyle='#2c3e50'; ctx.font='13px sans-serif'; ctx.textAlign='left';
+    wrapText(a.text||'Note', a.x+8, a.y+18, w-16, 16);
+    if(selected && selected.kind==='annotation' && selected.id===a.id){
+      ctx.setLineDash([6,4]); ctx.strokeStyle='#2c3e50';
+      ctx.strokeRect(a.x-3,a.y-3,w+6,h+6); ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
+
+function wrapText(text,x,y,maxW,lineH){
+  const words=(text||'').split(' '); let line='';
+  for(let n=0;n<words.length;n++){
+    const test=line+words[n]+' '; const w=ctx.measureText(test).width;
+    if(w>maxW && n>0){ ctx.fillText(line,x,y); line=words[n]+' '; y+=lineH; }
+    else line=test;
+  }
+  ctx.fillText(line,x,y);
+}
+
+function drawConnections(){
+  ctx.save();
+  for(const c of connections){
+    const a=getElementById(c.fromId), b=getElementById(c.toId);
+    if(!a||!b) continue;
+    const ax=a.x, ay=a.y, bx=b.x, by=b.y;
+
+    ctx.lineWidth=2; ctx.strokeStyle='#7f8c8d';
+    if(c.dashed){ ctx.setLineDash([6,4]); } else { ctx.setLineDash([]); }
+
+    ctx.beginPath();
+    if(c.style==='orthogonal'){
+      const mx=(ax+bx)/2; ctx.moveTo(ax,ay); ctx.lineTo(mx,ay); ctx.lineTo(mx,by); ctx.lineTo(bx,by);
+    } else { ctx.moveTo(ax,ay); ctx.lineTo(bx,by); }
+    ctx.stroke();
+
+    const ang=Math.atan2(by-ay,bx-ax), len=10;
+    ctx.beginPath();
+    ctx.moveTo(bx,by);
+    ctx.lineTo(bx - len*Math.cos(ang - Math.PI/6), by - len*Math.sin(ang - Math.PI/6));
+    ctx.lineTo(bx - len*Math.cos(ang + Math.PI/6), by - len*Math.sin(ang + Math.PI/6));
+    ctx.closePath(); ctx.fillStyle='#7f8c8d'; ctx.fill();
+
+    if(c.label){
+      const mx=(ax+bx)/2, my=(ay+by)/2;
+      ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center';
+      ctx.fillText(c.label, c.style==='orthogonal' ? (ax+bx)/2 : mx, c.style==='orthogonal' ? (ay+by)/2 - 6 : my - 6);
+    }
+
+    if(selected && selected.kind==='connection' && selected.id===c.id){
+      const mx=(ax+bx)/2, my=(ay+by)/2; ctx.setLineDash([4,3]); ctx.strokeStyle='#2c3e50';
+      ctx.strokeRect(mx-6,my-6,12,12); ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
+
+function redraw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawGrid();
+  const title = document.getElementById('diagramTitle').value;
+  if(title){ ctx.font='bold 22px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center'; ctx.fillText(title, canvas.width/2, 30); }
+  drawGroups(); drawConnections();
+  for(const el of elements) drawElement(el);
+  for(const a of annotations) drawAnnotation(a);
+}
+
+// ---------- Template Load / Save ----------
+function normalizeImported(obj){
+  if(!obj || typeof obj!=='object') throw new Error('Invalid template data');
+  const out = {
+    version: obj.version || '1.0',
+    title: obj.title || '',
+    canvas: obj.canvas && Number.isFinite(obj.canvas.width) && Number.isFinite(obj.canvas.height)
+      ? { width: obj.canvas.width, height: obj.canvas.height } : null,
+    elements: [],
+    groups: Array.isArray(obj.groups)? obj.groups : [],
+    annotations: Array.isArray(obj.annotations)? obj.annotations : [],
+    connections: Array.isArray(obj.connections)? obj.connections : [],
+    pricing: obj.pricing && obj.pricing.rates ? {
+      currency: obj.pricing.currency || pricing.currency,
+      rates: {
+        vcpu: Number(obj.pricing.rates.vcpu) || pricing.rates.vcpu,
+        ramGB: Number(obj.pricing.rates.ramGB) || pricing.rates.ramGB,
+        storageGB: Number(obj.pricing.rates.storageGB) || pricing.rates.storageGB
+      }
+    } : null
+  };
+
+  // Apply imported pricing if present
+  if(out.pricing){
+    pricing.currency = out.pricing.currency;
+    pricing.rates = out.pricing.rates;
+    document.getElementById('currency').value = pricing.currency;
+    document.getElementById('priceVcpu').value = pricing.rates.vcpu;
+    document.getElementById('priceRam').value = pricing.rates.ramGB;
+    document.getElementById('priceStorage').value = pricing.rates.storageGB;
+  }
+
+  // Elements
+  if(!Array.isArray(obj.elements)) throw new Error('Missing "elements" array');
+  for(const e of obj.elements){
+    if(!e || !elementTypes[e.type]) continue;
+    const x=Number(e.x), y=Number(e.y);
+    if(!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    const el = {
+      id: e.id || genId('el'),
+      type: e.type, x, y,
+      label: typeof e.label==='string' ? e.label : elementTypes[e.type].label
+    };
+    if(e.type==='server'){
+      el.sizing = {
+        vcpu: Number(e.sizing && e.sizing.vcpu) || 2,
+        ramGB: Number(e.sizing && e.sizing.ramGB) || 8,
+        storageGB: Number(e.sizing && e.sizing.storageGB) || 50
+      };
+    }
+    out.elements.push(el);
+  }
+
+  // Groups defaults
+  out.groups = out.groups.map(g => ({
+    id: g.id || genId('grp'),
+    kind: (g.kind==='swimlane'?'swimlane':'group'),
+    x: Number(g.x)||60, y:Number(g.y)||80,
+    w: Number(g.w)||880, h: Number(g.h)||140,
+    label: typeof g.label==='string' ? g.label : (g.kind==='swimlane'?'Swimlane':'Group')
+  }));
+
+  // Annotations defaults
+  out.annotations = out.annotations.map(a => {
+    const kind = (a.kind==='note')?'note':'label';
+    return {
+      id: a.id || genId('ann'),
+      kind,
+      x: Number(a.x)||80,
+      y: Number(a.y)||60,
+      w: kind==='note' ? (Number(a.w)||160) : undefined,
+      h: kind==='note' ? (Number(a.h)||90)  : undefined,
+      size: kind==='label' ? (Number(a.size)||14) : undefined,
+      text: typeof a.text==='string' ? a.text : (kind==='label'?'Label':'Note')
+    };
+  });
+
+  // Connections
+  const idAt = (idx)=> out.elements[idx] && out.elements[idx].id;
+  out.connections = out.connections.map(c=>{
+    let fromId = c.fromId || idAt(c.fromIndex||-1);
+    let toId   = c.toId   || idAt(c.toIndex||-1);
+    return {
+      id: c.id || genId('con'),
+      fromId, toId,
+      style: (c.style==='orthogonal'?'orthogonal':'straight'),
+      dashed: !!c.dashed,
+      label: typeof c.label==='string' ? c.label : ''
+    };
+  }).filter(c=>c.fromId && c.toId);
+
+  return out;
+}
+
+function setFromTemplateObject(obj, label='template'){
+  const n = normalizeImported(obj);
+  if(n.canvas){ canvas.width=n.canvas.width; canvas.height=n.canvas.height; }
+  document.getElementById('diagramTitle').value = n.title || '';
+  elements = n.elements; groups = n.groups; annotations = n.annotations; connections = n.connections;
+  redraw(); recalcCart();
+  updateStatus(`Loaded ${label} (v${n.version}). Elements: ${elements.length}, Groups: ${groups.length}, Annotations: ${annotations.length}, Connections: ${connections.length}.`);
+}
+
+async function loadTemplate(name){
+  try{
+    updateStatus(`Loading templates/${name}.json ...`);
+    const res = await fetch(`${templatesBasePath}${name}.json`, { cache:'no-store' });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    setFromTemplateObject(json, `${name}.json`);
+  }catch(e){
+    if(builtinTemplates[name]){
+      const b = builtinTemplates[name];
+      const withIds = {
+        version: SCHEMA_VERSION,
+        title: b.title,
+        elements: b.elements.map(el=>({ id: genId('el'), ...el })),
+        groups: [], annotations: [], connections: [],
+        pricing: { currency: pricing.currency, rates: {...pricing.rates} }
+      };
+      setFromTemplateObject(withIds, `built-in "${name}"`);
+      updateStatus(`External ${name}.json not found; used built-in template.`);
+    } else {
+      updateStatus(`No template found for "${name}".`);
+    }
+  }
+}
+
+function exportTemplate(){
+  const obj = {
+    version: SCHEMA_VERSION,
+    title: document.getElementById('diagramTitle').value || '',
+    canvas: { width: canvas.width, height: canvas.height },
+    pricing: { currency: pricing.currency, rates: {...pricing.rates} },
+    elements: elements.map(e=>{
+      const base = { id:e.id, type:e.type, x:Math.round(e.x), y:Math.round(e.y), label:e.label };
+      if(e.type==='server') base.sizing = { vcpu:e.sizing?.vcpu||0, ramGB:e.sizing?.ramGB||0, storageGB:e.sizing?.storageGB||0 };
+      return base;
+    }),
+    groups: groups.map(g=>({ id:g.id, kind:g.kind, x:Math.round(g.x), y:Math.round(g.y), w:Math.round(g.w), h:Math.round(g.h), label:g.label })),
+    annotations: annotations.map(a=>{
+      const base = { id:a.id, kind:a.kind, x:Math.round(a.x), y:Math.round(a.y), text:a.text };
+      if(a.kind==='label') base.size = a.size||14;
+      if(a.kind==='note'){ base.w=Math.round(a.w||160); base.h=Math.round(a.h||90); }
+      return base;
+    }),
+    connections: connections.map(c=>({ id:c.id, fromId:c.fromId, toId:c.toId, style:c.style, dashed:!!c.dashed, label:c.label || '' }))
+  };
+  const blob = new Blob([JSON.stringify(obj,null,2)], { type:'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  const safe = (obj.title || 'diagram').toLowerCase().replace(/\s+/g,'-');
+  link.download = `${safe}.json`;
+  link.click();
+  updateStatus('Exported current diagram as JSON (v1.2).');
+}
+
+function triggerImport(){ document.getElementById('fileInput').value=''; document.getElementById('fileInput').click(); }
+document.getElementById('fileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const json = JSON.parse(text);
+    setFromTemplateObject(json, file.name);
+  }catch(err){ updateStatus(`Failed to import: ${err.message}`); }
+});
+
+// ---------- Element / Group / Annotation creation ----------
+function addElement(type, promptSizingOnAdd=false){
+  const t = elementTypes[type]; if(!t) return;
+  const x = snapVal(120 + Math.random()*(canvas.width-240));
+  const y = snapVal(120 + Math.random()*(canvas.height-240));
+  const el = { id: genId('el'), type, x, y, label: t.label };
+  if(type==='server') el.sizing = { vcpu:2, ramGB:8, storageGB:50 };
+  elements.push(el);
+  if(promptSizingOnAdd && type==='server'){ promptServerSizing(el); }
+  redraw(); recalcCart();
+  updateStatus(`Added ${t.label}${type==='server'?' (sizing captured)':''}.`);
+}
+
+function addGroup(kind){
+  groups.push({ id: genId('grp'), kind, x:60, y:80, w:880, h:140, label:(kind==='swimlane'?'Swimlane':'Group') });
+  redraw(); updateStatus(`Added ${kind}.`);
+}
+
+function addAnnotation(kind){
+  if(kind==='label'){
+    annotations.push({ id: genId('ann'), kind:'label', x: snapVal(80), y: snapVal(60), text:'Label', size:14 });
+  } else {
+    annotations.push({ id: genId('ann'), kind:'note', x: snapVal(80), y: snapVal(60), w:200, h:100, text:'Note' });
+  }
+  redraw(); updateStatus(`Added annotation: ${kind}.`);
+}
+
+// ---------- Auto Layout ----------
+function autoLayout(){
+  const typesOrder = ['loadbalancer','firewall','router','switch','server','storage'];
+  const lanes = {}; for(const t of typesOrder) lanes[t]=elements.filter(e=>e.type===t);
+  const gapX=140, startY=120, laneH=100, centerX=canvas.width/2;
+
+  let laneIndex=0;
+  for(const t of typesOrder){
+    const arr=lanes[t]; if(!arr.length) continue;
+    const totalW=(arr.length-1)*gapX; let x=centerX-totalW/2; const y=startY+laneIndex*laneH;
+    for(const e of arr){ e.x=snapVal(x); e.y=snapVal(y); x+=gapX; }
+    laneIndex++;
+  }
+  redraw(); updateStatus('Auto layout applied.');
+}
+
+// ---------- Connections ----------
+function toggleConnectMode(){
+  connectMode=!connectMode; connectPendingFrom=null;
+  document.getElementById('connectBtn').textContent = connectMode ? '✅ Connecting (click source, then target)' : '🔗 Start Connect';
+  updateStatus(connectMode ? 'Connect mode: choose source element' : 'Connect mode off');
+}
+function cycleConnectionStyle(){
+  currentConnStyle = currentConnStyle==='straight' ? 'orthogonal' : 'straight';
+  document.getElementById('connStyleText').textContent = currentConnStyle;
+}
+function toggleDashed(){
+  currentConnDashed = !currentConnDashed;
+  document.getElementById('dashedText').textContent = currentConnDashed ? 'on' : 'off';
+}
+function addConnection(fromEl, toEl){
+  if(!fromEl || !toEl || fromEl.id===toEl.id) return;
+  connections.push({ id:genId('con'), fromId:fromEl.id, toId:toEl.id, style:currentConnStyle, dashed:currentConnDashed, label:'' });
+  redraw(); updateStatus(`Connected "${fromEl.label}" → "${toEl.label}".`);
+}
+
+// ---------- Hit Testing ----------
+function elementAt(x,y){
+  for(let i=elements.length-1;i>=0;i--){
+    const el=elements[i]; const t=elementTypes[el.type];
+    if(x>=el.x-t.width/2 && x<=el.x+t.width/2 && y>=el.y-t.height/2 && y<=el.y+t.height/2) return el;
+  } return null;
+}
+function groupAt(x,y){
+  for(let i=groups.length-1;i>=0;i--){
+    const g=groups[i]; if(x>=g.x && x<=g.x+g.w && y>=g.y && y<=g.y+g.h) return g;
+  } return null;
+}
+function annotationAt(x,y){
+  for(let i=annotations.length-1;i>=0;i--){
+    const a=annotations[i];
+    if(a.kind==='label'){
+      ctx.font=`bold ${a.size||14}px sans-serif`; const w=ctx.measureText(a.text||'Label').width; const h=(a.size||14);
+      if(x>=a.x-2 && x<=a.x+w+2 && y>=a.y-h && y<=a.y+6) return a;
+    } else {
+      const w=a.w||160, h=a.h||90; if(x>=a.x && x<=a.x+w && y>=a.y && y<=a.y+h) return a;
+    }
+  } return null;
+}
+function connectionAt(x,y){
+  const dist=(px,py,x1,y1,x2,y2)=>{ const A=px-x1,B=py-y1,C=x2-x1,D=y2-y1; const dot=A*C+B*D,len=C*C+D*D; let t=(len!==0)?(dot/len):-1; t=Math.max(0,Math.min(1,t)); const nx=x1+t*C,ny=y1+t*D; const dx=px-nx,dy=py-ny; return Math.sqrt(dx*dx+dy*dy); };
+  for(let i=connections.length-1;i>=0;i--){
+    const c=connections[i]; const a=getElementById(c.fromId), b=getElementById(c.toId); if(!a||!b) continue;
+    if(c.style==='orthogonal'){
+      const mx=(a.x+b.x)/2; const d=Math.min(dist(x,y,a.x,a.y,mx,a.y),dist(x,y,mx,a.y,mx,b.y),dist(x,y,mx,b.y,b.x,b.y)); if(d<6) return c;
+    } else { if(dist(x,y,a.x,a.y,b.x,b.y)<6) return c; }
+  } return null;
+}
+
+// ---------- Mouse ----------
+canvas.addEventListener('mousedown',(e)=>{
+  const {x,y}=canvasPoint(e);
+
+  if(connectMode){
+    const el=elementAt(x,y);
+    if(el){
+      if(!connectPendingFrom){ connectPendingFrom=el; updateStatus(`Connect from "${el.label}" → click target element`); }
+      else{ addConnection(connectPendingFrom,el); connectPendingFrom=null; connectMode=false; document.getElementById('connectBtn').textContent='🔗 Start Connect'; }
+    }
+    return;
+  }
+
+  const el=elementAt(x,y);
+  if(el){ selected={kind:'element',id:el.id}; isDragging=true; dragOffset.x=x-el.x; dragOffset.y=y-el.y; canvas.style.cursor='grabbing'; redraw(); return; }
+  const ann=annotationAt(x,y);
+  if(ann){ selected={kind:'annotation',id:ann.id}; isDragging=true; dragOffset.x=x-ann.x; dragOffset.y=y-ann.y; canvas.style.cursor='grabbing'; redraw(); return; }
+  const grp=groupAt(x,y);
+  if(grp){ selected={kind:'group',id:grp.id}; isDragging=true; dragOffset.x=x-grp.x; dragOffset.y=y-grp.y; canvas.style.cursor='grabbing'; redraw(); return; }
+  const con=connectionAt(x,y);
+  if(con){ selected={kind:'connection',id:con.id}; isDragging=false; redraw(); updateStatus('Connection selected (double-click to edit label).'); return; }
+
+  selected=null; redraw();
+});
+canvas.addEventListener('mousemove',(e)=>{
+  const {x,y}=canvasPoint(e);
+  if(isDragging && selected){
+    if(selected.kind==='element'){
+      const el=elements.find(e=>e.id===selected.id); el.x=snapVal(x - dragOffset.x); el.y=snapVal(y - dragOffset.y);
+    } else if(selected.kind==='annotation'){
+      const a=annotations.find(a=>a.id===selected.id); a.x=snapVal(x - dragOffset.x); a.y=snapVal(y - dragOffset.y);
+    } else if(selected.kind==='group'){
+      const g=groups.find(g=>g.id===selected.id); g.x=snapVal(x - dragOffset.x); g.y=snapVal(y - dragOffset.y);
+    }
+    redraw();
+  } else {
+    canvas.style.cursor = elementAt(x,y) || annotationAt(x,y) || groupAt(x,y) ? 'grab' : 'default';
+  }
+});
+canvas.addEventListener('mouseup',()=>{ isDragging=false; canvas.style.cursor='default'; });
+
+canvas.addEventListener('dblclick',(e)=>{
+  const {x,y}=canvasPoint(e);
+  let el=elementAt(x,y);
+  if(el){
+    const v=prompt('Label:', el.label || '');
+    if(v!==null){ el.label=v; }
+    if(el.type==='server'){
+      if(confirm('Edit sizing (vCPU/RAM/Storage)?')){ promptServerSizing(el); }
+      recalcCart();
+    }
+    redraw(); return;
+  }
+  let a=annotationAt(x,y);
+  if(a){ const v=prompt(a.kind==='label'?'Text:':'Note text:', a.text||''); if(v!==null){ a.text=v; redraw(); } return; }
+  let g=groupAt(x,y);
+  if(g){ const v=prompt('Group/Swimlane label:', g.label||''); if(v!==null){ g.label=v; redraw(); } return; }
+  let c=connectionAt(x,y);
+  if(c){ const v=prompt('Connection label:', c.label||''); if(v!==null){ c.label=v; redraw(); } return; }
+});
+
+window.addEventListener('keydown',(e)=>{
+  if(e.key==='Escape'){
+    if(connectMode||connectPendingFrom){ connectMode=false; connectPendingFrom=null; document.getElementById('connectBtn').textContent='🔗 Start Connect'; updateStatus('Connect mode cancelled.'); }
+  }
+});
+
+function canvasPoint(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
+
+// ---------- Export PNG/SVG ----------
+function exportDiagram(){
+  const link=document.createElement('a'); link.download='infrastructure-diagram.png'; link.href=canvas.toDataURL(); link.click();
+  updateStatus('PNG exported.');
+}
+function exportSVG(){
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let svg=`<svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">`;
+  const title=document.getElementById('diagramTitle').value;
+  if(title) svg+=`<text x="${canvas.width/2}" y="30" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="#2c3e50">${esc(title)}</text>`;
+  for(const g of groups){
+    const fill=g.kind==='swimlane'?'rgba(52,152,219,0.07)':'rgba(155,89,182,0.07)';
+    const stroke=g.kind==='swimlane'?'#3498db':'#9b59b6';
+    svg+=`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    svg+=`<text x="${g.x+8}" y="${g.y+18}" text-anchor="start" font-family="Arial" font-size="13" font-weight="bold" fill="#2c3e50">${esc(g.label||'')}</text>`;
+  }
+  for(const c of connections){
+    const a=getElementById(c.fromId), b=getElementById(c.toId); if(!a||!b) continue;
+    const ax=a.x,ay=a.y,bx=b.x,by=b.y; const dash=c.dashed?'stroke-dasharray="6 4"':'';
+    if(c.style==='orthogonal'){ const mx=(ax+bx)/2; svg+=`<polyline points="${ax},${ay} ${mx},${ay} ${mx},${by} ${bx},${by}" fill="none" stroke="#7f8c8d" stroke-width="2" ${dash}/>`; }
+    else { svg+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#7f8c8d" stroke-width="2" ${dash}/>`; }
+    if(c.label){ const mx=(ax+bx)/2,my=(ay+by)/2; svg+=`<text x="${mx}" y="${my-6}" text-anchor="middle" font-family="Arial" font-size="12" fill="#2c3e50">${esc(c.label)}</text>`; }
+  }
+  for(const el of elements){
+    const t=elementTypes[el.type]; const x=el.x - t.width/2, y=el.y - t.height/2;
+    svg+=`<rect x="${x}" y="${y}" width="${t.width}" height="${t.height}" fill="${t.color}" stroke="#34495e" stroke-width="1"/>`;
+    svg+=`<text x="${el.x}" y="${el.y-5}" text-anchor="middle" font-family="Arial" font-size="16" fill="#ffffff">${t.icon}</text>`;
+    svg+=`<text x="${el.x}" y="${el.y+25}" text-anchor="middle" font-family="Arial" font-size="11" fill="#2c3e50">${esc(el.label||t.label)}</text>`;
+    if(el.type==='server'){ const p=lineItemPrice(el); svg+=`<text x="${el.x}" y="${y + t.height + 12}" text-anchor="middle" font-family="Arial" font-size="11" fill="#2c3e50">${esc(fmt(p))}</text>`; }
+  }
+  svg+='</svg>';
+  const blob=new Blob([svg],{type:'image/svg+xml'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download='infrastructure-diagram.svg'; link.click();
+  updateStatus('SVG exported.');
+}
+
+function clearCanvas(){
+  elements=[]; groups=[]; annotations=[]; connections=[];
+  redraw(); recalcCart(); updateStatus('Cleared.');
+}
+
+// ---------- Custom generator (adds elements + basic connections) ----------
+function generateCustomDiagram(){
+  const title=document.getElementById('diagramTitle').value;
+  const req=(document.getElementById('requirements').value||'').toLowerCase();
+  if(!req.trim()){ updateStatus('Enter requirements first.'); return; }
+  elements=[]; connections=[];
+  let x=200, y=120;
+  const mk=(type,dx,dy,label)=>({ id:genId('el'), type, x:x+dx, y:y+dy, label });
+  if(req.includes('web') || req.includes('http')){
+    const lb=mk('loadbalancer',150,0,'Load Balancer');
+    const w1={...mk('server',0,100,'Web 1'), sizing:{vcpu:2,ramGB:8,storageGB:50}};
+    const w2={...mk('server',150,100,'Web 2'), sizing:{vcpu:2,ramGB:8,storageGB:50}};
+    const w3={...mk('server',300,100,'Web 3'), sizing:{vcpu:2,ramGB:8,storageGB:50}};
+    elements.push(lb,w1,w2,w3);
+    connections.push({ id:genId('con'), fromId:lb.id, toId:w1.id, style:'straight', dashed:false, label:'HTTPS' });
+    connections.push({ id:genId('con'), fromId:lb.id, toId:w2.id, style:'straight', dashed:false, label:'HTTPS' });
+    connections.push({ id:genId('con'), fromId:lb.id, toId:w3.id, style:'straight', dashed:false, label:'HTTPS' });
+    y+=200;
+  }
+  if(req.includes('database') || req.includes('db')){ elements.push({...mk('server',150,0,'Database'), sizing:{vcpu:4,ramGB:16,storageGB:200}}); y+=100; }
+  if(req.includes('storage') || req.includes('backup')){ elements.push(mk('storage',150,0,'Storage Array')); y+=100; }
+  if(req.includes('network') || req.includes('switch')){ elements.push(mk('switch',150,0,'Core Switch')); y+=100; }
+  if(req.includes('security') || req.includes('firewall')){ elements.push(mk('firewall',150,0,'Security Appliance')); }
+  document.getElementById('diagramTitle').value = title || 'Custom Diagram';
+  redraw(); recalcCart();
+  updateStatus(`Custom diagram generated. Servers: ${elements.filter(e=>e.type==='server').length}.`);
+}
+
+// ---------- Delete selected ----------
+function deleteSelected(){
+  if(!selected){ updateStatus('Nothing selected.'); return; }
+  const {kind,id}=selected;
+  if(kind==='element'){ elements=elements.filter(e=>e.id!==id); connections=connections.filter(c=>c.fromId!==id && c.toId!==id); }
+  else if(kind==='group'){ groups=groups.filter(g=>g.id!==id); }
+  else if(kind==='annotation'){ annotations=annotations.filter(a=>a.id!==id); }
+  else if(kind==='connection'){ connections=connections.filter(c=>c.id!==id); }
+  selected=null; redraw(); recalcCart(); updateStatus('Deleted.');
+}
+
+// ---------- Init ----------
+redraw(); recalcCart();
+updateStatus('Infrastructure Diagram Generator ready.');
+</script>
+</body>
+</html>
