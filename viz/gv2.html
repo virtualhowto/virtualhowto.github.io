@@ -107,17 +107,58 @@
     .modal-body{padding:14px 16px}
     .modal-actions{padding:12px 16px;border-top:1px solid #e9ecef;display:flex;justify-content:flex-end;gap:8px}
     .price-pill{background:#f7f9fc;border:1px solid #e9ecef;border-radius:999px;padding:6px 10px;display:inline-block;font-weight:700}
+
+    /* --- Elements Palette (left slide-out) --- */
+    .palette-panel{
+      position:fixed; top:0; left:0; height:100vh; width:360px; max-width:96vw;
+      background:#ffffff; border-right:1px solid #e9ecef;
+      transform:translateX(-100%); transition:transform .3s ease, box-shadow .3s ease;
+      z-index:996; display:flex; flex-direction:column; box-shadow:none;
+    }
+    body.palette-open .palette-panel{ transform:translateX(0); box-shadow:24px 0 40px rgba(0,0,0,.08); }
+    .palette-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.15);
+      opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:995;
+    }
+    body.palette-open .palette-backdrop{ opacity:1; pointer-events:auto; }
+    .palette-header{
+      position:sticky; top:0; background:#fff; border-bottom:1px solid #e9ecef;
+      display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px;
+    }
+    .palette-title{font-size:16px; font-weight:700; color:#2c3e50; display:flex; gap:8px; align-items:center}
+    .palette-close{background:#ecf0f1; border:1px solid #bdc3c7; border-radius:8px; padding:6px 10px; cursor:pointer}
+    .palette-body{padding:14px; overflow:auto; flex:1}
+    .palette-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .tile{
+      border:1px solid #e9ecef; border-radius:12px; padding:12px; display:flex; align-items:center; gap:10px;
+      background:#f9fafb; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .tile:hover{ transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.08) }
+    .tile .icon{font-size:20px}
+    .tile .meta{display:flex; flex-direction:column}
+    .tile .name{font-weight:700; color:#2c3e50}
+    .tile .hint{font-size:12px; color:#6c757d}
+
+    /* Floating palette toggle (left) */
+    .palette-toggle-btn{
+      position:fixed; left:16px; bottom:16px; z-index:994;
+      border:none; border-radius:999px; padding:12px 16px; cursor:pointer;
+      font-weight:700; display:flex; align-items:center; gap:8px;
+      background:linear-gradient(45deg,#3b82f6,#2563eb); color:#fff;
+      box-shadow:0 10px 24px rgba(37,99,235,.35);
+    }
+    .palette-toggle-btn:hover{ transform:translateY(-2px) }
   </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
     <h1>🏗️ AI Infrastructure Diagram Generator</h1>
-    <p>v1.3 — Versioned JSON • Groups/Swimlanes • Annotations • Explicit Connections • Auto Layout • <b>Pricing & Slide-out Cart</b> • <b>Server Specs</b></p>
+    <p>v1.3 — Versioned JSON • Groups/Swimlanes • Annotations • Explicit Connections • Auto Layout • <b>Pricing & Slide-out Cart</b> • <b>Server Specs</b> • <b>Elements Palette</b></p>
   </div>
 
   <div class="content">
-    <!-- LEFT: Controls -->
+    <!-- LEFT: Controls (Diagram Elements removed; use palette) -->
     <div class="controls">
       <div class="control-group">
         <h3>Quick Start Templates</h3>
@@ -161,18 +202,6 @@
       </div>
 
       <div class="control-group">
-        <h3>Diagram Elements</h3>
-        <div class="btn-group">
-          <button class="btn btn-secondary" onclick="addElement('server')">🖥️ Add Server</button>
-          <button class="btn btn-secondary" onclick="addElement('storage')">💾 Add Storage</button>
-          <button class="btn btn-secondary" onclick="addElement('switch')">🔀 Add Switch</button>
-          <button class="btn btn-secondary" onclick="addElement('firewall')">🛡️ Add Firewall</button>
-          <button class="btn btn-secondary" onclick="addElement('loadbalancer')">⚖️ Load Balancer</button>
-          <button class="btn btn-secondary" onclick="addElement('router')">📡 Add Router</button>
-        </div>
-      </div>
-
-      <div class="control-group">
         <h3>Groups / Swimlanes</h3>
         <div class="btn-group">
           <button class="btn btn-secondary" onclick="addGroup('group')">🧩 Add Group</button>
@@ -208,6 +237,7 @@
         <input type="file" id="fileInput" accept="application/json" style="display:none"/>
       </div>
 
+      <p class="muted small"><b>Tip:</b> Press <span class="kbd">E</span> or use the floating button to open the Elements palette.</p>
       <p class="muted small"><b>Schema:</b> v1.3 supports <i>version, currency, pricingCatalog, canvas, elements (id/unitPrice/specs), groups, annotations, connections</i>.</p>
     </div>
 
@@ -219,7 +249,7 @@
         <button class="btn btn-danger" onclick="clearCanvas()">🧹 Clear</button>
       </div>
       <canvas id="canvas" width="1100" height="700"></canvas>
-      <div class="status" id="status">Ready. Add Servers to enter specs; the cart updates per element.</div>
+      <div class="status" id="status">Ready. Open the Elements palette (left button or <span class="kbd">E</span>) to add items. Servers prompt for specs.</div>
     </div>
   </div>
 </div>
@@ -275,7 +305,7 @@
         <div class="total-row"><span>Subtotal</span><span id="tSubtotal">$0.00</span></div>
         <div class="total-row"><span>+ Margin (<span id="tMarginPct">0%</span>)</span><span id="tMargin">$0.00</span></div>
         <div class="total-row"><span>+ GST/VAT (<span id="tGstPct">10%</span>)</span><span id="tGst">$0.00</span></div>
-        <div class="total-row.grand"><strong>Total</strong><strong id="tTotal">$0.00</strong></div>
+        <div class="total-row grand"><strong>Total</strong><strong id="tTotal">$0.00</strong></div>
       </div>
 
       <div class="btn-group" style="margin-top:10px">
@@ -287,12 +317,57 @@
   </div>
 </aside>
 
-<!-- Backdrop -->
+<!-- Cart Backdrop -->
 <div class="cart-backdrop" id="cartBackdrop" onclick="closeCart()"></div>
 
-<!-- Floating toggle -->
+<!-- Floating Cart Toggle -->
 <button class="cart-toggle-btn" id="cartToggle" onclick="toggleCart()" aria-expanded="false" aria-controls="cartPanel">
   🛒 Cart <span class="cart-badge" id="cartTotalBadge">0</span>
+</button>
+
+<!-- Elements Palette (Left) -->
+<aside class="palette-panel" id="palettePanel" aria-hidden="true" aria-label="Elements palette">
+  <div class="palette-header">
+    <div class="palette-title">🧰 Elements</div>
+    <button class="palette-close" onclick="closePalette()" aria-label="Close elements">✕</button>
+  </div>
+  <div class="palette-body">
+    <div class="palette-grid">
+      <div class="tile" onclick="addElement('server')">
+        <div class="icon">🖥️</div>
+        <div class="meta"><span class="name">Server</span><span class="hint">Prompts for specs</span></div>
+      </div>
+      <div class="tile" onclick="addElement('storage')">
+        <div class="icon">💾</div>
+        <div class="meta"><span class="name">Storage</span><span class="hint">SAN/NAS, arrays</span></div>
+      </div>
+      <div class="tile" onclick="addElement('switch')">
+        <div class="icon">🔀</div>
+        <div class="meta"><span class="name">Switch</span><span class="hint">Access/Core/FC</span></div>
+      </div>
+      <div class="tile" onclick="addElement('firewall')">
+        <div class="icon">🛡️</div>
+        <div class="meta"><span class="name">Firewall</span><span class="hint">Security tier</span></div>
+      </div>
+      <div class="tile" onclick="addElement('loadbalancer')">
+        <div class="icon">⚖️</div>
+        <div class="meta"><span class="name">Load Balancer</span><span class="hint">L4/L7</span></div>
+      </div>
+      <div class="tile" onclick="addElement('router')">
+        <div class="icon">📡</div>
+        <div class="meta"><span class="name">Router</span><span class="hint">Edge/Core</span></div>
+      </div>
+    </div>
+    <p class="muted small" style="margin-top:10px">Tip: Keep the palette open to add multiple items quickly.</p>
+  </div>
+</aside>
+
+<!-- Palette Backdrop -->
+<div class="palette-backdrop" id="paletteBackdrop" onclick="closePalette()"></div>
+
+<!-- Floating Elements Toggle -->
+<button class="palette-toggle-btn" id="paletteToggle" onclick="togglePalette()" aria-expanded="false" aria-controls="palettePanel">
+  🧰 Elements
 </button>
 
 <!-- Server Specs Modal -->
@@ -338,26 +413,8 @@
 <script>
 /**
  * JSON Schema (v1.3)
- * {
- *   "version": "1.3",
- *   "title": "Diagram Title",
- *   "currency": "AUD",
- *   "pricingCatalog": {
- *     "server": 3500, "storage": 5000, "switch": 1200, "firewall": 3000, "loadbalancer": 2500, "router": 1800,
- *     "serverBase": 1000, "cpuPerCore": 150, "ramPerGB": 10, "storageSSDPerGB": 0.2, "storageHDDPerGB": 0.05
- *   },
- *   "canvas": { "width": 1100, "height": 700 },
- *   "elements": [
- *     {
- *       "id":"el-1","type":"server","x":350,"y":150,"label":"Web 1",
- *       "specs": {"cpuCores":8,"ramGB":32,"storageGB":512,"storageType":"ssd"},
- *       "unitPrice": 1000 + 8*150 + 32*10 + 512*0.2
- *     }
- *   ],
- *   "groups": [...], "annotations": [...], "connections": [...]
- * }
+ * Same as prior, unchanged by palette. Elements can include server specs.
  */
-
 const SCHEMA_VERSION = "1.3";
 const templatesBasePath = 'templates/';
 
@@ -395,7 +452,238 @@ const elementTypes = {
   router:       { width: 75,  height: 45, color: '#1abc9c', icon:'📡', label:'Router' }
 };
 
-// Built-in fallback templates
+/* ---------- Drawing ---------- */
+function updateStatus(msg){ document.getElementById('status').textContent = msg; }
+function genId(prefix){ return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`; }
+function snap(v){ return document.getElementById('snap').checked ? Math.round(v/50)*50 : v; }
+function getElementById(id){ return elements.find(e=>e.id===id); }
+function fmtCurrency(v){ try { return new Intl.NumberFormat('en-AU',{style:'currency', currency: currency}).format(v||0); } catch { return '$' + (v||0).toFixed(2); } }
+
+function drawGrid(){
+  ctx.strokeStyle = '#ecf0f1'; ctx.lineWidth = 1;
+  for(let x=0;x<canvas.width;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for(let y=0;y<canvas.height;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+}
+function drawGroups(){
+  for(const g of groups){
+    ctx.save();
+    ctx.fillStyle = g.kind==='swimlane' ? 'rgba(52,152,219,0.07)' : 'rgba(155,89,182,0.07)';
+    ctx.strokeStyle = g.kind==='swimlane' ? '#3498db' : '#9b59b6';
+    ctx.lineWidth = 2;
+    ctx.fillRect(g.x, g.y, g.w, g.h);
+    ctx.strokeRect(g.x, g.y, g.w, g.h);
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(g.label || (g.kind==='swimlane'?'Swimlane':'Group'), g.x+8, g.y+18);
+    if(selected && selected.kind==='group' && selected.id===g.id){
+      ctx.setLineDash([6,4]); ctx.strokeStyle = '#2c3e50';
+      ctx.strokeRect(g.x-3,g.y-3,g.w+6,g.h+6); ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+}
+function drawElement(el){
+  const t = elementTypes[el.type]; if(!t) return;
+  const x = el.x - t.width/2, y = el.y - t.height/2;
+  ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(x+3,y+3,t.width,t.height);
+  ctx.fillStyle=t.color; ctx.fillRect(x,y,t.width,t.height);
+  ctx.strokeStyle = (selected && selected.kind==='element' && selected.id===el.id) ? '#2c3e50' : '#34495e';
+  ctx.lineWidth = (selected && selected.kind==='element' && selected.id===el.id) ? 3 : 1;
+  ctx.strokeRect(x,y,t.width,t.height);
+  ctx.font='20px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#fff';
+  ctx.fillText(t.icon, el.x, el.y-5);
+  ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50';
+  const baseLabel = el.label || t.label;
+  const specBadge = (el.type==='server' && el.specs)
+    ? ` (${el.specs.cpuCores||'?'}c/${el.specs.ramGB||'?'}G/${el.specs.storageGB||'?'}G ${el.specs.storageType||''})`
+    : '';
+  ctx.fillText(baseLabel + specBadge, el.x, el.y+25);
+}
+function wrapText(text, x, y, maxW, lineH){
+  const words=(text||'').split(' '); let line='';
+  for(let n=0;n<words.length;n++){
+    const test=line+words[n]+' '; const w=ctx.measureText(test).width;
+    if(w>maxW && n>0){ ctx.fillText(line,x,y); line=words[n]+' '; y+=lineH; }
+    else line=test;
+  }
+  ctx.fillText(line,x,y);
+}
+function drawAnnotation(a){
+  ctx.save();
+  if(a.kind==='label'){
+    ctx.font = `bold ${a.size||14}px sans-serif`; ctx.textAlign='left'; ctx.fillStyle='#2c3e50';
+    ctx.fillText(a.text||'Label', a.x, a.y);
+    if(selected && selected.kind==='annotation' && selected.id===a.id){
+      const w = ctx.measureText(a.text||'Label').width;
+      ctx.setLineDash([5,3]); ctx.strokeStyle='#2c3e50';
+      ctx.strokeRect(a.x-4, a.y-(a.size||14), w+8, (a.size||14)+6); ctx.setLineDash([]);
+    }
+  } else {
+    const w=a.w||160, h=a.h||90;
+    ctx.fillStyle='rgba(241,196,15,0.2)'; ctx.strokeStyle='#f39c12'; ctx.lineWidth=2;
+    ctx.fillRect(a.x,a.y,w,h); ctx.strokeRect(a.x,a.y,w,h);
+    ctx.fillStyle='#2c3e50'; ctx.font='13px sans-serif'; ctx.textAlign='left';
+    wrapText(a.text||'Note', a.x+8, a.y+18, w-16, 16);
+    if(selected && selected.kind==='annotation' && selected.id===a.id){
+      ctx.setLineDash([6,4]); ctx.strokeStyle='#2c3e50';
+      ctx.strokeRect(a.x-3,a.y-3,w+6,h+6); ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
+function drawConnections(){
+  ctx.save();
+  for(const c of connections){
+    const a=getElementById(c.fromId), b=getElementById(c.toId); if(!a||!b) continue;
+    const ax=a.x, ay=a.y, bx=b.x, by=b.y;
+    ctx.lineWidth=2; ctx.strokeStyle='#7f8c8d'; c.dashed?ctx.setLineDash([6,4]):ctx.setLineDash([]);
+    ctx.beginPath();
+    if(c.style==='orthogonal'){
+      const mx=(ax+bx)/2; ctx.moveTo(ax,ay); ctx.lineTo(mx,ay); ctx.lineTo(mx,by); ctx.lineTo(bx,by);
+    } else { ctx.moveTo(ax,ay); ctx.lineTo(bx,by); }
+    ctx.stroke();
+    const ang=Math.atan2(by-ay,bx-ax), len=10;
+    ctx.beginPath(); ctx.moveTo(bx,by);
+    ctx.lineTo(bx - len*Math.cos(ang - Math.PI/6), by - len*Math.sin(ang - Math.PI/6));
+    ctx.lineTo(bx - len*Math.cos(ang + Math.PI/6), by - len*Math.sin(ang + Math.PI/6)); ctx.closePath(); ctx.fillStyle='#7f8c8d'; ctx.fill();
+    if(c.label){ const mx=(ax+bx)/2,my=(ay+by)/2; ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center'; ctx.fillText(c.label, mx, my-6); }
+    if(selected && selected.kind==='connection' && selected.id===c.id){
+      const mx=(ax+bx)/2,my=(ay+by)/2; ctx.setLineDash([4,3]); ctx.strokeStyle='#2c3e50'; ctx.strokeRect(mx-6,my-6,12,12); ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
+function redraw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawGrid();
+  const title = document.getElementById('diagramTitle').value;
+  if(title){ ctx.font='bold 22px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center'; ctx.fillText(title, canvas.width/2, 30); }
+  drawGroups();
+  drawConnections();
+  for(const el of elements) drawElement(el);
+  for(const a of annotations) drawAnnotation(a);
+}
+
+/* ---------- Server pricing ---------- */
+function calcServerUnitPrice(specs){
+  if(!specs) return pricingCatalog.server || 0;
+  const base = Number(pricingCatalog.serverBase)||0;
+  const perCore = Number(pricingCatalog.cpuPerCore)||0;
+  const perGBRam = Number(pricingCatalog.ramPerGB)||0;
+  const perGBStorage = specs.storageType==='hdd'
+    ? Number(pricingCatalog.storageHDDPerGB)||0
+    : Number(pricingCatalog.storageSSDPerGB)||0;
+  const cpu = Math.max(0, Number(specs.cpuCores)||0);
+  const ram = Math.max(0, Number(specs.ramGB)||0);
+  const sto = Math.max(0, Number(specs.storageGB)||0);
+  return base + cpu*perCore + ram*perGBRam + sto*perGBStorage;
+}
+
+/* ---------- Template I/O ---------- */
+function normalizeImported(obj){
+  if(!obj || typeof obj!=='object') throw new Error('Invalid template data');
+  const out = {
+    version: obj.version || '1.0',
+    title: obj.title || '',
+    currency: obj.currency || currency,
+    pricingCatalog: (obj.pricingCatalog && typeof obj.pricingCatalog==='object') ? obj.pricingCatalog : null,
+    canvas: obj.canvas && Number.isFinite(obj.canvas.width) && Number.isFinite(obj.canvas.height) ? { width: obj.canvas.width, height: obj.canvas.height } : null,
+    elements: [],
+    groups: Array.isArray(obj.groups)? obj.groups : [],
+    annotations: Array.isArray(obj.annotations)? obj.annotations : [],
+    connections: Array.isArray(obj.connections)? obj.connections : []
+  };
+  if(!Array.isArray(obj.elements)) throw new Error('Missing "elements" array');
+  for(const el of obj.elements){
+    if(!el || !elementTypes[el.type]) continue;
+    const x=Number(el.x), y=Number(el.y); if(!Number.isFinite(x)||!Number.isFinite(y)) continue;
+    const unitPrice = (typeof el.unitPrice==='number' && isFinite(el.unitPrice)) ? el.unitPrice : undefined;
+    const specs = (el.specs && typeof el.specs==='object') ? {
+      cpuCores: Number(el.specs.cpuCores)||undefined,
+      ramGB: Number(el.specs.ramGB)||undefined,
+      storageGB: Number(el.specs.storageGB)||undefined,
+      storageType: (el.specs.storageType==='hdd'?'hdd':'ssd')
+    } : undefined;
+    const finalUnit = (el.type==='server' && specs && !unitPrice) ? calcServerUnitPrice(specs) : unitPrice;
+    out.elements.push({ id: el.id || genId('el'), type: el.type, x, y, label: (typeof el.label==='string'?el.label:elementTypes[el.type].label), unitPrice: finalUnit, specs });
+  }
+  out.groups = out.groups.map(g=>({ id:g.id||genId('grp'), kind:(g.kind==='swimlane'?'swimlane':'group'), x:Number(g.x)||60, y:Number(g.y)||80, w:Number(g.w)||880, h:Number(g.h)||140, label: typeof g.label==='string'?g.label:(g.kind==='swimlane'?'Swimlane':'Group') }));
+  out.annotations = out.annotations.map(a=>{
+    const kind = (a.kind==='note')?'note':'label';
+    return { id:a.id||genId('ann'), kind, x:Number(a.x)||80, y:Number(a.y)||60, w: kind==='note'?(Number(a.w)||160):undefined, h: kind==='note'?(Number(a.h)||90):undefined, size: kind==='label'?(Number(a.size)||14):undefined, text: typeof a.text==='string'?a.text:(kind==='label'?'Label':'Note') };
+  });
+  const idAt = (idx)=> out.elements[idx] && out.elements[idx].id;
+  out.connections = out.connections.map(c=>{
+    let fromId = c.fromId || idAt(c.fromIndex||-1);
+    let toId   = c.toId   || idAt(c.toIndex||-1);
+    return { id:c.id||genId('con'), fromId, toId, style:(c.style==='orthogonal'?'orthogonal':'straight'), dashed:!!c.dashed, label: typeof c.label==='string'?c.label:'' };
+  }).filter(c=>c.fromId && c.toId);
+  return out;
+}
+function setFromTemplateObject(obj, label='template'){
+  const n = normalizeImported(obj);
+  if(n.canvas){ canvas.width=n.canvas.width; canvas.height=n.canvas.height; }
+  document.getElementById('diagramTitle').value = n.title || '';
+  if(n.pricingCatalog){ pricingCatalog = { ...pricingCatalog, ...n.pricingCatalog }; }
+  currency = n.currency || currency;
+  document.getElementById('currencySel').value = currency;
+
+  elements = n.elements; groups = n.groups; annotations = n.annotations; connections = n.connections;
+  redraw(); renderCart();
+  updateStatus(`Loaded ${label} (v${n.version}). Elements: ${elements.length}, Groups: ${groups.length}, Annotations: ${annotations.length}, Connections: ${connections.length}.`);
+}
+async function loadTemplate(name){
+  try {
+    updateStatus(`Loading templates/${name}.json ...`);
+    const res = await fetch(`${templatesBasePath}${name}.json`, { cache:'no-store' });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    setFromTemplateObject(json, `${name}.json`);
+  } catch(e){
+    if(builtinTemplates[name]) {
+      const b = builtinTemplates[name];
+      const withIds = {
+        version: SCHEMA_VERSION,
+        title: b.title, currency, pricingCatalog,
+        elements: b.elements.map(el=>({ id: genId('el'), ...el })),
+        groups: [], annotations: [], connections: []
+      };
+      setFromTemplateObject(withIds, `built-in "${name}"`);
+      updateStatus(`External ${name}.json not found; used built-in template.`);
+    } else updateStatus(`No template found for "${name}".`);
+  }
+}
+function exportTemplate(){
+  const obj = {
+    version: SCHEMA_VERSION,
+    title: document.getElementById('diagramTitle').value || '',
+    currency, pricingCatalog,
+    canvas: { width: canvas.width, height: canvas.height },
+    elements: elements.map(e=>{
+      const base = { id:e.id, type:e.type, x:Math.round(e.x), y:Math.round(e.y), label:e.label };
+      if(typeof e.unitPrice==='number') base.unitPrice = e.unitPrice;
+      if(e.specs) base.specs = { cpuCores:e.specs.cpuCores, ramGB:e.specs.ramGB, storageGB:e.specs.storageGB, storageType:e.specs.storageType };
+      return base;
+    }),
+    groups: groups.map(g=>({ id:g.id, kind:g.kind, x:Math.round(g.x), y:Math.round(g.y), w:Math.round(g.w), h:Math.round(g.h), label:g.label })),
+    annotations: annotations.map(a=>{
+      const base = { id:a.id, kind:a.kind, x:Math.round(a.x), y:Math.round(a.y), text:a.text };
+      if(a.kind==='label') base.size = a.size||14;
+      if(a.kind==='note'){ base.w=Math.round(a.w||160); base.h=Math.round(a.h||90); }
+      return base;
+    }),
+    connections: connections.map(c=>({ id:c.id, fromId:c.fromId, toId:c.toId, style:c.style, dashed:!!c.dashed, label:c.label || '' }))
+  };
+  const blob = new Blob([JSON.stringify(obj,null,2)], { type:'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  const safe = (obj.title || 'diagram').toLowerCase().replace(/\s+/g,'-');
+  link.download = `${safe}.json`;
+  link.click();
+  updateStatus('Exported JSON (v1.3 with server specs).');
+}
+
+/* ---------- Built-in templates ---------- */
 const builtinTemplates = {
   compute: { title:'Compute Infrastructure', elements:[
     { type:'loadbalancer', x:500, y:110, label:'Load Balancer' },
@@ -453,245 +741,7 @@ const builtinTemplates = {
   ]}
 };
 
-function updateStatus(msg){ document.getElementById('status').textContent = msg; }
-function genId(prefix){ return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`; }
-function snap(v){ return document.getElementById('snap').checked ? Math.round(v/50)*50 : v; }
-function getElementById(id){ return elements.find(e=>e.id===id); }
-function fmtCurrency(v){
-  try { return new Intl.NumberFormat('en-AU',{style:'currency', currency: currency}).format(v||0); }
-  catch { return '$' + (v||0).toFixed(2); }
-}
-
-/* ---- Server pricing helpers ---- */
-function calcServerUnitPrice(specs){
-  if(!specs) return pricingCatalog.server || 0;
-  const base = Number(pricingCatalog.serverBase)||0;
-  const perCore = Number(pricingCatalog.cpuPerCore)||0;
-  const perGBRam = Number(pricingCatalog.ramPerGB)||0;
-  const perGBStorage = specs.storageType==='hdd'
-    ? Number(pricingCatalog.storageHDDPerGB)||0
-    : Number(pricingCatalog.storageSSDPerGB)||0;
-  const cpu = Math.max(0, Number(specs.cpuCores)||0);
-  const ram = Math.max(0, Number(specs.ramGB)||0);
-  const sto = Math.max(0, Number(specs.storageGB)||0);
-  return base + cpu*perCore + ram*perGBRam + sto*perGBStorage;
-}
-
-/* ---- Drawing ---- */
-function drawGrid(){
-  ctx.strokeStyle = '#ecf0f1'; ctx.lineWidth = 1;
-  for(let x=0;x<canvas.width;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
-  for(let y=0;y<canvas.height;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
-}
-function drawGroups(){
-  for(const g of groups){
-    ctx.save();
-    ctx.fillStyle = g.kind==='swimlane' ? 'rgba(52,152,219,0.07)' : 'rgba(155,89,182,0.07)';
-    ctx.strokeStyle = g.kind==='swimlane' ? '#3498db' : '#9b59b6';
-    ctx.lineWidth = 2;
-    ctx.fillRect(g.x, g.y, g.w, g.h);
-    ctx.strokeRect(g.x, g.y, g.w, g.h);
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(g.label || (g.kind==='swimlane'?'Swimlane':'Group'), g.x+8, g.y+18);
-    if(selected && selected.kind==='group' && selected.id===g.id){
-      ctx.setLineDash([6,4]); ctx.strokeStyle = '#2c3e50';
-      ctx.strokeRect(g.x-3,g.y-3,g.w+6,g.h+6);
-      ctx.setLineDash([]);
-    }
-    ctx.restore();
-  }
-}
-function drawElement(el){
-  const t = elementTypes[el.type]; if(!t) return;
-  const x = el.x - t.width/2, y = el.y - t.height/2;
-  ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(x+3,y+3,t.width,t.height);
-  ctx.fillStyle=t.color; ctx.fillRect(x,y,t.width,t.height);
-  ctx.strokeStyle = (selected && selected.kind==='element' && selected.id===el.id) ? '#2c3e50' : '#34495e';
-  ctx.lineWidth = (selected && selected.kind==='element' && selected.id===el.id) ? 3 : 1;
-  ctx.strokeRect(x,y,t.width,t.height);
-  ctx.font='20px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#fff';
-  ctx.fillText(t.icon, el.x, el.y-5);
-  ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50';
-  const baseLabel = el.label || t.label;
-  const specBadge = (el.type==='server' && el.specs)
-    ? ` (${el.specs.cpuCores||'?'}c/${el.specs.ramGB||'?'}G/${el.specs.storageGB||'?'}G ${el.specs.storageType||''})`
-    : '';
-  ctx.fillText(baseLabel + specBadge, el.x, el.y+25);
-}
-function drawAnnotation(a){
-  ctx.save();
-  if(a.kind==='label'){
-    ctx.font = `bold ${a.size||14}px sans-serif`; ctx.textAlign='left'; ctx.fillStyle='#2c3e50';
-    ctx.fillText(a.text||'Label', a.x, a.y);
-    if(selected && selected.kind==='annotation' && selected.id===a.id){
-      const w = ctx.measureText(a.text||'Label').width;
-      ctx.setLineDash([5,3]); ctx.strokeStyle='#2c3e50';
-      ctx.strokeRect(a.x-4, a.y-(a.size||14), w+8, (a.size||14)+6); ctx.setLineDash([]);
-    }
-  } else {
-    const w=a.w||160, h=a.h||90;
-    ctx.fillStyle='rgba(241,196,15,0.2)'; ctx.strokeStyle='#f39c12'; ctx.lineWidth=2;
-    ctx.fillRect(a.x,a.y,w,h); ctx.strokeRect(a.x,a.y,w,h);
-    ctx.fillStyle='#2c3e50'; ctx.font='13px sans-serif'; ctx.textAlign='left';
-    wrapText(a.text||'Note', a.x+8, a.y+18, w-16, 16);
-    if(selected && selected.kind==='annotation' && selected.id===a.id){
-      ctx.setLineDash([6,4]); ctx.strokeStyle='#2c3e50';
-      ctx.strokeRect(a.x-3,a.y-3,w+6,h+6); ctx.setLineDash([]);
-    }
-  }
-  ctx.restore();
-}
-function wrapText(text, x, y, maxW, lineH){
-  const words=(text||'').split(' '); let line='';
-  for(let n=0;n<words.length;n++){
-    const test=line+words[n]+' '; const w=ctx.measureText(test).width;
-    if(w>maxW && n>0){ ctx.fillText(line,x,y); line=words[n]+' '; y+=lineH; }
-    else line=test;
-  }
-  ctx.fillText(line,x,y);
-}
-function drawConnections(){
-  ctx.save();
-  for(const c of connections){
-    const a=getElementById(c.fromId), b=getElementById(c.toId); if(!a||!b) continue;
-    const ax=a.x, ay=a.y, bx=b.x, by=b.y;
-    ctx.lineWidth=2; ctx.strokeStyle='#7f8c8d'; c.dashed?ctx.setLineDash([6,4]):ctx.setLineDash([]);
-    ctx.beginPath();
-    if(c.style==='orthogonal'){
-      const mx=(ax+bx)/2; ctx.moveTo(ax,ay); ctx.lineTo(mx,ay); ctx.lineTo(mx,by); ctx.lineTo(bx,by);
-    } else { ctx.moveTo(ax,ay); ctx.lineTo(bx,by); }
-    ctx.stroke();
-    const ang=Math.atan2(by-ay,bx-ax), len=10;
-    ctx.beginPath(); ctx.moveTo(bx,by);
-    ctx.lineTo(bx - len*Math.cos(ang - Math.PI/6), by - len*Math.sin(ang - Math.PI/6));
-    ctx.lineTo(bx - len*Math.cos(ang + Math.PI/6), by - len*Math.sin(ang + Math.PI/6)); ctx.closePath(); ctx.fillStyle='#7f8c8d'; ctx.fill();
-    if(c.label){ const mx=(ax+bx)/2,my=(ay+by)/2; ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center'; ctx.fillText(c.label, mx, my-6); }
-    if(selected && selected.kind==='connection' && selected.id===c.id){
-      const mx=(ax+bx)/2,my=(ay+by)/2; ctx.setLineDash([4,3]); ctx.strokeStyle='#2c3e50'; ctx.strokeRect(mx-6,my-6,12,12); ctx.setLineDash([]);
-    }
-  }
-  ctx.restore();
-}
-function redraw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawGrid();
-  const title = document.getElementById('diagramTitle').value;
-  if(title){ ctx.font='bold 22px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center'; ctx.fillText(title, canvas.width/2, 30); }
-  drawGroups();
-  drawConnections();
-  for(const el of elements) drawElement(el);
-  for(const a of annotations) drawAnnotation(a);
-}
-
-/* ---- Template I/O ---- */
-function normalizeImported(obj){
-  if(!obj || typeof obj!=='object') throw new Error('Invalid template data');
-  const out = {
-    version: obj.version || '1.0',
-    title: obj.title || '',
-    currency: obj.currency || currency,
-    pricingCatalog: (obj.pricingCatalog && typeof obj.pricingCatalog==='object') ? obj.pricingCatalog : null,
-    canvas: obj.canvas && Number.isFinite(obj.canvas.width) && Number.isFinite(obj.canvas.height) ? { width: obj.canvas.width, height: obj.canvas.height } : null,
-    elements: [],
-    groups: Array.isArray(obj.groups)? obj.groups : [],
-    annotations: Array.isArray(obj.annotations)? obj.annotations : [],
-    connections: Array.isArray(obj.connections)? obj.connections : []
-  };
-  if(!Array.isArray(obj.elements)) throw new Error('Missing "elements" array');
-  for(const el of obj.elements){
-    if(!el || !elementTypes[el.type]) continue;
-    const x=Number(el.x), y=Number(el.y); if(!Number.isFinite(x)||!Number.isFinite(y)) continue;
-    const unitPrice = (typeof el.unitPrice==='number' && isFinite(el.unitPrice)) ? el.unitPrice : undefined;
-    const specs = (el.specs && typeof el.specs==='object') ? {
-      cpuCores: Number(el.specs.cpuCores)||undefined,
-      ramGB: Number(el.specs.ramGB)||undefined,
-      storageGB: Number(el.specs.storageGB)||undefined,
-      storageType: (el.specs.storageType==='hdd'?'hdd':'ssd')
-    } : undefined;
-    // If server and has specs but no unitPrice, compute one
-    const finalUnit = (el.type==='server' && specs && !unitPrice) ? calcServerUnitPrice(specs) : unitPrice;
-    out.elements.push({ id: el.id || genId('el'), type: el.type, x, y, label: (typeof el.label==='string'?el.label:elementTypes[el.type].label), unitPrice: finalUnit, specs });
-  }
-  out.groups = out.groups.map(g=>({ id:g.id||genId('grp'), kind:(g.kind==='swimlane'?'swimlane':'group'), x:Number(g.x)||60, y:Number(g.y)||80, w:Number(g.w)||880, h:Number(g.h)||140, label: typeof g.label==='string'?g.label:(g.kind==='swimlane'?'Swimlane':'Group') }));
-  out.annotations = out.annotations.map(a=>{
-    const kind = (a.kind==='note')?'note':'label';
-    return { id:a.id||genId('ann'), kind, x:Number(a.x)||80, y:Number(a.y)||60, w: kind==='note'?(Number(a.w)||160):undefined, h: kind==='note'?(Number(a.h)||90):undefined, size: kind==='label'?(Number(a.size)||14):undefined, text: typeof a.text==='string'?a.text:(kind==='label'?'Label':'Note') };
-  });
-  const idAt = (idx)=> out.elements[idx] && out.elements[idx].id;
-  out.connections = out.connections.map(c=>{
-    let fromId = c.fromId || idAt(c.fromIndex||-1);
-    let toId   = c.toId   || idAt(c.toIndex||-1);
-    return { id:c.id||genId('con'), fromId, toId, style:(c.style==='orthogonal'?'orthogonal':'straight'), dashed:!!c.dashed, label: typeof c.label==='string'?c.label:'' };
-  }).filter(c=>c.fromId && c.toId);
-  return out;
-}
-function setFromTemplateObject(obj, label='template'){
-  const n = normalizeImported(obj);
-  if(n.canvas){ canvas.width=n.canvas.width; canvas.height=n.canvas.height; }
-  document.getElementById('diagramTitle').value = n.title || '';
-  if(n.pricingCatalog){ pricingCatalog = { ...pricingCatalog, ...n.pricingCatalog }; }
-  currency = n.currency || currency;
-  document.getElementById('currencySel').value = currency;
-
-  elements = n.elements; groups = n.groups; annotations = n.annotations; connections = n.connections;
-  redraw(); renderCart();
-  updateStatus(`Loaded ${label} (v${n.version}). Elements: ${elements.length}, Groups: ${groups.length}, Annotations: ${annotations.length}, Connections: ${connections.length}.`);
-}
-async function loadTemplate(name){
-  try {
-    updateStatus(`Loading templates/${name}.json ...`);
-    const res = await fetch(`${templatesBasePath}${name}.json`, { cache:'no-store' });
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    setFromTemplateObject(json, `${name}.json`);
-  } catch(e){
-    if(builtinTemplates[name]) {
-      const b = builtinTemplates[name];
-      const withIds = {
-        version: SCHEMA_VERSION,
-        title: b.title,
-        currency,
-        pricingCatalog,
-        elements: b.elements.map(el=>({ id: genId('el'), ...el })),
-        groups: [], annotations: [], connections: []
-      };
-      setFromTemplateObject(withIds, `built-in "${name}"`);
-      updateStatus(`External ${name}.json not found; used built-in template.`);
-    } else updateStatus(`No template found for "${name}".`);
-  }
-}
-function exportTemplate(){
-  const obj = {
-    version: SCHEMA_VERSION,
-    title: document.getElementById('diagramTitle').value || '',
-    currency,
-    pricingCatalog,
-    canvas: { width: canvas.width, height: canvas.height },
-    elements: elements.map(e=>{
-      const base = { id:e.id, type:e.type, x:Math.round(e.x), y:Math.round(e.y), label:e.label };
-      if(typeof e.unitPrice==='number') base.unitPrice = e.unitPrice;
-      if(e.specs) base.specs = { cpuCores:e.specs.cpuCores, ramGB:e.specs.ramGB, storageGB:e.specs.storageGB, storageType:e.specs.storageType };
-      return base;
-    }),
-    groups: groups.map(g=>({ id:g.id, kind:g.kind, x:Math.round(g.x), y:Math.round(g.y), w:Math.round(g.w), h:Math.round(g.h), label:g.label })),
-    annotations: annotations.map(a=>{
-      const base = { id:a.id, kind:a.kind, x:Math.round(a.x), y:Math.round(a.y), text:a.text };
-      if(a.kind==='label') base.size = a.size||14;
-      if(a.kind==='note'){ base.w=Math.round(a.w||160); base.h=Math.round(a.h||90); }
-      return base;
-    }),
-    connections: connections.map(c=>({ id:c.id, fromId:c.fromId, toId:c.toId, style:c.style, dashed:!!c.dashed, label:c.label || '' }))
-  };
-  const blob = new Blob([JSON.stringify(obj,null,2)], { type:'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  const safe = (obj.title || 'diagram').toLowerCase().replace(/\s+/g,'-');
-  link.download = `${safe}.json`;
-  link.click();
-  updateStatus('Exported JSON (v1.3 with server specs).');
-}
+/* ---------- File import ---------- */
 function triggerImport(){ document.getElementById('fileInput').value=''; document.getElementById('fileInput').click(); }
 document.getElementById('fileInput').addEventListener('change', async (e)=>{
   const file = e.target.files && e.target.files[0];
@@ -700,7 +750,7 @@ document.getElementById('fileInput').addEventListener('change', async (e)=>{
   catch(err){ updateStatus(`Failed to import: ${err.message}`); }
 });
 
-/* ---- Build / Edit ---- */
+/* ---------- Build / Edit ---------- */
 function addElement(type){
   const t = elementTypes[type]; if(!t) return;
   const x = snap(120 + Math.random()*(canvas.width-240));
@@ -709,7 +759,7 @@ function addElement(type){
   elements.push(el);
   redraw(); renderCart();
   updateStatus(`Added ${t.label}.`);
-  if(type==='server'){ openSpecModal(el); } // prompt for specs on add
+  if(type==='server'){ openSpecModal(el); }
 }
 function addGroup(kind){
   groups.push({ id: genId('grp'), kind, x:60, y:80, w:880, h:140, label: (kind==='swimlane'?'Swimlane':'Group') });
@@ -721,7 +771,7 @@ function addAnnotation(kind){
   redraw(); updateStatus(`Added annotation: ${kind}.`);
 }
 
-/* ---- Auto Layout ---- */
+/* ---------- Auto Layout ---------- */
 function autoLayout(){
   const typesOrder = ['loadbalancer','firewall','router','switch','server','storage'];
   const lanes = {}; for(const t of typesOrder) lanes[t] = elements.filter(e=>e.type===t);
@@ -737,7 +787,7 @@ function autoLayout(){
   redraw(); renderCart(); updateStatus('Auto layout applied.');
 }
 
-/* ---- Connections ---- */
+/* ---------- Connections ---------- */
 function toggleConnectMode(){
   connectMode=!connectMode; connectPendingFrom=null;
   document.getElementById('connectBtn').textContent = connectMode ? '✅ Connecting (click source, then target)' : '🔗 Start Connect';
@@ -751,7 +801,7 @@ function addConnection(fromEl,toEl){
   redraw(); updateStatus(`Connected "${fromEl.label}" → "${toEl.label}" (${currentConnStyle}${currentConnDashed?', dashed':''}).`);
 }
 
-/* ---- Hit Testing ---- */
+/* ---------- Hit Testing ---------- */
 function elementAt(x,y){
   for(let i=elements.length-1;i>=0;i--){
     const el=elements[i]; const t=elementTypes[el.type];
@@ -790,7 +840,7 @@ function connectionAt(x,y){
   return null;
 }
 
-/* ---- Mouse / Keyboard ---- */
+/* ---------- Mouse / Keyboard ---------- */
 canvas.addEventListener('mousedown', (e)=>{
   const {x,y}=canvasPoint(e);
   if(connectMode){
@@ -827,7 +877,7 @@ canvas.addEventListener('dblclick', (e)=>{
   const {x,y}=canvasPoint(e);
   const el=elementAt(x,y);
   if(el){
-    if(el.type==='server'){ openSpecModal(el); } // specs editor on dblclick
+    if(el.type==='server'){ openSpecModal(el); }
     else {
       const v=prompt('Label:', el.label||''); if(v!==null){ el.label=v; redraw(); renderCart(); }
     }
@@ -847,10 +897,12 @@ window.addEventListener('keydown', (e)=>{
     }
     if(document.body.classList.contains('cart-open')) closeCart();
     if(isSpecOpen()) closeSpecModal();
+    if(document.body.classList.contains('palette-open')) closePalette();
   }
+  if(e.key.toLowerCase()==='e'){ togglePalette(); }
 });
 
-/* ---- Helpers ---- */
+/* ---------- Helpers ---------- */
 function canvasPoint(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
 function exportDiagram(){ const link=document.createElement('a'); link.download='infrastructure-diagram.png'; link.href=canvas.toDataURL(); link.click(); updateStatus('PNG exported.'); }
 function exportSVG(){
@@ -897,7 +949,7 @@ function deleteSelected(){
   selected=null; redraw(); renderCart(); updateStatus('Deleted.');
 }
 
-/* ---- Cart ---- */
+/* ---------- Cart ---------- */
 const currencySel = document.getElementById('currencySel');
 const marginInput = document.getElementById('marginPct');
 const gstInput = document.getElementById('gstPct');
@@ -907,7 +959,7 @@ gstInput.addEventListener('input', ()=>{ gstPct = parseFloat(gstInput.value)||0;
 
 function unitPriceFor(el){
   if(typeof el.unitPrice==='number' && isFinite(el.unitPrice)) return el.unitPrice;
-  if(el.type==='server' && el.specs) return calcServerUnitPrice(el.specs); // compute if specs exist
+  if(el.type==='server' && el.specs) return calcServerUnitPrice(el.specs);
   const p = pricingCatalog[el.type];
   return (typeof p==='number' && isFinite(p)) ? p : 0;
 }
@@ -917,9 +969,7 @@ function computeCart(){
     const key = `${el.type}|${el.label||elementTypes[el.type].label}`;
     const unit = unitPriceFor(el);
     const row = map.get(key) || { type: el.type, label: el.label||elementTypes[el.type].label, qty:0, unit };
-    row.qty += 1;
-    // If we encounter different unit prices for the same (type|label), prefer latest
-    row.unit = unit;
+    row.qty += 1; row.unit = unit;
     map.set(key, row);
   }
   const rows = Array.from(map.values()).map(r => ({ ...r, subtotal: r.qty * r.unit }));
@@ -932,8 +982,6 @@ function computeCart(){
 }
 function renderCart(){
   const { rows, subtotal, marginAmt, gstAmt, total, totalQty } = computeCart();
-
-  // update inputs & labels
   currencySel.value = currency;
   marginInput.value = String(marginPct);
   gstInput.value = String(gstPct);
@@ -952,13 +1000,10 @@ function renderCart(){
       const tdType=document.createElement('td'); tdType.textContent = r.type; tr.appendChild(tdType);
       const tdQty=document.createElement('td'); tdQty.className='right'; tdQty.textContent = r.qty; tr.appendChild(tdQty);
       const tdUnit=document.createElement('td'); tdUnit.className='right';
-
-      // For servers, unit comes from specs -> show read-only + "edit"
       if(r.type==='server'){
         const span=document.createElement('span'); span.textContent = fmtCurrency(r.unit);
         const btn=document.createElement('button'); btn.textContent='Edit specs'; btn.className='btn btn-secondary'; btn.style.marginLeft='6px';
         btn.onclick = ()=>{
-          // open the first matching server by label (simple UX)
           const target = elements.find(e=>e.type==='server' && (e.label||'Server')===r.label);
           if(target) openSpecModal(target);
         };
@@ -968,12 +1013,11 @@ function renderCart(){
         inp.style.width='100px'; inp.style.textAlign='right';
         inp.addEventListener('change', ()=>{
           const v=parseFloat(inp.value); if(!isFinite(v)) return;
-          pricingCatalog[r.type] = v; // per-type price update
+          pricingCatalog[r.type] = v;
           renderCart();
         });
         tdUnit.appendChild(inp);
       }
-
       const tdSub=document.createElement('td'); tdSub.className='right'; tdSub.textContent = fmtCurrency(r.subtotal); tr.appendChild(tdSub);
       body.appendChild(tr);
     });
@@ -982,7 +1026,6 @@ function renderCart(){
   document.getElementById('tMargin').textContent = fmtCurrency(marginAmt);
   document.getElementById('tGst').textContent = fmtCurrency(gstAmt);
   document.getElementById('tTotal').textContent = fmtCurrency(total);
-
   updateCartBadges(totalQty);
 }
 function resetPricesToCatalog(){
@@ -1004,7 +1047,7 @@ function exportCartCSV(){
   link.click();
 }
 
-/* ---- Slide-out Cart Controls ---- */
+/* ---------- Cart controls ---------- */
 function openCart(){ document.body.classList.add('cart-open'); document.getElementById('cartPanel').setAttribute('aria-hidden','false'); document.getElementById('cartToggle').setAttribute('aria-expanded','true'); }
 function closeCart(){ document.body.classList.remove('cart-open'); document.getElementById('cartPanel').setAttribute('aria-hidden','true'); document.getElementById('cartToggle').setAttribute('aria-expanded','false'); }
 function toggleCart(){ if(document.body.classList.contains('cart-open')) closeCart(); else openCart(); }
@@ -1015,7 +1058,12 @@ function updateCartBadges(totalQty){
   if(hdr) hdr.textContent = totalQty ? `(${totalQty} item${totalQty>1?'s':''})` : '(empty)';
 }
 
-/* ---- Server Specs Modal ---- */
+/* ---------- Elements Palette controls ---------- */
+function openPalette(){ document.body.classList.add('palette-open'); document.getElementById('palettePanel').setAttribute('aria-hidden','false'); document.getElementById('paletteToggle').setAttribute('aria-expanded','true'); }
+function closePalette(){ document.body.classList.remove('palette-open'); document.getElementById('palettePanel').setAttribute('aria-hidden','true'); document.getElementById('paletteToggle').setAttribute('aria-expanded','false'); }
+function togglePalette(){ if(document.body.classList.contains('palette-open')) closePalette(); else openPalette(); }
+
+/* ---------- Server Specs Modal ---------- */
 const specModal = document.getElementById('specModal');
 const specBackdrop = document.getElementById('specBackdrop');
 const specLabel = document.getElementById('specLabel');
@@ -1068,17 +1116,17 @@ function saveSpecModal(){
   const el = getElementById(specTargetId); if(!el) return closeSpecModal();
   el.label = specLabel.value || 'Server';
   el.specs = currentSpecValues();
-  el.unitPrice = calcServerUnitPrice(el.specs); // store override explicitly
+  el.unitPrice = calcServerUnitPrice(el.specs);
   closeSpecModal();
   redraw(); renderCart();
   updateStatus(`Updated specs for "${el.label}": ${el.specs.cpuCores} cores, ${el.specs.ramGB}GB RAM, ${el.specs.storageGB}GB ${el.specs.storageType.toUpperCase()}.`);
 }
 
-/* ---- Init ---- */
+/* ---------- Init ---------- */
 redraw(); renderCart();
-updateStatus('Infrastructure Diagram Generator ready (with server specs & slide-out cart).');
+updateStatus('Ready. Use the Elements palette (left) and the Cart (right).');
 
-/* ---- Custom generator ---- */
+/* ---------- Custom generator ---------- */
 function generateCustomDiagram(){
   const title=document.getElementById('diagramTitle').value;
   const req=(document.getElementById('requirements').value||'').toLowerCase();
