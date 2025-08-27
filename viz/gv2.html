@@ -3,187 +3,624 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Infrastructure Diagram Generator</title>
+  <title>VHT Infrastructure Diagram Generator</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
-    .container{max-width:1600px;margin:0 auto;background:rgba(255,255,255,.95);border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,.1);overflow:hidden}
-    .header{background:linear-gradient(45deg,#2c3e50,#3498db);color:#fff;padding:24px 30px;text-align:center}
-    .header h1{font-size:2.2em;margin-bottom:8px;font-weight:300}
+    :root {
+      --vht-primary: #1a1a2e;
+      --vht-secondary: #16213e;
+      --vht-accent: #0f3460;
+      --vht-cyan: #00d4ff;
+      --vht-success: #00ff88;
+      --vht-warning: #ffb800;
+      --vht-danger: #ff4757;
+      --vht-text: #ffffff;
+      --vht-text-muted: #8892b0;
+      --vht-border: #233554;
+      --vht-surface: #0a1628;
+    }
 
-    /* 2-column layout (controls + diagram) */
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      background: linear-gradient(135deg, var(--vht-primary) 0%, var(--vht-secondary) 50%, var(--vht-accent) 100%);
+      min-height:100vh;
+      padding:20px;
+      color: var(--vht-text);
+    }
+    
+    .container{
+      max-width:1600px;
+      margin:0 auto;
+      background: rgba(26, 26, 46, 0.95);
+      border-radius:20px;
+      box-shadow:0 20px 40px rgba(0,0,0,.3);
+      overflow:hidden;
+      border: 1px solid var(--vht-border);
+    }
+    
+    .header{
+      background: linear-gradient(45deg, var(--vht-primary), var(--vht-secondary));
+      color: var(--vht-text);
+      padding:24px 30px;
+      text-align:center;
+      border-bottom: 2px solid var(--vht-cyan);
+      position: relative;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--vht-cyan), var(--vht-success), var(--vht-cyan));
+    }
+    
+    .header h1{
+      font-size:2.2em;
+      margin-bottom:8px;
+      font-weight:300;
+      text-shadow: 0 0 10px var(--vht-cyan);
+    }
+
+    .header .logo {
+      position: absolute;
+      left: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 60px;
+      height: 60px;
+      background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzAwZDRmZiIvPgo8dGV4dCB4PSIyMCIgeT0iMjYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5WSFRgL3RleHQ+Cjwvc3ZnPgo=') center/contain no-repeat;
+    }
+
     .content{display:grid;grid-template-columns:340px 1fr;min-height:680px}
 
-    .controls{background:#f8f9fa;padding:20px;border-right:1px solid #e9ecef;overflow-y:auto}
-    .diagram-area{padding:20px;background:#fff;position:relative}
+    .controls{
+      background: var(--vht-surface);
+      padding:20px;
+      border-right:1px solid var(--vht-border);
+      overflow-y:auto;
+    }
+    
+    .diagram-area{
+      padding:20px;
+      background: var(--vht-primary);
+      position:relative;
+    }
 
     .control-group{margin-bottom:20px}
-    .control-group h3{color:#2c3e50;margin-bottom:10px;font-size:1.05em;font-weight:700}
+    .control-group h3{
+      color: var(--vht-cyan);
+      margin-bottom:10px;
+      font-size:1.05em;
+      font-weight:700;
+      text-shadow: 0 0 5px var(--vht-cyan);
+    }
+    
     .btn-group{display:grid;gap:10px}
-    .btn{padding:10px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:all .25s ease;text-align:left;font-size:13px}
-    .btn-primary{background:linear-gradient(45deg,#3498db,#2980b9);color:#fff}
-    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(52,152,219,.35)}
-    .btn-secondary{background:#ecf0f1;color:#2c3e50;border:1px solid #bdc3c7}
-    .btn-secondary:hover{background:#dfe6e9}
-    .btn-danger{background:linear-gradient(45deg,#e74c3c,#c0392b);color:#fff}
-    .btn-success{background:linear-gradient(45deg,#27ae60,#2ecc71);color:#fff}
-    .btn-warning{background:linear-gradient(45deg,#f39c12,#d35400);color:#fff}
+    .btn{
+      padding:10px 12px;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+      transition:all .25s ease;
+      text-align:left;
+      font-size:13px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .btn:hover::before {
+      left: 100%;
+    }
+    
+    .btn-primary{
+      background: linear-gradient(45deg, var(--vht-cyan), #0099cc);
+      color: var(--vht-text);
+      border: 1px solid var(--vht-cyan);
+    }
+    
+    .btn-primary:hover{
+      transform:translateY(-2px);
+      box-shadow:0 6px 20px rgba(0,212,255,.3);
+      filter: brightness(1.1);
+    }
+    
+    .btn-secondary{
+      background: var(--vht-secondary);
+      color: var(--vht-text);
+      border:1px solid var(--vht-border);
+    }
+    
+    .btn-secondary:hover{
+      background: var(--vht-accent);
+      border-color: var(--vht-cyan);
+    }
+    
+    .btn-danger{
+      background: linear-gradient(45deg, var(--vht-danger), #cc3a47);
+      color: var(--vht-text);
+    }
+    
+    .btn-success{
+      background: linear-gradient(45deg, var(--vht-success), #00cc6a);
+      color: var(--vht-primary);
+    }
+    
+    .btn-warning{
+      background: linear-gradient(45deg, var(--vht-warning), #cc9200);
+      color: var(--vht-primary);
+    }
+    
     .input-group{margin-bottom:10px}
-    .input-group label{display:block;margin-bottom:4px;color:#2c3e50;font-weight:600}
-    .input-group input,.input-group select,.input-group textarea{width:100%;padding:9px;border:1px solid #bdc3c7;border-radius:6px;font-size:14px}
+    .input-group label{
+      display:block;
+      margin-bottom:4px;
+      color: var(--vht-cyan);
+      font-weight:600;
+    }
+    
+    .input-group input,.input-group select,.input-group textarea{
+      width:100%;
+      padding:9px;
+      border:1px solid var(--vht-border);
+      border-radius:6px;
+      font-size:14px;
+      background: var(--vht-secondary);
+      color: var(--vht-text);
+    }
+    
+    .input-group input:focus,.input-group select:focus,.input-group textarea:focus{
+      border-color: var(--vht-cyan);
+      box-shadow: 0 0 10px rgba(0,212,255,0.2);
+      outline: none;
+    }
+    
     .input-group textarea{resize:vertical;min-height:74px}
-    #canvas{border:2px solid #ecf0f1;border-radius:10px;background:#fdfdfd;cursor:crosshair}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:12px;background:#f8f9fa;border-radius:8px;border:1px solid #e9ecef}
+    
+    #canvas{
+      border:2px solid var(--vht-border);
+      border-radius:10px;
+      background: var(--vht-surface);
+      cursor:crosshair;
+    }
+    
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+      padding:12px;
+      background: var(--vht-secondary);
+      border-radius:8px;
+      border:1px solid var(--vht-border);
+    }
+    
     .toolbar .btn{padding:8px 10px;font-size:12px}
+    
     .preset-diagrams{display:grid;gap:10px;grid-template-columns:1fr}
-    .preset-btn{padding:12px;background:linear-gradient(45deg,#9b59b6,#8e44ad);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:all .25s ease}
-    .preset-btn:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(155,89,182,.35)}
-    .status{margin-top:12px;padding:12px;background:#e8f6f3;border-left:4px solid #27ae60;border-radius:0 8px 8px 0;color:#2c3e50}
-    .muted{font-size:12px;color:#6c757d}
+    .preset-btn{
+      padding:12px;
+      background: linear-gradient(45deg, var(--vht-accent), var(--vht-secondary));
+      color: var(--vht-text);
+      border:1px solid var(--vht-border);
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+      transition:all .25s ease;
+    }
+    
+    .preset-btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 6px 20px rgba(15,52,96,.3);
+      border-color: var(--vht-cyan);
+    }
+    
+    .status{
+      margin-top:12px;
+      padding:12px;
+      background: var(--vht-secondary);
+      border-left:4px solid var(--vht-success);
+      border-radius:0 8px 8px 0;
+      color: var(--vht-text);
+    }
+    
+    .muted{font-size:12px;color: var(--vht-text-muted)}
     .small{font-size:12px}
-    .kbd{background:#eee;border:1px solid #ccc;border-bottom-color:#bbb;border-radius:4px;padding:0 6px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
-
-    /* --- Slide-out Cart --- */
-    .cart-panel{
-      position:fixed; top:0; right:0; height:100vh; width:380px; max-width:96vw;
-      background:#fdfdfd; border-left:1px solid #e9ecef;
-      transform:translateX(100%); transition:transform .3s ease, box-shadow .3s ease;
-      z-index:999; display:flex; flex-direction:column; box-shadow:none;
-    }
-    body.cart-open .cart-panel{ transform:translateX(0); box-shadow:-24px 0 40px rgba(0,0,0,.12); }
-    .cart-backdrop{
-      position:fixed; inset:0; background:rgba(0,0,0,.2);
-      opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:998;
-    }
-    body.cart-open .cart-backdrop{ opacity:1; pointer-events:auto; }
-    .cart-header{
-      position:sticky; top:0; background:#fff; border-bottom:1px solid #e9ecef;
-      display:flex; align-items:center; justify-content:space-between; gap:8px;
-      padding:12px 14px;
-    }
-    .cart-title{font-size:16px; font-weight:700; color:#2c3e50; display:flex; gap:8px; align-items:center}
-    .cart-close{background:#ecf0f1; border:1px solid #bdc3c7; border-radius:8px; padding:6px 10px; cursor:pointer}
-    .cart-body{padding:14px; overflow:auto; flex:1}
-
-    .cart{background:#fdfdfd}
-    .cart-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-    .cart-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e9ecef;border-radius:8px;overflow:hidden}
-    .cart-table th,.cart-table td{font-size:12px;padding:8px 10px;border-bottom:1px solid #eef2f7;text-align:left}
-    .cart-table th{background:#f7f9fc;color:#2c3e50}
-    .cart-table tr:last-child td{border-bottom:none}
-    .right{text-align:right}
-    .total-box{margin-top:10px;border:1px solid #e9ecef;border-radius:8px;overflow:hidden}
-    .total-row{display:flex;justify-content:space-between;padding:8px 10px;font-size:13px;background:#fff;border-bottom:1px solid #eef2f7}
-    .total-row strong{font-weight:700}
-    .total-row.grand{background:#f7f9fc}
-
-    /* Floating cart toggle */
-    .cart-toggle-btn{
-      position:fixed; right:16px; bottom:16px; z-index:997;
-      border:none; border-radius:999px; padding:12px 16px; cursor:pointer;
-      font-weight:700; display:flex; align-items:center; gap:8px;
-      background:linear-gradient(45deg,#27ae60,#2ecc71); color:#fff;
-      box-shadow:0 10px 24px rgba(39,174,96,.35);
-    }
-    .cart-toggle-btn:hover{ transform:translateY(-2px) }
-    .cart-badge{
-      background:#fff; color:#27ae60; border-radius:999px; padding:2px 8px; font-size:12px; font-weight:800
+    .kbd{
+      background: var(--vht-secondary);
+      border:1px solid var(--vht-border);
+      border-bottom-color: var(--vht-cyan);
+      border-radius:4px;
+      padding:0 6px;
+      font-family:ui-monospace,Menlo,monospace;
+      font-size:12px;
+      color: var(--vht-cyan);
     }
 
-    /* --- Modal for Server Specs --- */
+    /* Modal styles */
     .modal-backdrop{
-      position:fixed; inset:0; background:rgba(0,0,0,.35);
-      opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:1001;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .3s ease;
+      z-index:1001;
+      backdrop-filter: blur(5px);
     }
+    
     .modal{
-      position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(.98);
-      width:520px; max-width:95vw; background:#fff; border-radius:12px;
-      box-shadow:0 24px 60px rgba(0,0,0,.2); z-index:1002;
-      opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%) scale(.95);
+      width:600px;
+      max-width:95vw;
+      max-height:90vh;
+      background: var(--vht-primary);
+      border-radius:16px;
+      box-shadow:0 24px 60px rgba(0,0,0,.4);
+      z-index:1002;
+      opacity:0;
+      pointer-events:none;
+      transition:all .3s ease;
+      border: 2px solid var(--vht-border);
+      overflow: hidden;
     }
-    .modal.open{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1)}
-    .modal-backdrop.open{opacity:1; pointer-events:auto}
-    .modal-header{padding:14px 16px;border-bottom:1px solid #e9ecef;font-weight:800;color:#2c3e50;display:flex;align-items:center;gap:8px}
-    .modal-body{padding:14px 16px}
-    .modal-actions{padding:12px 16px;border-top:1px solid #e9ecef;display:flex;justify-content:flex-end;gap:8px}
-    .price-pill{background:#f7f9fc;border:1px solid #e9ecef;border-radius:999px;padding:6px 10px;display:inline-block;font-weight:700}
+    
+    .modal.open{
+      opacity:1;
+      pointer-events:auto;
+      transform:translate(-50%,-50%) scale(1);
+    }
+    
+    .modal-backdrop.open{
+      opacity:1;
+      pointer-events:auto;
+    }
+    
+    .modal-header{
+      padding:16px 20px;
+      border-bottom:2px solid var(--vht-border);
+      font-weight:800;
+      color: var(--vht-cyan);
+      display:flex;
+      align-items:center;
+      gap:12px;
+      background: var(--vht-secondary);
+    }
+    
+    .modal-body{
+      padding:20px;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    
+    .modal-actions{
+      padding:16px 20px;
+      border-top:2px solid var(--vht-border);
+      display:flex;
+      justify-content:flex-end;
+      gap:12px;
+      background: var(--vht-secondary);
+    }
 
-    /* --- Elements Palette (left slide-out) --- */
+    /* Cart and palette styles with VHT theme */
+    .cart-panel, .palette-panel{
+      position:fixed;
+      top:0;
+      height:100vh;
+      width:420px;
+      max-width:96vw;
+      background: var(--vht-primary);
+      border:1px solid var(--vht-border);
+      transition:transform .3s ease, box-shadow .3s ease;
+      z-index:999;
+      display:flex;
+      flex-direction:column;
+      box-shadow:none;
+    }
+    
+    .cart-panel{
+      right:0;
+      transform:translateX(100%);
+      border-left:2px solid var(--vht-border);
+    }
+    
     .palette-panel{
-      position:fixed; top:0; left:0; height:100vh; width:360px; max-width:96vw;
-      background:#ffffff; border-right:1px solid #e9ecef;
-      transform:translateX(-100%); transition:transform .3s ease, box-shadow .3s ease;
-      z-index:996; display:flex; flex-direction:column; box-shadow:none;
+      left:0;
+      transform:translateX(-100%);
+      border-right:2px solid var(--vht-border);
     }
-    body.palette-open .palette-panel{ transform:translateX(0); box-shadow:24px 0 40px rgba(0,0,0,.08); }
-    .palette-backdrop{
-      position:fixed; inset:0; background:rgba(0,0,0,.15);
-      opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:995;
+    
+    body.cart-open .cart-panel{
+      transform:translateX(0);
+      box-shadow:-24px 0 40px rgba(0,0,0,.3);
     }
-    body.palette-open .palette-backdrop{ opacity:1; pointer-events:auto; }
-    .palette-header{
-      position:sticky; top:0; background:#fff; border-bottom:1px solid #e9ecef;
-      display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px;
+    
+    body.palette-open .palette-panel{
+      transform:translateX(0);
+      box-shadow:24px 0 40px rgba(0,0,0,.3);
     }
-    .palette-title{font-size:16px; font-weight:700; color:#2c3e50; display:flex; gap:8px; align-items:center}
-    .palette-close{background:#ecf0f1; border:1px solid #bdc3c7; border-radius:8px; padding:6px 10px; cursor:pointer}
-    .palette-body{padding:14px; overflow:auto; flex:1}
-    .palette-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .tile{
-      border:1px solid #e9ecef; border-radius:12px; padding:12px; display:flex; align-items:center; gap:10px;
-      background:#f9fafb; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;
+    
+    .cart-backdrop, .palette-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.3);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .3s ease;
+      z-index:998;
+      backdrop-filter: blur(3px);
     }
-    .tile:hover{ transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.08) }
-    .tile .icon{font-size:20px}
-    .tile .meta{display:flex; flex-direction:column}
-    .tile .name{font-weight:700; color:#2c3e50}
-    .tile .hint{font-size:12px; color:#6c757d}
+    
+    body.cart-open .cart-backdrop,
+    body.palette-open .palette-backdrop{
+      opacity:1;
+      pointer-events:auto;
+    }
+    
+    .cart-header, .palette-header{
+      position:sticky;
+      top:0;
+      background: var(--vht-secondary);
+      border-bottom:2px solid var(--vht-border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding:16px 18px;
+    }
+    
+    .cart-title, .palette-title{
+      font-size:16px;
+      font-weight:700;
+      color: var(--vht-cyan);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      text-shadow: 0 0 5px var(--vht-cyan);
+    }
+    
+    .cart-close, .palette-close{
+      background: var(--vht-danger);
+      border:1px solid var(--vht-border);
+      border-radius:8px;
+      padding:8px 12px;
+      cursor:pointer;
+      color: var(--vht-text);
+      font-weight: bold;
+    }
+    
+    .cart-body, .palette-body{
+      padding:18px;
+      overflow:auto;
+      flex:1;
+    }
 
-    /* Floating palette toggle (left) */
-    .palette-toggle-btn{
-      position:fixed; left:16px; bottom:16px; z-index:994;
-      border:none; border-radius:999px; padding:12px 16px; cursor:pointer;
-      font-weight:700; display:flex; align-items:center; gap:8px;
-      background:linear-gradient(45deg,#3b82f6,#2563eb); color:#fff;
-      box-shadow:0 10px 24px rgba(37,99,235,.35);
+    .cart-toggle-btn, .palette-toggle-btn{
+      position:fixed;
+      bottom:20px;
+      z-index:997;
+      border:none;
+      border-radius:50px;
+      padding:12px 20px;
+      cursor:pointer;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      box-shadow:0 10px 30px rgba(0,0,0,.4);
+      transition: all 0.3s ease;
+      border: 2px solid var(--vht-border);
     }
-    .palette-toggle-btn:hover{ transform:translateY(-2px) }
+    
+    .cart-toggle-btn{
+      right:20px;
+      background: linear-gradient(45deg, var(--vht-success), #00cc6a);
+      color: var(--vht-primary);
+    }
+    
+    .palette-toggle-btn{
+      left:20px;
+      background: linear-gradient(45deg, var(--vht-cyan), #0099cc);
+      color: var(--vht-primary);
+    }
+    
+    .cart-toggle-btn:hover, .palette-toggle-btn:hover{
+      transform:translateY(-3px) scale(1.05);
+      filter: brightness(1.1);
+    }
+    
+    .cart-badge{
+      background: var(--vht-text);
+      color: var(--vht-success);
+      border-radius:999px;
+      padding:4px 10px;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    /* Elements palette grid */
+    .palette-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    
+    .tile{
+      border:2px solid var(--vht-border);
+      border-radius:12px;
+      padding:16px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      background: var(--vht-secondary);
+      cursor:pointer;
+      transition:all .2s ease;
+    }
+    
+    .tile:hover{
+      transform:translateY(-3px);
+      box-shadow:0 8px 25px rgba(0,212,255,.2);
+      border-color: var(--vht-cyan);
+    }
+    
+    .tile .icon{font-size:24px}
+    .tile .meta{display:flex;flex-direction:column}
+    .tile .name{font-weight:700;color: var(--vht-text)}
+    .tile .hint{font-size:12px;color: var(--vht-text-muted)}
+
+    /* Delete button for selected elements */
+    .delete-btn {
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      width: 24px;
+      height: 24px;
+      background: var(--vht-danger);
+      border: 2px solid var(--vht-text);
+      border-radius: 50%;
+      color: var(--vht-text);
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    /* Firewall wizard styles */
+    .wizard-step {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .wizard-step.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .wizard-progress {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding: 0 20px;
+    }
+    
+    .progress-step {
+      flex: 1;
+      height: 4px;
+      background: var(--vht-border);
+      margin: 0 4px;
+      border-radius: 2px;
+      transition: background 0.3s ease;
+    }
+    
+    .progress-step.completed,
+    .progress-step.active {
+      background: var(--vht-cyan);
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    
+    .feature-card {
+      background: var(--vht-secondary);
+      border: 2px solid var(--vht-border);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .feature-card:hover {
+      border-color: var(--vht-cyan);
+    }
+    
+    .feature-card.selected {
+      border-color: var(--vht-success);
+      background: rgba(0, 255, 136, 0.1);
+    }
+    
+    .recommendation-card {
+      background: var(--vht-secondary);
+      border: 2px solid var(--vht-cyan);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    
+    .vendor-logo {
+      width: 60px;
+      height: 40px;
+      background: var(--vht-surface);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--vht-cyan);
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
-    <h1>🏗️ AI Infrastructure Diagram Generator</h1>
-    <p>v1.3 — Versioned JSON • Groups/Swimlanes • Annotations • Explicit Connections • Auto Layout • <b>Pricing & Slide-out Cart</b> • <b>Server Specs</b> • <b>Elements Palette</b></p>
+    <div class="logo"></div>
+    <h1>VHT Infrastructure Diagram Generator</h1>
+    <p>Professional Infrastructure Design & Costing Platform</p>
   </div>
 
   <div class="content">
-    <!-- LEFT: Controls (Diagram Elements removed; use palette) -->
     <div class="controls">
       <div class="control-group">
         <h3>Quick Start Templates</h3>
-        <p class="muted">Looks for <code>templates/&lt;name&gt;.json</code> (falls back to built-in).</p>
+        <p class="muted">Professional infrastructure templates.</p>
         <div class="preset-diagrams">
           <button class="preset-btn" onclick="loadTemplate('compute')">🖥️ Compute Infrastructure</button>
           <button class="preset-btn" onclick="loadTemplate('storage')">💾 Storage Architecture</button>
-          <button class="preset-btn" onclick="loadTemplate('rack')">🏢 Rack Layout</button>
           <button class="preset-btn" onclick="loadTemplate('network')">🌐 Network Topology</button>
           <button class="preset-btn" onclick="loadTemplate('hybrid')">☁️ Hybrid Cloud</button>
         </div>
       </div>
 
       <div class="control-group">
-        <h3>Custom Configuration</h3>
+        <h3>Diagram Configuration</h3>
         <div class="input-group">
-          <label for="diagramTitle">Diagram Title</label>
-          <input type="text" id="diagramTitle" placeholder="Enter diagram title">
+          <label for="diagramTitle">Project Title</label>
+          <input type="text" id="diagramTitle" placeholder="Enter project title">
         </div>
         <div class="input-group">
           <label for="requirements">Requirements</label>
-          <textarea id="requirements" placeholder="Describe your infrastructure requirements..."></textarea>
+          <textarea id="requirements" placeholder="Describe infrastructure requirements..."></textarea>
         </div>
         <div class="input-group">
-          <label for="scale">Scale</label>
+          <label for="scale">Project Scale</label>
           <select id="scale">
             <option value="small">Small (1–10 servers)</option>
             <option value="medium">Medium (10–100 servers)</option>
@@ -191,965 +628,172 @@
             <option value="enterprise">Enterprise Scale</option>
           </select>
         </div>
-        <div class="muted small" style="display:flex;align-items:center;gap:8px;margin:6px 0 10px">
-          <input type="checkbox" id="snap" checked><label for="snap">Snap to 50px grid</label>
+        <div class="muted small" style="display:flex;align-items:center;gap:8px;margin:10px 0">
+          <input type="checkbox" id="snap" checked><label for="snap">Snap to grid</label>
         </div>
         <div class="btn-group">
           <button class="btn btn-primary" onclick="generateCustomDiagram()">Generate Custom</button>
           <button class="btn btn-warning" onclick="autoLayout()">Auto Layout</button>
-          <button class="btn btn-danger" onclick="deleteSelected()">🗑️ Delete Selected</button>
         </div>
       </div>
 
       <div class="control-group">
-        <h3>Groups / Swimlanes</h3>
+        <h3>Templates & Export</h3>
         <div class="btn-group">
-          <button class="btn btn-secondary" onclick="addGroup('group')">🧩 Add Group</button>
-          <button class="btn btn-secondary" onclick="addGroup('swimlane')">🏊 Add Swimlane</button>
-        </div>
-        <p class="muted small">Drag to position. (Elements don’t auto-move with groups.)</p>
-      </div>
-
-      <div class="control-group">
-        <h3>Annotations</h3>
-        <div class="btn-group">
-          <button class="btn btn-secondary" onclick="addAnnotation('label')">🔖 Add Label</button>
-          <button class="btn btn-secondary" onclick="addAnnotation('note')">📝 Add Note</button>
-        </div>
-      </div>
-
-      <div class="control-group">
-        <h3>Connections</h3>
-        <div class="btn-group">
-          <button id="connectBtn" class="btn btn-secondary" onclick="toggleConnectMode()">🔗 Start Connect</button>
-          <button class="btn btn-secondary" onclick="cycleConnectionStyle()">↔️ Style: <span id="connStyleText">straight</span></button>
-          <button class="btn btn-secondary" onclick="toggleDashed()">— — Dashed: <span id="dashedText">off</span></button>
-        </div>
-        <p class="muted small">Click source, then target. <span class="kbd">Esc</span> cancels.</p>
-      </div>
-
-      <div class="control-group">
-        <h3>Templates (JSON)</h3>
-        <div class="btn-group">
-          <button class="btn btn-secondary" onclick="triggerImport()">📂 Import Template (JSON)</button>
-          <button class="btn btn-success" onclick="exportTemplate()">💾 Export Current as JSON</button>
+          <button class="btn btn-secondary" onclick="triggerImport()">📂 Import Template</button>
+          <button class="btn btn-success" onclick="exportTemplate()">💾 Export JSON</button>
         </div>
         <input type="file" id="fileInput" accept="application/json" style="display:none"/>
       </div>
 
-      <p class="muted small"><b>Tip:</b> Press <span class="kbd">E</span> or use the floating button to open the Elements palette.</p>
-      <p class="muted small"><b>Schema:</b> v1.3 supports <i>version, currency, pricingCatalog, canvas, elements (id/unitPrice/specs), groups, annotations, connections</i>.</p>
+      <p class="muted small">Press <span class="kbd">E</span> for Elements palette, <span class="kbd">Esc</span> to cancel operations</p>
     </div>
 
-    <!-- CENTER: Diagram -->
     <div class="diagram-area">
       <div class="toolbar">
         <button class="btn btn-success" onclick="exportDiagram()">📥 Export PNG</button>
         <button class="btn btn-success" onclick="exportSVG()">📄 Export SVG</button>
-        <button class="btn btn-danger" onclick="clearCanvas()">🧹 Clear</button>
+        <button class="btn btn-danger" onclick="clearCanvas()">🧹 Clear All</button>
       </div>
       <canvas id="canvas" width="1100" height="700"></canvas>
-      <div class="status" id="status">Ready. Open the Elements palette (left button or <span class="kbd">E</span>) to add items. Servers prompt for specs.</div>
+      <div class="status" id="status">VHT Infrastructure Generator ready. Press <span class="kbd">E</span> to open Elements palette.</div>
     </div>
   </div>
 </div>
 
-<!-- Slide-out Cart -->
-<aside class="cart-panel" id="cartPanel" aria-hidden="true" aria-label="Shopping cart">
+<!-- Cart Panel -->
+<aside class="cart-panel" id="cartPanel">
   <div class="cart-header">
-    <div class="cart-title">🛒 Shopping Cart <span id="cartHeaderCount" class="muted small"></span></div>
-    <button class="cart-close" onclick="closeCart()" aria-label="Close cart">✕</button>
+    <div class="cart-title">💰 Project Costing</div>
+    <button class="cart-close" onclick="closeCart()">✕</button>
   </div>
   <div class="cart-body">
-    <div class="cart">
-      <div class="cart-controls">
-        <div class="input-group">
-          <label for="currencySel">Currency</label>
-          <select id="currencySel">
-            <option value="AUD" selected>AUD</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="GBP">GBP</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label for="marginPct">Margin %</label>
-          <input type="number" id="marginPct" value="0" min="0" max="100" step="0.1"/>
-        </div>
-        <div class="input-group">
-          <label for="gstPct">GST/VAT %</label>
-          <input type="number" id="gstPct" value="10" min="0" max="50" step="0.1"/>
-        </div>
-        <div class="input-group">
-          <label>&nbsp;</label>
-          <button class="btn btn-secondary" onclick="resetPricesToCatalog()">Reset Prices</button>
-        </div>
-      </div>
-
-      <table class="cart-table" id="cartTable">
-        <thead>
-        <tr>
-          <th>Item</th>
-          <th>Type</th>
-          <th class="right">Qty</th>
-          <th class="right">Unit</th>
-          <th class="right">Subtotal</th>
-        </tr>
-        </thead>
-        <tbody id="cartBody">
-        <tr><td colspan="5" class="muted">No items yet.</td></tr>
-        </tbody>
-      </table>
-
-      <div class="total-box">
-        <div class="total-row"><span>Subtotal</span><span id="tSubtotal">$0.00</span></div>
-        <div class="total-row"><span>+ Margin (<span id="tMarginPct">0%</span>)</span><span id="tMargin">$0.00</span></div>
-        <div class="total-row"><span>+ GST/VAT (<span id="tGstPct">10%</span>)</span><span id="tGst">$0.00</span></div>
-        <div class="total-row grand"><strong>Total</strong><strong id="tTotal">$0.00</strong></div>
-      </div>
-
-      <div class="btn-group" style="margin-top:10px">
-        <button class="btn btn-secondary" onclick="exportCartCSV()">⬇️ Export Cart CSV</button>
-      </div>
-
-      <p class="muted small" style="margin-top:8px">Edit a Unit to update catalog pricing (non-server). For Servers, open specs to recalc price.</p>
+    <div class="input-group">
+      <label for="currencySel">Currency</label>
+      <select id="currencySel">
+        <option value="AUD" selected>AUD</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+      </select>
+    </div>
+    <div id="cartContent">
+      <p class="muted">No items in project yet.</p>
     </div>
   </div>
 </aside>
 
-<!-- Cart Backdrop -->
-<div class="cart-backdrop" id="cartBackdrop" onclick="closeCart()"></div>
-
-<!-- Floating Cart Toggle -->
-<button class="cart-toggle-btn" id="cartToggle" onclick="toggleCart()" aria-expanded="false" aria-controls="cartPanel">
-  🛒 Cart <span class="cart-badge" id="cartTotalBadge">0</span>
-</button>
-
-<!-- Elements Palette (Left) -->
-<aside class="palette-panel" id="palettePanel" aria-hidden="true" aria-label="Elements palette">
+<!-- Elements Palette -->
+<aside class="palette-panel" id="palettePanel">
   <div class="palette-header">
-    <div class="palette-title">🧰 Elements</div>
-    <button class="palette-close" onclick="closePalette()" aria-label="Close elements">✕</button>
+    <div class="palette-title">🧰 Infrastructure Elements</div>
+    <button class="palette-close" onclick="closePalette()">✕</button>
   </div>
   <div class="palette-body">
     <div class="palette-grid">
       <div class="tile" onclick="addElement('server')">
         <div class="icon">🖥️</div>
-        <div class="meta"><span class="name">Server</span><span class="hint">Prompts for specs</span></div>
+        <div class="meta">
+          <span class="name">Server</span>
+          <span class="hint">Compute resources</span>
+        </div>
       </div>
       <div class="tile" onclick="addElement('storage')">
         <div class="icon">💾</div>
-        <div class="meta"><span class="name">Storage</span><span class="hint">SAN/NAS, arrays</span></div>
+        <div class="meta">
+          <span class="name">Storage</span>
+          <span class="hint">SAN/NAS arrays</span>
+        </div>
       </div>
       <div class="tile" onclick="addElement('switch')">
         <div class="icon">🔀</div>
-        <div class="meta"><span class="name">Switch</span><span class="hint">Access/Core/FC</span></div>
+        <div class="meta">
+          <span class="name">Switch</span>
+          <span class="hint">Network switching</span>
+        </div>
       </div>
       <div class="tile" onclick="addElement('firewall')">
         <div class="icon">🛡️</div>
-        <div class="meta"><span class="name">Firewall</span><span class="hint">Security tier</span></div>
+        <div class="meta">
+          <span class="name">Firewall</span>
+          <span class="hint">Security appliance</span>
+        </div>
       </div>
       <div class="tile" onclick="addElement('loadbalancer')">
         <div class="icon">⚖️</div>
-        <div class="meta"><span class="name">Load Balancer</span><span class="hint">L4/L7</span></div>
+        <div class="meta">
+          <span class="name">Load Balancer</span>
+          <span class="hint">Traffic distribution</span>
+        </div>
       </div>
       <div class="tile" onclick="addElement('router')">
         <div class="icon">📡</div>
-        <div class="meta"><span class="name">Router</span><span class="hint">Edge/Core</span></div>
+        <div class="meta">
+          <span class="name">Router</span>
+          <span class="hint">Network routing</span>
+        </div>
       </div>
     </div>
-    <p class="muted small" style="margin-top:10px">Tip: Keep the palette open to add multiple items quickly.</p>
+    
+    <div class="control-group" style="margin-top: 20px;">
+      <h3>Diagram Elements</h3>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="addGroup('group')">🧩 Add Group</button>
+        <button class="btn btn-secondary" onclick="addGroup('swimlane')">🏊 Add Swimlane</button>
+        <button class="btn btn-secondary" onclick="addAnnotation('label')">🔖 Add Label</button>
+        <button class="btn btn-secondary" onclick="addAnnotation('note')">📝 Add Note</button>
+      </div>
+    </div>
+    
+    <div class="control-group">
+      <h3>Connections</h3>
+      <div class="btn-group">
+        <button id="connectBtn" class="btn btn-secondary" onclick="toggleConnectMode()">🔗 Connect Elements</button>
+        <button class="btn btn-secondary" onclick="cycleConnectionStyle()">↔️ Style: <span id="connStyleText">straight</span></button>
+      </div>
+    </div>
   </div>
 </aside>
 
-<!-- Palette Backdrop -->
-<div class="palette-backdrop" id="paletteBackdrop" onclick="closePalette()"></div>
+<!-- Backdrops -->
+<div class="cart-backdrop" onclick="closeCart()"></div>
+<div class="palette-backdrop" onclick="closePalette()"></div>
 
-<!-- Floating Elements Toggle -->
-<button class="palette-toggle-btn" id="paletteToggle" onclick="togglePalette()" aria-expanded="false" aria-controls="palettePanel">
+<!-- Toggle Buttons -->
+<button class="cart-toggle-btn" onclick="toggleCart()">
+  💰 Costing <span class="cart-badge" id="cartBadge">0</span>
+</button>
+<button class="palette-toggle-btn" onclick="togglePalette()">
   🧰 Elements
 </button>
 
 <!-- Server Specs Modal -->
-<div id="specBackdrop" class="modal-backdrop" aria-hidden="true"></div>
-<div id="specModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="specTitle" aria-hidden="true">
-  <div class="modal-header"><span id="specTitle">🖥️ Server Specs</span></div>
+<div id="serverBackdrop" class="modal-backdrop"></div>
+<div id="serverModal" class="modal">
+  <div class="modal-header">🖥️ Server Configuration</div>
   <div class="modal-body">
     <div class="input-group">
-      <label for="specLabel">Label</label>
-      <input id="specLabel" placeholder="e.g., Web 1">
+      <label>Server Label</label>
+      <input id="serverLabel" placeholder="e.g., Web Server 1">
     </div>
     <div class="input-group">
-      <label for="specCpu">CPU Cores</label>
-      <input type="number" id="specCpu" min="1" step="1" value="4">
+      <label>CPU Cores</label>
+      <input type="number" id="serverCpu" min="1" value="4">
     </div>
     <div class="input-group">
-      <label for="specRam">RAM (GB)</label>
-      <input type="number" id="specRam" min="1" step="1" value="16">
+      <label>RAM (GB)</label>
+      <input type="number" id="serverRam" min="1" value="16">
     </div>
     <div class="input-group">
-      <label for="specStorage">Storage (GB)</label>
-      <input type="number" id="specStorage" min="1" step="1" value="256">
+      <label>Storage (GB)</label>
+      <input type="number" id="serverStorage" min="1" value="256">
     </div>
     <div class="input-group">
-      <label for="specStorageType">Storage Type</label>
-      <select id="specStorageType">
-        <option value="ssd" selected>SSD</option>
+      <label>Storage Type</label>
+      <select id="serverStorageType">
+        <option value="ssd">SSD</option>
         <option value="hdd">HDD</option>
       </select>
     </div>
-    <div class="input-group">
-      <label>Estimated Unit Price</label>
-      <div class="price-pill"><span id="specEstPrice">$0.00</span></div>
-      <div class="muted small" id="specFormula" style="margin-top:6px"></div>
-    </div>
-  </div>
-  <div class="modal-actions">
-    <button class="btn btn-secondary" onclick="closeSpecModal()">Cancel</button>
-    <button class="btn btn-success" onclick="saveSpecModal()">Save</button>
-  </div>
-</div>
-
-<script>
-/**
- * JSON Schema (v1.3)
- * Same as prior, unchanged by palette. Elements can include server specs.
- */
-const SCHEMA_VERSION = "1.3";
-const templatesBasePath = 'templates/';
-
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-
-let elements = [];     // {id,type,x,y,label,unitPrice?,specs?}
-let groups = [];       // {id,kind,x,y,w,h,label}
-let annotations = [];  // {id,kind,x,y,w?,h?,text,size?}
-let connections = [];  // {id,fromId,toId,style,dashed,label}
-
-let selected = null;
-let isDragging = false;
-let dragOffset = { x:0, y:0 };
-
-let connectMode = false;
-let connectPendingFrom = null;
-let currentConnStyle = 'straight';
-let currentConnDashed = false;
-
-let currency = 'AUD';
-let pricingCatalog = {
-  server:3500, storage:5000, switch:1200, firewall:3000, loadbalancer:2500, router:1800,
-  serverBase:1000, cpuPerCore:150, ramPerGB:10, storageSSDPerGB:0.2, storageHDDPerGB:0.05
-};
-let marginPct = 0;
-let gstPct = 10;
-
-const elementTypes = {
-  server:       { width: 80,  height: 60, color: '#3498db', icon:'🖥️', label:'Server' },
-  storage:      { width:100,  height: 40, color: '#e74c3c', icon:'💾', label:'Storage' },
-  switch:       { width: 60,  height: 40, color: '#f39c12', icon:'🔀', label:'Switch' },
-  firewall:     { width: 70,  height: 50, color: '#e67e22', icon:'🛡️', label:'Firewall' },
-  loadbalancer: { width: 90,  height: 45, color: '#9b59b6', icon:'⚖️', label:'Load Balancer' },
-  router:       { width: 75,  height: 45, color: '#1abc9c', icon:'📡', label:'Router' }
-};
-
-/* ---------- Drawing ---------- */
-function updateStatus(msg){ document.getElementById('status').textContent = msg; }
-function genId(prefix){ return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`; }
-function snap(v){ return document.getElementById('snap').checked ? Math.round(v/50)*50 : v; }
-function getElementById(id){ return elements.find(e=>e.id===id); }
-function fmtCurrency(v){ try { return new Intl.NumberFormat('en-AU',{style:'currency', currency: currency}).format(v||0); } catch { return '$' + (v||0).toFixed(2); } }
-
-function drawGrid(){
-  ctx.strokeStyle = '#ecf0f1'; ctx.lineWidth = 1;
-  for(let x=0;x<canvas.width;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
-  for(let y=0;y<canvas.height;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
-}
-function drawGroups(){
-  for(const g of groups){
-    ctx.save();
-    ctx.fillStyle = g.kind==='swimlane' ? 'rgba(52,152,219,0.07)' : 'rgba(155,89,182,0.07)';
-    ctx.strokeStyle = g.kind==='swimlane' ? '#3498db' : '#9b59b6';
-    ctx.lineWidth = 2;
-    ctx.fillRect(g.x, g.y, g.w, g.h);
-    ctx.strokeRect(g.x, g.y, g.w, g.h);
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(g.label || (g.kind==='swimlane'?'Swimlane':'Group'), g.x+8, g.y+18);
-    if(selected && selected.kind==='group' && selected.id===g.id){
-      ctx.setLineDash([6,4]); ctx.strokeStyle = '#2c3e50';
-      ctx.strokeRect(g.x-3,g.y-3,g.w+6,g.h+6); ctx.setLineDash([]);
-    }
-    ctx.restore();
-  }
-}
-function drawElement(el){
-  const t = elementTypes[el.type]; if(!t) return;
-  const x = el.x - t.width/2, y = el.y - t.height/2;
-  ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(x+3,y+3,t.width,t.height);
-  ctx.fillStyle=t.color; ctx.fillRect(x,y,t.width,t.height);
-  ctx.strokeStyle = (selected && selected.kind==='element' && selected.id===el.id) ? '#2c3e50' : '#34495e';
-  ctx.lineWidth = (selected && selected.kind==='element' && selected.id===el.id) ? 3 : 1;
-  ctx.strokeRect(x,y,t.width,t.height);
-  ctx.font='20px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#fff';
-  ctx.fillText(t.icon, el.x, el.y-5);
-  ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50';
-  const baseLabel = el.label || t.label;
-  const specBadge = (el.type==='server' && el.specs)
-    ? ` (${el.specs.cpuCores||'?'}c/${el.specs.ramGB||'?'}G/${el.specs.storageGB||'?'}G ${el.specs.storageType||''})`
-    : '';
-  ctx.fillText(baseLabel + specBadge, el.x, el.y+25);
-}
-function wrapText(text, x, y, maxW, lineH){
-  const words=(text||'').split(' '); let line='';
-  for(let n=0;n<words.length;n++){
-    const test=line+words[n]+' '; const w=ctx.measureText(test).width;
-    if(w>maxW && n>0){ ctx.fillText(line,x,y); line=words[n]+' '; y+=lineH; }
-    else line=test;
-  }
-  ctx.fillText(line,x,y);
-}
-function drawAnnotation(a){
-  ctx.save();
-  if(a.kind==='label'){
-    ctx.font = `bold ${a.size||14}px sans-serif`; ctx.textAlign='left'; ctx.fillStyle='#2c3e50';
-    ctx.fillText(a.text||'Label', a.x, a.y);
-    if(selected && selected.kind==='annotation' && selected.id===a.id){
-      const w = ctx.measureText(a.text||'Label').width;
-      ctx.setLineDash([5,3]); ctx.strokeStyle='#2c3e50';
-      ctx.strokeRect(a.x-4, a.y-(a.size||14), w+8, (a.size||14)+6); ctx.setLineDash([]);
-    }
-  } else {
-    const w=a.w||160, h=a.h||90;
-    ctx.fillStyle='rgba(241,196,15,0.2)'; ctx.strokeStyle='#f39c12'; ctx.lineWidth=2;
-    ctx.fillRect(a.x,a.y,w,h); ctx.strokeRect(a.x,a.y,w,h);
-    ctx.fillStyle='#2c3e50'; ctx.font='13px sans-serif'; ctx.textAlign='left';
-    wrapText(a.text||'Note', a.x+8, a.y+18, w-16, 16);
-    if(selected && selected.kind==='annotation' && selected.id===a.id){
-      ctx.setLineDash([6,4]); ctx.strokeStyle='#2c3e50';
-      ctx.strokeRect(a.x-3,a.y-3,w+6,h+6); ctx.setLineDash([]);
-    }
-  }
-  ctx.restore();
-}
-function drawConnections(){
-  ctx.save();
-  for(const c of connections){
-    const a=getElementById(c.fromId), b=getElementById(c.toId); if(!a||!b) continue;
-    const ax=a.x, ay=a.y, bx=b.x, by=b.y;
-    ctx.lineWidth=2; ctx.strokeStyle='#7f8c8d'; c.dashed?ctx.setLineDash([6,4]):ctx.setLineDash([]);
-    ctx.beginPath();
-    if(c.style==='orthogonal'){
-      const mx=(ax+bx)/2; ctx.moveTo(ax,ay); ctx.lineTo(mx,ay); ctx.lineTo(mx,by); ctx.lineTo(bx,by);
-    } else { ctx.moveTo(ax,ay); ctx.lineTo(bx,by); }
-    ctx.stroke();
-    const ang=Math.atan2(by-ay,bx-ax), len=10;
-    ctx.beginPath(); ctx.moveTo(bx,by);
-    ctx.lineTo(bx - len*Math.cos(ang - Math.PI/6), by - len*Math.sin(ang - Math.PI/6));
-    ctx.lineTo(bx - len*Math.cos(ang + Math.PI/6), by - len*Math.sin(ang + Math.PI/6)); ctx.closePath(); ctx.fillStyle='#7f8c8d'; ctx.fill();
-    if(c.label){ const mx=(ax+bx)/2,my=(ay+by)/2; ctx.font='12px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center'; ctx.fillText(c.label, mx, my-6); }
-    if(selected && selected.kind==='connection' && selected.id===c.id){
-      const mx=(ax+bx)/2,my=(ay+by)/2; ctx.setLineDash([4,3]); ctx.strokeStyle='#2c3e50'; ctx.strokeRect(mx-6,my-6,12,12); ctx.setLineDash([]);
-    }
-  }
-  ctx.restore();
-}
-function redraw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawGrid();
-  const title = document.getElementById('diagramTitle').value;
-  if(title){ ctx.font='bold 22px sans-serif'; ctx.fillStyle='#2c3e50'; ctx.textAlign='center'; ctx.fillText(title, canvas.width/2, 30); }
-  drawGroups();
-  drawConnections();
-  for(const el of elements) drawElement(el);
-  for(const a of annotations) drawAnnotation(a);
-}
-
-/* ---------- Server pricing ---------- */
-function calcServerUnitPrice(specs){
-  if(!specs) return pricingCatalog.server || 0;
-  const base = Number(pricingCatalog.serverBase)||0;
-  const perCore = Number(pricingCatalog.cpuPerCore)||0;
-  const perGBRam = Number(pricingCatalog.ramPerGB)||0;
-  const perGBStorage = specs.storageType==='hdd'
-    ? Number(pricingCatalog.storageHDDPerGB)||0
-    : Number(pricingCatalog.storageSSDPerGB)||0;
-  const cpu = Math.max(0, Number(specs.cpuCores)||0);
-  const ram = Math.max(0, Number(specs.ramGB)||0);
-  const sto = Math.max(0, Number(specs.storageGB)||0);
-  return base + cpu*perCore + ram*perGBRam + sto*perGBStorage;
-}
-
-/* ---------- Template I/O ---------- */
-function normalizeImported(obj){
-  if(!obj || typeof obj!=='object') throw new Error('Invalid template data');
-  const out = {
-    version: obj.version || '1.0',
-    title: obj.title || '',
-    currency: obj.currency || currency,
-    pricingCatalog: (obj.pricingCatalog && typeof obj.pricingCatalog==='object') ? obj.pricingCatalog : null,
-    canvas: obj.canvas && Number.isFinite(obj.canvas.width) && Number.isFinite(obj.canvas.height) ? { width: obj.canvas.width, height: obj.canvas.height } : null,
-    elements: [],
-    groups: Array.isArray(obj.groups)? obj.groups : [],
-    annotations: Array.isArray(obj.annotations)? obj.annotations : [],
-    connections: Array.isArray(obj.connections)? obj.connections : []
-  };
-  if(!Array.isArray(obj.elements)) throw new Error('Missing "elements" array');
-  for(const el of obj.elements){
-    if(!el || !elementTypes[el.type]) continue;
-    const x=Number(el.x), y=Number(el.y); if(!Number.isFinite(x)||!Number.isFinite(y)) continue;
-    const unitPrice = (typeof el.unitPrice==='number' && isFinite(el.unitPrice)) ? el.unitPrice : undefined;
-    const specs = (el.specs && typeof el.specs==='object') ? {
-      cpuCores: Number(el.specs.cpuCores)||undefined,
-      ramGB: Number(el.specs.ramGB)||undefined,
-      storageGB: Number(el.specs.storageGB)||undefined,
-      storageType: (el.specs.storageType==='hdd'?'hdd':'ssd')
-    } : undefined;
-    const finalUnit = (el.type==='server' && specs && !unitPrice) ? calcServerUnitPrice(specs) : unitPrice;
-    out.elements.push({ id: el.id || genId('el'), type: el.type, x, y, label: (typeof el.label==='string'?el.label:elementTypes[el.type].label), unitPrice: finalUnit, specs });
-  }
-  out.groups = out.groups.map(g=>({ id:g.id||genId('grp'), kind:(g.kind==='swimlane'?'swimlane':'group'), x:Number(g.x)||60, y:Number(g.y)||80, w:Number(g.w)||880, h:Number(g.h)||140, label: typeof g.label==='string'?g.label:(g.kind==='swimlane'?'Swimlane':'Group') }));
-  out.annotations = out.annotations.map(a=>{
-    const kind = (a.kind==='note')?'note':'label';
-    return { id:a.id||genId('ann'), kind, x:Number(a.x)||80, y:Number(a.y)||60, w: kind==='note'?(Number(a.w)||160):undefined, h: kind==='note'?(Number(a.h)||90):undefined, size: kind==='label'?(Number(a.size)||14):undefined, text: typeof a.text==='string'?a.text:(kind==='label'?'Label':'Note') };
-  });
-  const idAt = (idx)=> out.elements[idx] && out.elements[idx].id;
-  out.connections = out.connections.map(c=>{
-    let fromId = c.fromId || idAt(c.fromIndex||-1);
-    let toId   = c.toId   || idAt(c.toIndex||-1);
-    return { id:c.id||genId('con'), fromId, toId, style:(c.style==='orthogonal'?'orthogonal':'straight'), dashed:!!c.dashed, label: typeof c.label==='string'?c.label:'' };
-  }).filter(c=>c.fromId && c.toId);
-  return out;
-}
-function setFromTemplateObject(obj, label='template'){
-  const n = normalizeImported(obj);
-  if(n.canvas){ canvas.width=n.canvas.width; canvas.height=n.canvas.height; }
-  document.getElementById('diagramTitle').value = n.title || '';
-  if(n.pricingCatalog){ pricingCatalog = { ...pricingCatalog, ...n.pricingCatalog }; }
-  currency = n.currency || currency;
-  document.getElementById('currencySel').value = currency;
-
-  elements = n.elements; groups = n.groups; annotations = n.annotations; connections = n.connections;
-  redraw(); renderCart();
-  updateStatus(`Loaded ${label} (v${n.version}). Elements: ${elements.length}, Groups: ${groups.length}, Annotations: ${annotations.length}, Connections: ${connections.length}.`);
-}
-async function loadTemplate(name){
-  try {
-    updateStatus(`Loading templates/${name}.json ...`);
-    const res = await fetch(`${templatesBasePath}${name}.json`, { cache:'no-store' });
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    setFromTemplateObject(json, `${name}.json`);
-  } catch(e){
-    if(builtinTemplates[name]) {
-      const b = builtinTemplates[name];
-      const withIds = {
-        version: SCHEMA_VERSION,
-        title: b.title, currency, pricingCatalog,
-        elements: b.elements.map(el=>({ id: genId('el'), ...el })),
-        groups: [], annotations: [], connections: []
-      };
-      setFromTemplateObject(withIds, `built-in "${name}"`);
-      updateStatus(`External ${name}.json not found; used built-in template.`);
-    } else updateStatus(`No template found for "${name}".`);
-  }
-}
-function exportTemplate(){
-  const obj = {
-    version: SCHEMA_VERSION,
-    title: document.getElementById('diagramTitle').value || '',
-    currency, pricingCatalog,
-    canvas: { width: canvas.width, height: canvas.height },
-    elements: elements.map(e=>{
-      const base = { id:e.id, type:e.type, x:Math.round(e.x), y:Math.round(e.y), label:e.label };
-      if(typeof e.unitPrice==='number') base.unitPrice = e.unitPrice;
-      if(e.specs) base.specs = { cpuCores:e.specs.cpuCores, ramGB:e.specs.ramGB, storageGB:e.specs.storageGB, storageType:e.specs.storageType };
-      return base;
-    }),
-    groups: groups.map(g=>({ id:g.id, kind:g.kind, x:Math.round(g.x), y:Math.round(g.y), w:Math.round(g.w), h:Math.round(g.h), label:g.label })),
-    annotations: annotations.map(a=>{
-      const base = { id:a.id, kind:a.kind, x:Math.round(a.x), y:Math.round(a.y), text:a.text };
-      if(a.kind==='label') base.size = a.size||14;
-      if(a.kind==='note'){ base.w=Math.round(a.w||160); base.h=Math.round(a.h||90); }
-      return base;
-    }),
-    connections: connections.map(c=>({ id:c.id, fromId:c.fromId, toId:c.toId, style:c.style, dashed:!!c.dashed, label:c.label || '' }))
-  };
-  const blob = new Blob([JSON.stringify(obj,null,2)], { type:'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  const safe = (obj.title || 'diagram').toLowerCase().replace(/\s+/g,'-');
-  link.download = `${safe}.json`;
-  link.click();
-  updateStatus('Exported JSON (v1.3 with server specs).');
-}
-
-/* ---------- Built-in templates ---------- */
-const builtinTemplates = {
-  compute: { title:'Compute Infrastructure', elements:[
-    { type:'loadbalancer', x:500, y:110, label:'Load Balancer' },
-    { type:'server', x:350, y:180, label:'Web 1' },
-    { type:'server', x:500, y:180, label:'Web 2' },
-    { type:'server', x:650, y:180, label:'Web 3' },
-    { type:'server', x:425, y:300, label:'App 1' },
-    { type:'server', x:575, y:300, label:'App 2' },
-    { type:'server', x:500, y:460, label:'Database' },
-    { type:'switch', x:500, y:540, label:'Core Switch' }
-  ]},
-  storage: { title:'Storage Architecture', elements:[
-    { type:'server', x:200,y:100, label:'Storage Controller 1' },
-    { type:'server', x:400,y:100, label:'Storage Controller 2' },
-    { type:'storage', x:150,y:200, label:'SAN Array 1' },
-    { type:'storage', x:300,y:200, label:'SAN Array 2' },
-    { type:'storage', x:450,y:200, label:'SAN Array 3' },
-    { type:'storage', x:300,y:300, label:'Backup Storage' },
-    { type:'switch', x:300,y:400, label:'FC Switch' },
-    { type:'server', x:600,y:250, label:'Backup Server' }
-  ]},
-  rack: { title:'Rack Layout Diagram', elements:[
-    { type:'switch', x:100,y:80, label:'TOR Switch' },
-    { type:'server', x:100,y:140, label:'Server 1U' },
-    { type:'server', x:100,y:200, label:'Server 2U' },
-    { type:'server', x:100,y:260, label:'Server 3U' },
-    { type:'storage', x:100,y:320, label:'Storage 4U' },
-    { type:'server', x:100,y:380, label:'Server 5U' },
-    { type:'switch', x:300,y:80, label:'TOR Switch' },
-    { type:'server', x:300,y:140, label:'Server 1U' },
-    { type:'server', x:300,y:200, label:'Server 2U' },
-    { type:'storage', x:300,y:260, label:'Storage 3U' }
-  ]},
-  network: { title:'Network Topology', elements:[
-    { type:'router', x:550,y:100, label:'Core Router' },
-    { type:'switch', x:350,y:200, label:'Access Switch 1' },
-    { type:'switch', x:750,y:200, label:'Access Switch 2' },
-    { type:'firewall', x:550,y:200, label:'Firewall' },
-    { type:'server', x:250,y:320, label:'Server A' },
-    { type:'server', x:450,y:320, label:'Server B' },
-    { type:'server', x:650,y:320, label:'Server C' },
-    { type:'server', x:850,y:320, label:'Server D' }
-  ]},
-  hybrid: { title:'Hybrid Cloud Architecture', elements:[
-    { type:'router', x:550,y:100, label:'Edge Router' },
-    { type:'firewall', x:550,y:160, label:'Firewall' },
-    { type:'loadbalancer', x:400,y:240, label:'On-Prem LB' },
-    { type:'loadbalancer', x:700,y:240, label:'Cloud LB' },
-    { type:'server', x:300,y:340, label:'On-Prem App' },
-    { type:'server', x:500,y:340, label:'On-Prem DB' },
-    { type:'server', x:600,y:340, label:'Cloud App' },
-    { type:'server', x:800,y:340, label:'Cloud DB' },
-    { type:'storage', x:420,y:440, label:'Local Storage' },
-    { type:'storage', x:700,y:440, label:'Cloud Storage' }
-  ]}
-};
-
-/* ---------- File import ---------- */
-function triggerImport(){ document.getElementById('fileInput').value=''; document.getElementById('fileInput').click(); }
-document.getElementById('fileInput').addEventListener('change', async (e)=>{
-  const file = e.target.files && e.target.files[0];
-  if(!file) return;
-  try{ const text = await file.text(); const json = JSON.parse(text); setFromTemplateObject(json, file.name); }
-  catch(err){ updateStatus(`Failed to import: ${err.message}`); }
-});
-
-/* ---------- Build / Edit ---------- */
-function addElement(type){
-  const t = elementTypes[type]; if(!t) return;
-  const x = snap(120 + Math.random()*(canvas.width-240));
-  const y = snap(120 + Math.random()*(canvas.height-240));
-  const el = { id: genId('el'), type, x, y, label: t.label };
-  elements.push(el);
-  redraw(); renderCart();
-  updateStatus(`Added ${t.label}.`);
-  if(type==='server'){ openSpecModal(el); }
-}
-function addGroup(kind){
-  groups.push({ id: genId('grp'), kind, x:60, y:80, w:880, h:140, label: (kind==='swimlane'?'Swimlane':'Group') });
-  redraw(); updateStatus(`Added ${kind}.`);
-}
-function addAnnotation(kind){
-  if(kind==='label'){ annotations.push({ id: genId('ann'), kind:'label', x: snap(80), y: snap(60), text:'Label', size:14 }); }
-  else { annotations.push({ id: genId('ann'), kind:'note', x: snap(80), y: snap(60), w:200, h:100, text:'Note' }); }
-  redraw(); updateStatus(`Added annotation: ${kind}.`);
-}
-
-/* ---------- Auto Layout ---------- */
-function autoLayout(){
-  const typesOrder = ['loadbalancer','firewall','router','switch','server','storage'];
-  const lanes = {}; for(const t of typesOrder) lanes[t] = elements.filter(e=>e.type===t);
-  const gapX=140, startY=120, laneH=110, centerX=canvas.width/2;
-  let laneIndex=0;
-  for(const t of typesOrder){
-    const arr=lanes[t]; if(!arr.length) continue;
-    const totalW=(arr.length-1)*gapX;
-    let x=centerX-totalW/2; const y=startY+laneIndex*laneH;
-    for(const e of arr){ e.x=snap(x); e.y=snap(y); x+=gapX; }
-    laneIndex++;
-  }
-  redraw(); renderCart(); updateStatus('Auto layout applied.');
-}
-
-/* ---------- Connections ---------- */
-function toggleConnectMode(){
-  connectMode=!connectMode; connectPendingFrom=null;
-  document.getElementById('connectBtn').textContent = connectMode ? '✅ Connecting (click source, then target)' : '🔗 Start Connect';
-  updateStatus(connectMode ? 'Connect mode: choose source element' : 'Connect mode off');
-}
-function cycleConnectionStyle(){ currentConnStyle = currentConnStyle==='straight' ? 'orthogonal' : 'straight'; document.getElementById('connStyleText').textContent = currentConnStyle; }
-function toggleDashed(){ currentConnDashed=!currentConnDashed; document.getElementById('dashedText').textContent = currentConnDashed?'on':'off'; }
-function addConnection(fromEl,toEl){
-  if(!fromEl || !toEl || fromEl.id===toEl.id) return;
-  connections.push({ id: genId('con'), fromId: fromEl.id, toId: toEl.id, style: currentConnStyle, dashed: currentConnDashed, label: '' });
-  redraw(); updateStatus(`Connected "${fromEl.label}" → "${toEl.label}" (${currentConnStyle}${currentConnDashed?', dashed':''}).`);
-}
-
-/* ---------- Hit Testing ---------- */
-function elementAt(x,y){
-  for(let i=elements.length-1;i>=0;i--){
-    const el=elements[i]; const t=elementTypes[el.type];
-    if(x>=el.x-t.width/2 && x<=el.x+t.width/2 && y>=el.y-t.height/2 && y<=el.y+t.height/2) return el;
-  }
-  return null;
-}
-function groupAt(x,y){
-  for(let i=groups.length-1;i>=0;i--){
-    const g=groups[i]; if(x>=g.x && x<=g.x+g.w && y>=g.y && y<=g.y+g.h) return g;
-  }
-  return null;
-}
-function annotationAt(x,y){
-  for(let i=annotations.length-1;i>=0;i--){
-    const a=annotations[i];
-    if(a.kind==='label'){
-      ctx.font = `bold ${a.size||14}px sans-serif`;
-      const w=ctx.measureText(a.text||'Label').width, h=(a.size||14);
-      if(x>=a.x-2 && x<=a.x+w+2 && y>=a.y-h && y<=a.y+6) return a;
-    } else {
-      const w=a.w||160, h=a.h||90;
-      if(x>=a.x && x<=a.x+w && y>=a.y && y<=a.y+h) return a;
-    }
-  }
-  return null;
-}
-function connectionAt(x,y){
-  const dist=(px,py,x1,y1,x2,y2)=>{ const A=px-x1,B=py-y1,C=x2-x1,D=y2-y1; const dot=A*C+B*D,len=C*C+D*D; let t=(len!==0)?(dot/len):-1; t=Math.max(0,Math.min(1,t)); const nx=x1+t*C,ny=y1+t*D; const dx=px-nx,dy=py-ny; return Math.sqrt(dx*dx+dy*dy); };
-  for(let i=connections.length-1;i>=0;i--){
-    const c=connections[i], a=getElementById(c.fromId), b=getElementById(c.toId); if(!a||!b) continue;
-    if(c.style==='orthogonal'){
-      const mx=(a.x+b.x)/2, d=Math.min(dist(x,y,a.x,a.y,mx,a.y), dist(x,y,mx,a.y,mx,b.y), dist(x,y,mx,b.y,b.x,b.y)); if(d<6) return c;
-    } else { const d=dist(x,y,a.x,a.y,b.x,b.y); if(d<6) return c; }
-  }
-  return null;
-}
-
-/* ---------- Mouse / Keyboard ---------- */
-canvas.addEventListener('mousedown', (e)=>{
-  const {x,y}=canvasPoint(e);
-  if(connectMode){
-    const el=elementAt(x,y);
-    if(el){
-      if(!connectPendingFrom){ connectPendingFrom=el; updateStatus(`Connect from "${el.label}" → click target`); }
-      else { addConnection(connectPendingFrom, el); connectPendingFrom=null; connectMode=false; document.getElementById('connectBtn').textContent='🔗 Start Connect'; }
-    }
-    return;
-  }
-  const el=elementAt(x,y);
-  if(el){ selected={kind:'element', id:el.id}; isDragging=true; dragOffset.x=x-el.x; dragOffset.y=y-el.y; canvas.style.cursor='grabbing'; redraw(); return; }
-  const ann=annotationAt(x,y);
-  if(ann){ selected={kind:'annotation', id:ann.id}; isDragging=true; dragOffset.x=x-ann.x; dragOffset.y=y-ann.y; canvas.style.cursor='grabbing'; redraw(); return; }
-  const grp=groupAt(x,y);
-  if(grp){ selected={kind:'group', id:grp.id}; isDragging=true; dragOffset.x=x-grp.x; dragOffset.y=y-grp.y; canvas.style.cursor='grabbing'; redraw(); return; }
-  const con=connectionAt(x,y);
-  if(con){ selected={kind:'connection', id:con.id}; isDragging=false; redraw(); updateStatus('Connection selected (double-click to edit label).'); return; }
-  selected=null; redraw();
-});
-canvas.addEventListener('mousemove', (e)=>{
-  const {x,y}=canvasPoint(e);
-  if(isDragging && selected){
-    if(selected.kind==='element'){ const el=elements.find(e=>e.id===selected.id); el.x=snap(x-dragOffset.x); el.y=snap(y-dragOffset.y); }
-    else if(selected.kind==='annotation'){ const a=annotations.find(a=>a.id===selected.id); a.x=snap(x-dragOffset.x); a.y=snap(y-dragOffset.y); }
-    else if(selected.kind==='group'){ const g=groups.find(g=>g.id===selected.id); g.x=snap(x-dragOffset.x); g.y=snap(y-dragOffset.y); }
-    redraw();
-  } else {
-    canvas.style.cursor = elementAt(x,y) || annotationAt(x,y) || groupAt(x,y) ? 'grab' : 'default';
-  }
-});
-canvas.addEventListener('mouseup', ()=>{ isDragging=false; canvas.style.cursor='default'; });
-canvas.addEventListener('dblclick', (e)=>{
-  const {x,y}=canvasPoint(e);
-  const el=elementAt(x,y);
-  if(el){
-    if(el.type==='server'){ openSpecModal(el); }
-    else {
-      const v=prompt('Label:', el.label||''); if(v!==null){ el.label=v; redraw(); renderCart(); }
-    }
-    return;
-  }
-  let a=annotationAt(x,y);
-  if(a){ const v=prompt(a.kind==='label'?'Text:':'Note text:', a.text||''); if(v!==null){ a.text=v; redraw(); } return; }
-  let g=groupAt(x,y);
-  if(g){ const v=prompt('Group/Swimlane label:', g.label||''); if(v!==null){ g.label=v; redraw(); } return; }
-  let c=connectionAt(x,y);
-  if(c){ const v=prompt('Connection label:', c.label||''); if(v!==null){ c.label=v; redraw(); } return; }
-});
-window.addEventListener('keydown', (e)=>{
-  if(e.key==='Escape'){
-    if(connectMode || connectPendingFrom){
-      connectMode=false; connectPendingFrom=null; document.getElementById('connectBtn').textContent='🔗 Start Connect'; updateStatus('Connect mode cancelled.');
-    }
-    if(document.body.classList.contains('cart-open')) closeCart();
-    if(isSpecOpen()) closeSpecModal();
-    if(document.body.classList.contains('palette-open')) closePalette();
-  }
-  if(e.key.toLowerCase()==='e'){ togglePalette(); }
-});
-
-/* ---------- Helpers ---------- */
-function canvasPoint(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
-function exportDiagram(){ const link=document.createElement('a'); link.download='infrastructure-diagram.png'; link.href=canvas.toDataURL(); link.click(); updateStatus('PNG exported.'); }
-function exportSVG(){
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  let svg=`<svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">`;
-  const title=document.getElementById('diagramTitle').value;
-  if(title) svg+=`<text x="${canvas.width/2}" y="30" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="#2c3e50">${esc(title)}</text>`;
-  for(const g of groups){
-    const fill=g.kind==='swimlane'?'rgba(52,152,219,0.07)':'rgba(155,89,182,0.07)'; const stroke=g.kind==='swimlane'?'#3498db':'#9b59b6';
-    svg+=`<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
-    svg+=`<text x="${g.x+8}" y="${g.y+18}" text-anchor="start" font-family="Arial" font-size="13" font-weight="bold" fill="#2c3e50">${esc(g.label||'')}</text>`;
-  }
-  for(const c of connections){
-    const a=getElementById(c.fromId), b=getElementById(c.toId); if(!a||!b) continue;
-    const ax=a.x,ay=a.y,bx=b.x,by=b.y; const dash=c.dashed?'stroke-dasharray="6 4"':'';
-    if(c.style==='orthogonal'){ const mx=(ax+bx)/2; svg+=`<polyline points="${ax},${ay} ${mx},${ay} ${mx},${by} ${bx},${by}" fill="none" stroke="#7f8c8d" stroke-width="2" ${dash}/>`; }
-    else { svg+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#7f8c8d" stroke-width="2" ${dash}/>`; }
-    if(c.label){ const mx=(ax+bx)/2,my=(ay+by)/2; svg+=`<text x="${mx}" y="${my-6}" text-anchor="middle" font-family="Arial" font-size="12" fill="#2c3e50">${esc(c.label)}</text>`; }
-  }
-  for(const el of elements){
-    const t=elementTypes[el.type]; const x=el.x - t.width/2, y=el.y - t.height/2;
-    svg+=`<rect x="${x}" y="${y}" width="${t.width}" height="${t.height}" fill="${t.color}" stroke="#34495e" stroke-width="1"/>`;
-    svg+=`<text x="${el.x}" y="${el.y-5}" text-anchor="middle" font-family="Arial" font-size="16" fill="#ffffff">${t.icon}</text>`;
-    const escLbl=esc(el.label||t.label);
-    const specBadge=(el.type==='server'&&el.specs)?` (${el.specs.cpuCores||'?'}c/${el.specs.ramGB||'?'}G/${el.specs.storageGB||'?'}G ${el.specs.storageType||''})`:'';
-    svg+=`<text x="${el.x}" y="${el.y+25}" text-anchor="middle" font-family="Arial" font-size="11" fill="#2c3e50">${escLbl}${esc(specBadge)}</text>`;
-  }
-  for(const a of annotations){
-    if(a.kind==='label'){ svg+=`<text x="${a.x}" y="${a.y}" text-anchor="start" font-family="Arial" font-size="${a.size||14}" font-weight="bold" fill="#2c3e50">${esc(a.text||'Label')}</text>`; }
-    else { const w=a.w||160,h=a.h||90; svg+=`<rect x="${a.x}" y="${a.y}" width="${w}" height="${h}" fill="rgba(241,196,15,0.2)" stroke="#f39c12" stroke-width="2"/>`; svg+=`<text x="${a.x+8}" y="${a.y+18}" text-anchor="start" font-family="Arial" font-size="13" fill="#2c3e50">${esc(a.text||'Note')}</text>`; }
-  }
-  svg+='</svg>';
-  const blob=new Blob([svg],{type:'image/svg+xml'}), link=document.createElement('a');
-  link.href=URL.createObjectURL(blob); link.download='infrastructure-diagram.svg'; link.click(); updateStatus('SVG exported.');
-}
-function clearCanvas(){ elements=[]; groups=[]; annotations=[]; connections=[]; redraw(); renderCart(); updateStatus('Cleared.'); }
-function deleteSelected(){
-  if(!selected){ updateStatus('Nothing selected.'); return; }
-  const {kind,id}=selected;
-  if(kind==='element'){ elements=elements.filter(e=>e.id!==id); connections=connections.filter(c=>c.fromId!==id && c.toId!==id); }
-  else if(kind==='group'){ groups=groups.filter(g=>g.id!==id); }
-  else if(kind==='annotation'){ annotations=annotations.filter(a=>a.id!==id); }
-  else if(kind==='connection'){ connections=connections.filter(c=>c.id!==id); }
-  selected=null; redraw(); renderCart(); updateStatus('Deleted.');
-}
-
-/* ---------- Cart ---------- */
-const currencySel = document.getElementById('currencySel');
-const marginInput = document.getElementById('marginPct');
-const gstInput = document.getElementById('gstPct');
-currencySel.addEventListener('change', ()=>{ currency=currencySel.value; renderCart(); });
-marginInput.addEventListener('input', ()=>{ marginPct = parseFloat(marginInput.value)||0; renderCart(); });
-gstInput.addEventListener('input', ()=>{ gstPct = parseFloat(gstInput.value)||0; renderCart(); });
-
-function unitPriceFor(el){
-  if(typeof el.unitPrice==='number' && isFinite(el.unitPrice)) return el.unitPrice;
-  if(el.type==='server' && el.specs) return calcServerUnitPrice(el.specs);
-  const p = pricingCatalog[el.type];
-  return (typeof p==='number' && isFinite(p)) ? p : 0;
-}
-function computeCart(){
-  const map = new Map();
-  for(const el of elements){
-    const key = `${el.type}|${el.label||elementTypes[el.type].label}`;
-    const unit = unitPriceFor(el);
-    const row = map.get(key) || { type: el.type, label: el.label||elementTypes[el.type].label, qty:0, unit };
-    row.qty += 1; row.unit = unit;
-    map.set(key, row);
-  }
-  const rows = Array.from(map.values()).map(r => ({ ...r, subtotal: r.qty * r.unit }));
-  const subtotal = rows.reduce((s,r)=>s+r.subtotal, 0);
-  const marginAmt = subtotal * (marginPct/100);
-  const gstAmt = (subtotal + marginAmt) * (gstPct/100);
-  const total = subtotal + marginAmt + gstAmt;
-  const totalQty = rows.reduce((s,r)=>s+r.qty, 0);
-  return { rows, subtotal, marginAmt, gstAmt, total, totalQty };
-}
-function renderCart(){
-  const { rows, subtotal, marginAmt, gstAmt, total, totalQty } = computeCart();
-  currencySel.value = currency;
-  marginInput.value = String(marginPct);
-  gstInput.value = String(gstPct);
-  document.getElementById('tMarginPct').textContent = `${(marginPct||0)}%`;
-  document.getElementById('tGstPct').textContent = `${(gstPct||0)}%`;
-
-  const body = document.getElementById('cartBody');
-  body.innerHTML = '';
-  if(rows.length===0){
-    const tr=document.createElement('tr'); const td=document.createElement('td');
-    td.colSpan=5; td.className='muted'; td.textContent='No items yet.'; tr.appendChild(td); body.appendChild(tr);
-  } else {
-    rows.forEach(r=>{
-      const tr=document.createElement('tr');
-      const tdItem=document.createElement('td'); tdItem.textContent = r.label; tr.appendChild(tdItem);
-      const tdType=document.createElement('td'); tdType.textContent = r.type; tr.appendChild(tdType);
-      const tdQty=document.createElement('td'); tdQty.className='right'; tdQty.textContent = r.qty; tr.appendChild(tdQty);
-      const tdUnit=document.createElement('td'); tdUnit.className='right';
-      if(r.type==='server'){
-        const span=document.createElement('span'); span.textContent = fmtCurrency(r.unit);
-        const btn=document.createElement('button'); btn.textContent='Edit specs'; btn.className='btn btn-secondary'; btn.style.marginLeft='6px';
-        btn.onclick = ()=>{
-          const target = elements.find(e=>e.type==='server' && (e.label||'Server')===r.label);
-          if(target) openSpecModal(target);
-        };
-        tdUnit.appendChild(span); tdUnit.appendChild(btn);
-      } else {
-        const inp=document.createElement('input'); inp.type='number'; inp.min='0'; inp.step='0.01'; inp.value = r.unit.toFixed(2);
-        inp.style.width='100px'; inp.style.textAlign='right';
-        inp.addEventListener('change', ()=>{
-          const v=parseFloat(inp.value); if(!isFinite(v)) return;
-          pricingCatalog[r.type] = v;
-          renderCart();
-        });
-        tdUnit.appendChild(inp);
-      }
-      const tdSub=document.createElement('td'); tdSub.className='right'; tdSub.textContent = fmtCurrency(r.subtotal); tr.appendChild(tdSub);
-      body.appendChild(tr);
-    });
-  }
-  document.getElementById('tSubtotal').textContent = fmtCurrency(subtotal);
-  document.getElementById('tMargin').textContent = fmtCurrency(marginAmt);
-  document.getElementById('tGst').textContent = fmtCurrency(gstAmt);
-  document.getElementById('tTotal').textContent = fmtCurrency(total);
-  updateCartBadges(totalQty);
-}
-function resetPricesToCatalog(){
-  elements.forEach(el=>{ if('unitPrice' in el && el.type!=='server') delete el.unitPrice; });
-  renderCart(); updateStatus('Reset element overrides. Using catalog prices.');
-}
-function exportCartCSV(){
-  const { rows, subtotal, marginAmt, gstAmt, total } = computeCart();
-  let csv = `Item,Type,Qty,Unit (${currency}),Subtotal (${currency})\n`;
-  rows.forEach(r=>{
-    csv += `"${r.label.replace(/"/g,'""')}",${r.type},${r.qty},${r.unit.toFixed(2)},${(r.subtotal).toFixed(2)}\n`;
-  });
-  csv += `\nSubtotal,,,,${subtotal.toFixed(2)}\n`;
-  csv += `Margin (${marginPct}%),,,,${marginAmt.toFixed(2)}\n`;
-  csv += `GST/VAT (${gstPct}%),,,,${gstAmt.toFixed(2)}\n`;
-  csv += `Total,,,,${total.toFixed(2)}\n`;
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const link=document.createElement('a');
-  link.href=URL.createObjectURL(blob); link.download=`quote-${(document.getElementById('diagramTitle').value||'diagram').toLowerCase().replace(/\s+/g,'-')}.csv`;
-  link.click();
-}
-
-/* ---------- Cart controls ---------- */
-function openCart(){ document.body.classList.add('cart-open'); document.getElementById('cartPanel').setAttribute('aria-hidden','false'); document.getElementById('cartToggle').setAttribute('aria-expanded','true'); }
-function closeCart(){ document.body.classList.remove('cart-open'); document.getElementById('cartPanel').setAttribute('aria-hidden','true'); document.getElementById('cartToggle').setAttribute('aria-expanded','false'); }
-function toggleCart(){ if(document.body.classList.contains('cart-open')) closeCart(); else openCart(); }
-function updateCartBadges(totalQty){
-  const badge = document.getElementById('cartTotalBadge');
-  const hdr = document.getElementById('cartHeaderCount');
-  if(badge) badge.textContent = totalQty || 0;
-  if(hdr) hdr.textContent = totalQty ? `(${totalQty} item${totalQty>1?'s':''})` : '(empty)';
-}
-
-/* ---------- Elements Palette controls ---------- */
-function openPalette(){ document.body.classList.add('palette-open'); document.getElementById('palettePanel').setAttribute('aria-hidden','false'); document.getElementById('paletteToggle').setAttribute('aria-expanded','true'); }
-function closePalette(){ document.body.classList.remove('palette-open'); document.getElementById('palettePanel').setAttribute('aria-hidden','true'); document.getElementById('paletteToggle').setAttribute('aria-expanded','false'); }
-function togglePalette(){ if(document.body.classList.contains('palette-open')) closePalette(); else openPalette(); }
-
-/* ---------- Server Specs Modal ---------- */
-const specModal = document.getElementById('specModal');
-const specBackdrop = document.getElementById('specBackdrop');
-const specLabel = document.getElementById('specLabel');
-const specCpu = document.getElementById('specCpu');
-const specRam = document.getElementById('specRam');
-const specStorage = document.getElementById('specStorage');
-const specStorageType = document.getElementById('specStorageType');
-const specEstPrice = document.getElementById('specEstPrice');
-const specFormula = document.getElementById('specFormula');
-let specTargetId = null;
-
-function isSpecOpen(){ return specModal.classList.contains('open'); }
-function openSpecModal(el){
-  specTargetId = el.id;
-  specLabel.value = el.label || 'Server';
-  const s = el.specs || { cpuCores:4, ramGB:16, storageGB:256, storageType:'ssd' };
-  specCpu.value = s.cpuCores ?? 4;
-  specRam.value = s.ramGB ?? 16;
-  specStorage.value = s.storageGB ?? 256;
-  specStorageType.value = s.storageType || 'ssd';
-  refreshSpecPriceUI();
-  specModal.classList.add('open'); specBackdrop.classList.add('open');
-  specModal.setAttribute('aria-hidden','false'); specBackdrop.setAttribute('aria-hidden','false');
-}
-function closeSpecModal(){
-  specModal.classList.remove('open'); specBackdrop.classList.remove('open');
-  specModal.setAttribute('aria-hidden','true'); specBackdrop.setAttribute('aria-hidden','true');
-  specTargetId = null;
-}
-function currentSpecValues(){
-  return {
-    cpuCores: parseInt(specCpu.value,10)||0,
-    ramGB: parseInt(specRam.value,10)||0,
-    storageGB: parseInt(specStorage.value,10)||0,
-    storageType: specStorageType.value==='hdd' ? 'hdd' : 'ssd'
-  };
-}
-function refreshSpecPriceUI(){
-  const specs = currentSpecValues();
-  const price = calcServerUnitPrice(specs);
-  specEstPrice.textContent = fmtCurrency(price);
-  specFormula.textContent =
-    `= base(${fmtCurrency(pricingCatalog.serverBase||0)}) + cores(${specs.cpuCores} × ${fmtCurrency(pricingCatalog.cpuPerCore||0)}) + `+
-    `ram(${specs.ramGB} × ${fmtCurrency(pricingCatalog.ramPerGB||0)}) + storage(${specs.storageGB} × ${fmtCurrency((specs.storageType==='hdd'?pricingCatalog.storageHDDPerGB:pricingCatalog.storageSSDPerGB)||0)})`;
-}
-[specCpu,specRam,specStorage,specStorageType].forEach(inp=>inp.addEventListener('input', refreshSpecPriceUI));
-
-function saveSpecModal(){
-  if(!specTargetId) return closeSpecModal();
-  const el = getElementById(specTargetId); if(!el) return closeSpecModal();
-  el.label = specLabel.value || 'Server';
-  el.specs = currentSpecValues();
-  el.unitPrice = calcServerUnitPrice(el.specs);
-  closeSpecModal();
-  redraw(); renderCart();
-  updateStatus(`Updated specs for "${el.label}": ${el.specs.cpuCores} cores, ${el.specs.ramGB}GB RAM, ${el.specs.storageGB}GB ${el.specs.storageType.toUpperCase()}.`);
-}
-
-/* ---------- Init ---------- */
-redraw(); renderCart();
-updateStatus('Ready. Use the Elements palette (left) and the Cart (right).');
-
-/* ---------- Custom generator ---------- */
-function generateCustomDiagram(){
-  const title=document.getElementById('diagramTitle').value;
-  const req=(document.getElementById('requirements').value||'').toLowerCase();
-  if(!req.trim()){ updateStatus('Enter requirements first.'); return; }
-  elements=[]; connections=[];
-  let x=250, y=140;
-  if(req.includes('web')||req.includes('http')){
-    const lb={ id:genId('el'), type:'loadbalancer', x:x+180, y:y, label:'Load Balancer' };
-    const w1={ id:genId('el'), type:'server', x:x, y:y+110, label:'Web 1' };
-    const w2={ id:genId('el'), type:'server', x:x+180, y:y+110, label:'Web 2' };
-    const w3={ id:genId('el'), type:'server', x:x+360, y:y+110, label:'Web 3' };
-    elements.push(lb,w1,w2,w3);
-    for(const w of [w1,w2,w3]) connections.push({ id:genId('con'), fromId:lb.id, toId:w.id, style:'straight', dashed:false, label:'HTTP/HTTPS' });
-    y+=220;
-  }
-  if(req.includes('database')||req.includes('db')){ elements.push({ id:genId('el'), type:'server', x:x+180, y:y, label:'Database' }); y+=110; }
-  if(req.includes('storage')||req.includes('backup')){ elements.push({ id:genId('el'), type:'storage', x:x+180, y:y, label:'Storage Array' }); y+=110; }
-  if(req.includes('network')||req.includes('switch')){ elements.push({ id:genId('el'), type:'switch', x:x+180, y:y, label:'Core Switch' }); y+=110; }
-  if(req.includes('security')||req.includes('firewall')){ elements.push({ id:genId('el'), type:'firewall', x:x+180, y:y, label:'Security Appliance' }); }
-  document.getElementById('diagramTitle').value = title || 'Custom Diagram';
-  redraw(); renderCart();
-  updateStatus(`Custom diagram generated. Elements: ${elements.length}, Connections: ${connections.length}.`);
-}
-</script>
-</body>
-</html>
+    <div style="background: var(--vht-secondary); padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <strong>Estimated Cost: <span id="serverEstCost" style="color: var(--vht-success);">$0.00</span></strong>
