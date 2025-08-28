@@ -270,6 +270,7 @@
           <th id="skuHdr" style="display:none">SKU</th>
           <th class="right">Unit</th>
           <th class="right">Subtotal</th>
+          <th class="right">Actions</th>
         </tr>
         </thead>
         <tbody id="cartBody">
@@ -313,7 +314,9 @@
       <div class="tile" onclick="addElement('switch')"><div class="icon">🔀</div><div class="meta"><span class="name">Switch</span><span class="hint">Access/Core/FC</span></div></div>
       <div class="tile" onclick="addElement('firewall')"><div class="icon">🛡️</div><div class="meta"><span class="name">Firewall</span><span class="hint">Security tier</span></div></div>
       <div class="tile" onclick="addElement('loadbalancer')"><div class="icon">⚖️</div><div class="meta"><span class="name">Load Balancer</span><span class="hint">L4/L7</span></div></div>
-      <div class="tile" onclick="addElement('router')"><div class="icon">📡</div><div class="meta"><span class="name">Router</span><span class="hint">Edge/Core</span></div></div>
+      $1
+      <div class="tile" onclick="addGroup('group')"><div class="icon">🧩</div><div class="meta"><span class="name">Group</span><span class="hint">Container</span></div></div>
+      <div class="tile" onclick="addGroup('swimlane')"><div class="icon">🏊</div><div class="meta"><span class="name">Swimlane</span><span class="hint">Process lane</span></div></div><div class="meta"><span class="name">Router</span><span class="hint">Edge/Core</span></div></div>
     </div>
     <p class="muted small" style="margin-top:10px">Tip: Keep the palette open to add multiple items quickly.</p>
   </div>
@@ -900,8 +903,13 @@ function canvasPoint(e){ const r=canvas.getBoundingClientRect(); return { x:e.cl
 function exportDiagram(){ redraw(); stampLogoOnCanvas(); const link=document.createElement('a'); link.download='infrastructure-diagram.png'; link.href=canvas.toDataURL(); link.click(); redraw(); updateStatus('PNG exported (logo included).'); }
 function exportSVG(){
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const imgToDataHref = (img)=>{ try{ const c=document.createElement('canvas'); c.width=img.naturalWidth||img.width||0; c.height=img.naturalHeight||img.height||0; const ict=c.getContext('2d'); ict.drawImage(img,0,0); return c.toDataURL('image/png'); }catch{ return null; } };
   let svg=`<svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">`;
-  if(showCanvasBackground){ svg+=`<image href="background.png" x="0" y="0" width="${canvas.width}" height="${canvas.height}" opacity="0.08"/>`; }
+  // Optional background image
+  if(showCanvasBackground){
+    let bgHref = bgReady ? imgToDataHref(bgImg) : 'background.png';
+    if(bgHref){ svg+=`<image href="${bgHref}" x="0" y="0" width="${canvas.width}" height="${canvas.height}" opacity="0.08"/>`; }
+  }
   const title=document.getElementById('diagramTitle').value;
   if(title) svg+=`<text x="${canvas.width/2}" y="30" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="#2c3e50">${esc(title)}</text>`;
   for(const g of groups){
@@ -929,13 +937,16 @@ function exportSVG(){
     if(a.kind==='label'){ svg+=`<text x="${a.x}" y="${a.y}" text-anchor="start" font-family="Arial" font-size="${a.size||14}" font-weight="bold" fill="#2c3e50">${esc(a.text||'Label')}</text>`; }
     else { const w=a.w||160,h=a.h||90; svg+=`<rect x="${a.x}" y="${a.y}" width="${w}" height="${h}" fill="rgba(241,196,15,0.2)" stroke="#f39c12" stroke-width="2"/>`; svg+=`<text x="${a.x+8}" y="${a.y+18}" text-anchor="start" font-family="Arial" font-size="13" fill="#2c3e50">${esc(a.text||'Note')}</text>`; }
   }
-  if(includeLogoOnExport){ const w=120, h=40; svg+=`<image href="vht-logo.png" x="${canvas.width - w - 12}" y="12" width="${w}" height="${h}" opacity="0.95"/>`; }
+  if(includeLogoOnExport){ const w=120, h=40; const logoHref = logoReady ? imgToDataHref(logoImg) : 'vht-logo.png'; if(logoHref){ svg+=`<image href="${logoHref}" x="${canvas.width - w - 12}" y="12" width="${w}" height="${h}" opacity="0.95"/>`; } }
   svg+='</svg>';
   const blob=new Blob([svg],{type:'image/svg+xml'}), link=document.createElement('a');
   link.href=URL.createObjectURL(blob); link.download='infrastructure-diagram.svg'; link.click();
-  updateStatus('SVG exported (logo included).');
+  updateStatus('SVG exported (logo included, embedded images).');
 }
-function clearCanvas(){ elements=[]; groups=[]; annotations=[]; connections=[]; redraw(); renderCart(); updateStatus('Cleared.'); }
+function clearCanvas(){
+  elements=[]; groups=[]; annotations=[]; connections=[];
+  redraw(); renderCart(); updateStatus('Cleared.');
+}
 function deleteSelected(){
   if(!selected){ updateStatus('Nothing selected.'); return; }
   const {kind,id}=selected;
@@ -991,7 +1002,7 @@ function renderCart(){
   const skuHdr = document.getElementById('skuHdr');
   skuHdr.style.display = showSkus ? '' : 'none';
   body.innerHTML = '';
-  if(rows.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=6; td.className='muted'; td.textContent='No items yet.'; tr.appendChild(td); body.appendChild(tr); }
+  if(rows.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan = showSkus ? 7 : 6; td.className='muted'; td.textContent='No items yet.'; tr.appendChild(td); body.appendChild(tr); }
   else {
     rows.forEach(r=>{
       const tr=document.createElement('tr');
@@ -1015,6 +1026,12 @@ function renderCart(){
         tdUnit.appendChild(inp);
       }
       const tdSub=document.createElement('td'); tdSub.className='right'; tdSub.textContent = fmtCurrency(r.subtotal); tr.appendChild(tdSub);
+      const tdAct=document.createElement('td'); tdAct.className='right';
+      const btnMinus=document.createElement('button'); btnMinus.className='btn btn-secondary'; btnMinus.textContent='−1'; btnMinus.style.marginRight='6px';
+      btnMinus.onclick=()=>removeCartItem(r.type, r.label, r.sku||'', 1);
+      const btnDel=document.createElement('button'); btnDel.className='btn btn-danger'; btnDel.textContent='🗑️';
+      btnDel.onclick=()=>removeCartItem(r.type, r.label, r.sku||'');
+      tdAct.appendChild(btnMinus); tdAct.appendChild(btnDel); tr.appendChild(tdAct);
       body.appendChild(tr);
     });
   }
@@ -1036,6 +1053,20 @@ function exportCartCSV(){
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const link=document.createElement('a');
   link.href=URL.createObjectURL(blob); link.download=`quote-${(document.getElementById('diagramTitle').value||'diagram').toLowerCase().replace(/\s+/g,'-')}.csv`;
   link.click();
+}
+
+function removeCartItem(type,label,sku,count){
+  let removed=0;
+  for(let i=elements.length-1;i>=0;i--){
+    const e=elements[i];
+    if(e.type===type && (e.label||'')===label && (e.sku||'')===(sku||'')){
+      elements.splice(i,1);
+      removed++;
+      if(count && removed>=count) break;
+    }
+  }
+  redraw(); renderCart();
+  updateStatus(count?`Removed ${removed} × ${label}`:`Removed all of ${label}`);
 }
 
 /* ---------- Cart controls ---------- */
