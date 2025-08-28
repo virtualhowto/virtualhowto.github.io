@@ -114,7 +114,7 @@
       <img class="logo" src="vht-logo.png" alt="VHT logo"/>
       <div>
         <h1>🏗️ AI Infrastructure Diagram Generator</h1>
-        <p>v1.5 — Color-coded traffic • Object Storage ($/TB) • Hidden SKUs • Branded background • Logo watermark on export</p>
+        <p>v1.6 — Grouped palette • Split line type buttons • Traffic colors • Delete key support • Logo watermark on export</p>
       </div>
     </div>
   </div>
@@ -184,11 +184,24 @@
         <h3>Connections</h3>
         <div class="btn-group">
           <button id="connectBtn" class="btn btn-secondary" onclick="toggleConnectMode()">🔗 Start Connect</button>
-          <button class="btn btn-secondary" onclick="cycleConnectionStyle()">↔️ Style: <span id="connStyleText">straight</span></button>
           <button class="btn btn-secondary" onclick="toggleDashed()">— — Dashed: <span id="dashedText">off</span></button>
-          <button class="btn btn-secondary" onclick="cycleTraffic()">🟢 Traffic: <span id="trafficText">none</span></button>
         </div>
-        <p class="muted small">Click source, then target. <span class="kbd">Esc</span> cancels. Clean = green, Dirty = red.</p>
+        <div class="input-group" style="margin-top:8px">
+          <label>Line type</label>
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="setConnectionStyle('straight')">Straight</button>
+            <button class="btn btn-secondary" onclick="setConnectionStyle('orthogonal')">Orthogonal</button>
+          </div>
+        </div>
+        <div class="input-group" style="margin-top:8px">
+          <label>Traffic color</label>
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="setConnectionTraffic('clean')">Clean (green)</button>
+            <button class="btn btn-secondary" onclick="setConnectionTraffic('dirty')">Dirty (red)</button>
+            <button class="btn btn-secondary" onclick="setConnectionTraffic('none')">None</button>
+          </div>
+        </div>
+        <p class="muted small">Click source, then target. <span class="kbd">Esc</span> cancels. Current: <b>Line</b> <span id="connStyleBadge">straight</span> • <b>Traffic</b> <span id="connTrafficBadge">none</span></p>
       </div>
 
       <div class="control-group">
@@ -200,7 +213,7 @@
         <input type="file" id="fileInput" accept="application/json" style="display:none"/>
       </div>
 
-      <p class="muted small"><b>Schema:</b> v1.5 supports <i>version, currency, pricingCatalog, canvas, elements (id/sku/unitPrice/specs), groups, annotations, connections (traffic)</i>.</p>
+      <p class="muted small"><b>Schema:</b> v1.6 supports <i>version, currency, pricingCatalog, canvas, elements (id/sku/unitPrice/specs), groups, annotations, connections (traffic)</i>. Press <span class="kbd">Delete</span> to remove the current selection.</p>
     </div>
 
     <!-- Diagram -->
@@ -307,6 +320,7 @@
     <button class="palette-close" onclick="closePalette()" aria-label="Close elements">✕</button>
   </div>
   <div class="palette-body">
+    <h4 class="muted" style="margin:6px 0 8px">Elements</h4>
     <div class="palette-grid">
       <div class="tile" onclick="addElement('server')"><div class="icon">🖥️</div><div class="meta"><span class="name">Server</span><span class="hint">Prompts for specs</span></div></div>
       <div class="tile" onclick="addElement('storage')"><div class="icon">💾</div><div class="meta"><span class="name">Storage</span><span class="hint">SAN/NAS, arrays</span></div></div>
@@ -314,11 +328,27 @@
       <div class="tile" onclick="addElement('switch')"><div class="icon">🔀</div><div class="meta"><span class="name">Switch</span><span class="hint">Access/Core/FC</span></div></div>
       <div class="tile" onclick="addElement('firewall')"><div class="icon">🛡️</div><div class="meta"><span class="name">Firewall</span><span class="hint">Security tier</span></div></div>
       <div class="tile" onclick="addElement('loadbalancer')"><div class="icon">⚖️</div><div class="meta"><span class="name">Load Balancer</span><span class="hint">L4/L7</span></div></div>
-      $1
+      <div class="tile" onclick="addElement('router')"><div class="icon">📡</div><div class="meta"><span class="name">Router</span><span class="hint">Edge/Core</span></div></div>
       <div class="tile" onclick="addGroup('group')"><div class="icon">🧩</div><div class="meta"><span class="name">Group</span><span class="hint">Container</span></div></div>
-      <div class="tile" onclick="addGroup('swimlane')"><div class="icon">🏊</div><div class="meta"><span class="name">Swimlane</span><span class="hint">Process lane</span></div></div><div class="meta"><span class="name">Router</span><span class="hint">Edge/Core</span></div></div>
+      <div class="tile" onclick="addGroup('swimlane')"><div class="icon">🏊</div><div class="meta"><span class="name">Swimlane</span><span class="hint">Process lane</span></div></div>
     </div>
-    <p class="muted small" style="margin-top:10px">Tip: Keep the palette open to add multiple items quickly.</p>
+
+    <h4 class="muted" style="margin:12px 0 8px">Annotations</h4>
+    <div class="palette-grid">
+      <div class="tile" onclick="addAnnotation('label')"><div class="icon">🔖</div><div class="meta"><span class="name">Label</span><span class="hint">Text tag</span></div></div>
+      <div class="tile" onclick="addAnnotation('note')"><div class="icon">📝</div><div class="meta"><span class="name">Note</span><span class="hint">Sticky note</span></div></div>
+    </div>
+
+    <h4 class="muted" style="margin:12px 0 8px">Connections</h4>
+    <div class="palette-grid">
+      <div class="tile" onclick="toggleConnectMode()"><div class="icon">🔗</div><div class="meta"><span class="name">Start Connect</span><span class="hint">Click source → target</span></div></div>
+      <div class="tile" onclick="setConnectionStyle('straight')"><div class="icon">↔️</div><div class="meta"><span class="name">Straight</span><span class="hint">Line type</span></div></div>
+      <div class="tile" onclick="setConnectionStyle('orthogonal')"><div class="icon">⤴️</div><div class="meta"><span class="name">Orthogonal</span><span class="hint">Line type</span></div></div>
+      <div class="tile" onclick="setConnectionTraffic('clean')"><div class="icon">🟩</div><div class="meta"><span class="name">Clean</span><span class="hint">Green</span></div></div>
+      <div class="tile" onclick="setConnectionTraffic('dirty')"><div class="icon">🟥</div><div class="meta"><span class="name">Dirty</span><span class="hint">Red</span></div></div>
+    </div>
+
+    <p class="muted small" style="margin-top:10px">Tip: Keep the palette open to add multiple items quickly. Press <span class="kbd">E</span> to toggle.</p>
   </div>
 </aside>
 <div class="palette-backdrop" id="paletteBackdrop" onclick="closePalette()"></div>
@@ -366,9 +396,9 @@
 
 <script>
 /**********************
- * v1.5 — Full Build  *
+ * v1.6 — Full Build  *
  **********************/
-const SCHEMA_VERSION = "1.5";
+const SCHEMA_VERSION = "1.6";
 const templatesBasePath = 'templates/';
 
 const canvas = document.getElementById('canvas');
@@ -663,10 +693,10 @@ function exportTemplate(){
   const blob = new Blob([JSON.stringify(obj,null,2)], { type:'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  const safe = (obj.title || 'diagram').toLowerCase().replace(/\s+/g,'-');
+  const safe = (obj.title || 'diagram').toLowerCase().replace(/\\s+/g,'-');
   link.download = `${safe}.json`;
   link.click();
-  updateStatus('Exported JSON (v1.5 with SKUs, traffic, object storage).');
+  updateStatus('Exported JSON (v1.6 with SKUs, traffic, object storage).');
 }
 
 /* ---------- Built-in templates ---------- */
@@ -782,9 +812,17 @@ function toggleConnectMode(){
   document.getElementById('connectBtn').textContent = connectMode ? '✅ Connecting (click source, then target)' : '🔗 Start Connect';
   updateStatus(connectMode ? 'Connect mode: choose source element' : 'Connect mode off');
 }
-function cycleConnectionStyle(){ currentConnStyle = currentConnStyle==='straight' ? 'orthogonal' : 'straight'; document.getElementById('connStyleText').textContent = currentConnStyle; }
+function setConnectionStyle(s){
+  currentConnStyle = (s==='orthogonal') ? 'orthogonal' : 'straight';
+  const b=document.getElementById('connStyleBadge'); if(b) b.textContent=currentConnStyle;
+  updateStatus('Line type set to '+currentConnStyle);
+}
 function toggleDashed(){ currentConnDashed=!currentConnDashed; document.getElementById('dashedText').textContent = currentConnDashed?'on':'off'; }
-function cycleTraffic(){ currentTraffic = (currentTraffic==='none')?'clean':(currentTraffic==='clean')?'dirty':'none'; document.getElementById('trafficText').textContent=currentTraffic; }
+function setConnectionTraffic(t){
+  currentTraffic = (t==='clean'||t==='dirty')?t:'none';
+  const b=document.getElementById('connTrafficBadge'); if(b) b.textContent=currentTraffic;
+  updateStatus('Traffic marked as '+currentTraffic);
+}
 function addConnection(fromEl,toEl){
   if(!fromEl || !toEl || fromEl.id===toEl.id) return;
   connections.push({ id: genId('con'), fromId: fromEl.id, toId: toEl.id, style: currentConnStyle, dashed: currentConnDashed, label: '', traffic: currentTraffic });
@@ -896,6 +934,9 @@ window.addEventListener('keydown', (e)=>{
     if(document.body.classList.contains('palette-open')) closePalette();
   }
   if(e.key.toLowerCase()==='e'){ togglePalette(); }
+  if(e.key==='Delete' || e.key==='Backspace'){
+    if(selected){ e.preventDefault(); deleteSelected(); }
+  }
 });
 
 /* ---------- Helpers ---------- */
@@ -1045,13 +1086,13 @@ function resetPricesToCatalog(){ elements.forEach(el=>{ if('unitPrice' in el && 
 function exportCartCSV(){
   const { rows, subtotal, marginAmt, gstAmt, total } = computeCart();
   let csv = `Item,Type,Qty,SKU,Unit (${currency}),Subtotal (${currency})\n`;
-  rows.forEach(r=>{ csv += `"${(r.label||'').replace(/"/g,'""')}",${r.type},${r.qty},"${(r.sku||'').replace(/"/g,'""')}",${r.unit.toFixed(2)},${(r.subtotal).toFixed(2)}\n`; });
+  rows.forEach(r=>{ csv += `\"${(r.label||'').replace(/\"/g,'\"\"')}\",${r.type},${r.qty},\"${(r.sku||'').replace(/\"/g,'\"\"')}\",${r.unit.toFixed(2)},${(r.subtotal).toFixed(2)}\n`; });
   csv += `\nSubtotal,,,,${subtotal.toFixed(2)}\n`;
   csv += `Margin (${marginPct}%),,,,${marginAmt.toFixed(2)}\n`;
   csv += `GST/VAT (${gstPct}%),,,,${gstAmt.toFixed(2)}\n`;
   csv += `Total,,,,${total.toFixed(2)}\n`;
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const link=document.createElement('a');
-  link.href=URL.createObjectURL(blob); link.download=`quote-${(document.getElementById('diagramTitle').value||'diagram').toLowerCase().replace(/\s+/g,'-')}.csv`;
+  link.href=URL.createObjectURL(blob); link.download=`quote-${(document.getElementById('diagramTitle').value||'diagram').toLowerCase().replace(/\\s+/g,'-')}.csv`;
   link.click();
 }
 
