@@ -900,13 +900,8 @@ function canvasPoint(e){ const r=canvas.getBoundingClientRect(); return { x:e.cl
 function exportDiagram(){ redraw(); stampLogoOnCanvas(); const link=document.createElement('a'); link.download='infrastructure-diagram.png'; link.href=canvas.toDataURL(); link.click(); redraw(); updateStatus('PNG exported (logo included).'); }
 function exportSVG(){
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const imgToDataHref = (img)=>{ try{ const c=document.createElement('canvas'); c.width=img.naturalWidth||img.width||0; c.height=img.naturalHeight||img.height||0; const ict=c.getContext('2d'); ict.drawImage(img,0,0); return c.toDataURL('image/png'); }catch{ return null; } };
   let svg=`<svg width="${canvas.width}" height="${canvas.height}" xmlns="http://www.w3.org/2000/svg">`;
-  // Optional background image
-  if(showCanvasBackground){
-    let bgHref = bgReady ? imgToDataHref(bgImg) : 'background.png';
-    if(bgHref){ svg+=`<image href="${bgHref}" x="0" y="0" width="${canvas.width}" height="${canvas.height}" opacity="0.08"/>`; }
-  }
+  if(showCanvasBackground){ svg+=`<image href="background.png" x="0" y="0" width="${canvas.width}" height="${canvas.height}" opacity="0.08"/>`; }
   const title=document.getElementById('diagramTitle').value;
   if(title) svg+=`<text x="${canvas.width/2}" y="30" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="#2c3e50">${esc(title)}</text>`;
   for(const g of groups){
@@ -934,13 +929,13 @@ function exportSVG(){
     if(a.kind==='label'){ svg+=`<text x="${a.x}" y="${a.y}" text-anchor="start" font-family="Arial" font-size="${a.size||14}" font-weight="bold" fill="#2c3e50">${esc(a.text||'Label')}</text>`; }
     else { const w=a.w||160,h=a.h||90; svg+=`<rect x="${a.x}" y="${a.y}" width="${w}" height="${h}" fill="rgba(241,196,15,0.2)" stroke="#f39c12" stroke-width="2"/>`; svg+=`<text x="${a.x+8}" y="${a.y+18}" text-anchor="start" font-family="Arial" font-size="13" fill="#2c3e50">${esc(a.text||'Note')}</text>`; }
   }
-  if(includeLogoOnExport){ const w=120, h=40; const logoHref = logoReady ? imgToDataHref(logoImg) : 'vht-logo.png'; if(logoHref){ svg+=`<image href="${logoHref}" x="${canvas.width - w - 12}" y="12" width="${w}" height="${h}" opacity="0.95"/>`; } }
+  if(includeLogoOnExport){ const w=120, h=40; svg+=`<image href="vht-logo.png" x="${canvas.width - w - 12}" y="12" width="${w}" height="${h}" opacity="0.95"/>`; }
   svg+='</svg>';
   const blob=new Blob([svg],{type:'image/svg+xml'}), link=document.createElement('a');
   link.href=URL.createObjectURL(blob); link.download='infrastructure-diagram.svg'; link.click();
-  updateStatus('SVG exported (logo included, embedded images).');
+  updateStatus('SVG exported (logo included).');
 }
-function clearCanvas(){(){ elements=[]; groups=[]; annotations=[]; connections=[]; redraw(); renderCart(); updateStatus('Cleared.'); }
+function clearCanvas(){ elements=[]; groups=[]; annotations=[]; connections=[]; redraw(); renderCart(); updateStatus('Cleared.'); }
 function deleteSelected(){
   if(!selected){ updateStatus('Nothing selected.'); return; }
   const {kind,id}=selected;
