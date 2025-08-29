@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Modern Diagram Editor</title>
+<style>
+  body { margin:0; font-family:Arial,Helvetica,sans-serif; }
+  #toolbar { background:#f8f8f8; padding:5px; display:flex; gap:8px; }
+  #toolbar button { padding:5px 10px; }
+  #canvas { width:100%; height:calc(100vh - 45px); border:1px solid #ddd; background:#fafafa; }
+  .node rect { rx:8; ry:8; stroke:#333; stroke-width:1; }
+  .node text { fill:#fff; font-size:14px; text-anchor:middle; }
+  .conn { fill:none; }
+  .conn.hover { stroke-width:4; }
+  .conn.selected { stroke:#d00; }
+  .handle { fill:#fff; stroke:#333; cursor:pointer; }
+  .node.selected rect { stroke:#d00; stroke-width:2; }
+  #conn-panel {
+    position:absolute; top:10px; right:10px; background:#fff; border:1px solid #ccc;
+    padding:10px; font-size:14px; display:none; z-index:10;
+  }
+  #conn-panel label { display:block; margin-bottom:5px; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="add-loadbalancer">Load Balancer</button>
+  <button id="add-server">Server</button>
+  <button id="add-storage">Object Storage</button>
+  <button id="add-switch">Switch</button>
+  <button id="add-firewall">Firewall</button>
+  <button id="toggle-connect">Connect Mode</button>
+  <button id="clear">Clear</button>
+  <button id="save">Save</button>
+  <button id="load">Load</button>
+</div>
+
+<svg id="canvas">
+  <defs>
+    <!-- Arrowhead marker -->
+    <marker id="arrow" markerWidth="10" markerHeight="7"
+            refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333"/>
+    </marker>
+  </defs>
+</svg>
+
+<div id="conn-panel">
+  <h4>Connection</h4>
+  <label><input type="checkbox" id="dash-toggle"> Dashed</label>
+  <label>Weight: <input type="number" id="weight-input" min="1" max="10" value="1"></label>
+  <label>Traffic:
+    <select id="traffic-select">
+      <option value="clean">Clean</option>
+      <option value="noisy">Noisy</option>
+    </select>
+  </label>
+  <button id="delete-con">Delete</button>
+</div>
+
+<script type="module">
+/* ----------------------------------------------------------- *
+ *  1. Data models – Node & Connection
+ * ----------------------------------------------------------- */
+class Node {
+  constructor(id, x, y, type, opts = {}) {
+    this.id = id;                 // unique id
+    this.x   = x;                 // top‑left corner
+    this.y   = y;
+    this.type = type;             // "loadbalancer" | "server" | ...
+
+    this.width  = opts.width  ?? 100;
+    this.height = opts.height ?? 50;
+    this.weight = opts.weight ?? 1;   // optional line width for edge‑style
+  }
+}
+
+class Connection {
+  constructor(id, fromId, toId, opts = {}) {
+    this.id = id;
+    this.from = fromId;
+    this.to   = toId;
+
+    this.dashed  = !!opts.dashed;
+    this.traffic = opts.traffic ?? 'clean';   // 'clean' | 'noisy'
+    this.weight  = opts.weight ?? 1;          // line width
+    this.control = opts.control ?? null;      // {x, y} relative to mid‑point
+  }
+}
+
+/* ----------------------------------------------------------- *
+ *  2. Diagram – encapsulates everything
+ * ----------------------------------------------------------- */
+class Diagram {
+  constructor(svg) {
+    /* ---------- Core data ---------- */
+    this.svg = svg;
+    this.nodes   = new Map();          // id -> Node
+    this.conns   = new Map();          // id -> Connection
+    this.nodeId  = 0;
+    this.connId  = 0;
+
+    /* ---------- Interaction state ---------- */
+    this.selectedNode      = null;
+    this.selectedConn      = null;
+    this.connectMode       = false;
+    this.connectFrom       = null;     // source node id when in connect mode
+
+    this.draggingNode     = null;
+    this.draggingConnCtrl = null;
+
+    /* ---------- Bind UI ---------- */
+    this.initUI();
+    this.initEvents();
+    this.render();                    // initial paint
+  }
+
+  /* ---------- UI helpers ---------- */
+  initUI() {
+    const toolbar = {
+      addLoadBalancer : document.getElementById('add-loadbalancer'),
+      addServer       : document.getElementById('add-server'),
+      addStorage      : document.getElementById('add-storage'),
+      addSwitch       : document.getElementById('add-switch'),
+      addFirewall     : document.getElementById('add-firewall'),
+      toggleConnect   : document.getElementById('toggle-connect'),
+      clearBtn        : document.getElementById('clear'),
+      saveBtn         : document.getElementById('save'),
+      loadBtn         : document.getElementById('load')
+    };
+
+    toolbar.addLoadBalancer.onclick   = () => this.addNode('loadbalancer');
+    toolbar.addServer.onclick         = () => this.addNode('server');
+    toolbar.addStorage.onclick        = () => this.addNode('storage');
+    toolbar.addSwitch.onclick         = () => this.addNode('switch');
+    toolbar.addFirewall.onclick       = () => this.addNode('firewall');
+    toolbar.toggleConnect.onclick    = () => this.toggleConnectMode();
+    toolbar.clearBtn.onclick         = () => this.clearAll();
+    toolbar.saveBtn.onclick          = () => this.saveDiagram();
+    toolbar.loadBtn.onclick          = () => this.loadDiagram();
+  }
+
+  /* ---------- Node helpers ---------- */
+  addNode(type) {
+    const id = `node-${++this.nodeId}`;
+    const x = 100 + Math.random() * 200;
+    const y = 100 + Math.random() * 200;
+    this.nodes.set(id, new Node(id, x, y, type));
+    this.render();
+  }
+
+  deleteSelected() {
+    if (this.selectedNode) this.nodes.delete(this.selectedNode);
+    if (this.selectedConn) this.conns.delete(this.selectedConn);
+    this.selectedNode = this.selectedConn = null;
+    this.render();
+  }
+
+  selectNode(id) {
+    this.selectedNode = id;
+    this.selectedConn = null;
+    this.render();
+  }
+
+  selectConn(id) {
+    this.selectedConn = id;
+    this.selectedNode = null;
+    this.render();
+  }
+
+  highlightNode(id, on) {
+    const nodeEl = this.svg.querySelector(`.node[data-id="${id}"]`);
+    if (nodeEl) nodeEl.classList.toggle('selected', on);
+  }
+
+  highlightConn(id, on) {
+    const connEl = this.svg.querySelector(`path[data-id="${id}"]`);
+    if (connEl) connEl.classList.toggle('selected', on);
+  }
+
+  /* ---------- Connection helpers ---------- */
+  addConnection(fromId, toId) {
+    const id = `conn-${++this.connId}`;
+    this.conns.set(id, new Connection(id, fromId, toId));
+    this.selectConn(id);
+  }
+
+  removeConnection(id) {
+    this.conns.delete(id);
+    if (this.selectedConn === id) this.selectedConn = null;
+    this.hidePanel();
+    this.render();
+  }
+
+  /* ---------- Rendering ---------- */
+  render() {
+    this.clearGroups();
+    this.renderNodes();
+    this.renderConns();
+    this.renderHandles();
+  }
+
+  clearGroups() {
+    const groups = this.svg.querySelectorAll('g');
+    groups.forEach(g => {
+      if (g.id !== 'defs') this.svg.removeChild(g);
+    });
+  }
+
+  /* ---------- Node rendering & drag ---------- */
+  renderNodes() {
+    const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    nodeGroup.setAttribute('id', 'nodes');
+    this.svg.appendChild(nodeGroup);
+
+    for (const node of this.nodes.values()) {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.classList.add('node');
+      g.dataset.id = node.id;
+      g.setAttribute('transform', `translate(${node.x},${node.y})`);
+      if (node.id === this.selectedNode) g.classList.add('selected');
+
+      // rectangle
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('width', node.width);
+      rect.setAttribute('height', node.height);
+      rect.setAttribute('class', 'node-rect');
+      g.appendChild(rect);
+
+      // label
+      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      txt.setAttribute('x', node.width / 2);
+      txt.setAttribute('y', node.height / 2 + 5); // +5 to center vertically
+      txt.textContent = node.type.replace(/\b\w/g, l => l.toUpperCase());
+      g.appendChild(txt);
+
+      // drag logic
+      let drag = false;
+      g.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        drag = true;
+        this.draggingNode = node.id;
+      });
+
+      const onMove = e => {
+        if (!drag) return;
+        const parentRect = this.svg.getBoundingClientRect();
+        node.x = e.clientX - parentRect.left - node.width / 2;
+        node.y = e.clientY - parentRect.top  - node.height / 2;
+        this.render();
+      };
+      const onUp = () => { drag = false; this.draggingNode = null; };
+      g.addEventListener('mousemove', onMove);
+      g.addEventListener('mouseup', onUp);
+      g.addEventListener('mouseleave', onUp);
+
+      // click – either select node or start/finish connect
+      g.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!this.connectMode) this.selectNode(node.id);
+        else this.connectStep(node.id);
+      });
+
+      nodeGroup.appendChild(g);
+    }
+  }
+
+  /* ---------- Connection rendering ---------- */
+  renderConns() {
+    const connGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    connGroup.setAttribute('id', 'conns');
+    this.svg.appendChild(connGroup);
+
+    for (const con of this.conns.values()) {
+      const from = this.centerOf(con.from);
+      const to   = this.centerOf(con.to);
+      let d;
+
+      if (con.control) {
+        const c = con.control;
+        const mx = (from.x + to.x) / 2 + c.x;
+        const my = (from.y + to.y) / 2 + c.y;
+        d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
+      } else {
+        d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      }
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.classList.add('conn');
+      path.dataset.id = con.id;
+      path.setAttribute('stroke', con.traffic === 'noisy' ? '#e8b123' : '#333');
+      path.setAttribute('stroke-width', con.weight);
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-dasharray', con.dashed ? '4 4' : null);
+      path.setAttribute('marker-end', 'url(#arrow)');
+
+      if (con.id === this.selectedConn) path.classList.add('selected');
+
+      path.addEventListener('mouseenter', () => path.classList.add('hover'));
+      path.addEventListener('mouseleave', () => path.classList.remove('hover'));
+      path.addEventListener('click', e => {
+        e.stopPropagation();
+        this.selectConn(con.id);
+      });
+
+      connGroup.appendChild(path);
+    }
+  }
+
+  /* ---------- Bézier handles for curve editing ---------- */
+  renderHandles() {
+    // remove old handles
+    this.svg.querySelectorAll('circle.handle').forEach(c => c.remove());
+
+    for (const con of this.conns.values()) {
+      if (!con.control) continue;           // only curves get a handle
+
+      const from = this.centerOf(con.from);
+      const to   = this.centerOf(con.to);
+      const mx = (from.x + to.x) / 2 + con.control.x;
+      const my = (from.y + to.y) / 2 + con.control.y;
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', mx);
+      circle.setAttribute('cy', my);
+      circle.setAttribute('r', 6);
+      circle.classList.add('handle');
+      circle.dataset.id = con.id;
+
+      // drag logic
+      let dragging = false;
+      circle.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        dragging = true;
+      });
+
+      const onMove = e => {
+        if (!dragging) return;
+        const rect = this.svg.getBoundingClientRect();
+        const nx = e.clientX - rect.left;
+        const ny = e.clientY - rect.top;
+        con.control.x += nx - mx;
+        con.control.y += ny - my;
+        this.render();
+      };
+      const onUp = () => { dragging = false; };
+
+      circle.addEventListener('mousemove', onMove);
+      circle.addEventListener('mouseup', onUp);
+      circle.addEventListener('mouseleave', onUp);
+
+      this.svg.appendChild(circle);
+    }
+  }
+
+  /* ---------- Connection selection & panel ---------- */
+  selectConn(id) {
+    this.selectedConn = id;
+    const con = this.conns.get(id);
+    const panel = document.getElementById('conn-panel');
+    panel.style.display = 'block';
+    panel.querySelector('#dash-toggle').checked  = con.dashed;
+    panel.querySelector('#weight-input').value = con.weight;
+    panel.querySelector('#traffic-select').value = con.traffic;
+  }
+
+  hidePanel() {
+    document.getElementById('conn-panel').style.display = 'none';
+  }
+
+  /* ---------- Interaction state machine ---------- */
+  connectStep(nodeId) {
+    if (!this.connectFrom) {
+      this.connectFrom = nodeId;
+      this.highlightNode(nodeId, true);
+    } else if (this.connectFrom !== nodeId) {
+      this.addConnection(this.connectFrom, nodeId);
+      this.highlightNode(this.connectFrom, false);
+      this.connectFrom = null;
+    }
+  }
+
+  /* ---------- Utility: get mid‑point of a node ---------- */
+  centerOf(id) {
+    const node = this.nodes.get(id);
+    return {
+      x: node.x + node.width / 2,
+      y: node.y + node.height / 2
+    };
+  }
+
+  /* ---------- Event helpers ---------- */
+  highlightNode(id, on) {
+    const nodeEl = this.svg.querySelector(`.node[data-id="${id}"]`);
+    if (nodeEl) nodeEl.classList.toggle('selected', on);
+  }
+
+  /* ---------- Key handling ---------- */
+  initKeyHandlers() {
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Delete') {
+        if (this.selectedConn) this.removeConnection(this.selectedConn);
+        if (this.selectedNode) this.nodes.delete(this.selectedNode);
+        this.selectedNode = this.selectedConn = null;
+        this.hidePanel();
+        this.render();
+      }
+    });
+  }
+
+  /* ---------- Serialization ---------- */
+  toJSON() {
+    const nodes = [...this.nodes.values()].map(n => ({
+      id: n.id, x:n.x, y:n.y, type:n.type, width:n.width, height:n.height
+    }));
+    const conns = [...this.conns.values()].map(c => ({
+      id:c.id, from:c.from, to:c.to, dashed:c.dashed,
+      traffic:c.traffic, weight:c.weight,
+      control:c.control ? {x:c.control.x, y:c.control.y} : null
+    }));
+    return JSON.stringify({nodes, conns}, null, 2);
+  }
+
+  saveDiagram() {
+    const blob = new Blob([this.toJSON()], {type:'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = 'diagram.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  loadDiagram() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const data = JSON.parse(evt.target.result);
+        this.nodes.clear();
+        this.conns.clear();
+        data.nodes.forEach(n => this.nodes.set(n.id, new Node(n)));
+        data.conns.forEach(c => this.conns.set(c.id, new Connection(c.id, c.from, c.to, {
+          dashed:c.dashed, traffic:c.traffic, weight:c.weight,
+          control: c.control
+        })));
+        this.render();
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  /* ---------- Clear all ---------- */
+  clearAll() {
+    this.nodes.clear();
+    this.conns.clear();
+    this.selectedNode = this.selectedConn = null;
+    this.hidePanel();
+    this.render();
+  }
+}
+
+/* ----------------------------------------------------------- *
+ *  3. Instantiation & wiring
+ * ----------------------------------------------------------- */
+const canvas = document.getElementById('canvas');
+const diagram = new Diagram(canvas);
+
+/* Toolbar actions */
+document.getElementById('add-loadbalancer').onclick = () => diagram.addNode('loadbalancer');
+document.getElementById('add-server').onclick = () => diagram.addNode('server');
+document.getElementById('add-storage').onclick = () => diagram.addNode('storage');
+document.getElementById('add-switch').onclick = () => diagram.addNode('switch');
+document.getElementById('add-firewall').onclick = () => diagram.addNode('firewall');
+
+document.getElementById('toggle-connect').onclick = () => diagram.toggleConnectMode();
+document.getElementById('clear').onclick = () => diagram.clearAll();
+document.getElementById('save').onclick = () => diagram.saveDiagram();
+document.getElementById('load').onclick = () => diagram.loadDiagram();
+
+/* Connection‑panel controls */
+document.getElementById('dash-toggle').addEventListener('change', e => {
+  if (!diagram.selectedConn) return;
+  diagram.conns.get(diagram.selectedConn).dashed = e.target.checked;
+  diagram.render();
+});
+
+document.getElementById('weight-input').addEventListener('input', e => {
+  if (!diagram.selectedConn) return;
+  diagram.conns.get(diagram.selectedConn).weight = +e.target.value;
+  diagram.render();
+});
+
+document.getElementById('traffic-select').addEventListener('change', e => {
+  if (!diagram.selectedConn) return;
+  diagram.conns.get(diagram.selectedConn).traffic = e.target.value;
+  diagram.render();
+});
+
+document.getElementById('delete-con').addEventListener('click', () => {
+  if (!diagram.selectedConn) return;
+  diagram.removeConnection(diagram.selectedConn);
+  diagram.selectedConn = null;
+  diagram.hidePanel();
+});
+
+/* Initial paint */
+diagram.render();
+</script>
+</body>
+</html>
