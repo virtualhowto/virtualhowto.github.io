@@ -29,14 +29,17 @@
     .dropdown-menu button{width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--ink);cursor:pointer;font-size:14px}
     .dropdown-menu button:hover{background:#0f141d}
     #toolbar{display:flex;overflow-x:auto;gap:8px;padding:6px;background:#1a1f29;border-bottom:1px solid var(--border)}
-    .tool{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel)}
+    .tool{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel);gap:6px}
     .tool .emoji{font-size:22px}
+    .tool .thumb{width:22px;height:22px;object-fit:contain;display:block}
+    .tool .label{font-size:12px;color:var(--muted)}
     #mapWrap{position:relative;flex:1}
     #map{width:100%;height:100%}
-    #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:220px}
+    #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:260px}
     #legend h3{margin:0 0 6px 0;font-size:12px}
     #legend ul{margin:0;padding:0;list-style:none}
-    #legend li{margin:2px 0}
+    #legend li{margin:4px 0;display:flex;align-items:center;gap:6px}
+    #legend img{width:14px;height:14px;object-fit:contain;display:inline-block;background:#fff;border-radius:2px}
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
     #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
     #watermark img{display:block;max-width:100%;max-height:100%}
@@ -50,6 +53,8 @@
     .modal label{display:block;margin:10px 0;color:var(--muted);font-size:13px}
     .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
     .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
+    .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
+    .size-popup input[type="range"]{width:140px}
   </style>
 </head>
 <body>
@@ -86,18 +91,26 @@
 
   <!-- Emoji/Text toolbar -->
   <div id="toolbar">
-    <div class="tool" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
-    <div class="tool" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
-    <div class="tool" data-label="Parking" data-icon="🅿️"><span class="emoji">🅿️</span></div>
-    <div class="tool" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span></div>
-    <div class="tool" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span></div>
-    <div class="tool" data-label="Competition Detecting" data-icon="🏆"><span class="emoji">🏆</span></div>
-    <!-- CHANGED: Free Detecting is now a magnifying glass -->
-    <div class="tool" data-label="Free Detecting" data-icon="🔍"><span class="emoji">🔍</span></div>
-    <div class="tool" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
-    <div class="tool" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
-    <div class="tool" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
-    <div class="tool" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
+    <div class="tool" data-type="emoji" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
+    <div class="tool" data-type="emoji" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
+    <div class="tool" data-type="emoji" data-label="Parking" data-icon="🅿️"><span class="emoji">🅿️</span></div>
+    <div class="tool" data-type="emoji" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span></div>
+    <div class="tool" data-type="emoji" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span></div>
+    <div class="tool" data-type="emoji" data-label="Competition Detecting" data-icon="🏆"><span class="emoji">🏆</span></div>
+    <!-- Free Detecting = magnifying glass -->
+    <div class="tool" data-type="emoji" data-label="Free Detecting" data-icon="🔍"><span class="emoji">🔍</span></div>
+    <div class="tool" data-type="emoji" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
+    <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
+    <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
+    <div class="tool" data-type="text"  data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
+
+    <!-- Custom icon uploader -->
+    <input id="customIconInput" type="file" accept="image/*" style="display:none">
+    <button class="tool" id="addCustomIconBtn" title="Add custom PNG icon">
+      <img class="thumb" src="" alt="" style="display:none">
+      <span class="emoji" style="font-size:18px">➕</span>
+      <span class="label">Custom Icon</span>
+    </button>
   </div>
 
   <div id="mapWrap">
@@ -207,7 +220,7 @@
     const markers=[]; let selectedMarker=null;
     const legendSet=new Map();
 
-    // ---------- Export dropdown (working toggle) ----------
+    // ---------- Export dropdown ----------
     const exportBtn = document.getElementById('exportMenuBtn');
     const exportMenu = document.getElementById('exportMenu');
     const toggleMenu = (show)=>exportMenu.style.display = show ? 'block' : 'none';
@@ -219,18 +232,58 @@
     document.getElementById('menuJsonExport').onclick=()=>{ toggleMenu(false); doExportJSON(); };
     document.getElementById('menuJsonImport').onclick=()=>{ toggleMenu(false); document.getElementById('importJsonFile').click(); };
 
-    // ---------- Tools (emoji/text) ----------
+    // ---------- Tools (emoji/text/custom image) ----------
     let activeTool=null;
-    document.querySelectorAll('.tool').forEach(t=>{ t.addEventListener('click',()=>{ activeTool=t; }); });
+    function attachToolHandlers(){
+      document.querySelectorAll('.tool[data-type]').forEach(t=>{
+        t.onclick=()=>{ activeTool=t; };
+      });
+    }
+    attachToolHandlers();
+
+    // Custom icon uploader
+    const customInput = document.getElementById('customIconInput');
+    const addCustomBtn = document.getElementById('addCustomIconBtn');
+    addCustomBtn.addEventListener('click', ()=> customInput.click());
+    customInput.addEventListener('change', e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=ev=>{
+        const label = prompt("Label for this icon (for legend):","No Detecting");
+        const dataUrl = ev.target.result;
+        addCustomTool(label || "Custom", dataUrl);
+        // reset so the same file can be selected again later
+        customInput.value = "";
+      };
+      r.readAsDataURL(f);
+    });
+
+    function addCustomTool(label, dataUrl){
+      const btn = document.createElement('button');
+      btn.className = 'tool';
+      btn.setAttribute('data-type','image');
+      btn.setAttribute('data-label', label);
+      btn.setAttribute('data-imgsrc', dataUrl);
+      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt=""><span class="label">${label}</span>`;
+      addCustomBtn.insertAdjacentElement('beforebegin', btn);
+      attachToolHandlers();
+    }
 
     map.on('click',e=>{
       if(activeTool && !drawMode){
-        const meta = {label:activeTool.dataset.label, icon:activeTool.dataset.icon};
-        placeMarkerOrText(e.latlng, meta);
-        activeTool=null;
-        return;
+        const type  = activeTool.dataset.type;
+        const label = activeTool.dataset.label;
+        if(type==='emoji' || type==='text' || type==='image'){
+          const meta = { label };
+          if(type==='emoji'){ meta.icon = activeTool.dataset.icon; }
+          if(type==='text'){  meta.icon = '✏️'; meta.isText = true; }
+          if(type==='image'){ meta.imgSrc = activeTool.dataset.imgsrc; }
+          placeMarkerOrText(e.latlng, meta);
+          activeTool=null;
+          return;
+        }
       }
-      // Draw mode: create helper segments
+      // Draw mode: helper lines
       if(drawMode){
         tempPoints.push([e.latlng.lat,e.latlng.lng]);
         const N = tempPoints.length;
@@ -245,17 +298,25 @@
     });
 
     function placeMarkerOrText(latlng, meta){
-      // If "Text Label", prompt for text and mark as isText with color
-      if(meta.label==="Text Label"){
+      // Text label -> prompt content
+      if(meta.isText){
         const text = prompt("Enter label text:");
         if(!text) return;
         meta.icon = text;
-        meta.isText = true;
-        meta.color = "#ffffff"; // default white
+        meta.color = "#ffffff";
       }
+
       const size = meta.size || 26;
-      const colorStyle = meta.isText ? `color:${meta.color};` : '';
-      const html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
+      let html;
+      if(meta.imgSrc){
+        // Render as <img> so it scales crisply
+        html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
+                  <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
+                </div>`;
+      }else{
+        const colorStyle = meta.isText ? `color:${meta.color};` : '';
+        html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
+      }
 
       const marker = L.marker(latlng,{
         icon: L.divIcon({className:"custom-div-icon",html,iconSize:[size,size],iconAnchor:[size/2,size/2]}),
@@ -267,26 +328,26 @@
 
       marker.on('click',()=>{ selectedMarker = marker; });
       marker.on('contextmenu',()=>openMarkerPopup(marker));
-      // Long-press on touch to open popup
       let lpTimer=null;
       marker.on('touchstart',()=>{ lpTimer=setTimeout(()=>openMarkerPopup(marker),600); });
       marker.on('touchend',()=>{ if(lpTimer) clearTimeout(lpTimer); });
 
-      // Legend only for emoji (not for text labels)
-      if(meta.label !== "Text Label"){
-        legendSet.set(meta.label, meta.icon);
+      // Legend entry (use emoji or image thumbnail)
+      if(!meta.isText){
+        legendSet.set(meta.label, meta.imgSrc ? {img:meta.imgSrc} : {emoji:meta.icon});
         renderLegend();
       }
     }
 
     function openMarkerPopup(marker){
       const isText = !!marker.myMeta.isText;
+      const hasImg = !!marker.myMeta.imgSrc;
       const sizeNow = marker.myMeta.size || 26;
       const colorNow = marker.myMeta.color || "#ffffff";
       const wrap = document.createElement('div');
       wrap.className='size-popup';
       wrap.innerHTML = `
-        <label>Size <input type="range" min="12" max="96" step="2" value="${sizeNow}"></label>
+        <label>Size <input type="range" min="12" max="120" step="2" value="${sizeNow}"></label>
         ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
           <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
@@ -317,18 +378,34 @@
     }
 
     function refreshMarkerIcon(marker){
-      const {icon,size,isText,color} = marker.myMeta;
-      const colorStyle = isText ? `color:${color};` : '';
+      const {icon,size,isText,color,imgSrc} = marker.myMeta;
+      let html;
+      if(imgSrc){
+        html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
+                  <img src="${imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
+                </div>`;
+      }else{
+        const colorStyle = isText ? `color:${color};` : '';
+        html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${icon}</div>`;
+      }
       marker.setIcon(L.divIcon({
         className:"custom-div-icon",
-        html:`<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${icon}</div>`,
-        iconSize:[size,size], iconAnchor:[size/2,size/2]
+        html, iconSize:[size,size], iconAnchor:[size/2,size/2]
       }));
     }
 
     function renderLegend(){
       const list=document.getElementById('legendList'); list.innerHTML='';
-      legendSet.forEach((icon,label)=>{ const li=document.createElement('li'); li.textContent=`${icon} ${label}`; list.appendChild(li); });
+      legendSet.forEach((val,label)=>{
+        const li=document.createElement('li');
+        if(val.img){
+          const img=document.createElement('img'); img.src=val.img; li.appendChild(img);
+          const span=document.createElement('span'); span.textContent=' '+label; li.appendChild(span);
+        }else{
+          li.textContent=`${val.emoji} ${label}`;
+        }
+        list.appendChild(li);
+      });
     }
 
     // Delete selected marker with keyboard
@@ -490,7 +567,7 @@
     function buildProjectJSON(){
       const savedMarkers = markers.map(m=>{
         const ll = m.getLatLng();
-        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta }; // includes {label,icon,size,isText,color?}
+        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta }; // {label, icon?, size, isText?, color?, imgSrc?}
       });
       const savedPolys = polygons.map(p=>{
         const rings = p.getLatLngs();
@@ -498,7 +575,7 @@
         const {color,weight,dashArray,fillOpacity}=p.options;
         return { latlngs, style:{color,weight,dashArray,fillOpacity} };
       });
-      const savedLegend = Array.from(legendSet.entries()).map(([label,icon])=>({label,icon}));
+      const savedLegend = Array.from(legendSet.entries()).map(([label,val])=>({label, icon:val.emoji || null, imgSrc:val.img || null}));
       // Watermark
       const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
       const wmRect=wm.getBoundingClientRect();
@@ -512,7 +589,7 @@
       } : null;
 
       return {
-        version: 3,
+        version: 4,
         createdAt: new Date().toISOString(),
         view: { center: map.getCenter(), zoom: map.getZoom() },
         markers: savedMarkers,
@@ -538,15 +615,19 @@
 
       // Legend
       if(Array.isArray(data.legend)){
-        data.legend.forEach(item=>{ if(item && item.label && item.icon){ legendSet.set(item.label,item.icon); }});
+        data.legend.forEach(item=>{
+          if(!item || !item.label) return;
+          if(item.imgSrc) legendSet.set(item.label,{img:item.imgSrc});
+          else if(item.icon) legendSet.set(item.label,{emoji:item.icon});
+        });
         renderLegend();
       }
 
-      // Markers (includes text labels)
+      // Markers (includes image markers & text)
       if(Array.isArray(data.markers)){
         data.markers.forEach(m=>{
           const latlng = L.latLng(m.lat, m.lng);
-          const meta = m.meta && m.meta.icon ? m.meta : {icon:'📍',label:'Marker',size:26};
+          const meta = m.meta && (m.meta.icon || m.meta.imgSrc) ? m.meta : {icon:'📍',label:'Marker',size:26};
           placeMarkerOrText(latlng, meta);
         });
       }
@@ -573,6 +654,18 @@
         wm.style.opacity = (typeof data.watermark.opacity==='number'? data.watermark.opacity : 0.5);
       }
     }
+
+    // ---------- PDF dialog open/close handlers ----------
+    function openPdfDialog(){ 
+      document.getElementById('pdfBackdrop').style.display='block'; 
+      document.getElementById('pdfDialog').style.display='block'; 
+    }
+    function closePdfDialog(){ 
+      document.getElementById('pdfBackdrop').style.display='none'; 
+      document.getElementById('pdfDialog').style.display='none'; 
+    }
+    document.getElementById('pdfBackdrop').addEventListener('click', closePdfDialog);
+    document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
   </script>
 </body>
 </html>
