@@ -7,38 +7,35 @@
   <style>
     :root{
       --bg:#0e1116; --panel:#1a1f29; --ink:#e8eef7; --muted:#aab3c5; --accent:#4aa3ff;
-      --border:#2a3342; --warn:#ff6b6b;
+      --border:#2a3342;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:var(--ink)}
     header{background:#121722;border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
     header h1{font-size:18px;margin:0;font-weight:600}
     #topbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
-    #topbar > *{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:8px 10px;border-radius:10px}
-    #colorPicker{padding:6px}
+    #topbar > *{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:6px 10px;border-radius:10px}
     #toolbar{display:flex;gap:10px;padding:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);background:#1a1f29}
     .tool{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 8px;border:1px dashed var(--border);border-radius:10px;cursor:grab;background:var(--panel)}
     .tool span.emoji{font-size:28px;line-height:1}
     .tool span.lbl{font-size:12px;color:var(--muted)}
-    #workspace{padding:12px}
-    #map-container{position:relative;margin:0 auto;border:1px solid var(--border);border-radius:14px;overflow:hidden;
-      width:min(1200px,94vw);height:76vh;background:#0c0f15;display:grid;place-items:center}
-    #map{max-width:100%;max-height:100%;object-fit:contain;display:block}
+    #workspace{padding:12px;overflow:auto}
+    #map-wrapper{width:min(1200px,94vw);height:76vh;margin:0 auto;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:#0c0f15}
+    #map-container{position:relative;transform-origin:0 0;}
+    #map{max-width:100%;max-height:100%;display:block}
     canvas.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto}
     .label{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:move;user-select:none;transform:translate(-50%,-100%);outline:0}
-    .label.selected .text{box-shadow:0 0 0 2px var(--accent) inset}
-    .label .emoji{font-size:30px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.5))}
+    .label .emoji{font-size:30px}
     .label .text{margin-top:2px;font-size:12px;background:rgba(18,23,34,.75);padding:2px 6px;border-radius:6px;border:1px solid var(--border);color:var(--ink)}
     #hint{position:fixed;bottom:10px;left:10px;background:#0f141d;border:1px solid var(--border);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:50}
     #signin-screen{position:fixed;inset:0;background:#05070b;display:flex;align-items:center;justify-content:center;z-index:9999}
-    #signin-card{width:min(420px,92vw);background:#0f141d;border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+    #signin-card{width:min(420px,92vw);background:#0f141d;border:1px solid var(--border);border-radius:16px;padding:18px}
     #signin-card h2{margin:0 0 12px 0;font-size:18px}
     .row{display:flex;gap:8px}
     .field{flex:1;display:flex;flex-direction:column;gap:6px}
-    .field input{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0b1018;color:var(--ink)}
-    .signin-btn{width:100%;padding:10px 12px;border-radius:10px;background:var(--accent);border:none;font-weight:600;color:#08131f;margin-top:12px}
+    .field input{padding:10px;border-radius:10px;border:1px solid var(--border);background:#0b1018;color:var(--ink)}
+    .signin-btn{width:100%;padding:10px;border-radius:10px;background:var(--accent);border:none;font-weight:600;color:#08131f;margin-top:12px}
     #signin-msg{color:#ff9b9b;font-size:12px;display:none;margin-top:6px}
-    .muted{color:var(--muted);font-size:12px;margin-top:6px}
   </style>
 </head>
 <body>
@@ -49,6 +46,8 @@
       <button id="modeToggle">✏️ Draw Mode</button>
       <input type="color" id="colorPicker" value="#ff0000" />
       <button id="finishPolygon">Finish Polygon</button>
+      <button id="zoomIn">🔍 +</button>
+      <button id="zoomOut">🔍 -</button>
       <button id="exportBtn">Export PNG</button>
     </div>
   </header>
@@ -65,13 +64,15 @@
   </div>
 
   <div id="workspace">
-    <div id="map-container">
-      <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Base Map">
-      <canvas id="draw-layer" class="overlay"></canvas>
+    <div id="map-wrapper">
+      <div id="map-container">
+        <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Base Map">
+        <canvas id="draw-layer" class="overlay"></canvas>
+      </div>
     </div>
   </div>
 
-  <div id="hint">💡 Tips: Drag icons • Delete key removes • Draw Mode for polygons • Upload a map image</div>
+  <div id="hint">💡 Tips: Drag icons • Delete key removes • Draw Mode for polygons • Click polygon to select • Upload a map image • Zoom with buttons</div>
 
   <div id="signin-screen">
     <div id="signin-card">
@@ -82,7 +83,6 @@
       </div>
       <button class="signin-btn" id="signinBtn">Sign In</button>
       <div id="signin-msg">Invalid login</div>
-      <div class="muted">Demo: <code>admin</code> / <code>detector123</code></div>
     </div>
   </div>
 
@@ -97,8 +97,19 @@
       else document.getElementById("signin-msg").style.display="block";
     };
 
-    // --- map upload ---
+    // --- map + canvas ---
     const container=document.getElementById("map-container"), baseImg=document.getElementById("map"), canvas=document.getElementById("draw-layer"), ctx=canvas.getContext("2d");
+    function fitCanvas(){canvas.width=container.clientWidth;canvas.height=container.clientHeight;redraw();}
+    window.addEventListener("resize",fitCanvas);fitCanvas();
+
+    // --- zoom ---
+    let zoom=1;
+    function applyZoom(){container.style.transform=`scale(${zoom})`;}
+    document.getElementById("zoomIn").onclick=()=>{zoom=Math.min(zoom+0.2,3);applyZoom();}
+    document.getElementById("zoomOut").onclick=()=>{zoom=Math.max(zoom-0.2,0.4);applyZoom();}
+    applyZoom();
+
+    // --- upload map ---
     document.getElementById("baseImage").addEventListener("change",e=>{
       const f=e.target.files[0]; if(!f) return; baseImg.src=URL.createObjectURL(f); setTimeout(fitCanvas,50);
     });
@@ -110,7 +121,7 @@
     container.addEventListener("dragover",e=>e.preventDefault());
     container.addEventListener("drop",e=>{
       e.preventDefault(); if(!dragItem||drawMode) return;
-      const r=container.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+      const r=container.getBoundingClientRect(),x=(e.clientX-r.left)/zoom,y=(e.clientY-r.top)/zoom;
       addLabel(dragItem.dataset.label,dragItem.dataset.icon,x,y);
     });
 
@@ -118,48 +129,57 @@
       const l=document.createElement("div"); l.className="label"; l.style.left=x+"px"; l.style.top=y+"px";
       l.innerHTML=`<span class="emoji">${icon}</span><span class="text" contenteditable="true">${text}</span>`; container.appendChild(l);
       l.addEventListener("mousedown",ev=>{
-        if(drawMode) return; selectedLabel=l; document.querySelectorAll(".label").forEach(e=>e.classList.remove("selected")); l.classList.add("selected");
+        if(drawMode) return; selectedLabel=l;
         if(ev.target.classList.contains("text")) return;
-        const c=container.getBoundingClientRect(),offX=ev.offsetX,offY=ev.offsetY;
-        function move(e2){l.style.left=(e2.clientX-c.left-offX)+"px";l.style.top=(e2.clientY-c.top-offY)+"px";}
+        const c=container.getBoundingClientRect();const offX=ev.offsetX,offY=ev.offsetY;
+        function move(e2){l.style.left=(e2.clientX-c.left-offX)/zoom+"px";l.style.top=(e2.clientY-c.top-offY)/zoom+"px";}
         function up(){document.removeEventListener("mousemove",move);document.removeEventListener("mouseup",up);}
         document.addEventListener("mousemove",move);document.addEventListener("mouseup",up);
       });
     }
 
-    // --- draw mode ---
-    document.getElementById("modeToggle").onclick=()=>{
-      drawMode=!drawMode;
-      document.getElementById("modeToggle").textContent=drawMode?"🖱️ Label Mode":"✏️ Draw Mode";
-    };
+    // --- draw polygons ---
+    document.getElementById("modeToggle").onclick=()=>{drawMode=!drawMode;document.getElementById("modeToggle").textContent=drawMode?"🖱️ Label Mode":"✏️ Draw Mode";};
     canvas.addEventListener("click",e=>{
-      const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+      const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/zoom,y=(e.clientY-r.top)/zoom;
       if(drawMode){points.push({x,y}); redraw();}
-      else {selectedPolygonIndex=hitTestPolygon(x,y); redraw();}
+      else {
+        // selection mode
+        selectedPolygonIndex=hitTestPolygon(x,y);
+        redraw();
+      }
     });
-    document.getElementById("finishPolygon").onclick=()=>{
-      if(points.length>2){polygons.push({points:[...points],color:document.getElementById("colorPicker").value});}
-      points=[]; redraw();
-    };
+    document.getElementById("finishPolygon").onclick=()=>{if(points.length>2){polygons.push({points:[...points],color:document.getElementById("colorPicker").value});}points=[];redraw();};
 
     // --- delete ---
     document.addEventListener("keydown",e=>{
-      if(e.key==="Delete"){if(selectedLabel){selectedLabel.remove();selectedLabel=null;} if(selectedPolygonIndex!=null){polygons.splice(selectedPolygonIndex,1);selectedPolygonIndex=null;redraw();}}
+      if(e.key==="Delete"){
+        if(selectedLabel){selectedLabel.remove();selectedLabel=null;}
+        if(selectedPolygonIndex!=null){polygons.splice(selectedPolygonIndex,1);selectedPolygonIndex=null;redraw();}
+      }
     });
 
     // --- rendering ---
     function pathFromPoints(pts){const p=new Path2D();if(!pts.length)return p;p.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)p.lineTo(pts[i].x,pts[i].y);p.closePath();return p;}
     function hitTestPolygon(x,y){for(let i=polygons.length-1;i>=0;i--){if(ctx.isPointInPath(pathFromPoints(polygons[i].points),x,y))return i;}return null;}
-    function redraw(){fitCanvas();ctx.clearRect(0,0,canvas.width,canvas.height);
-      polygons.forEach((poly,i)=>{const p=pathFromPoints(poly.points);ctx.fillStyle=hexToRgba(poly.color,0.25);ctx.fill(p);ctx.setLineDash([6,4]);ctx.lineWidth=i===selectedPolygonIndex?3:2;ctx.strokeStyle=i===selectedPolygonIndex?"#000":poly.color;ctx.stroke(p);});
-      if(points.length){ctx.setLineDash([4,4]);ctx.strokeStyle=document.getElementById("colorPicker").value;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);ctx.stroke();}
+    function redraw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      polygons.forEach((poly,i)=>{
+        const p=pathFromPoints(poly.points);
+        ctx.fillStyle=hexToRgba(poly.color,0.25);ctx.fill(p);
+        ctx.setLineDash([6,4]);ctx.lineWidth=i===selectedPolygonIndex?3:2;
+        ctx.strokeStyle=i===selectedPolygonIndex?"#000":poly.color;ctx.stroke(p);
+      });
+      if(points.length){
+        ctx.setLineDash([4,4]);ctx.strokeStyle=document.getElementById("colorPicker").value;
+        ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+        for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);ctx.stroke();
+      }
     }
     function hexToRgba(hex,a){let r=0,g=0,b=0;if(hex.length===7){r=parseInt(hex.slice(1,3),16);g=parseInt(hex.slice(3,5),16);b=parseInt(hex.slice(5,7),16);}return`rgba(${r},${g},${b},${a})`;}
-    function fitCanvas(){canvas.width=container.clientWidth;canvas.height=container.clientHeight;}
-    window.addEventListener("resize",fitCanvas);fitCanvas();
 
     // --- export ---
-    document.getElementById("exportBtn").onclick=()=>{html2canvas(container,{backgroundColor:null}).then(c=>{const a=document.createElement("a");a.download="event-map.png";a.href=c.toDataURL();a.click();});};
+    document.getElementById("exportBtn").onclick=()=>{html2canvas(document.getElementById("map-wrapper"),{backgroundColor:null,scale:2}).then(c=>{const a=document.createElement("a");a.download="event-map.png";a.href=c.toDataURL();a.click();});};
   </script>
 </body>
 </html>
