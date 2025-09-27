@@ -29,27 +29,23 @@
     .tool .lbl{font-size:11px;color:var(--muted);white-space:nowrap}
 
     #mapWrap{position:relative}
-    #map{width:100%;height:calc(100vh - 240px)}
-    .leaflet-tooltip.custom-label{background:rgba(18,23,34,.75);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:2px 6px;font-size:12px}
+    #map{width:100%;height:calc(100vh - 260px)}
 
     #hint{position:fixed;bottom:6px;left:6px;right:6px;background:#0f141d;border:1px solid var(--border);padding:6px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:1000;text-align:center}
 
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
 
-    /* Legend with solid black background so it prints as seen */
     #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:200px}
     #legend h3{margin:0 0 6px 0;font-size:12px}
     #legend ul{margin:0;padding:0;list-style:none}
     #legend li{margin:2px 0}
 
-    /* Watermark overlay (inside mapWrap so it exports) */
     #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
     #watermark img{display:block;max-width:100%;max-height:100%}
     #wmControls{position:absolute;bottom:110%;right:0;background:#0f141d;border:1px solid var(--border);border-radius:8px;padding:8px;display:none;gap:6px;z-index:851;width:220px}
     #wmControls label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px;margin:4px 0}
     #wmControls input[type="range"]{flex:1}
 
-    /* Compass as a Leaflet control on the map */
     .compass-control{
       background:#0f141d;border:1px solid var(--border);border-radius:50%;
       width:40px;height:40px;display:flex;align-items:center;justify-content:center;
@@ -74,6 +70,14 @@
         <option value="a3">A3</option>
         <option value="a1">A1</option>
       </select>
+      <select id="exportOrientation" class="btn">
+        <option value="portrait">Portrait</option>
+        <option value="landscape">Landscape</option>
+      </select>
+      <select id="exportScaleMode" class="btn">
+        <option value="ratio">Maintain Ratio</option>
+        <option value="fit">Fit to Page</option>
+      </select>
       <input type="file" id="logoFile" accept="image/*" style="display:none"/>
       <button class="btn" id="logoBtn">Upload Logo</button>
       <button class="btn" id="toggleWmPanel">WM Controls</button>
@@ -97,11 +101,7 @@
 
   <div id="mapWrap">
     <div id="map"></div>
-
-    <!-- Legend inside the map so exports match the view -->
     <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
-
-    <!-- Watermark with controls -->
     <div id="watermark">
       <img id="watermarkImg" alt="watermark"/>
       <div id="wmControls">
@@ -114,7 +114,7 @@
     </div>
   </div>
 
-  <div id="hint">💡 Search • Drag/click emoji labels (no pins) • Draw polygons/lines • Toggle fill/delete • Watermark controls • Export PNG/PDF</div>
+  <div id="hint">💡 Search • Drag/click emoji labels • Draw polygons/lines • Toggle fill/delete • Watermark controls • Export PNG/PDF</div>
 
   <div id="polygonControls" class="leaflet-top leaflet-right">
     <button id="toggleFill" class="btn">Toggle Fill</button>
@@ -122,21 +122,21 @@
   </div>
 
   <script>
-    // --- Map ---
+    // Map init
     const map = L.map('map').setView([-32.77,149.67],15);
     L.esri.tiledMapLayer({
       url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
       attribution:'Imagery © NSW Spatial Services'
     }).addTo(map);
 
-    // Compass as a Leaflet control (on the map)
+    // Compass control
     const compassControl = L.control({position: 'topright'});
     compassControl.onAdd = () => {
       const div = L.DomUtil.create('div', 'compass-control'); div.innerHTML = '🧭'; return div;
     };
     compassControl.addTo(map);
 
-    // --- Search (OSM Nominatim) ---
+    // Search (Enter to pan via Nominatim)
     const searchBox=document.getElementById('searchBox');
     searchBox.addEventListener('keydown',async e=>{
       if(e.key!=="Enter") return;
@@ -149,11 +149,11 @@
       }catch{ alert("Search error"); }
     });
 
-    // --- State ---
+    // State
     let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null, activeTool=null;
     const legendSet=new Map();
 
-    // --- Emoji tools (drag + click) ---
+    // Emoji tools
     document.querySelectorAll('.tool').forEach(t=>{
       t.addEventListener('dragstart',()=>{activeTool=t;});
       t.addEventListener('click',()=>{ activeTool=t; });
@@ -166,6 +166,7 @@
     map.on('click',e=>{
       if(activeTool && !drawMode){ placeEmoji(e.latlng); activeTool=null; return; }
       if(!drawMode) return;
+      // drawing mode
       tempPoints.push([e.latlng.lat,e.latlng.lng]);
       if(tempPoints.length>1){
         const line=L.polyline([tempPoints.at(-2),tempPoints.at(-1)],{
@@ -185,13 +186,12 @@
       legendSet.set(activeTool.dataset.label,activeTool.dataset.icon);
       renderLegend();
     }
-
     function renderLegend(){
-      const list = document.getElementById('legendList'); list.innerHTML='';
+      const list=document.getElementById('legendList'); list.innerHTML='';
       legendSet.forEach((icon,label)=>{ const li=document.createElement('li'); li.textContent=`${icon} ${label}`; list.appendChild(li); });
     }
 
-    // --- Drawing polygons ---
+    // Drawing polygons
     document.getElementById('modeToggle').onclick=()=>{
       drawMode=!drawMode;
       document.getElementById('modeToggle').textContent=drawMode?'🖱️ Label Mode':'✏️ Draw Mode';
@@ -208,15 +208,10 @@
       clearSketch();
     };
     document.getElementById('cancelPolygon').onclick=()=>clearSketch();
-
     function clearSketch(){ tempPoints=[]; tempLines.forEach(l=>map.removeLayer(l)); tempLines=[]; }
-
     function selectPolygon(poly){ selected=poly; selectedLine=null; document.getElementById('polygonControls').style.display='flex'; }
     function selectLine(line){ if(selectedLine) selectedLine.setStyle({weight:2}); selectedLine=line; selected=null; line.setStyle({weight:4}); document.getElementById('polygonControls').style.display='none'; }
-
-    document.getElementById('toggleFill').onclick=()=>{
-      if(!selected) return; selected.setStyle({fillOpacity: selected.options.fillOpacity>0 ? 0 : 0.25});
-    };
+    document.getElementById('toggleFill').onclick=()=>{ if(!selected) return; selected.setStyle({fillOpacity: selected.options.fillOpacity>0 ? 0 : 0.25}); };
     document.getElementById('deletePoly').onclick=()=>deleteSelected();
     document.addEventListener('keydown',e=>{ if(e.key==="Delete") deleteSelected(); });
     function deleteSelected(){
@@ -224,13 +219,9 @@
       if(selectedLine){ map.removeLayer(selectedLine); tempLines=tempLines.filter(l=>l!==selectedLine); selectedLine=null; }
     }
 
-    // --- Watermark upload/drag/size/opacity ---
-    const wm = document.getElementById('watermark');
-    const wmImg = document.getElementById('watermarkImg');
-    const wmControls = document.getElementById('wmControls');
-    const wmOpacity = document.getElementById('wmOpacity');
-    const wmSize = document.getElementById('wmSize');
-
+    // Watermark controls
+    const wm=document.getElementById('watermark'), wmImg=document.getElementById('watermarkImg'),
+          wmControls=document.getElementById('wmControls'), wmOpacity=document.getElementById('wmOpacity'), wmSize=document.getElementById('wmSize');
     document.getElementById('logoBtn').onclick=()=>document.getElementById('logoFile').click();
     document.getElementById('logoFile').addEventListener('change', e=>{
       const f=e.target.files[0]; if(!f) return;
@@ -238,46 +229,29 @@
       r.onload=ev=>{ wmImg.src=ev.target.result; wm.style.display='block'; wmControls.style.display='flex'; wm.style.width=wmSize.value+'px'; wm.style.opacity=wmOpacity.value; };
       r.readAsDataURL(f);
     });
-    document.getElementById('toggleWmPanel').onclick=()=>{ wmControls.style.display = (wmControls.style.display==='flex'?'none':'flex'); };
-    wmOpacity.oninput=()=>{ wm.style.opacity = wmOpacity.value; };
-    wmSize.oninput=()=>{ wm.style.width = wmSize.value+'px'; };
+    document.getElementById('toggleWmPanel').onclick=()=>{ wmControls.style.display=(wmControls.style.display==='flex'?'none':'flex'); };
+    wmOpacity.oninput=()=>wm.style.opacity=wmOpacity.value;
+    wmSize.oninput=()=>wm.style.width=wmSize.value+'px';
     document.getElementById('wmHide').onclick=()=>{ wm.style.display='none'; wmControls.style.display='none'; };
 
-    // Drag watermark (mouse + touch)
-    let dragging=false, startX=0, startY=0, startLeft=0, startTop=0;
-    const onDown = (x,y)=>{ dragging=true; const r=wm.getBoundingClientRect(); startX=x; startY=y; startLeft=r.left; startTop=r.top; map.dragging.disable(); };
-    const onMove = (x,y)=>{ if(!dragging) return;
-      const dx=x-startX, dy=y-startY; const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
-      wm.style.left=(startLeft+dx-wrapRect.left)+'px'; wm.style.top=(startTop+dy-wrapRect.top)+'px';
-      wm.style.right='auto'; wm.style.bottom='auto'; wm.style.position='absolute';
-    };
-    const onUp = ()=>{ dragging=false; map.dragging.enable(); };
+    // Drag watermark
+    let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
+    wm.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startY=e.clientY;const r=wm.getBoundingClientRect();startLeft=r.left;startTop=r.top;map.dragging.disable();});
+    window.addEventListener('mousemove',e=>{if(!dragging) return;const dx=e.clientX-startX,dy=e.clientY-startY;const wrap=document.getElementById('mapWrap').getBoundingClientRect();wm.style.left=(startLeft+dx-wrap.left)+'px';wm.style.top=(startTop+dy-wrap.top)+'px';wm.style.right='auto';wm.style.bottom='auto';wm.style.position='absolute';});
+    window.addEventListener('mouseup',()=>{dragging=false;map.dragging.enable();});
 
-    wm.addEventListener('mousedown', e=>{ onDown(e.clientX,e.clientY); e.preventDefault(); });
-    window.addEventListener('mousemove', e=>onMove(e.clientX,e.clientY));
-    window.addEventListener('mouseup', onUp);
-
-    wm.addEventListener('touchstart', e=>{ const t=e.touches[0]; onDown(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
-    window.addEventListener('touchmove', e=>{ if(!dragging) return; const t=e.touches[0]; onMove(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
-    window.addEventListener('touchend', onUp);
-
-    // Helper: draw watermark into any canvas (safeguard)
+    // Helper: draw WM into a canvas (safety)
     function addWatermarkToCanvas(c){
       return new Promise(resolve=>{
-        if(!wmImg.src || wm.style.display==='none') return resolve(c);
-        const ctx=c.getContext('2d');
-        const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
-        const wmRect=wm.getBoundingClientRect();
-        const scaleX=c.width/wrapRect.width, scaleY=c.height/wrapRect.height;
-        const left=(wmRect.left-wrapRect.left)*scaleX;
-        const top =(wmRect.top -wrapRect.top )*scaleY;
-        const w=wmRect.width*scaleX, h=wmRect.height*scaleY;
-        ctx.globalAlpha=parseFloat(wmOpacity.value); ctx.drawImage(wmImg,left,top,w,h); ctx.globalAlpha=1;
-        resolve(c);
+        if(!wmImg.src||wm.style.display==='none') return resolve(c);
+        const ctx=c.getContext('2d'); const wrap=document.getElementById('mapWrap').getBoundingClientRect(); const wmRect=wm.getBoundingClientRect();
+        const scaleX=c.width/wrap.width, scaleY=c.height/wrap.height;
+        const left=(wmRect.left-wrap.left)*scaleX, top=(wmRect.top-wrap.top)*scaleY, w=wmRect.width*scaleX, h=wmRect.height*scaleY;
+        ctx.globalAlpha=parseFloat(wmOpacity.value); ctx.drawImage(wmImg,left,top,w,h); ctx.globalAlpha=1; resolve(c);
       });
     }
 
-    // --- PNG Export (whole page) ---
+    // PNG Export (whole page)
     document.getElementById('exportBtn').onclick=()=>{
       const size=document.getElementById('exportSize').value;
       let scale=2; if(size==='a4') scale=2.5; if(size==='a3') scale=3.5; if(size==='a1') scale=7;
@@ -286,25 +260,40 @@
       });
     };
 
-    // --- PDF Export (capture the full map wrapper so legend & overlays match the view) ---
+    // PDF Export (size + orientation + scale mode)
     document.getElementById('exportPdfBtn').onclick=()=>{
       const { jsPDF } = window.jspdf;
       const size=document.getElementById('exportSize').value;
       let format='a4'; if(size==='a3') format='a3'; if(size==='a1') format='a1';
-      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format});
+      const orientation=document.getElementById('exportOrientation').value;
+      const scaleMode=document.getElementById('exportScaleMode').value; // 'ratio' | 'fit'
+
+      const pdf=new jsPDF({orientation,unit:'mm',format});
 
       html2canvas(document.getElementById('mapWrap'), {
         useCORS:true,
         scale:2,
-        backgroundColor:'#000' // ensures any transparent areas render as black
+        backgroundColor:'#000'
       })
       .then(addWatermarkToCanvas)
       .then(c=>{
         const img=c.toDataURL('image/jpeg',1.0);
         const pageW=pdf.internal.pageSize.getWidth();
         const pageH=pdf.internal.pageSize.getHeight();
-        pdf.addImage(img,'JPEG',0,0,pageW,pageH);
-        pdf.save(`event-map-${format}.pdf`);
+
+        let imgW, imgH, x, y;
+        if(scaleMode==='fit'){
+          // Stretch to fill page (may distort if aspect ratios differ)
+          imgW=pageW; imgH=pageH; x=0; y=0;
+        }else{
+          // Maintain aspect ratio, fit inside page and center
+          const ratio=Math.min(pageW/c.width, pageH/c.height);
+          imgW=c.width*ratio; imgH=c.height*ratio;
+          x=(pageW-imgW)/2; y=(pageH-imgH)/2;
+        }
+
+        pdf.addImage(img,'JPEG',x,y,imgW,imgH);
+        pdf.save(`event-map-${format}-${orientation}-${scaleMode}.pdf`);
       });
     };
   </script>
