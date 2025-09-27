@@ -10,10 +10,6 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
 
-  <!-- Leaflet Control Geocoder -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-
   <!-- Export libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -22,15 +18,16 @@
     :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
     body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink)}
     header{background:#121722;border-bottom:1px solid var(--border);padding:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-    header h1{font-size:16px;margin:0;font-weight:600;flex:1}
-    #topbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    header h1{font-size:16px;margin:0;font-weight:600;flex:0 0 auto}
+    #topbar{display:flex;flex:1;flex-wrap:wrap;gap:6px;align-items:center}
     .btn{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px}
     .btn.primary{background:var(--accent);color:#0a1524;border:none}
+    #searchBox{background:#fff;color:#000;border:1px solid var(--border);border-radius:6px;padding:6px;font-size:14px;flex:1;min-width:160px}
     #toolbar{display:flex;overflow-x:auto;gap:8px;padding:6px;background:#1a1f29;border-bottom:1px solid var(--border)}
     .tool{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel)}
     .tool .emoji{font-size:22px}
     .tool .lbl{font-size:11px;color:var(--muted);white-space:nowrap}
-    #map{width:100%;height:calc(100vh - 160px)}
+    #map{width:100%;height:calc(100vh - 180px)}
     .leaflet-tooltip.custom-label{background:rgba(18,23,34,.75);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:2px 6px;font-size:12px}
     #hint{position:fixed;bottom:6px;left:6px;right:6px;background:#0f141d;border:1px solid var(--border);padding:6px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:1000;text-align:center}
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
@@ -39,12 +36,15 @@
     #legend h3{margin:0 0 6px 0;font-size:12px}
     #legend ul{margin:0;padding:0;list-style:none}
     #legend li{margin:2px 0}
+    #watermark{position:fixed;bottom:10px;right:10px;z-index:1200;opacity:0.5;max-width:150px;max-height:100px;display:none;}
+    #watermark img{max-width:100%;max-height:100%}
   </style>
 </head>
 <body>
   <header>
     <h1>Event Map Builder</h1>
     <div id="topbar">
+      <input type="text" id="searchBox" placeholder="Search location..." />
       <button class="btn" id="modeToggle">✏️ Draw Mode</button>
       <input type="color" id="colorPicker" value="#ff0000" class="btn" />
       <button class="btn" id="finishPolygon">Finish</button>
@@ -53,6 +53,7 @@
         <option value="a3">A3</option>
         <option value="a1">A1</option>
       </select>
+      <input type="file" id="logoUpload" accept="image/*" class="btn" />
       <button class="btn" id="exportBtn">Export PNG</button>
       <button class="btn primary" id="exportPdfBtn">Export PDF</button>
     </div>
@@ -72,7 +73,7 @@
   </div>
 
   <div id="map"></div>
-  <div id="hint">💡 Search for location • Tap/drag icons • Draw polygons • Toggle fill/delete • Export PNG/PDF</div>
+  <div id="hint">💡 Search location • Tap/drag icons • Draw polygons • Toggle fill/delete • Export PNG/PDF</div>
 
   <div id="polygonControls">
     <button id="toggleFill" class="btn">Toggle Fill</button>
@@ -81,6 +82,7 @@
 
   <div id="compass">🧭</div>
   <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
+  <div id="watermark"><img id="watermarkImg" /></div>
 
   <script>
     const map = L.map('map').setView([-32.77,149.67],15);
@@ -89,12 +91,22 @@
       attribution:'Imagery © NSW Spatial Services'
     }).addTo(map);
 
-    // Add search control
-    L.Control.geocoder({
-      defaultMarkGeocode: true,
-      placeholder: "Search location...",
-      errorMessage: "Not found."
-    }).addTo(map);
+    // Search autocomplete with Enter
+    const searchBox=document.getElementById('searchBox');
+    searchBox.addEventListener('keydown',async e=>{
+      if(e.key==="Enter"){
+        const query=searchBox.value.trim();
+        if(!query) return;
+        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const data=await res.json();
+        if(data && data.length>0){
+          const lat=parseFloat(data[0].lat), lon=parseFloat(data[0].lon);
+          map.setView([lat,lon],15);
+        } else {
+          alert("Location not found");
+        }
+      }
+    });
 
     let drawMode=false, tempPoints=[], polygons=[], selected=null, activeTool=null;
     const legendSet=new Map();
@@ -190,6 +202,33 @@
       }
     });
 
+    // Logo upload → watermark
+    document.getElementById('logoUpload').addEventListener('change', e=>{
+      const file=e.target.files[0];
+      if(file){
+        const reader=new FileReader();
+        reader.onload=ev=>{
+          document.getElementById('watermarkImg').src=ev.target.result;
+          document.getElementById('watermark').style.display='block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function addWatermarkToCanvas(c){
+      return new Promise(resolve=>{
+        const wm=document.getElementById('watermarkImg');
+        if(wm && wm.src){
+          const ctx=c.getContext('2d');
+          const w=150, h=100;
+          ctx.globalAlpha=0.5;
+          ctx.drawImage(wm,c.width-w-20,c.height-h-20,w,h);
+          ctx.globalAlpha=1.0;
+        }
+        resolve(c);
+      });
+    }
+
     // PNG Export
     document.getElementById('exportBtn').onclick=()=>{
       const size=document.getElementById('exportSize').value;
@@ -197,7 +236,7 @@
       if(size==='a4') scale=2.5;
       if(size==='a3') scale=3.5;
       if(size==='a1') scale=7;
-      html2canvas(document.body,{useCORS:true,scale:scale}).then(c=>{
+      html2canvas(document.body,{useCORS:true,scale:scale}).then(addWatermarkToCanvas).then(c=>{
         const a=document.createElement('a');
         a.download=`event-map-${size}.png`; a.href=c.toDataURL(); a.click();
       });
@@ -209,7 +248,7 @@
       const size=document.getElementById('exportSize').value;
       let format="a4"; if(size==="a3") format="a3"; if(size==="a1") format="a1";
       const pdf=new jsPDF({orientation:"portrait",unit:"mm",format});
-      html2canvas(map.getContainer(),{useCORS:true,scale:2}).then(c=>{
+      html2canvas(map.getContainer(),{useCORS:true,scale:2}).then(addWatermarkToCanvas).then(c=>{
         const img=c.toDataURL("image/jpeg",1.0);
         const pageWidth=pdf.internal.pageSize.getWidth();
         const pageHeight=pdf.internal.pageSize.getHeight();
