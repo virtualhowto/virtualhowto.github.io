@@ -1,1 +1,118 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Event Map Builder</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
+    header { background: #333; color: white; padding: 10px; text-align: center; }
+    #toolbar { display: flex; gap: 10px; padding: 10px; background: #eee; }
+    .tool {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 5px; cursor: grab;
+    }
+    .tool img { width: 40px; height: 40px; }
+    #map-container {
+      position: relative; margin: 10px auto; width: 90%; height: 80vh;
+      border: 2px solid #444; background: #ddd; overflow: hidden;
+    }
+    #map {
+      width: 100%; height: 100%; object-fit: contain;
+    }
+    .label {
+      position: absolute; cursor: move; user-select: none;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .label img { width: 40px; height: 40px; }
+    .label span {
+      background: rgba(255,255,255,0.8); padding: 2px 4px; border-radius: 3px;
+      font-size: 12px; margin-top: 2px;
+    }
+    #controls { text-align: center; margin: 10px; }
+  </style>
+</head>
+<body>
+  <header><h2>Sofala Showground Event Map Builder</h2></header>
+
+  <div id="toolbar">
+    <div class="tool" draggable="true" data-label="Stage"><img src="https://img.icons8.com/emoji/48/performing-arts.png"><span>Stage</span></div>
+    <div class="tool" draggable="true" data-label="Toilets"><img src="https://img.icons8.com/emoji/48/toilet.png"><span>Toilets</span></div>
+    <div class="tool" draggable="true" data-label="Parking"><img src="https://img.icons8.com/emoji/48/parking.png"><span>Parking</span></div>
+    <div class="tool" draggable="true" data-label="First Aid"><img src="https://img.icons8.com/emoji/48/hospital.png"><span>First Aid</span></div>
+    <div class="tool" draggable="true" data-label="Camping"><img src="https://img.icons8.com/emoji/48/tent.png"><span>Camping</span></div>
+  </div>
+
+  <div id="map-container">
+    <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Event Map Base">
+  </div>
+
+  <div id="controls">
+    <button id="exportBtn">Export as PNG</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    const container = document.getElementById('map-container');
+    const tools = document.querySelectorAll('.tool');
+    let dragItem = null;
+
+    // Drag from toolbar
+    tools.forEach(tool => {
+      tool.addEventListener('dragstart', e => {
+        dragItem = tool;
+      });
+    });
+
+    // Drop on map
+    container.addEventListener('dragover', e => e.preventDefault());
+    container.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragItem) {
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left - 20;
+        const y = e.clientY - rect.top - 20;
+        addLabel(dragItem.dataset.label, dragItem.querySelector('img').src, x, y);
+      }
+    });
+
+    // Add label function
+    function addLabel(text, icon, x, y) {
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.style.left = x + 'px';
+      label.style.top = y + 'px';
+      label.innerHTML = `<img src="${icon}"><span contenteditable="true">${text}</span>`;
+      container.appendChild(label);
+
+      // Make draggable
+      let offsetX, offsetY;
+      label.onmousedown = e => {
+        if (e.target.tagName === 'SPAN') return; // allow text edit
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
+        function move(ev) {
+          label.style.left = (ev.clientX - container.getBoundingClientRect().left - offsetX) + 'px';
+          label.style.top = (ev.clientY - container.getBoundingClientRect().top - offsetY) + 'px';
+        }
+        function up() {
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+        }
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      };
+    }
+
+    // Export button
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      html2canvas(container).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'event-map.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    });
+  </script>
+</body>
+</html>
