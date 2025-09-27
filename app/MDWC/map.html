@@ -89,7 +89,7 @@
     </div>
   </header>
 
-  <!-- Emoji/Text toolbar -->
+  <!-- Emoji/Text + Permanent PNG + Uploader toolbar -->
   <div id="toolbar">
     <div class="tool" data-type="emoji" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
     <div class="tool" data-type="emoji" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
@@ -97,17 +97,21 @@
     <div class="tool" data-type="emoji" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span></div>
     <div class="tool" data-type="emoji" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span></div>
     <div class="tool" data-type="emoji" data-label="Competition Detecting" data-icon="🏆"><span class="emoji">🏆</span></div>
-    <!-- Free Detecting = magnifying glass -->
     <div class="tool" data-type="emoji" data-label="Free Detecting" data-icon="🔍"><span class="emoji">🔍</span></div>
     <div class="tool" data-type="emoji" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
     <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
     <div class="tool" data-type="text"  data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
 
-    <!-- Custom icon uploader -->
+    <!-- Permanent PNG icon in the same folder; change filename if needed -->
+    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" title="No Detecting">
+      <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
+      <span class="label">No Detecting</span>
+    </div>
+
+    <!-- Custom icon uploader (optional) -->
     <input id="customIconInput" type="file" accept="image/*" style="display:none">
     <button class="tool" id="addCustomIconBtn" title="Add custom PNG icon">
-      <img class="thumb" src="" alt="" style="display:none">
       <span class="emoji" style="font-size:18px">➕</span>
       <span class="label">Custom Icon</span>
     </button>
@@ -187,7 +191,20 @@
     centerOnUser({silent:true});
     document.getElementById('gpsBtn').addEventListener('click',()=>centerOnUser());
 
-    // Compass rose
+    // Search (Enter) via Nominatim
+    const searchBox=document.getElementById('searchBox');
+    searchBox.addEventListener('keydown',async e=>{
+      if(e.key!=="Enter") return;
+      const q=searchBox.value.trim(); if(!q) return;
+      try{
+        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+        const data=await res.json();
+        if(data && data.length){ map.setView([+data[0].lat, +data[0].lon], 15); }
+        else alert("Location not found");
+      }catch{ alert("Search error"); }
+    });
+
+    // Compass
     const compass = L.control({position:'topright'});
     compass.onAdd=()=>{
       const d=L.DomUtil.create('div','compass-control');
@@ -202,19 +219,6 @@
     };
     compass.addTo(map);
 
-    // Search (Enter)
-    const searchBox=document.getElementById('searchBox');
-    searchBox.addEventListener('keydown',async e=>{
-      if(e.key!=="Enter") return;
-      const q=searchBox.value.trim(); if(!q) return;
-      try{
-        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
-        const data=await res.json();
-        if(data && data.length){ map.setView([+data[0].lat, +data[0].lon], 15); }
-        else alert("Location not found");
-      }catch{ alert("Search error"); }
-    });
-
     // ---------- State ----------
     let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null;
     const markers=[]; let selectedMarker=null;
@@ -225,14 +229,20 @@
     const exportMenu = document.getElementById('exportMenu');
     const toggleMenu = (show)=>exportMenu.style.display = show ? 'block' : 'none';
     exportBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMenu(exportMenu.style.display!=='block'); });
-    document.addEventListener('click', ()=>toggleMenu(false));
+    document.addEventListener('click', (e)=>{
+      toggleMenu(false);
+      if(!e.target.closest('#watermark') && !e.target.closest('#wmControls')) {
+        document.getElementById('wmControls').style.display='none';
+        clearTimeout(wm._hideTimer);
+      }
+    });
     exportMenu.addEventListener('click',(e)=>e.stopPropagation());
     document.getElementById('menuPng').onclick=()=>{ toggleMenu(false); exportPNG(); };
     document.getElementById('menuPdf').onclick=()=>{ toggleMenu(false); openPdfDialog(); };
     document.getElementById('menuJsonExport').onclick=()=>{ toggleMenu(false); doExportJSON(); };
     document.getElementById('menuJsonImport').onclick=()=>{ toggleMenu(false); document.getElementById('importJsonFile').click(); };
 
-    // ---------- Tools (emoji/text/custom image) ----------
+    // ---------- Tools (emoji/text/permanent image/custom image) ----------
     let activeTool=null;
     function attachToolHandlers(){
       document.querySelectorAll('.tool[data-type]').forEach(t=>{
@@ -241,7 +251,7 @@
     }
     attachToolHandlers();
 
-    // Custom icon uploader
+    // Custom icon uploader (optional)
     const customInput = document.getElementById('customIconInput');
     const addCustomBtn = document.getElementById('addCustomIconBtn');
     addCustomBtn.addEventListener('click', ()=> customInput.click());
@@ -249,21 +259,19 @@
       const f=e.target.files[0]; if(!f) return;
       const r=new FileReader();
       r.onload=ev=>{
-        const label = prompt("Label for this icon (for legend):","No Detecting");
-        const dataUrl = ev.target.result;
-        addCustomTool(label || "Custom", dataUrl);
-        // reset so the same file can be selected again later
+        const label = prompt("Label for this icon (for legend):","Custom");
+        addCustomTool(label || "Custom", ev.target.result);
         customInput.value = "";
       };
       r.readAsDataURL(f);
     });
-
     function addCustomTool(label, dataUrl){
       const btn = document.createElement('button');
       btn.className = 'tool';
       btn.setAttribute('data-type','image');
       btn.setAttribute('data-label', label);
       btn.setAttribute('data-imgsrc', dataUrl);
+      btn.setAttribute('data-size', '26'); // Set default size to match emojis
       btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt=""><span class="label">${label}</span>`;
       addCustomBtn.insertAdjacentElement('beforebegin', btn);
       attachToolHandlers();
@@ -275,9 +283,9 @@
         const label = activeTool.dataset.label;
         if(type==='emoji' || type==='text' || type==='image'){
           const meta = { label };
-          if(type==='emoji'){ meta.icon = activeTool.dataset.icon; }
+          if(type==='emoji'){ meta.icon = activeTool.dataset.icon; meta.size = 26; }
           if(type==='text'){  meta.icon = '✏️'; meta.isText = true; }
-          if(type==='image'){ meta.imgSrc = activeTool.dataset.imgsrc; }
+          if(type==='image'){ meta.imgSrc = activeTool.dataset.imgsrc; meta.size = parseInt(activeTool.dataset.size) || 26; }
           placeMarkerOrText(e.latlng, meta);
           activeTool=null;
           return;
@@ -309,7 +317,6 @@
       const size = meta.size || 26;
       let html;
       if(meta.imgSrc){
-        // Render as <img> so it scales crisply
         html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
                   <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
                 </div>`;
@@ -341,7 +348,6 @@
 
     function openMarkerPopup(marker){
       const isText = !!marker.myMeta.isText;
-      const hasImg = !!marker.myMeta.imgSrc;
       const sizeNow = marker.myMeta.size || 26;
       const colorNow = marker.myMeta.color || "#ffffff";
       const wrap = document.createElement('div');
@@ -349,7 +355,8 @@
       wrap.innerHTML = `
         <label>Size <input type="range" min="12" max="120" step="2" value="${sizeNow}"></label>
         ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
-        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">
+          <button type="button" id="cloneBtn" style="background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Clone</button>
           <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
         </div>
       `;
@@ -366,11 +373,19 @@
           refreshMarkerIcon(marker);
         });
       }
+      // Delete
       wrap.querySelector('#delBtn').addEventListener('click',()=>{
         map.removeLayer(marker);
         const idx = markers.indexOf(marker); if(idx>-1) markers.splice(idx,1);
         if(selectedMarker===marker) selectedMarker=null;
         marker.closePopup();
+      });
+      // Clone
+      wrap.querySelector('#cloneBtn').addEventListener('click',()=>{
+        const ll = marker.getLatLng();
+        const offset = 0.0002; // ~20m-ish
+        const metaCopy = JSON.parse(JSON.stringify(marker.myMeta));
+        placeMarkerOrText(L.latLng(ll.lat+offset, ll.lng+offset), metaCopy);
       });
 
       selectedMarker = marker;
@@ -466,9 +481,30 @@
     wmOpacity.oninput=()=>{ wm.style.opacity=wmOpacity.value; hideWmControlsSoon(); };
     wmSize.oninput=()=>{ wm.style.width=wmSize.value+'px'; hideWmControlsSoon(); };
     document.getElementById('wmDelete').onclick=()=>{ wm.style.display='none'; wmControls.style.display='none'; wmImg.src=''; };
-    wm.addEventListener('click',()=>{ wmControls.style.display='flex'; });
+    wm.addEventListener('contextmenu', (e)=>{
+      e.preventDefault();
+      wmControls.style.display='flex';
+      clearTimeout(wm._hideTimer);
+    });
+    wm.addEventListener('mousedown', (e)=>{
+      dragging=true;
+      startX=e.clientX;
+      startY=e.clientY;
+      const r=wm.getBoundingClientRect();
+      startLeft=r.left;
+      startTop=r.top;
+      map.dragging.disable();
+      wmControls.style.display='flex';
+      clearTimeout(wm._hideTimer);
+    });
+    wm.addEventListener('click', (e)=>{
+      e.stopPropagation();
+    });
 
-    function hideWmControlsSoon(){ clearTimeout(wm._hideTimer); wm._hideTimer=setTimeout(()=>{ wmControls.style.display='none'; },1200); }
+    function hideWmControlsSoon(){ 
+      clearTimeout(wm._hideTimer); 
+      wm._hideTimer=setTimeout(()=>{ wmControls.style.display='none'; },1200); 
+    }
     function ensureWMLeftTop(){
       if(!wm.style.left && !wm.style.top){
         wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
@@ -476,25 +512,67 @@
         wm.style.right='auto'; wm.style.bottom='auto'; wm.style.position='absolute';
       }
     }
-    // Drag WM (mouse)
+    // Drag WM
     let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
-    wm.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startY=e.clientY;const r=wm.getBoundingClientRect();startLeft=r.left;startTop=r.top;map.dragging.disable();});
-    window.addEventListener('mousemove',e=>{if(!dragging) return;const dx=e.clientX-startX,dy=e.clientY-startY;const wrap=document.getElementById('mapWrap').getBoundingClientRect();wm.style.left=(startLeft+dx-wrap.left)+'px';wm.style.top=(startTop+dy-wrap.top)+'px';wm.style.right='auto';wm.style.bottom='auto';wm.style.position='absolute';});
-    window.addEventListener('mouseup',()=>{dragging=false;map.dragging.enable();});
-    // Drag WM (touch)
+    window.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const dx=e.clientX-startX,dy=e.clientY-startY;
+      const wrap=document.getElementById('mapWrap').getBoundingClientRect();
+      wm.style.left=(startLeft+dx-wrap.left)+'px';
+      wm.style.top=(startTop+dy-wrap.top)+'px';
+      wm.style.right='auto'; 
+      wm.style.bottom='auto'; 
+      wm.style.position='absolute';
+    });
+    window.addEventListener('mouseup',()=>{
+      dragging=false;
+      map.dragging.enable();
+      hideWmControlsSoon();
+    });
+    // Touch drag
     let draggingT=false, tStart=null;
-    wm.addEventListener('touchstart',e=>{const t=e.touches[0];draggingT=true;tStart={x:t.clientX,y:t.clientY};const r=wm.getBoundingClientRect();startLeft=r.left;startTop=r.top;map.dragging.disable();},{passive:false});
-    window.addEventListener('touchmove',e=>{if(!draggingT) return;const t=e.touches[0];const dx=t.clientX-tStart.x,dy=t.clientY-tStart.y;const wrap=document.getElementById('mapWrap').getBoundingClientRect();wm.style.left=(startLeft+dx-wrap.left)+'px';wm.style.top=(startTop+dy-wrap.top)+'px';wm.style.right='auto';wm.style.bottom='auto';wm.style.position='absolute';e.preventDefault();},{passive:false});
-    window.addEventListener('touchend',()=>{draggingT=false;map.dragging.enable();});
+    wm.addEventListener('touchstart',e=>{
+      const t=e.touches[0];
+      draggingT=true;
+      tStart={x:t.clientX,y:t.clientY};
+      const r=wm.getBoundingClientRect();
+      startLeft=r.left;
+      startTop=r.top;
+      map.dragging.disable();
+      wmControls.style.display='flex';
+      clearTimeout(wm._hideTimer);
+    },{passive:false});
+    window.addEventListener('touchmove',e=>{
+      if(!draggingT) return;
+      const t=e.touches[0];
+      const dx=t.clientX-tStart.x,dy=t.clientY-tStart.y;
+      const wrap=document.getElementById('mapWrap').getBoundingClientRect();
+      wm.style.left=(startLeft+dx-wrap.left)+'px';
+      wm.style.top=(startTop+dy-wrap.top)+'px';
+      wm.style.right='auto'; 
+      wm.style.bottom='auto'; 
+      wm.style.position='absolute';
+      e.preventDefault();
+    },{passive:false});
+    window.addEventListener('touchend',()=>{
+      draggingT=false;
+      map.dragging.enable();
+      hideWmControlsSoon();
+    });
 
     // ---------- Export helpers ----------
     function addWatermarkToCanvas(c){
       return new Promise(resolve=>{
         if(!wmImg.src || wm.style.display==='none'){ return resolve(c); }
-        const ctx=c.getContext('2d'); const wrap=document.getElementById('mapWrap').getBoundingClientRect(); const wmRect=wm.getBoundingClientRect();
+        const ctx=c.getContext('2d'); 
+        const wrap=document.getElementById('mapWrap').getBoundingClientRect(); 
+        const wmRect=wm.getBoundingClientRect();
         const scaleX=c.width/wrap.width, scaleY=c.height/wrap.height;
         const left=(wmRect.left-wrap.left)*scaleX, top=(wmRect.top-wrap.top)*scaleY, w=wmRect.width*scaleX, h=wmRect.height*scaleY;
-        ctx.globalAlpha=parseFloat(wm.style.opacity || 1); ctx.drawImage(wmImg,left,top,w,h); ctx.globalAlpha=1; resolve(c);
+        ctx.globalAlpha=parseFloat(wm.style.opacity || 1); 
+        ctx.drawImage(wmImg,left,top,w,h); 
+        ctx.globalAlpha=1; 
+        resolve(c);
       });
     }
     function captureMapCanvas() {
@@ -507,15 +585,24 @@
     }
     function exportPNG(){
       captureMapCanvas().then(c=>{
-        const a=document.createElement('a'); a.download='event-map.png'; a.href=c.toDataURL('image/png'); a.click();
+        const a=document.createElement('a'); 
+        a.download='event-map.png'; 
+        a.href=c.toDataURL('image/png'); 
+        a.click();
       });
     }
 
     // ---------- PDF dialog ----------
     const pdfBackdrop=document.getElementById('pdfBackdrop');
     const pdfDialog=document.getElementById('pdfDialog');
-    function openPdfDialog(){ pdfBackdrop.style.display='block'; pdfDialog.style.display='block'; }
-    function closePdfDialog(){ pdfBackdrop.style.display='none'; pdfDialog.style.display='none'; }
+    function openPdfDialog(){ 
+      pdfBackdrop.style.display='block'; 
+      pdfDialog.style.display='block'; 
+    }
+    function closePdfDialog(){ 
+      pdfBackdrop.style.display='none'; 
+      pdfDialog.style.display='none'; 
+    }
     pdfBackdrop.addEventListener('click', closePdfDialog);
     document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
 
@@ -589,7 +676,7 @@
       } : null;
 
       return {
-        version: 4,
+        version: 5,
         createdAt: new Date().toISOString(),
         view: { center: map.getCenter(), zoom: map.getZoom() },
         markers: savedMarkers,
