@@ -22,37 +22,27 @@
     #topbar{display:flex;flex:1;flex-wrap:wrap;gap:8px;align-items:center}
     .btn{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px}
     .btn.primary{background:var(--accent);color:#0a1524;border:none}
-
     .dropdown{position:relative;display:inline-block}
     .dropdown-menu{display:none;position:absolute;right:0;top:100%;margin-top:6px;background:#1a1f29;border:1px solid var(--border);border-radius:10px;min-width:180px;z-index:3000;box-shadow:0 10px 25px rgba(0,0,0,.4)}
     .dropdown-menu button{width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--ink);cursor:pointer;font-size:14px}
     .dropdown-menu button:hover{background:#0f141d}
-
     #toolbar{display:flex;overflow-x:auto;gap:8px;padding:6px;background:#1a1f29;border-bottom:1px solid var(--border)}
     .tool{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel)}
     .tool .emoji{font-size:22px}
-
     #mapWrap{position:relative}
     #map{width:100%;height:calc(100vh - 380px)}
-
     #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:220px}
     #legend h3{margin:0 0 6px 0;font-size:12px}
     #legend ul{margin:0;padding:0;list-style:none}
     #legend li{margin:2px 0}
-
-    .compass-control{
-      background:#0f141d;border:1px solid var(--border);border-radius:50%;
-      width:40px;height:40px;display:flex;align-items:center;justify-content:center;
-      font-size:20px;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,0.5)
-    }
-
+    .compass-control{background:#0f141d;border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+    .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
     .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
     .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
     .modal h3{margin:0 0 10px 0;color:#fff;font-size:16px}
     .modal label{display:block;margin:10px 0;color:var(--muted);font-size:13px}
     .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
     .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
-    .modal .actions .btn{padding:8px 12px}
   </style>
 </head>
 <body>
@@ -61,7 +51,6 @@
     <div id="topbar">
       <button class="btn" id="gpsBtn">📍 Use GPS</button>
       <input type="text" id="searchBox" placeholder="Search location..." />
-
       <div class="dropdown">
         <button class="btn" id="exportMenuBtn">📤 Export ▼</button>
         <div class="dropdown-menu" id="exportMenu">
@@ -86,6 +75,7 @@
     <div class="tool" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
     <div class="tool" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
+    <div class="tool" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
   </div>
 
   <div id="mapWrap">
@@ -119,17 +109,76 @@
       url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
       attribution:'Imagery © NSW Spatial Services'
     }).addTo(map);
-
-    // Sofala fallback
-    const SOFALA_CENTER = [-33.083, 149.689]; const SOFALA_ZOOM = 15;
-    map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+    const SOFALA_CENTER = [-33.083, 149.689]; map.setView(SOFALA_CENTER, 15);
 
     // Compass
     const compassControl = L.control({position: 'topright'});
-    compassControl.onAdd = () => {
-      const div = L.DomUtil.create('div', 'compass-control'); div.innerHTML = '🧭'; return div;
-    };
+    compassControl.onAdd = () => { const div=L.DomUtil.create('div','compass-control'); div.innerHTML='🧭'; return div; };
     compassControl.addTo(map);
+
+    // --- Marker & text logic ---
+    const markers=[]; let selectedMarker=null; const legendSet=new Map();
+
+    function placeEmoji(latlng, meta){
+      if(meta.label==="Text Label"){
+        const text=prompt("Enter label text:"); if(!text) return;
+        meta.icon=text;
+      }
+      const size=meta.size||26;
+      const html=`<div style="font-size:${size}px;cursor:move;">${meta.icon}</div>`;
+      const marker=L.marker(latlng,{
+        icon:L.divIcon({className:"custom-div-icon",html,iconSize:[size,size],iconAnchor:[size/2,size/2]}),
+        draggable:true
+      }).addTo(map);
+      marker.myMeta={...meta,size};
+      marker.on('click',()=>{selectedMarker=marker;});
+      marker.on('contextmenu',()=>openSizePopup(marker));
+      markers.push(marker);
+      legendSet.set(meta.label,meta.icon); renderLegend();
+    }
+
+    function openSizePopup(marker){
+      const sizeNow=marker.myMeta.size||26;
+      const wrap=document.createElement('div');
+      wrap.innerHTML=`
+        <label>Size <input type="range" min="12" max="96" step="2" value="${sizeNow}"></label>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        </div>`;
+      const input=wrap.querySelector('input');
+      input.addEventListener('input',()=>{
+        const newSize=parseInt(input.value);
+        marker.myMeta.size=newSize;
+        marker.setIcon(L.divIcon({className:"custom-div-icon",html:`<div style="font-size:${newSize}px;cursor:move;">${marker.myMeta.icon}</div>`,iconSize:[newSize,newSize],iconAnchor:[newSize/2,newSize/2]}));
+      });
+      wrap.querySelector('#delBtn').addEventListener('click',()=>{
+        map.removeLayer(marker); const idx=markers.indexOf(marker); if(idx>-1) markers.splice(idx,1); if(selectedMarker===marker) selectedMarker=null; marker.closePopup();
+      });
+      marker.bindPopup(wrap).openPopup();
+    }
+
+    function renderLegend(){
+      const list=document.getElementById('legendList'); list.innerHTML='';
+      legendSet.forEach((icon,label)=>{ const li=document.createElement('li'); li.textContent=`${icon} ${label}`; list.appendChild(li); });
+    }
+
+    // Delete with keyboard
+    document.addEventListener('keydown',e=>{
+      if(e.key==="Delete" && selectedMarker){
+        map.removeLayer(selectedMarker);
+        const idx=markers.indexOf(selectedMarker); if(idx>-1) markers.splice(idx,1);
+        selectedMarker=null;
+      }
+    });
+
+    // Toolbar
+    let activeTool=null;
+    document.querySelectorAll('.tool').forEach(t=>{
+      t.addEventListener('click',()=>{activeTool=t;});
+    });
+    map.on('click',e=>{
+      if(activeTool){ placeEmoji(e.latlng,{label:activeTool.dataset.label,icon:activeTool.dataset.icon}); activeTool=null; }
+    });
   </script>
 </body>
 </html>
