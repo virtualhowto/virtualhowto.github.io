@@ -1,244 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Event Map Builder</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
-    header { background: #333; color: white; padding: 10px; text-align: center; }
-    #toolbar { display: flex; gap: 10px; padding: 10px; background: #eee; flex-wrap: wrap; }
-    .tool {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 5px; cursor: grab;
+    :root{
+      --bg:#0e1116; --panel:#1a1f29; --ink:#e8eef7; --muted:#aab3c5; --accent:#4aa3ff;
+      --border:#2a3342; --warn:#ff6b6b;
     }
-    .tool span.emoji { font-size: 32px; }
-    #map-container {
-      position: relative; margin: 10px auto; width: 90%; height: 80vh;
-      border: 2px solid #444; background: #ddd; overflow: hidden;
-    }
-    #map { width: 100%; height: 100%; object-fit: contain; }
-    .label {
-      position: absolute; cursor: move; user-select: none;
-      display: flex; flex-direction: column; align-items: center;
-    }
-    .label span.emoji { font-size: 32px; }
-    .label span.text {
-      background: rgba(255,255,255,0.8); padding: 2px 4px; border-radius: 3px;
-      font-size: 12px; margin-top: 2px;
-    }
-    #controls { text-align: center; margin: 10px; }
-    canvas.overlay {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%; pointer-events: none;
-    }
-    #colorPicker, #modeToggle { margin-left: 10px; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:var(--ink)}
+    header{background:#121722;border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
+    header h1{font-size:18px;margin:0;font-weight:600}
+    #topbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+    #topbar > *{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:8px 10px;border-radius:10px}
+    #colorPicker{padding:6px}
+    #toolbar{display:flex;gap:10px;padding:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);background:#1a1f29}
+    .tool{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 8px;border:1px dashed var(--border);border-radius:10px;cursor:grab;background:var(--panel)}
+    .tool span.emoji{font-size:28px;line-height:1}
+    .tool span.lbl{font-size:12px;color:var(--muted)}
+    #workspace{padding:12px}
+    #map-container{position:relative;margin:0 auto;border:1px solid var(--border);border-radius:14px;overflow:hidden;
+      width:min(1200px,94vw);height:76vh;background:#0c0f15;display:grid;place-items:center}
+    #map{max-width:100%;max-height:100%;object-fit:contain;display:block}
+    canvas.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto}
+    .label{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:move;user-select:none;transform:translate(-50%,-100%);outline:0}
+    .label.selected .text{box-shadow:0 0 0 2px var(--accent) inset}
+    .label .emoji{font-size:30px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.5))}
+    .label .text{margin-top:2px;font-size:12px;background:rgba(18,23,34,.75);padding:2px 6px;border-radius:6px;border:1px solid var(--border);color:var(--ink)}
+    #hint{position:fixed;bottom:10px;left:10px;background:#0f141d;border:1px solid var(--border);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:50}
+    #signin-screen{position:fixed;inset:0;background:#05070b;display:flex;align-items:center;justify-content:center;z-index:9999}
+    #signin-card{width:min(420px,92vw);background:#0f141d;border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+    #signin-card h2{margin:0 0 12px 0;font-size:18px}
+    .row{display:flex;gap:8px}
+    .field{flex:1;display:flex;flex-direction:column;gap:6px}
+    .field input{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0b1018;color:var(--ink)}
+    .signin-btn{width:100%;padding:10px 12px;border-radius:10px;background:var(--accent);border:none;font-weight:600;color:#08131f;margin-top:12px}
+    #signin-msg{color:#ff9b9b;font-size:12px;display:none;margin-top:6px}
+    .muted{color:var(--muted);font-size:12px;margin-top:6px}
   </style>
 </head>
 <body>
-  <header><h2>Sofala Showground Event Map Builder</h2></header>
+  <header>
+    <h1>Event Map Builder</h1>
+    <div id="topbar">
+      <label for="baseImage">📷 Upload Map <input type="file" id="baseImage" accept="image/*" /></label>
+      <button id="modeToggle">✏️ Draw Mode</button>
+      <input type="color" id="colorPicker" value="#ff0000" />
+      <button id="finishPolygon">Finish Polygon</button>
+      <button id="exportBtn">Export PNG</button>
+    </div>
+  </header>
 
   <div id="toolbar">
-    <div class="tool" draggable="true" data-label="Stage" data-icon="🎤">
-      <span class="emoji">🎤</span><span>Stage</span>
-    </div>
-    <div class="tool" draggable="true" data-label="Toilets" data-icon="🚻">
-      <span class="emoji">🚻</span><span>Toilets</span>
-    </div>
-    <div class="tool" draggable="true" data-label="Parking" data-icon="🅿️">
-      <span class="emoji">🅿️</span><span>Parking</span>
-    </div>
-    <div class="tool" draggable="true" data-label="First Aid" data-icon="⛑️">
-      <span class="emoji">⛑️</span><span>First Aid</span>
-    </div>
-    <div class="tool" draggable="true" data-label="Camping" data-icon="⛺">
-      <span class="emoji">⛺</span><span>Camping</span>
+    <div class="tool" draggable="true" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span><span class="lbl">Stage</span></div>
+    <div class="tool" draggable="true" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span><span class="lbl">Toilets</span></div>
+    <div class="tool" draggable="true" data-label="Parking" data-icon="🅿️"><span class="emoji">🅿️</span><span class="lbl">Parking</span></div>
+    <div class="tool" draggable="true" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span><span class="lbl">First Aid</span></div>
+    <div class="tool" draggable="true" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span><span class="lbl">Camping</span></div>
+    <div class="tool" draggable="true" data-label="Competition Detecting" data-icon="🏆🔎"><span class="emoji">🏆🔎</span><span class="lbl">Competition</span></div>
+    <div class="tool" draggable="true" data-label="Free Detecting" data-icon="🆓🔎"><span class="emoji">🆓🔎</span><span class="lbl">Free Detecting</span></div>
+    <div class="tool" draggable="true" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span><span class="lbl">Sign-in Desk</span></div>
+  </div>
+
+  <div id="workspace">
+    <div id="map-container">
+      <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Base Map">
+      <canvas id="draw-layer" class="overlay"></canvas>
     </div>
   </div>
 
-  <div id="map-container">
-    <!-- Base map -->
-    <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Event Map Base">
-    <!-- Drawing overlay -->
-    <canvas id="draw-layer" class="overlay"></canvas>
-  </div>
+  <div id="hint">💡 Tips: Drag icons • Delete key removes • Draw Mode for polygons • Upload a map image</div>
 
-  <div id="controls">
-    <button id="exportBtn">Export as PNG</button>
-    <button id="modeToggle">Switch to Draw Mode</button>
-    <input type="color" id="colorPicker" value="#ff0000">
-    <button id="finishPolygon">Finish Polygon</button>
+  <div id="signin-screen">
+    <div id="signin-card">
+      <h2>Sign in to edit maps</h2>
+      <div class="row">
+        <div class="field"><label>Username</label><input id="username" type="text" placeholder="admin" /></div>
+        <div class="field"><label>Password</label><input id="password" type="password" placeholder="••••••••" /></div>
+      </div>
+      <button class="signin-btn" id="signinBtn">Sign In</button>
+      <div id="signin-msg">Invalid login</div>
+      <div class="muted">Demo: <code>admin</code> / <code>detector123</code></div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    const container = document.getElementById('map-container');
-    const tools = document.querySelectorAll('.tool');
-    let dragItem = null;
+    // --- sign in ---
+    const validUser="admin", validPass="detector123";
+    if(localStorage.getItem("eventmap_user")) document.getElementById("signin-screen").style.display="none";
+    document.getElementById("signinBtn").onclick=()=>{
+      const u=document.getElementById("username").value, p=document.getElementById("password").value;
+      if(u===validUser && p===validPass){localStorage.setItem("eventmap_user","1");document.getElementById("signin-screen").style.display="none";}
+      else document.getElementById("signin-msg").style.display="block";
+    };
 
-    // -------------------
-    // Drag & Drop Labels
-    // -------------------
-    tools.forEach(tool => {
-      tool.addEventListener('dragstart', () => { dragItem = tool; });
+    // --- map upload ---
+    const container=document.getElementById("map-container"), baseImg=document.getElementById("map"), canvas=document.getElementById("draw-layer"), ctx=canvas.getContext("2d");
+    document.getElementById("baseImage").addEventListener("change",e=>{
+      const f=e.target.files[0]; if(!f) return; baseImg.src=URL.createObjectURL(f); setTimeout(fitCanvas,50);
     });
 
-    container.addEventListener('dragover', e => e.preventDefault());
-    container.addEventListener('drop', e => {
-      e.preventDefault();
-      if (dragItem && !drawMode) {
-        const rect = container.getBoundingClientRect();
-        const x = e.clientX - rect.left - 20;
-        const y = e.clientY - rect.top - 20;
-        addLabel(dragItem.dataset.label, dragItem.dataset.icon, x, y);
-      }
+    // --- state ---
+    let dragItem=null, drawMode=false, points=[], polygons=[], selectedPolygonIndex=null, selectedLabel=null;
+    const tools=document.querySelectorAll(".tool");
+    tools.forEach(tool=>tool.addEventListener("dragstart",()=>{dragItem=tool;}));
+    container.addEventListener("dragover",e=>e.preventDefault());
+    container.addEventListener("drop",e=>{
+      e.preventDefault(); if(!dragItem||drawMode) return;
+      const r=container.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+      addLabel(dragItem.dataset.label,dragItem.dataset.icon,x,y);
     });
 
-    function addLabel(text, icon, x, y) {
-      const label = document.createElement('div');
-      label.className = 'label';
-      label.style.left = x + 'px';
-      label.style.top = y + 'px';
-      label.tabIndex = 0;
-      label.innerHTML = `<span class="emoji">${icon}</span><span class="text" contenteditable="true">${text}</span>`;
-      container.appendChild(label);
-
-      // Dragging
-      let offsetX, offsetY;
-      label.onmousedown = e => {
-        if (e.target.classList.contains('text')) return;
-        offsetX = e.offsetX;
-        offsetY = e.offsetY;
-        function move(ev) {
-          label.style.left = (ev.clientX - container.getBoundingClientRect().left - offsetX) + 'px';
-          label.style.top = (ev.clientY - container.getBoundingClientRect().top - offsetY) + 'px';
-        }
-        function up() {
-          document.removeEventListener('mousemove', move);
-          document.removeEventListener('mouseup', up);
-        }
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', up);
-      };
-
-      // Delete with Delete key
-      label.addEventListener('click', () => {
-        selectedLabel = label;
+    function addLabel(text,icon,x,y){
+      const l=document.createElement("div"); l.className="label"; l.style.left=x+"px"; l.style.top=y+"px";
+      l.innerHTML=`<span class="emoji">${icon}</span><span class="text" contenteditable="true">${text}</span>`; container.appendChild(l);
+      l.addEventListener("mousedown",ev=>{
+        if(drawMode) return; selectedLabel=l; document.querySelectorAll(".label").forEach(e=>e.classList.remove("selected")); l.classList.add("selected");
+        if(ev.target.classList.contains("text")) return;
+        const c=container.getBoundingClientRect(),offX=ev.offsetX,offY=ev.offsetY;
+        function move(e2){l.style.left=(e2.clientX-c.left-offX)+"px";l.style.top=(e2.clientY-c.top-offY)+"px";}
+        function up(){document.removeEventListener("mousemove",move);document.removeEventListener("mouseup",up);}
+        document.addEventListener("mousemove",move);document.addEventListener("mouseup",up);
       });
     }
 
-    let selectedLabel = null;
+    // --- draw mode ---
+    document.getElementById("modeToggle").onclick=()=>{
+      drawMode=!drawMode;
+      document.getElementById("modeToggle").textContent=drawMode?"🖱️ Label Mode":"✏️ Draw Mode";
+    };
+    canvas.addEventListener("click",e=>{
+      const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+      if(drawMode){points.push({x,y}); redraw();}
+      else {selectedPolygonIndex=hitTestPolygon(x,y); redraw();}
+    });
+    document.getElementById("finishPolygon").onclick=()=>{
+      if(points.length>2){polygons.push({points:[...points],color:document.getElementById("colorPicker").value});}
+      points=[]; redraw();
+    };
 
-    document.addEventListener('keydown', e => {
-      if (e.key === "Delete" && selectedLabel) {
-        selectedLabel.remove();
-        selectedLabel = null;
-      }
-      if (e.key === "Delete" && selectedPolygonIndex !== null) {
-        polygons.splice(selectedPolygonIndex, 1);
-        selectedPolygonIndex = null;
-        redrawAll();
-      }
+    // --- delete ---
+    document.addEventListener("keydown",e=>{
+      if(e.key==="Delete"){if(selectedLabel){selectedLabel.remove();selectedLabel=null;} if(selectedPolygonIndex!=null){polygons.splice(selectedPolygonIndex,1);selectedPolygonIndex=null;redraw();}}
     });
 
-    // -------------------
-    // Drawing Mode
-    // -------------------
-    const canvas = document.getElementById('draw-layer');
-    const ctx = canvas.getContext('2d');
-    let drawMode = false;
-    let points = [];
-    let currentColor = document.getElementById('colorPicker').value;
-    let polygons = [];
-    let selectedPolygonIndex = null;
-
-    function resizeCanvas() {
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-      redrawAll();
+    // --- rendering ---
+    function pathFromPoints(pts){const p=new Path2D();if(!pts.length)return p;p.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)p.lineTo(pts[i].x,pts[i].y);p.closePath();return p;}
+    function hitTestPolygon(x,y){for(let i=polygons.length-1;i>=0;i--){if(ctx.isPointInPath(pathFromPoints(polygons[i].points),x,y))return i;}return null;}
+    function redraw(){fitCanvas();ctx.clearRect(0,0,canvas.width,canvas.height);
+      polygons.forEach((poly,i)=>{const p=pathFromPoints(poly.points);ctx.fillStyle=hexToRgba(poly.color,0.25);ctx.fill(p);ctx.setLineDash([6,4]);ctx.lineWidth=i===selectedPolygonIndex?3:2;ctx.strokeStyle=i===selectedPolygonIndex?"#000":poly.color;ctx.stroke(p);});
+      if(points.length){ctx.setLineDash([4,4]);ctx.strokeStyle=document.getElementById("colorPicker").value;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);ctx.stroke();}
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    function hexToRgba(hex,a){let r=0,g=0,b=0;if(hex.length===7){r=parseInt(hex.slice(1,3),16);g=parseInt(hex.slice(3,5),16);b=parseInt(hex.slice(5,7),16);}return`rgba(${r},${g},${b},${a})`;}
+    function fitCanvas(){canvas.width=container.clientWidth;canvas.height=container.clientHeight;}
+    window.addEventListener("resize",fitCanvas);fitCanvas();
 
-    document.getElementById('modeToggle').addEventListener('click', () => {
-      drawMode = !drawMode;
-      document.getElementById('modeToggle').innerText = drawMode ? "Switch to Label Mode" : "Switch to Draw Mode";
-      canvas.style.pointerEvents = drawMode ? 'auto' : 'auto'; // keep clickable for polygon selection
-    });
-
-    canvas.addEventListener('click', e => {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      if (drawMode) {
-        points.push({x, y});
-        redrawAll();
-      } else {
-        // Selection mode: check polygons
-        selectedPolygonIndex = null;
-        polygons.forEach((poly, i) => {
-          if (ctx.isPointInPath(new Path2D(poly.path), x, y)) {
-            selectedPolygonIndex = i;
-          }
-        });
-        redrawAll();
-      }
-    });
-
-    document.getElementById('colorPicker').addEventListener('input', e => {
-      currentColor = e.target.value;
-    });
-
-    document.getElementById('finishPolygon').addEventListener('click', () => {
-      if (points.length > 2) {
-        const path = new Path2D();
-        path.moveTo(points[0].x, points[0].y);
-        for (let i=1; i<points.length; i++) path.lineTo(points[i].x, points[i].y);
-        path.closePath();
-        polygons.push({points: [...points], color: currentColor, path: path});
-      }
-      points = [];
-      redrawAll();
-    });
-
-    function redrawAll() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-
-      polygons.forEach((poly, i) => {
-        ctx.beginPath();
-        ctx.moveTo(poly.points[0].x, poly.points[0].y);
-        for (let j=1; j<poly.points.length; j++) ctx.lineTo(poly.points[j].x, poly.points[j].y);
-        ctx.closePath();
-        ctx.fillStyle = poly.color + "40"; // transparent fill
-        ctx.fill();
-        ctx.setLineDash([6,4]);
-        ctx.lineWidth = (i === selectedPolygonIndex ? 3 : 2);
-        ctx.strokeStyle = i === selectedPolygonIndex ? "black" : poly.color;
-        ctx.stroke();
-      });
-
-      // Draw temp polygon being created
-      if (points.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-        ctx.setLineDash([4,4]);
-        ctx.strokeStyle = currentColor;
-        ctx.stroke();
-      }
-    }
-
-    // -------------------
-    // Export
-    // -------------------
-    document.getElementById('exportBtn').addEventListener('click', () => {
-      html2canvas(container).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'event-map.png';
-        link.href = canvas.toDataURL();
-        link.click();
-      });
-    });
+    // --- export ---
+    document.getElementById("exportBtn").onclick=()=>{html2canvas(container,{backgroundColor:null}).then(c=>{const a=document.createElement("a");a.download="event-map.png";a.href=c.toDataURL();a.click();});};
   </script>
 </body>
 </html>
