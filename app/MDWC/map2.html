@@ -27,7 +27,7 @@
     .tool{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel)}
     .tool .emoji{font-size:22px}
     .tool .lbl{font-size:11px;color:var(--muted);white-space:nowrap}
-    #map{width:100%;height:calc(100vh - 180px)}
+    #map{width:100%;height:calc(100vh - 200px)}
     .leaflet-tooltip.custom-label{background:rgba(18,23,34,.75);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:2px 6px;font-size:12px}
     #hint{position:fixed;bottom:6px;left:6px;right:6px;background:#0f141d;border:1px solid var(--border);padding:6px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:1000;text-align:center}
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
@@ -48,6 +48,10 @@
       <button class="btn" id="modeToggle">✏️ Draw Mode</button>
       <input type="color" id="colorPicker" value="#ff0000" class="btn" />
       <button class="btn" id="finishPolygon">Finish</button>
+      <button class="btn" id="cancelPolygon">Cancel</button>
+      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
+        <input type="checkbox" id="defaultFill" checked /> Fill new polygon
+      </label>
       <select id="exportSize" class="btn">
         <option value="a4">A4</option>
         <option value="a3">A3</option>
@@ -73,7 +77,7 @@
   </div>
 
   <div id="map"></div>
-  <div id="hint">💡 Search location • Tap/drag icons • Draw polygons • Toggle fill/delete • Export PNG/PDF</div>
+  <div id="hint">💡 Search location • Tap/drag icons • Draw polygons/lines • Toggle fill/delete • Export PNG/PDF</div>
 
   <div id="polygonControls">
     <button id="toggleFill" class="btn">Toggle Fill</button>
@@ -91,7 +95,7 @@
       attribution:'Imagery © NSW Spatial Services'
     }).addTo(map);
 
-    // Search autocomplete with Enter
+    // Search box with OSM Nominatim
     const searchBox=document.getElementById('searchBox');
     searchBox.addEventListener('keydown',async e=>{
       if(e.key==="Enter"){
@@ -108,7 +112,7 @@
       }
     });
 
-    let drawMode=false, tempPoints=[], polygons=[], selected=null, activeTool=null;
+    let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null, activeTool=null;
     const legendSet=new Map();
 
     // Tools
@@ -133,7 +137,11 @@
       } else if(drawMode){
         tempPoints.push([e.latlng.lat,e.latlng.lng]);
         if(tempPoints.length>1){
-          L.polyline(tempPoints,{color:document.getElementById('colorPicker').value,dashArray:"4,4"}).addTo(map);
+          const line=L.polyline([tempPoints[tempPoints.length-2],tempPoints[tempPoints.length-1]],{
+            color:document.getElementById('colorPicker').value,dashArray:"4,4"
+          }).addTo(map);
+          line.on('click',()=>selectLine(line));
+          tempLines.push(line);
         }
       }
     });
@@ -166,17 +174,35 @@
       if(tempPoints.length>2){
         const poly=L.polygon(tempPoints,{
           color:document.getElementById('colorPicker').value,
-          weight:2,dashArray:"6,4",fillOpacity:0.25
+          weight:2,dashArray:"6,4",
+          fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
         }).addTo(map);
         poly.on('click',()=>selectPolygon(poly));
         polygons.push(poly);
       }
-      tempPoints=[];
+      clearTempDrawing();
     };
+
+    document.getElementById('cancelPolygon').onclick=()=>{ clearTempDrawing(); };
+
+    function clearTempDrawing(){
+      tempPoints=[];
+      tempLines.forEach(l=>map.removeLayer(l));
+      tempLines=[];
+    }
 
     function selectPolygon(poly){
       selected=poly;
+      selectedLine=null;
       document.getElementById('polygonControls').style.display='flex';
+    }
+
+    function selectLine(line){
+      if(selectedLine) selectedLine.setStyle({weight:2});
+      selectedLine=line;
+      selected=null;
+      line.setStyle({weight:4});
+      document.getElementById('polygonControls').style.display='none';
     }
 
     document.getElementById('toggleFill').onclick=()=>{
@@ -186,19 +212,32 @@
     };
 
     document.getElementById('deletePoly').onclick=()=>{
-      if(!selected) return;
-      map.removeLayer(selected);
-      polygons=polygons.filter(p=>p!==selected);
-      selected=null;
+      if(selected){
+        map.removeLayer(selected);
+        polygons=polygons.filter(p=>p!==selected);
+        selected=null;
+      }
+      if(selectedLine){
+        map.removeLayer(selectedLine);
+        tempLines=tempLines.filter(l=>l!==selectedLine);
+        selectedLine=null;
+      }
       document.getElementById('polygonControls').style.display='none';
     };
 
     document.addEventListener('keydown',e=>{
-      if(e.key==="Delete"&&selected){
-        map.removeLayer(selected);
-        polygons=polygons.filter(p=>p!==selected);
-        selected=null;
-        document.getElementById('polygonControls').style.display='none';
+      if(e.key==="Delete"){
+        if(selected){
+          map.removeLayer(selected);
+          polygons=polygons.filter(p=>p!==selected);
+          selected=null;
+          document.getElementById('polygonControls').style.display='none';
+        }
+        if(selectedLine){
+          map.removeLayer(selectedLine);
+          tempLines=tempLines.filter(l=>l!==selectedLine);
+          selectedLine=null;
+        }
       }
     });
 
