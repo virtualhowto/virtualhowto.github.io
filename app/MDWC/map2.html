@@ -27,17 +27,34 @@
     .tool{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel)}
     .tool .emoji{font-size:22px}
     .tool .lbl{font-size:11px;color:var(--muted);white-space:nowrap}
-    #map{width:100%;height:calc(100vh - 200px)}
+
+    #mapWrap{position:relative}
+    #map{width:100%;height:calc(100vh - 240px)}
     .leaflet-tooltip.custom-label{background:rgba(18,23,34,.75);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:2px 6px;font-size:12px}
+
     #hint{position:fixed;bottom:6px;left:6px;right:6px;background:#0f141d;border:1px solid var(--border);padding:6px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:1000;text-align:center}
+
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
-    #compass{position:fixed;top:70px;right:10px;background:#0f141d;border:1px solid var(--border);border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1200}
-    #legend{position:fixed;bottom:70px;left:10px;background:#0f141d;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:1200;color:var(--ink);max-width:160px}
+
+    /* Legend with solid black background so it prints as seen */
+    #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:200px}
     #legend h3{margin:0 0 6px 0;font-size:12px}
     #legend ul{margin:0;padding:0;list-style:none}
     #legend li{margin:2px 0}
-    #watermark{position:fixed;bottom:10px;right:10px;z-index:1200;opacity:0.5;max-width:150px;max-height:100px;display:none;}
-    #watermark img{max-width:100%;max-height:100%}
+
+    /* Watermark overlay (inside mapWrap so it exports) */
+    #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
+    #watermark img{display:block;max-width:100%;max-height:100%}
+    #wmControls{position:absolute;bottom:110%;right:0;background:#0f141d;border:1px solid var(--border);border-radius:8px;padding:8px;display:none;gap:6px;z-index:851;width:220px}
+    #wmControls label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px;margin:4px 0}
+    #wmControls input[type="range"]{flex:1}
+
+    /* Compass as a Leaflet control on the map */
+    .compass-control{
+      background:#0f141d;border:1px solid var(--border);border-radius:50%;
+      width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+      font-size:20px;color:var(--ink)
+    }
   </style>
 </head>
 <body>
@@ -57,7 +74,9 @@
         <option value="a3">A3</option>
         <option value="a1">A1</option>
       </select>
-      <input type="file" id="logoUpload" accept="image/*" class="btn" />
+      <input type="file" id="logoFile" accept="image/*" style="display:none"/>
+      <button class="btn" id="logoBtn">Upload Logo</button>
+      <button class="btn" id="toggleWmPanel">WM Controls</button>
       <button class="btn" id="exportBtn">Export PNG</button>
       <button class="btn primary" id="exportPdfBtn">Export PDF</button>
     </div>
@@ -76,230 +95,216 @@
     <div class="tool" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span><span class="lbl">Food Area</span></div>
   </div>
 
-  <div id="map"></div>
-  <div id="hint">💡 Search location • Tap/drag icons • Draw polygons/lines • Toggle fill/delete • Export PNG/PDF</div>
+  <div id="mapWrap">
+    <div id="map"></div>
 
-  <div id="polygonControls">
+    <!-- Legend inside the map so exports match the view -->
+    <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
+
+    <!-- Watermark with controls -->
+    <div id="watermark">
+      <img id="watermarkImg" alt="watermark"/>
+      <div id="wmControls">
+        <label>Opacity <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="0.5"></label>
+        <label>Size (px) <input id="wmSize" type="range" min="60" max="500" step="10" value="150"></label>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button class="btn" id="wmHide">Hide</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hint">💡 Search • Drag/click emoji labels (no pins) • Draw polygons/lines • Toggle fill/delete • Watermark controls • Export PNG/PDF</div>
+
+  <div id="polygonControls" class="leaflet-top leaflet-right">
     <button id="toggleFill" class="btn">Toggle Fill</button>
     <button id="deletePoly" class="btn">Delete</button>
   </div>
 
-  <div id="compass">🧭</div>
-  <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
-  <div id="watermark"><img id="watermarkImg" /></div>
-
   <script>
+    // --- Map ---
     const map = L.map('map').setView([-32.77,149.67],15);
     L.esri.tiledMapLayer({
       url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
       attribution:'Imagery © NSW Spatial Services'
     }).addTo(map);
 
-    // Search box with OSM Nominatim
+    // Compass as a Leaflet control (on the map)
+    const compassControl = L.control({position: 'topright'});
+    compassControl.onAdd = () => {
+      const div = L.DomUtil.create('div', 'compass-control'); div.innerHTML = '🧭'; return div;
+    };
+    compassControl.addTo(map);
+
+    // --- Search (OSM Nominatim) ---
     const searchBox=document.getElementById('searchBox');
     searchBox.addEventListener('keydown',async e=>{
-      if(e.key==="Enter"){
-        const query=searchBox.value.trim();
-        if(!query) return;
-        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+      if(e.key!=="Enter") return;
+      const q=searchBox.value.trim(); if(!q) return;
+      try{
+        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
         const data=await res.json();
-        if(data && data.length>0){
-          const lat=parseFloat(data[0].lat), lon=parseFloat(data[0].lon);
-          map.setView([lat,lon],15);
-        } else {
-          alert("Location not found");
-        }
-      }
+        if(data && data.length){ map.setView([+data[0].lat, +data[0].lon], 15); }
+        else alert("Location not found");
+      }catch{ alert("Search error"); }
     });
 
+    // --- State ---
     let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null, activeTool=null;
     const legendSet=new Map();
 
-    // Tools
+    // --- Emoji tools (drag + click) ---
     document.querySelectorAll('.tool').forEach(t=>{
       t.addEventListener('dragstart',()=>{activeTool=t;});
-      t.addEventListener('click',()=>{
-        activeTool=t;
-        alert(`Tap the map to place: ${t.dataset.label}`);
-      });
+      t.addEventListener('click',()=>{ activeTool=t; });
     });
-
     map.getContainer().addEventListener('dragover',e=>e.preventDefault());
     map.getContainer().addEventListener('drop',e=>{
       e.preventDefault(); if(!activeTool||drawMode) return;
-      const latlng=map.containerPointToLatLng([e.offsetX,e.offsetY]);
-      placeMarker(latlng);
+      placeEmoji(map.containerPointToLatLng([e.offsetX,e.offsetY]));
     });
-
     map.on('click',e=>{
-      if(activeTool && !drawMode){
-        placeMarker(e.latlng); activeTool=null;
-      } else if(drawMode){
-        tempPoints.push([e.latlng.lat,e.latlng.lng]);
-        if(tempPoints.length>1){
-          const line=L.polyline([tempPoints[tempPoints.length-2],tempPoints[tempPoints.length-1]],{
-            color:document.getElementById('colorPicker').value,dashArray:"4,4"
-          }).addTo(map);
-          line.on('click',()=>selectLine(line));
-          tempLines.push(line);
-        }
+      if(activeTool && !drawMode){ placeEmoji(e.latlng); activeTool=null; return; }
+      if(!drawMode) return;
+      tempPoints.push([e.latlng.lat,e.latlng.lng]);
+      if(tempPoints.length>1){
+        const line=L.polyline([tempPoints.at(-2),tempPoints.at(-1)],{
+          color:document.getElementById('colorPicker').value,dashArray:"4,4",weight:2
+        }).addTo(map);
+        line.on('click',()=>selectLine(line));
+        tempLines.push(line);
       }
     });
 
-    function placeMarker(latlng){
-      const marker=L.marker(latlng,{draggable:true}).addTo(map);
-      marker.bindTooltip(
-        `<div contenteditable="true" style="outline:0">${activeTool.dataset.icon} ${activeTool.dataset.label}</div>`,
-        {permanent:true,direction:'top',className:'custom-label',opacity:0.95});
+    function placeEmoji(latlng){
+      const html = `<div contenteditable="true" style="font-size:20px;cursor:move;">${activeTool.dataset.icon} ${activeTool.dataset.label}</div>`;
+      L.marker(latlng,{
+        icon: L.divIcon({className:"custom-div-icon",html,iconSize:[30,30],iconAnchor:[15,15]}),
+        draggable:true
+      }).addTo(map);
       legendSet.set(activeTool.dataset.label,activeTool.dataset.icon);
-      updateLegend();
+      renderLegend();
     }
 
-    function updateLegend(){
-      const list=document.getElementById('legendList');
-      list.innerHTML='';
-      legendSet.forEach((icon,label)=>{
-        const li=document.createElement('li');
-        li.textContent=`${icon} ${label}`;
-        list.appendChild(li);
-      });
+    function renderLegend(){
+      const list = document.getElementById('legendList'); list.innerHTML='';
+      legendSet.forEach((icon,label)=>{ const li=document.createElement('li'); li.textContent=`${icon} ${label}`; list.appendChild(li); });
     }
 
+    // --- Drawing polygons ---
     document.getElementById('modeToggle').onclick=()=>{
       drawMode=!drawMode;
       document.getElementById('modeToggle').textContent=drawMode?'🖱️ Label Mode':'✏️ Draw Mode';
     };
-
     document.getElementById('finishPolygon').onclick=()=>{
       if(tempPoints.length>2){
         const poly=L.polygon(tempPoints,{
-          color:document.getElementById('colorPicker').value,
-          weight:2,dashArray:"6,4",
+          color:document.getElementById('colorPicker').value,weight:2,dashArray:"6,4",
           fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
         }).addTo(map);
         poly.on('click',()=>selectPolygon(poly));
         polygons.push(poly);
       }
-      clearTempDrawing();
+      clearSketch();
     };
+    document.getElementById('cancelPolygon').onclick=()=>clearSketch();
 
-    document.getElementById('cancelPolygon').onclick=()=>{ clearTempDrawing(); };
+    function clearSketch(){ tempPoints=[]; tempLines.forEach(l=>map.removeLayer(l)); tempLines=[]; }
 
-    function clearTempDrawing(){
-      tempPoints=[];
-      tempLines.forEach(l=>map.removeLayer(l));
-      tempLines=[];
-    }
-
-    function selectPolygon(poly){
-      selected=poly;
-      selectedLine=null;
-      document.getElementById('polygonControls').style.display='flex';
-    }
-
-    function selectLine(line){
-      if(selectedLine) selectedLine.setStyle({weight:2});
-      selectedLine=line;
-      selected=null;
-      line.setStyle({weight:4});
-      document.getElementById('polygonControls').style.display='none';
-    }
+    function selectPolygon(poly){ selected=poly; selectedLine=null; document.getElementById('polygonControls').style.display='flex'; }
+    function selectLine(line){ if(selectedLine) selectedLine.setStyle({weight:2}); selectedLine=line; selected=null; line.setStyle({weight:4}); document.getElementById('polygonControls').style.display='none'; }
 
     document.getElementById('toggleFill').onclick=()=>{
-      if(!selected) return;
-      const current=selected.options.fillOpacity;
-      selected.setStyle({fillOpacity:current>0?0:0.25});
+      if(!selected) return; selected.setStyle({fillOpacity: selected.options.fillOpacity>0 ? 0 : 0.25});
     };
+    document.getElementById('deletePoly').onclick=()=>deleteSelected();
+    document.addEventListener('keydown',e=>{ if(e.key==="Delete") deleteSelected(); });
+    function deleteSelected(){
+      if(selected){ map.removeLayer(selected); polygons=polygons.filter(p=>p!==selected); selected=null; document.getElementById('polygonControls').style.display='none'; }
+      if(selectedLine){ map.removeLayer(selectedLine); tempLines=tempLines.filter(l=>l!==selectedLine); selectedLine=null; }
+    }
 
-    document.getElementById('deletePoly').onclick=()=>{
-      if(selected){
-        map.removeLayer(selected);
-        polygons=polygons.filter(p=>p!==selected);
-        selected=null;
-      }
-      if(selectedLine){
-        map.removeLayer(selectedLine);
-        tempLines=tempLines.filter(l=>l!==selectedLine);
-        selectedLine=null;
-      }
-      document.getElementById('polygonControls').style.display='none';
+    // --- Watermark upload/drag/size/opacity ---
+    const wm = document.getElementById('watermark');
+    const wmImg = document.getElementById('watermarkImg');
+    const wmControls = document.getElementById('wmControls');
+    const wmOpacity = document.getElementById('wmOpacity');
+    const wmSize = document.getElementById('wmSize');
+
+    document.getElementById('logoBtn').onclick=()=>document.getElementById('logoFile').click();
+    document.getElementById('logoFile').addEventListener('change', e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=ev=>{ wmImg.src=ev.target.result; wm.style.display='block'; wmControls.style.display='flex'; wm.style.width=wmSize.value+'px'; wm.style.opacity=wmOpacity.value; };
+      r.readAsDataURL(f);
+    });
+    document.getElementById('toggleWmPanel').onclick=()=>{ wmControls.style.display = (wmControls.style.display==='flex'?'none':'flex'); };
+    wmOpacity.oninput=()=>{ wm.style.opacity = wmOpacity.value; };
+    wmSize.oninput=()=>{ wm.style.width = wmSize.value+'px'; };
+    document.getElementById('wmHide').onclick=()=>{ wm.style.display='none'; wmControls.style.display='none'; };
+
+    // Drag watermark (mouse + touch)
+    let dragging=false, startX=0, startY=0, startLeft=0, startTop=0;
+    const onDown = (x,y)=>{ dragging=true; const r=wm.getBoundingClientRect(); startX=x; startY=y; startLeft=r.left; startTop=r.top; map.dragging.disable(); };
+    const onMove = (x,y)=>{ if(!dragging) return;
+      const dx=x-startX, dy=y-startY; const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
+      wm.style.left=(startLeft+dx-wrapRect.left)+'px'; wm.style.top=(startTop+dy-wrapRect.top)+'px';
+      wm.style.right='auto'; wm.style.bottom='auto'; wm.style.position='absolute';
     };
+    const onUp = ()=>{ dragging=false; map.dragging.enable(); };
 
-    document.addEventListener('keydown',e=>{
-      if(e.key==="Delete"){
-        if(selected){
-          map.removeLayer(selected);
-          polygons=polygons.filter(p=>p!==selected);
-          selected=null;
-          document.getElementById('polygonControls').style.display='none';
-        }
-        if(selectedLine){
-          map.removeLayer(selectedLine);
-          tempLines=tempLines.filter(l=>l!==selectedLine);
-          selectedLine=null;
-        }
-      }
-    });
+    wm.addEventListener('mousedown', e=>{ onDown(e.clientX,e.clientY); e.preventDefault(); });
+    window.addEventListener('mousemove', e=>onMove(e.clientX,e.clientY));
+    window.addEventListener('mouseup', onUp);
 
-    // Logo upload → watermark
-    document.getElementById('logoUpload').addEventListener('change', e=>{
-      const file=e.target.files[0];
-      if(file){
-        const reader=new FileReader();
-        reader.onload=ev=>{
-          document.getElementById('watermarkImg').src=ev.target.result;
-          document.getElementById('watermark').style.display='block';
-        };
-        reader.readAsDataURL(file);
-      }
-    });
+    wm.addEventListener('touchstart', e=>{ const t=e.touches[0]; onDown(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
+    window.addEventListener('touchmove', e=>{ if(!dragging) return; const t=e.touches[0]; onMove(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
+    window.addEventListener('touchend', onUp);
 
+    // Helper: draw watermark into any canvas (safeguard)
     function addWatermarkToCanvas(c){
       return new Promise(resolve=>{
-        const wm=document.getElementById('watermarkImg');
-        if(wm && wm.src){
-          const ctx=c.getContext('2d');
-          const w=150, h=100;
-          ctx.globalAlpha=0.5;
-          ctx.drawImage(wm,c.width-w-20,c.height-h-20,w,h);
-          ctx.globalAlpha=1.0;
-        }
+        if(!wmImg.src || wm.style.display==='none') return resolve(c);
+        const ctx=c.getContext('2d');
+        const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
+        const wmRect=wm.getBoundingClientRect();
+        const scaleX=c.width/wrapRect.width, scaleY=c.height/wrapRect.height;
+        const left=(wmRect.left-wrapRect.left)*scaleX;
+        const top =(wmRect.top -wrapRect.top )*scaleY;
+        const w=wmRect.width*scaleX, h=wmRect.height*scaleY;
+        ctx.globalAlpha=parseFloat(wmOpacity.value); ctx.drawImage(wmImg,left,top,w,h); ctx.globalAlpha=1;
         resolve(c);
       });
     }
 
-    // PNG Export
+    // --- PNG Export (whole page) ---
     document.getElementById('exportBtn').onclick=()=>{
       const size=document.getElementById('exportSize').value;
-      let scale=2;
-      if(size==='a4') scale=2.5;
-      if(size==='a3') scale=3.5;
-      if(size==='a1') scale=7;
-      html2canvas(document.body,{useCORS:true,scale:scale}).then(addWatermarkToCanvas).then(c=>{
-        const a=document.createElement('a');
-        a.download=`event-map-${size}.png`; a.href=c.toDataURL(); a.click();
+      let scale=2; if(size==='a4') scale=2.5; if(size==='a3') scale=3.5; if(size==='a1') scale=7;
+      html2canvas(document.body,{useCORS:true,scale}).then(addWatermarkToCanvas).then(c=>{
+        const a=document.createElement('a'); a.download=`event-map-${size}.png`; a.href=c.toDataURL('image/png'); a.click();
       });
     };
 
-    // PDF Export
+    // --- PDF Export (capture the full map wrapper so legend & overlays match the view) ---
     document.getElementById('exportPdfBtn').onclick=()=>{
       const { jsPDF } = window.jspdf;
       const size=document.getElementById('exportSize').value;
-      let format="a4"; if(size==="a3") format="a3"; if(size==="a1") format="a1";
-      const pdf=new jsPDF({orientation:"portrait",unit:"mm",format});
-      html2canvas(map.getContainer(),{useCORS:true,scale:2}).then(addWatermarkToCanvas).then(c=>{
-        const img=c.toDataURL("image/jpeg",1.0);
-        const pageWidth=pdf.internal.pageSize.getWidth();
-        const pageHeight=pdf.internal.pageSize.getHeight();
-        pdf.addImage(img,"JPEG",0,0,pageWidth,pageHeight);
-        // Compass
-        pdf.setFontSize(12); pdf.text("N",pageWidth-10,15);
-        pdf.line(pageWidth-10,20,pageWidth-10,30);
-        // Legend
-        let y=pageHeight-40; pdf.setFontSize(10);
-        pdf.text("Legend:",10,y); y+=6;
-        legendSet.forEach((icon,label)=>{pdf.text(`${icon} ${label}`,10,y);y+=6;});
-        pdf.save(`event-map-${size}.pdf`);
+      let format='a4'; if(size==='a3') format='a3'; if(size==='a1') format='a1';
+      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format});
+
+      html2canvas(document.getElementById('mapWrap'), {
+        useCORS:true,
+        scale:2,
+        backgroundColor:'#000' // ensures any transparent areas render as black
+      })
+      .then(addWatermarkToCanvas)
+      .then(c=>{
+        const img=c.toDataURL('image/jpeg',1.0);
+        const pageW=pdf.internal.pageSize.getWidth();
+        const pageH=pdf.internal.pageSize.getHeight();
+        pdf.addImage(img,'JPEG',0,0,pageW,pageH);
+        pdf.save(`event-map-${format}.pdf`);
       });
     };
   </script>
