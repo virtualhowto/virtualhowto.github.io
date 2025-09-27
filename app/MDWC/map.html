@@ -104,7 +104,7 @@
     <div class="tool" data-type="text"  data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
 
     <!-- Permanent PNG icon in the same folder; change filename if needed -->
-    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" title="No Detecting">
+    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" data-size="26" title="No Detecting">
       <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
       <span class="label">No Detecting</span>
     </div>
@@ -171,10 +171,11 @@
 
   <script>
     // ---------- Map init (no Leaflet attribution) ----------
-    const map = L.map('map', { attributionControl: false });
-    L.esri.tiledMapLayer({
-      url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
-      attribution:'Imagery © NSW Spatial Services'
+    const map = L.map('map', { attributionControl: false, preferCanvas: true });
+    const tileLayer = L.esri.tiledMapLayer({
+      url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+      attribution: 'Imagery © NSW Spatial Services',
+      crossOrigin: 'anonymous'
     }).addTo(map);
 
     // GPS + Sofala fallback
@@ -272,7 +273,7 @@
       btn.setAttribute('data-label', label);
       btn.setAttribute('data-imgsrc', dataUrl);
       btn.setAttribute('data-size', '26'); // Set default size to match emojis
-      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt=""><span class="label">${label}</span>`;
+      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt="${label}"/><span class="label">${label}</span>`;
       addCustomBtn.insertAdjacentElement('beforebegin', btn);
       attachToolHandlers();
     }
@@ -283,8 +284,8 @@
         const label = activeTool.dataset.label;
         if(type==='emoji' || type==='text' || type==='image'){
           const meta = { label };
-          if(type==='emoji'){ meta.icon = activeTool.dataset.icon; meta.size = 26; }
-          if(type==='text'){  meta.icon = '✏️'; meta.isText = true; }
+          if(type==='emoji'){ meta.icon = activeTool.dataset.icon; meta.size = parseInt(activeTool.dataset.size) || 26; }
+          if(type==='text'){  meta.icon = '✏️'; meta.isText = true; meta.size = 26; }
           if(type==='image'){ meta.imgSrc = activeTool.dataset.imgsrc; meta.size = parseInt(activeTool.dataset.size) || 26; }
           placeMarkerOrText(e.latlng, meta);
           activeTool=null;
@@ -576,12 +577,36 @@
       });
     }
     function captureMapCanvas() {
-      return html2canvas(document.getElementById('mapWrap'), {
-        useCORS: true,
-        scale: 2,
-        backgroundColor: '#000',
-        foreignObjectRendering: true
-      }).then(addWatermarkToCanvas);
+      return new Promise((resolve, reject) => {
+        // Ensure map is centered and tiles are loaded
+        map.invalidateSize();
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        map.setView(center, zoom); // Re-center map
+        tileLayer.once('load', () => {
+          // Hide polygon controls to avoid capturing them
+          const polygonControls = document.getElementById('polygonControls');
+          const originalDisplay = polygonControls.style.display;
+          polygonControls.style.display = 'none';
+          
+          html2canvas(document.getElementById('mapWrap'), {
+            useCORS: true,
+            scale: 3, // Higher resolution for PDF
+            backgroundColor: '#000',
+            foreignObjectRendering: true,
+            logging: false
+          }).then(canvas => {
+            // Restore polygon controls
+            polygonControls.style.display = originalDisplay;
+            addWatermarkToCanvas(canvas).then(resolve).catch(reject);
+          }).catch(err => {
+            polygonControls.style.display = originalDisplay;
+            reject(err);
+          });
+        });
+        // Trigger tile load
+        map._onResize();
+      });
     }
     function exportPNG(){
       captureMapCanvas().then(c=>{
@@ -589,6 +614,9 @@
         a.download='event-map.png'; 
         a.href=c.toDataURL('image/png'); 
         a.click();
+      }).catch(err => {
+        console.error('PNG export failed:', err);
+        alert('Failed to export PNG');
       });
     }
 
@@ -618,14 +646,19 @@
         const pageW=pdf.internal.pageSize.getWidth();
         const pageH=pdf.internal.pageSize.getHeight();
         let imgW,imgH,x,y;
-        if(scaleMode==='fit'){ imgW=pageW; imgH=pageH; x=0; y=0; }
-        else{
+        if(scaleMode==='fit'){
+          imgW=pageW; imgH=pageH; x=0; y=0;
+        }else{
           const ratio=Math.min(pageW/c.width, pageH/c.height);
           imgW=c.width*ratio; imgH=c.height*ratio;
           x=(pageW-imgW)/2; y=(pageH-imgH)/2;
         }
         pdf.addImage(img,'JPEG',x,y,imgW,imgH);
         pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
+        closePdfDialog();
+      }).catch(err => {
+        console.error('PDF export failed:', err);
+        alert('Failed to export PDF');
         closePdfDialog();
       });
     };
