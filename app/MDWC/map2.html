@@ -9,7 +9,14 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
+
+  <!-- Leaflet Control Geocoder -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+  <!-- Export libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
     :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
@@ -17,16 +24,21 @@
     header{background:#121722;border-bottom:1px solid var(--border);padding:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
     header h1{font-size:16px;margin:0;font-weight:600;flex:1}
     #topbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-    .btn{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+    .btn{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px}
     .btn.primary{background:var(--accent);color:#0a1524;border:none}
-    #toolbar{display:flex;overflow-x:auto;gap:10px;padding:8px;background:#1a1f29;border-bottom:1px solid var(--border)}
-    .tool{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:1px dashed var(--border);border-radius:10px;cursor:pointer;background:var(--panel)}
-    .tool .emoji{font-size:24px}
+    #toolbar{display:flex;overflow-x:auto;gap:8px;padding:6px;background:#1a1f29;border-bottom:1px solid var(--border)}
+    .tool{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel)}
+    .tool .emoji{font-size:22px}
     .tool .lbl{font-size:11px;color:var(--muted);white-space:nowrap}
-    #map{width:100%;height:calc(100vh - 140px)}
+    #map{width:100%;height:calc(100vh - 160px)}
     .leaflet-tooltip.custom-label{background:rgba(18,23,34,.75);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:2px 6px;font-size:12px}
     #hint{position:fixed;bottom:6px;left:6px;right:6px;background:#0f141d;border:1px solid var(--border);padding:6px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:1000;text-align:center}
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
+    #compass{position:fixed;top:70px;right:10px;background:#0f141d;border:1px solid var(--border);border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1200}
+    #legend{position:fixed;bottom:70px;left:10px;background:#0f141d;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:1200;color:var(--ink);max-width:160px}
+    #legend h3{margin:0 0 6px 0;font-size:12px}
+    #legend ul{margin:0;padding:0;list-style:none}
+    #legend li{margin:2px 0}
   </style>
 </head>
 <body>
@@ -36,7 +48,13 @@
       <button class="btn" id="modeToggle">✏️ Draw Mode</button>
       <input type="color" id="colorPicker" value="#ff0000" class="btn" />
       <button class="btn" id="finishPolygon">Finish</button>
-      <button class="btn primary" id="exportBtn">Export</button>
+      <select id="exportSize" class="btn">
+        <option value="a4">A4</option>
+        <option value="a3">A3</option>
+        <option value="a1">A1</option>
+      </select>
+      <button class="btn" id="exportBtn">Export PNG</button>
+      <button class="btn primary" id="exportPdfBtn">Export PDF</button>
     </div>
   </header>
 
@@ -54,46 +72,52 @@
   </div>
 
   <div id="map"></div>
-  <div id="hint">💡 Tap or drag icons • Draw polygons • Select to toggle fill/delete • Export PNG</div>
+  <div id="hint">💡 Search for location • Tap/drag icons • Draw polygons • Toggle fill/delete • Export PNG/PDF</div>
 
   <div id="polygonControls">
     <button id="toggleFill" class="btn">Toggle Fill</button>
     <button id="deletePoly" class="btn">Delete</button>
   </div>
 
+  <div id="compass">🧭</div>
+  <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
+
   <script>
-    // --- Map setup ---
     const map = L.map('map').setView([-32.77,149.67],15);
     L.esri.tiledMapLayer({
       url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
       attribution:'Imagery © NSW Spatial Services'
     }).addTo(map);
 
-    // --- State ---
-    let drawMode=false, tempPoints=[], polygons=[], selected=null, activeTool=null;
+    // Add search control
+    L.Control.geocoder({
+      defaultMarkGeocode: true,
+      placeholder: "Search location...",
+      errorMessage: "Not found."
+    }).addTo(map);
 
-    // --- Toolbar (desktop drag + mobile tap) ---
+    let drawMode=false, tempPoints=[], polygons=[], selected=null, activeTool=null;
+    const legendSet=new Map();
+
+    // Tools
     document.querySelectorAll('.tool').forEach(t=>{
-      // Desktop dragstart
       t.addEventListener('dragstart',()=>{activeTool=t;});
-      // Mobile tap
       t.addEventListener('click',()=>{
         activeTool=t;
         alert(`Tap the map to place: ${t.dataset.label}`);
       });
     });
 
-    // Drop / tap placement
     map.getContainer().addEventListener('dragover',e=>e.preventDefault());
     map.getContainer().addEventListener('drop',e=>{
       e.preventDefault(); if(!activeTool||drawMode) return;
       const latlng=map.containerPointToLatLng([e.offsetX,e.offsetY]);
       placeMarker(latlng);
     });
+
     map.on('click',e=>{
       if(activeTool && !drawMode){
-        placeMarker(e.latlng);
-        activeTool=null;
+        placeMarker(e.latlng); activeTool=null;
       } else if(drawMode){
         tempPoints.push([e.latlng.lat,e.latlng.lng]);
         if(tempPoints.length>1){
@@ -107,9 +131,20 @@
       marker.bindTooltip(
         `<div contenteditable="true" style="outline:0">${activeTool.dataset.icon} ${activeTool.dataset.label}</div>`,
         {permanent:true,direction:'top',className:'custom-label',opacity:0.95});
+      legendSet.set(activeTool.dataset.label,activeTool.dataset.icon);
+      updateLegend();
     }
 
-    // --- Polygon drawing ---
+    function updateLegend(){
+      const list=document.getElementById('legendList');
+      list.innerHTML='';
+      legendSet.forEach((icon,label)=>{
+        const li=document.createElement('li');
+        li.textContent=`${icon} ${label}`;
+        list.appendChild(li);
+      });
+    }
+
     document.getElementById('modeToggle').onclick=()=>{
       drawMode=!drawMode;
       document.getElementById('modeToggle').textContent=drawMode?'🖱️ Label Mode':'✏️ Draw Mode';
@@ -119,8 +154,7 @@
       if(tempPoints.length>2){
         const poly=L.polygon(tempPoints,{
           color:document.getElementById('colorPicker').value,
-          weight:2,dashArray:"6,4",
-          fillOpacity:0.25 // default, toggle later
+          weight:2,dashArray:"6,4",fillOpacity:0.25
         }).addTo(map);
         poly.on('click',()=>selectPolygon(poly));
         polygons.push(poly);
@@ -133,7 +167,6 @@
       document.getElementById('polygonControls').style.display='flex';
     }
 
-    // --- Polygon controls ---
     document.getElementById('toggleFill').onclick=()=>{
       if(!selected) return;
       const current=selected.options.fillOpacity;
@@ -148,9 +181,8 @@
       document.getElementById('polygonControls').style.display='none';
     };
 
-    // Keyboard delete (desktop)
     document.addEventListener('keydown',e=>{
-      if(e.key==="Delete" && selected){
+      if(e.key==="Delete"&&selected){
         map.removeLayer(selected);
         polygons=polygons.filter(p=>p!==selected);
         selected=null;
@@ -158,10 +190,38 @@
       }
     });
 
-    // --- Export ---
+    // PNG Export
     document.getElementById('exportBtn').onclick=()=>{
+      const size=document.getElementById('exportSize').value;
+      let scale=2;
+      if(size==='a4') scale=2.5;
+      if(size==='a3') scale=3.5;
+      if(size==='a1') scale=7;
+      html2canvas(document.body,{useCORS:true,scale:scale}).then(c=>{
+        const a=document.createElement('a');
+        a.download=`event-map-${size}.png`; a.href=c.toDataURL(); a.click();
+      });
+    };
+
+    // PDF Export
+    document.getElementById('exportPdfBtn').onclick=()=>{
+      const { jsPDF } = window.jspdf;
+      const size=document.getElementById('exportSize').value;
+      let format="a4"; if(size==="a3") format="a3"; if(size==="a1") format="a1";
+      const pdf=new jsPDF({orientation:"portrait",unit:"mm",format});
       html2canvas(map.getContainer(),{useCORS:true,scale:2}).then(c=>{
-        const a=document.createElement('a');a.download='event-map.png';a.href=c.toDataURL();a.click();
+        const img=c.toDataURL("image/jpeg",1.0);
+        const pageWidth=pdf.internal.pageSize.getWidth();
+        const pageHeight=pdf.internal.pageSize.getHeight();
+        pdf.addImage(img,"JPEG",0,0,pageWidth,pageHeight);
+        // Compass
+        pdf.setFontSize(12); pdf.text("N",pageWidth-10,15);
+        pdf.line(pageWidth-10,20,pageWidth-10,30);
+        // Legend
+        let y=pageHeight-40; pdf.setFontSize(10);
+        pdf.text("Legend:",10,y); y+=6;
+        legendSet.forEach((icon,label)=>{pdf.text(`${icon} ${label}`,10,y);y+=6;});
+        pdf.save(`event-map-${size}.pdf`);
       });
     };
   </script>
