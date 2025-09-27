@@ -98,9 +98,11 @@
       label.className = 'label';
       label.style.left = x + 'px';
       label.style.top = y + 'px';
+      label.tabIndex = 0;
       label.innerHTML = `<span class="emoji">${icon}</span><span class="text" contenteditable="true">${text}</span>`;
       container.appendChild(label);
 
+      // Dragging
       let offsetX, offsetY;
       label.onmousedown = e => {
         if (e.target.classList.contains('text')) return;
@@ -117,7 +119,26 @@
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', up);
       };
+
+      // Delete with Delete key
+      label.addEventListener('click', () => {
+        selectedLabel = label;
+      });
     }
+
+    let selectedLabel = null;
+
+    document.addEventListener('keydown', e => {
+      if (e.key === "Delete" && selectedLabel) {
+        selectedLabel.remove();
+        selectedLabel = null;
+      }
+      if (e.key === "Delete" && selectedPolygonIndex !== null) {
+        polygons.splice(selectedPolygonIndex, 1);
+        selectedPolygonIndex = null;
+        redrawAll();
+      }
+    });
 
     // -------------------
     // Drawing Mode
@@ -127,10 +148,13 @@
     let drawMode = false;
     let points = [];
     let currentColor = document.getElementById('colorPicker').value;
+    let polygons = [];
+    let selectedPolygonIndex = null;
 
     function resizeCanvas() {
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
+      redrawAll();
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -138,16 +162,27 @@
     document.getElementById('modeToggle').addEventListener('click', () => {
       drawMode = !drawMode;
       document.getElementById('modeToggle').innerText = drawMode ? "Switch to Label Mode" : "Switch to Draw Mode";
-      canvas.style.pointerEvents = drawMode ? 'auto' : 'none';
+      canvas.style.pointerEvents = drawMode ? 'auto' : 'auto'; // keep clickable for polygon selection
     });
 
     canvas.addEventListener('click', e => {
-      if (!drawMode) return;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      points.push({x, y});
-      redraw();
+
+      if (drawMode) {
+        points.push({x, y});
+        redrawAll();
+      } else {
+        // Selection mode: check polygons
+        selectedPolygonIndex = null;
+        polygons.forEach((poly, i) => {
+          if (ctx.isPointInPath(new Path2D(poly.path), x, y)) {
+            selectedPolygonIndex = i;
+          }
+        });
+        redrawAll();
+      }
     });
 
     document.getElementById('colorPicker').addEventListener('input', e => {
@@ -156,28 +191,39 @@
 
     document.getElementById('finishPolygon').addEventListener('click', () => {
       if (points.length > 2) {
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-        ctx.closePath();
-        ctx.fillStyle = currentColor + "40"; // transparent fill
-        ctx.fill();
-        ctx.setLineDash([6,4]);
-        ctx.strokeStyle = currentColor;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        const path = new Path2D();
+        path.moveTo(points[0].x, points[0].y);
+        for (let i=1; i<points.length; i++) path.lineTo(points[i].x, points[i].y);
+        path.closePath();
+        polygons.push({points: [...points], color: currentColor, path: path});
       }
       points = [];
+      redrawAll();
     });
 
-    function redraw() {
+    function redrawAll() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      polygons.forEach((poly, i) => {
+        ctx.beginPath();
+        ctx.moveTo(poly.points[0].x, poly.points[0].y);
+        for (let j=1; j<poly.points.length; j++) ctx.lineTo(poly.points[j].x, poly.points[j].y);
+        ctx.closePath();
+        ctx.fillStyle = poly.color + "40"; // transparent fill
+        ctx.fill();
+        ctx.setLineDash([6,4]);
+        ctx.lineWidth = (i === selectedPolygonIndex ? 3 : 2);
+        ctx.strokeStyle = i === selectedPolygonIndex ? "black" : poly.color;
+        ctx.stroke();
+      });
+
+      // Draw temp polygon being created
       if (points.length > 0) {
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         for (let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-        ctx.strokeStyle = currentColor;
         ctx.setLineDash([4,4]);
+        ctx.strokeStyle = currentColor;
         ctx.stroke();
       }
     }
