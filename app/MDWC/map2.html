@@ -54,7 +54,7 @@
     .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
     .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
     .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
-    .size-popup input[type="range"]{width:140px}
+    .size-popup input[type="range"]{width:160px}
   </style>
 </head>
 <body>
@@ -103,7 +103,7 @@
     <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
     <div class="tool" data-type="text"  data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
 
-    <!-- Permanent PNG icon in the same folder; change filename if needed -->
+    <!-- Permanent PNG icon: place your file in the same folder -->
     <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" title="No Detecting">
       <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
       <span class="label">No Detecting</span>
@@ -284,7 +284,7 @@
           return;
         }
       }
-      // Draw mode: helper lines
+      // Draw mode helper lines
       if(drawMode){
         tempPoints.push([e.latlng.lat,e.latlng.lng]);
         const N = tempPoints.length;
@@ -298,13 +298,11 @@
       }
     });
 
+    // ---------- Place marker (stores baseSize for centered scaling) ----------
     function placeMarkerOrText(latlng, meta){
-      // Text label -> prompt content
       if(meta.isText){
-        const text = prompt("Enter label text:");
-        if(!text) return;
-        meta.icon = text;
-        meta.color = "#ffffff";
+        const text = prompt("Enter label text:"); if(!text) return;
+        meta.icon = text; meta.color = "#ffffff";
       }
 
       const size = meta.size || 26;
@@ -323,7 +321,7 @@
         draggable:true
       }).addTo(map);
 
-      marker.myMeta = {...meta, size};
+      marker.myMeta = {...meta, size, baseSize: meta.baseSize || size};
       markers.push(marker);
 
       marker.on('click',()=>{ selectedMarker = marker; });
@@ -332,33 +330,43 @@
       marker.on('touchstart',()=>{ lpTimer=setTimeout(()=>openMarkerPopup(marker),600); });
       marker.on('touchend',()=>{ if(lpTimer) clearTimeout(lpTimer); });
 
-      // Legend entry (use emoji or image thumbnail)
       if(!meta.isText){
         legendSet.set(meta.label, meta.imgSrc ? {img:meta.imgSrc} : {emoji:meta.icon});
         renderLegend();
       }
     }
 
+    // ---------- Marker popup with centered scale & clone ----------
     function openMarkerPopup(marker){
       const isText = !!marker.myMeta.isText;
       const sizeNow = marker.myMeta.size || 26;
+      if(!marker.myMeta.baseSize) marker.myMeta.baseSize = sizeNow;
+
+      // size = base * 2^(val/50), so 0 = 1x, -50≈0.5x, +50≈2x
+      const sliderVal = Math.round(50 * Math.log(sizeNow / marker.myMeta.baseSize) / Math.log(2));
       const colorNow = marker.myMeta.color || "#ffffff";
+
       const wrap = document.createElement('div');
       wrap.className='size-popup';
       wrap.innerHTML = `
-        <label>Size <input type="range" min="12" max="120" step="2" value="${sizeNow}"></label>
+        <label>Scale
+          <input id="scaleSlider" type="range" min="-50" max="50" step="1" value="${sliderVal}">
+        </label>
         ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">
           <button type="button" id="cloneBtn" style="background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Clone</button>
           <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
         </div>
       `;
-      const sizeInput = wrap.querySelector('input[type="range"]');
-      sizeInput.addEventListener('input',()=>{
-        const newSize = parseInt(sizeInput.value);
-        marker.myMeta.size = newSize;
+
+      const slider = wrap.querySelector('#scaleSlider');
+      slider.addEventListener('input',()=>{
+        const val = parseInt(slider.value,10);
+        const scale = Math.pow(2, val/50);
+        marker.myMeta.size = Math.max(6, marker.myMeta.baseSize * scale);
         refreshMarkerIcon(marker);
       });
+
       if(isText){
         const colorInput = wrap.querySelector('#txtColor');
         colorInput.addEventListener('input',()=>{
@@ -366,17 +374,17 @@
           refreshMarkerIcon(marker);
         });
       }
-      // Delete
+
       wrap.querySelector('#delBtn').addEventListener('click',()=>{
         map.removeLayer(marker);
         const idx = markers.indexOf(marker); if(idx>-1) markers.splice(idx,1);
         if(selectedMarker===marker) selectedMarker=null;
         marker.closePopup();
       });
-      // Clone
+
       wrap.querySelector('#cloneBtn').addEventListener('click',()=>{
         const ll = marker.getLatLng();
-        const offset = 0.0002; // ~20m-ish
+        const offset = 0.0002;
         const metaCopy = JSON.parse(JSON.stringify(marker.myMeta));
         placeMarkerOrText(L.latLng(ll.lat+offset, ll.lng+offset), metaCopy);
       });
@@ -456,7 +464,7 @@
       if(selectedLine){ map.removeLayer(selectedLine); tempLines=tempLines.filter(l=>l!==selectedLine); selectedLine=null; }
     }
 
-    // ---------- Watermark ----------
+    // ---------- Watermark (controls remain visible while watermark exists) ----------
     const wm=document.getElementById('watermark'), wmImg=document.getElementById('watermarkImg'),
           wmControls=document.getElementById('wmControls'), wmOpacity=document.getElementById('wmOpacity'), wmSize=document.getElementById('wmSize');
     document.getElementById('logoBtn').onclick=()=>document.getElementById('logoFile').click();
@@ -471,12 +479,11 @@
       };
       r.readAsDataURL(f);
     });
-    wmOpacity.oninput=()=>{ wm.style.opacity=wmOpacity.value; hideWmControlsSoon(); };
-    wmSize.oninput=()=>{ wm.style.width=wmSize.value+'px'; hideWmControlsSoon(); };
+    wmOpacity.oninput=()=>{ wm.style.opacity=wmOpacity.value; };
+    wmSize.oninput=()=>{ wm.style.width=wmSize.value+'px'; };
     document.getElementById('wmDelete').onclick=()=>{ wm.style.display='none'; wmControls.style.display='none'; wmImg.src=''; };
-    wm.addEventListener('click',()=>{ wmControls.style.display='flex'; });
+    wm.addEventListener('click',()=>{ if(wm.style.display!=='none') wmControls.style.display='flex'; });
 
-    function hideWmControlsSoon(){ clearTimeout(wm._hideTimer); wm._hideTimer=setTimeout(()=>{ wmControls.style.display='none'; },1200); }
     function ensureWMLeftTop(){
       if(!wm.style.left && !wm.style.top){
         wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
@@ -575,7 +582,7 @@
     function buildProjectJSON(){
       const savedMarkers = markers.map(m=>{
         const ll = m.getLatLng();
-        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta }; // {label, icon?, size, isText?, color?, imgSrc?}
+        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta }; // {label, icon?, size, baseSize, isText?, color?, imgSrc?}
       });
       const savedPolys = polygons.map(p=>{
         const rings = p.getLatLngs();
@@ -597,7 +604,7 @@
       } : null;
 
       return {
-        version: 5,
+        version: 6,
         createdAt: new Date().toISOString(),
         view: { center: map.getCenter(), zoom: map.getZoom() },
         markers: savedMarkers,
@@ -631,11 +638,14 @@
         renderLegend();
       }
 
-      // Markers (includes image markers & text)
+      // Markers (emoji, image, text)
       if(Array.isArray(data.markers)){
         data.markers.forEach(m=>{
           const latlng = L.latLng(m.lat, m.lng);
-          const meta = m.meta && (m.meta.icon || m.meta.imgSrc) ? m.meta : {icon:'📍',label:'Marker',size:26};
+          const meta = m.meta && (m.meta.icon || m.meta.imgSrc)
+            ? m.meta
+            : {icon:'📍',label:'Marker',size:26};
+          if(!meta.baseSize && meta.size) meta.baseSize = meta.size; // ensure centered slider works after import
           placeMarkerOrText(latlng, meta);
         });
       }
@@ -663,16 +673,10 @@
       }
     }
 
-    // ---------- PDF dialog open/close handlers ----------
-    function openPdfDialog(){ 
-      document.getElementById('pdfBackdrop').style.display='block'; 
-      document.getElementById('pdfDialog').style.display='block'; 
-    }
-    function closePdfDialog(){ 
-      document.getElementById('pdfBackdrop').style.display='none'; 
-      document.getElementById('pdfDialog').style.display='none'; 
-    }
-    document.getElementById('pdfBackdrop').addEventListener('click', closePdfDialog);
+    // PDF dialog open/close (extra safety)
+    function openPdfDialog(){ pdfBackdrop.style.display='block'; pdfDialog.style.display='block'; }
+    function closePdfDialog(){ pdfBackdrop.style.display='none'; pdfDialog.style.display='none'; }
+    pdfBackdrop.addEventListener('click', closePdfDialog);
     document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
   </script>
 </body>
