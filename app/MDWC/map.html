@@ -6,7 +6,7 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
     header { background: #333; color: white; padding: 10px; text-align: center; }
-    #toolbar { display: flex; gap: 10px; padding: 10px; background: #eee; }
+    #toolbar { display: flex; gap: 10px; padding: 10px; background: #eee; flex-wrap: wrap; }
     .tool {
       display: flex; flex-direction: column; align-items: center;
       padding: 5px; cursor: grab;
@@ -16,9 +16,7 @@
       position: relative; margin: 10px auto; width: 90%; height: 80vh;
       border: 2px solid #444; background: #ddd; overflow: hidden;
     }
-    #map {
-      width: 100%; height: 100%; object-fit: contain;
-    }
+    #map { width: 100%; height: 100%; object-fit: contain; }
     .label {
       position: absolute; cursor: move; user-select: none;
       display: flex; flex-direction: column; align-items: center;
@@ -29,6 +27,11 @@
       font-size: 12px; margin-top: 2px;
     }
     #controls { text-align: center; margin: 10px; }
+    canvas.overlay {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; pointer-events: none;
+    }
+    #colorPicker, #modeToggle { margin-left: 10px; }
   </style>
 </head>
 <body>
@@ -53,12 +56,17 @@
   </div>
 
   <div id="map-container">
-    <!-- Replace src with your own base image file -->
+    <!-- Base map -->
     <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Event Map Base">
+    <!-- Drawing overlay -->
+    <canvas id="draw-layer" class="overlay"></canvas>
   </div>
 
   <div id="controls">
     <button id="exportBtn">Export as PNG</button>
+    <button id="modeToggle">Switch to Draw Mode</button>
+    <input type="color" id="colorPicker" value="#ff0000">
+    <button id="finishPolygon">Finish Polygon</button>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -67,18 +75,17 @@
     const tools = document.querySelectorAll('.tool');
     let dragItem = null;
 
-    // Drag from toolbar
+    // -------------------
+    // Drag & Drop Labels
+    // -------------------
     tools.forEach(tool => {
-      tool.addEventListener('dragstart', () => {
-        dragItem = tool;
-      });
+      tool.addEventListener('dragstart', () => { dragItem = tool; });
     });
 
-    // Drop on map
     container.addEventListener('dragover', e => e.preventDefault());
     container.addEventListener('drop', e => {
       e.preventDefault();
-      if (dragItem) {
+      if (dragItem && !drawMode) {
         const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left - 20;
         const y = e.clientY - rect.top - 20;
@@ -86,7 +93,6 @@
       }
     });
 
-    // Add label function
     function addLabel(text, icon, x, y) {
       const label = document.createElement('div');
       label.className = 'label';
@@ -95,10 +101,9 @@
       label.innerHTML = `<span class="emoji">${icon}</span><span class="text" contenteditable="true">${text}</span>`;
       container.appendChild(label);
 
-      // Make draggable
       let offsetX, offsetY;
       label.onmousedown = e => {
-        if (e.target.classList.contains('text')) return; // allow text edit
+        if (e.target.classList.contains('text')) return;
         offsetX = e.offsetX;
         offsetY = e.offsetY;
         function move(ev) {
@@ -114,7 +119,72 @@
       };
     }
 
-    // Export button
+    // -------------------
+    // Drawing Mode
+    // -------------------
+    const canvas = document.getElementById('draw-layer');
+    const ctx = canvas.getContext('2d');
+    let drawMode = false;
+    let points = [];
+    let currentColor = document.getElementById('colorPicker').value;
+
+    function resizeCanvas() {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.getElementById('modeToggle').addEventListener('click', () => {
+      drawMode = !drawMode;
+      document.getElementById('modeToggle').innerText = drawMode ? "Switch to Label Mode" : "Switch to Draw Mode";
+      canvas.style.pointerEvents = drawMode ? 'auto' : 'none';
+    });
+
+    canvas.addEventListener('click', e => {
+      if (!drawMode) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      points.push({x, y});
+      redraw();
+    });
+
+    document.getElementById('colorPicker').addEventListener('input', e => {
+      currentColor = e.target.value;
+    });
+
+    document.getElementById('finishPolygon').addEventListener('click', () => {
+      if (points.length > 2) {
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+        ctx.closePath();
+        ctx.fillStyle = currentColor + "40"; // transparent fill
+        ctx.fill();
+        ctx.setLineDash([6,4]);
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      points = [];
+    });
+
+    function redraw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      if (points.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+        ctx.strokeStyle = currentColor;
+        ctx.setLineDash([4,4]);
+        ctx.stroke();
+      }
+    }
+
+    // -------------------
+    // Export
+    // -------------------
     document.getElementById('exportBtn').addEventListener('click', () => {
       html2canvas(container).then(canvas => {
         const link = document.createElement('a');
