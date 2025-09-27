@@ -347,6 +347,17 @@
       }
     }
 
+    function updateLegendAfterDelete(marker){
+      if(marker.myMeta.isText) return; // Text markers aren't in legend
+      const label = marker.myMeta.label;
+      // Count markers with the same label
+      const count = markers.filter(m => m.myMeta.label === label && !m.myMeta.isText).length;
+      if(count === 0){
+        legendSet.delete(label);
+        renderLegend();
+      }
+    }
+
     function openMarkerPopup(marker){
       const isText = !!marker.myMeta.isText;
       const sizeNow = marker.myMeta.size || 26;
@@ -379,6 +390,7 @@
         map.removeLayer(marker);
         const idx = markers.indexOf(marker); if(idx>-1) markers.splice(idx,1);
         if(selectedMarker===marker) selectedMarker=null;
+        updateLegendAfterDelete(marker); // Update legend
         marker.closePopup();
       });
       // Clone
@@ -429,6 +441,7 @@
       if(e.key==="Delete" && selectedMarker){
         map.removeLayer(selectedMarker);
         const idx = markers.indexOf(selectedMarker); if(idx>-1) markers.splice(idx,1);
+        updateLegendAfterDelete(selectedMarker); // Update legend
         selectedMarker=null;
       }
     });
