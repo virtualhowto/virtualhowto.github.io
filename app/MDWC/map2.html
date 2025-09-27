@@ -2,17 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Event Map Builder</title>
+  <title>Event Map Builder - Collaborative</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
   <!-- Leaflet + Esri-Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
 
   <!-- Export libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- WebRTC & Collaboration -->
+  <script src="https://unpkg.com/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+  <script src="https://unpkg.com/yjs@13/dist/y.js"></script>
+  <script src="https://unpkg.com/y-webrtc@10.0.7/dist/y-webrtc.js"></script>
 
   <style>
     :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
@@ -41,11 +47,8 @@
     #legend li{margin:4px 0;display:flex;align-items:center;gap:6px}
     #legend img{width:14px;height:14px;object-fit:contain;display:inline-block;background:#fff;border-radius:2px}
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
-    #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
-    #watermark img{display:block;max-width:100%;max-height:100%}
-    #wmControls{position:absolute;bottom:110%;right:0;background:#0f141d;border:1px solid var(--border);border-radius:8px;padding:8px;display:none;gap:6px;z-index:851;width:260px}
-    #wmControls label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px;margin:4px 0}
-    #wmControls input[type="range"]{flex:1}
+    .watermark{position:absolute;z-index:850;display:none;cursor:move;user-select:none}
+    .watermark img{display:block;max-width:100%;max-height:100%}
     .compass-control{width:80px;height:80px}
     .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
     .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
@@ -54,12 +57,13 @@
     .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
     .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
     .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
-    .size-popup input[type="range"]{width:160px}
+    .size-popup input[type="range"]{width:140px}
+    #status{position:absolute;top:10px;right:10px;background:var(--panel);padding:5px;border-radius:5px;z-index:900;font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
   <header>
-    <h1>Event Map Builder</h1>
+    <h1>Event Map Builder - Collaborative</h1>
     <div id="topbar">
       <button class="btn" id="gpsBtn">📍 Use GPS</button>
       <input type="text" id="searchBox" placeholder="Search location..." />
@@ -70,8 +74,6 @@
       <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
         <input type="checkbox" id="defaultFill" checked /> Fill new polygon
       </label>
-
-      <!-- Export dropdown -->
       <div class="dropdown">
         <button class="btn" id="exportMenuBtn">📤 Export ▼</button>
         <div class="dropdown-menu" id="exportMenu">
@@ -82,14 +84,10 @@
         </div>
       </div>
       <input type="file" id="importJsonFile" accept="application/json" style="display:none"/>
-
-      <!-- Watermark -->
       <input type="file" id="logoFile" accept="image/*" style="display:none"/>
       <button class="btn" id="logoBtn">Upload Logo</button>
     </div>
   </header>
-
-  <!-- Emoji/Text + Permanent PNG + Uploader toolbar -->
   <div id="toolbar">
     <div class="tool" data-type="emoji" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
     <div class="tool" data-type="emoji" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
@@ -101,48 +99,28 @@
     <div class="tool" data-type="emoji" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
     <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
-    <div class="tool" data-type="text"  data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
-
-    <!-- Permanent PNG icon: place your file in the same folder -->
-    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" title="No Detecting">
+    <div class="tool" data-type="text" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
+    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" data-size="26" title="No Detecting">
       <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
       <span class="label">No Detecting</span>
     </div>
-
-    <!-- Custom icon uploader (optional) -->
     <input id="customIconInput" type="file" accept="image/*" style="display:none">
     <button class="tool" id="addCustomIconBtn" title="Add custom PNG icon">
       <span class="emoji" style="font-size:18px">➕</span>
       <span class="label">Custom Icon</span>
     </button>
   </div>
-
   <div id="mapWrap">
     <div id="map"></div>
-
-    <!-- Legend -->
     <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
-
-    <!-- Watermark -->
-    <div id="watermark">
-      <img id="watermarkImg" alt="watermark"/>
-      <div id="wmControls">
-        <label>Opacity <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="0.5"></label>
-        <label>Size (px) <input id="wmSize" type="range" min="60" max="800" step="10" value="180"></label>
-        <button class="btn" id="wmDelete">Delete Watermark</button>
-      </div>
-    </div>
+    <div id="status">Connecting collaborators...</div>
   </div>
-
-  <!-- Polygon selection controls -->
   <div id="polygonControls" class="leaflet-top leaflet-right">
     <button id="toggleFill" class="btn">Toggle Fill</button>
     <button id="deletePoly" class="btn">Delete</button>
   </div>
-
-  <!-- PDF Options Modal -->
   <div class="modal-backdrop" id="pdfBackdrop"></div>
-  <div class="modal" id="pdfDialog" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
+  <div class="modal" id="pdfDialog">
     <h3 id="pdfTitle">PDF Export Options</h3>
     <label>Paper Size
       <select id="pdfSize">
@@ -168,47 +146,77 @@
       <button class="btn primary" id="exportPdf">Export</button>
     </div>
   </div>
-
   <script>
-    // ---------- Map init (no Leaflet attribution) ----------
-    const map = L.map('map', { attributionControl: false });
-    L.esri.tiledMapLayer({
-      url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
-      attribution:'Imagery © NSW Spatial Services'
+    // ---------- Collaboration Setup ----------
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'default-room';
+    const userId = Math.random().toString(36).substring(7);
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = `Room: ${roomId} | User: ${userId}`;
+    const SIGNALING_URL = window.location.protocol + '//' + window.location.host;
+
+    // Yjs document
+    const ydoc = new Y.Doc();
+    const ymap = ydoc.getMap('mapState');
+    const ymarkers = ymap.get('markers') || ydoc.getArray('markers');
+    const ypolygons = ymap.get('polygons') || ydoc.getArray('polygons');
+    const ywatermarks = ymap.get('watermarks') || ydoc.getArray('watermarks');
+    const yview = ymap.get('view') || ydoc.getMap('view');
+    const ylegend = ymap.get('legend') || ydoc.getMap('legend');
+
+    // WebRTC provider
+    const webrtcProvider = new WebrtcProvider(roomId, ydoc, {
+      signaling: [SIGNALING_URL],
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    // Local state
+    let drawMode = false, tempPoints = [], tempLines = [], polygons = [], selected = null, selectedLine = null;
+    let markers = [], selectedMarker = null;
+    const watermarks = [];
+    const legendSet = new Map();
+    const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
+
+    // Map init
+    const map = L.map('map', { attributionControl: false, preferCanvas: true });
+    const tileLayer = L.esri.tiledMapLayer({
+      url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+      attribution: 'Imagery © NSW Spatial Services',
+      crossOrigin: 'anonymous'
     }).addTo(map);
 
     // GPS + Sofala fallback
-    const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
     function centerOnUser({silent=false} = {}){
       if(!navigator.geolocation){ map.setView(SOFALA_CENTER, SOFALA_ZOOM); if(!silent) alert("No geolocation."); return; }
-      navigator.geolocation.getCurrentPosition(p=>{
-        map.setView([p.coords.latitude,p.coords.longitude], 16);
-      }, _=>{
-        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+      navigator.geolocation.getCurrentPosition(p => {
+        ydoc.transact(() => { yview.set('center', [p.coords.latitude, p.coords.longitude]); yview.set('zoom', 16); });
+      }, () => {
+        ydoc.transact(() => { yview.set('center', SOFALA_CENTER); yview.set('zoom', SOFALA_ZOOM); });
         if(!silent) alert("Could not get your location. Defaulting to Sofala, NSW.");
-      }, {enableHighAccuracy:true, timeout:8000, maximumAge:0});
+      }, {enableHighAccuracy: true, timeout: 8000, maximumAge: 0});
     }
-    centerOnUser({silent:true});
-    document.getElementById('gpsBtn').addEventListener('click',()=>centerOnUser());
+    centerOnUser({silent: true});
+    document.getElementById('gpsBtn').addEventListener('click', () => centerOnUser());
 
-    // Search (Enter) via Nominatim
-    const searchBox=document.getElementById('searchBox');
-    searchBox.addEventListener('keydown',async e=>{
-      if(e.key!=="Enter") return;
-      const q=searchBox.value.trim(); if(!q) return;
-      try{
-        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
-        const data=await res.json();
-        if(data && data.length){ map.setView([+data[0].lat, +data[0].lon], 15); }
-        else alert("Location not found");
-      }catch{ alert("Search error"); }
+    // Search
+    const searchBox = document.getElementById('searchBox');
+    searchBox.addEventListener('keydown', async e => {
+      if(e.key !== "Enter") return;
+      const q = searchBox.value.trim(); if(!q) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if(data && data.length) {
+          ydoc.transact(() => { yview.set('center', [+data[0].lat, +data[0].lon]); yview.set('zoom', 15); });
+        } else alert("Location not found");
+      } catch { alert("Search error"); }
     });
 
     // Compass
-    const compass = L.control({position:'topright'});
-    compass.onAdd=()=>{
-      const d=L.DomUtil.create('div','compass-control');
-      d.innerHTML=`
+    const compass = L.control({position: 'topright'});
+    compass.onAdd = () => {
+      const d = L.DomUtil.create('div', 'compass-control');
+      d.innerHTML = `
         <div style="position:relative;width:80px;height:80px;border-radius:50%;background:#0f141d;border:2px solid #4aa3ff;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)">
           <span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);font-weight:bold;color:#ff4444">N</span>
           <span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%)">S</span>
@@ -219,465 +227,878 @@
     };
     compass.addTo(map);
 
-    // ---------- State ----------
-    let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null;
-    const markers=[]; let selectedMarker=null;
-    const legendSet=new Map();
-
-    // ---------- Export dropdown ----------
+    // Export dropdown
     const exportBtn = document.getElementById('exportMenuBtn');
     const exportMenu = document.getElementById('exportMenu');
-    const toggleMenu = (show)=>exportMenu.style.display = show ? 'block' : 'none';
-    exportBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMenu(exportMenu.style.display!=='block'); });
-    document.addEventListener('click', ()=>toggleMenu(false));
-    exportMenu.addEventListener('click',(e)=>e.stopPropagation());
-    document.getElementById('menuPng').onclick=()=>{ toggleMenu(false); exportPNG(); };
-    document.getElementById('menuPdf').onclick=()=>{ toggleMenu(false); openPdfDialog(); };
-    document.getElementById('menuJsonExport').onclick=()=>{ toggleMenu(false); doExportJSON(); };
-    document.getElementById('menuJsonImport').onclick=()=>{ toggleMenu(false); document.getElementById('importJsonFile').click(); };
+    const toggleMenu = (show) => exportMenu.style.display = show ? 'block' : 'none';
+    exportBtn.addEventListener('click', e => { e.stopPropagation(); toggleMenu(exportMenu.style.display !== 'block'); });
+    document.addEventListener('click', () => toggleMenu(false));
+    exportMenu.addEventListener('click', e => e.stopPropagation());
+    document.getElementById('menuPng').onclick = () => { toggleMenu(false); exportPNG(); };
+    document.getElementById('menuPdf').onclick = () => { toggleMenu(false); openPdfDialog(); };
+    document.getElementById('menuJsonExport').onclick = () => { toggleMenu(false); doExportJSON(); };
+    document.getElementById('menuJsonImport').onclick = () => { toggleMenu(false); document.getElementById('importJsonFile').click(); };
 
-    // ---------- Tools (emoji/text/permanent image/custom image) ----------
-    let activeTool=null;
-    function attachToolHandlers(){
-      document.querySelectorAll('.tool[data-type]').forEach(t=>{
-        t.onclick=()=>{ activeTool=t; };
+    // Tools
+    let activeTool = null;
+    function attachToolHandlers() {
+      document.querySelectorAll('.tool[data-type]').forEach(t => {
+        t.onclick = () => { activeTool = t; };
       });
     }
     attachToolHandlers();
 
-    // Custom icon uploader (optional)
+    // Custom icon uploader
     const customInput = document.getElementById('customIconInput');
     const addCustomBtn = document.getElementById('addCustomIconBtn');
-    addCustomBtn.addEventListener('click', ()=> customInput.click());
-    customInput.addEventListener('change', e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader();
-      r.onload=ev=>{
-        const label = prompt("Label for this icon (for legend):","Custom");
+    addCustomBtn.addEventListener('click', () => customInput.click());
+    customInput.addEventListener('change', e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        const label = prompt("Label for this icon (for legend):", "Custom");
         addCustomTool(label || "Custom", ev.target.result);
         customInput.value = "";
       };
       r.readAsDataURL(f);
     });
-    function addCustomTool(label, dataUrl){
+    function addCustomTool(label, dataUrl) {
       const btn = document.createElement('button');
       btn.className = 'tool';
-      btn.setAttribute('data-type','image');
+      btn.setAttribute('data-type', 'image');
       btn.setAttribute('data-label', label);
       btn.setAttribute('data-imgsrc', dataUrl);
-      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt=""><span class="label">${label}</span>`;
+      btn.setAttribute('data-size', '26');
+      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt="${label}"/><span class="label">${label}</span>`;
       addCustomBtn.insertAdjacentElement('beforebegin', btn);
       attachToolHandlers();
     }
 
-    map.on('click',e=>{
-      if(activeTool && !drawMode){
-        const type  = activeTool.dataset.type;
+    // Map click for markers and drawing
+    map.on('click', e => {
+      if(activeTool && !drawMode) {
+        const type = activeTool.dataset.type;
         const label = activeTool.dataset.label;
-        if(type==='emoji' || type==='text' || type==='image'){
+        if(type === 'emoji' || type === 'text' || type === 'image') {
           const meta = { label };
-          if(type==='emoji'){ meta.icon = activeTool.dataset.icon; }
-          if(type==='text'){  meta.icon = '✏️'; meta.isText = true; }
-          if(type==='image'){ meta.imgSrc = activeTool.dataset.imgsrc; }
+          if(type === 'emoji') { meta.icon = activeTool.dataset.icon; meta.size = parseInt(activeTool.dataset.size) || 26; }
+          if(type === 'text') { meta.icon = '✏️'; meta.isText = true; meta.size = 26; }
+          if(type === 'image') { meta.imgSrc = activeTool.dataset.imgsrc; meta.size = parseInt(activeTool.dataset.size) || 26; }
           placeMarkerOrText(e.latlng, meta);
-          activeTool=null;
+          activeTool = null;
           return;
         }
       }
-      // Draw mode helper lines
-      if(drawMode){
-        tempPoints.push([e.latlng.lat,e.latlng.lng]);
+      if(drawMode) {
+        tempPoints.push([e.latlng.lat, e.latlng.lng]);
         const N = tempPoints.length;
-        if(N>1){
-          const line=L.polyline([tempPoints[N-2], tempPoints[N-1]],{
-            color:document.getElementById('colorPicker').value,dashArray:"4,4",weight:2
+        if(N > 1) {
+          const line = L.polyline([tempPoints[N-2], tempPoints[N-1]], {
+            color: document.getElementById('colorPicker').value, dashArray: "4,4", weight: 2
           }).addTo(map);
-          line.on('click',()=>selectLine(line));
+          line.on('click', () => selectLine(line));
           tempLines.push(line);
         }
       }
     });
 
-    // ---------- Place marker (stores baseSize for centered scaling) ----------
-    function placeMarkerOrText(latlng, meta){
-      if(meta.isText){
-        const text = prompt("Enter label text:"); if(!text) return;
-        meta.icon = text; meta.color = "#ffffff";
+    function placeMarkerOrText(latlng, meta) {
+      if(meta.isText) {
+        const text = prompt("Enter label text:");
+        if(!text) return;
+        meta.icon = text;
+        meta.color = "#ffffff";
       }
-
       const size = meta.size || 26;
       let html;
-      if(meta.imgSrc){
+      if(meta.imgSrc) {
         html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
                   <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
                 </div>`;
-      }else{
+      } else {
         const colorStyle = meta.isText ? `color:${meta.color};` : '';
         html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
       }
-
-      const marker = L.marker(latlng,{
-        icon: L.divIcon({className:"custom-div-icon",html,iconSize:[size,size],iconAnchor:[size/2,size/2]}),
-        draggable:true
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({className: "custom-div-icon", html, iconSize: [size, size], iconAnchor: [size/2, size/2]}),
+        draggable: true
       }).addTo(map);
-
-      marker.myMeta = {...meta, size, baseSize: meta.baseSize || size};
+      marker.myMeta = {...meta, size};
       markers.push(marker);
-
-      marker.on('click',()=>{ selectedMarker = marker; });
-      marker.on('contextmenu',()=>openMarkerPopup(marker));
-      let lpTimer=null;
-      marker.on('touchstart',()=>{ lpTimer=setTimeout(()=>openMarkerPopup(marker),600); });
-      marker.on('touchend',()=>{ if(lpTimer) clearTimeout(lpTimer); });
-
-      if(!meta.isText){
-        legendSet.set(meta.label, meta.imgSrc ? {img:meta.imgSrc} : {emoji:meta.icon});
+      marker.on('click', () => { selectedMarker = marker; });
+      marker.on('contextmenu', () => openMarkerPopup(marker));
+      let lpTimer = null;
+      marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
+      marker.on('touchend', () => { if(lpTimer) clearTimeout(lpTimer); });
+      marker.on('dragend', () => {
+        ydoc.transact(() => {
+          const idx = markers.indexOf(marker);
+          if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
+        });
+      });
+      if(!meta.isText) {
+        ydoc.transact(() => {
+          ylegend.set(meta.label, meta.imgSrc ? {img: meta.imgSrc} : {emoji: meta.icon});
+          ymarkers.push({ lat: latlng.lat, lng: latlng.lng, meta });
+        });
         renderLegend();
       }
     }
 
-    // ---------- Marker popup with centered scale & clone ----------
-    function openMarkerPopup(marker){
+    function updateLegendAfterDelete(marker) {
+      if(marker.myMeta.isText) return;
+      const label = marker.myMeta.label;
+      const count = markers.filter(m => m.myMeta.label === label && !m.myMeta.isText).length;
+      if(count === 1) {
+        ydoc.transact(() => { ylegend.delete(label); });
+        renderLegend();
+      }
+    }
+
+    function openMarkerPopup(marker) {
       const isText = !!marker.myMeta.isText;
       const sizeNow = marker.myMeta.size || 26;
-      if(!marker.myMeta.baseSize) marker.myMeta.baseSize = sizeNow;
-
-      // size = base * 2^(val/50), so 0 = 1x, -50≈0.5x, +50≈2x
-      const sliderVal = Math.round(50 * Math.log(sizeNow / marker.myMeta.baseSize) / Math.log(2));
       const colorNow = marker.myMeta.color || "#ffffff";
-
       const wrap = document.createElement('div');
-      wrap.className='size-popup';
+      wrap.className = 'size-popup';
       wrap.innerHTML = `
-        <label>Scale
-          <input id="scaleSlider" type="range" min="-50" max="50" step="1" value="${sliderVal}">
-        </label>
+        <label>Size <input type="range" min="12" max="120" step="2" value="${sizeNow}"></label>
         ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">
           <button type="button" id="cloneBtn" style="background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Clone</button>
           <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
-        </div>
-      `;
-
-      const slider = wrap.querySelector('#scaleSlider');
-      slider.addEventListener('input',()=>{
-        const val = parseInt(slider.value,10);
-        const scale = Math.pow(2, val/50);
-        marker.myMeta.size = Math.max(6, marker.myMeta.baseSize * scale);
+        </div>`;
+      const sizeInput = wrap.querySelector('input[type="range"]');
+      sizeInput.addEventListener('input', () => {
+        marker.myMeta.size = parseInt(sizeInput.value);
         refreshMarkerIcon(marker);
+        ydoc.transact(() => {
+          const idx = markers.indexOf(marker);
+          if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
+        });
       });
-
-      if(isText){
+      if(isText) {
         const colorInput = wrap.querySelector('#txtColor');
-        colorInput.addEventListener('input',()=>{
+        colorInput.addEventListener('input', () => {
           marker.myMeta.color = colorInput.value;
           refreshMarkerIcon(marker);
+          ydoc.transact(() => {
+            const idx = markers.indexOf(marker);
+            if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
+          });
         });
       }
-
-      wrap.querySelector('#delBtn').addEventListener('click',()=>{
-        map.removeLayer(marker);
-        const idx = markers.indexOf(marker); if(idx>-1) markers.splice(idx,1);
-        if(selectedMarker===marker) selectedMarker=null;
+      wrap.querySelector('#delBtn').addEventListener('click', () => {
+        ydoc.transact(() => {
+          const idx = markers.indexOf(marker);
+          if(idx > -1) {
+            ymarkers.delete(idx, 1);
+            map.removeLayer(marker);
+            markers.splice(idx, 1);
+            updateLegendAfterDelete(marker);
+          }
+        });
         marker.closePopup();
       });
-
-      wrap.querySelector('#cloneBtn').addEventListener('click',()=>{
+      wrap.querySelector('#cloneBtn').addEventListener('click', () => {
         const ll = marker.getLatLng();
         const offset = 0.0002;
         const metaCopy = JSON.parse(JSON.stringify(marker.myMeta));
-        placeMarkerOrText(L.latLng(ll.lat+offset, ll.lng+offset), metaCopy);
+        placeMarkerOrText(L.latLng(ll.lat + offset, ll.lng + offset), metaCopy);
       });
-
       selectedMarker = marker;
-      marker.bindPopup(wrap,{autoPan:true}).openPopup();
+      marker.bindPopup(wrap, {autoPan: true}).openPopup();
     }
 
-    function refreshMarkerIcon(marker){
-      const {icon,size,isText,color,imgSrc} = marker.myMeta;
+    function refreshMarkerIcon(marker) {
+      const {icon, size, isText, color, imgSrc} = marker.myMeta;
       let html;
-      if(imgSrc){
+      if(imgSrc) {
         html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
                   <img src="${imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
                 </div>`;
-      }else{
+      } else {
         const colorStyle = isText ? `color:${color};` : '';
         html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${icon}</div>`;
       }
       marker.setIcon(L.divIcon({
-        className:"custom-div-icon",
-        html, iconSize:[size,size], iconAnchor:[size/2,size/2]
+        className: "custom-div-icon",
+        html, iconSize: [size, size], iconAnchor: [size/2, size/2]
       }));
     }
 
-    function renderLegend(){
-      const list=document.getElementById('legendList'); list.innerHTML='';
-      legendSet.forEach((val,label)=>{
-        const li=document.createElement('li');
-        if(val.img){
-          const img=document.createElement('img'); img.src=val.img; li.appendChild(img);
-          const span=document.createElement('span'); span.textContent=' '+label; li.appendChild(span);
-        }else{
-          li.textContent=`${val.emoji} ${label}`;
+    function renderLegend() {
+      const list = document.getElementById('legendList');
+      list.innerHTML = '';
+      ylegend.forEach((val, label) => {
+        const li = document.createElement('li');
+        if(val.img) {
+          const img = document.createElement('img');
+          img.src = val.img;
+          li.appendChild(img);
+          const span = document.createElement('span');
+          span.textContent = ' ' + label;
+          li.appendChild(span);
+        } else {
+          li.textContent = `${val.emoji} ${label}`;
         }
         list.appendChild(li);
       });
     }
 
-    // Delete selected marker with keyboard
-    document.addEventListener('keydown',e=>{
-      if(e.key==="Delete" && selectedMarker){
-        map.removeLayer(selectedMarker);
-        const idx = markers.indexOf(selectedMarker); if(idx>-1) markers.splice(idx,1);
-        selectedMarker=null;
+    document.addEventListener('keydown', e => {
+      if(e.key === "Delete" && selectedMarker) {
+        ydoc.transact(() => {
+          const idx = markers.indexOf(selectedMarker);
+          if(idx > -1) {
+            ymarkers.delete(idx, 1);
+            map.removeLayer(selectedMarker);
+            markers.splice(idx, 1);
+            updateLegendAfterDelete(selectedMarker);
+            selectedMarker = null;
+          }
+        });
       }
     });
 
-    // ---------- Drawing polygons ----------
-    document.getElementById('modeToggle').onclick=()=>{
-      drawMode=!drawMode;
-      document.getElementById('modeToggle').textContent=drawMode?'🖱️ Label Mode':'✏️ Draw Mode';
+    // Drawing polygons
+    document.getElementById('modeToggle').onclick = () => {
+      drawMode = !drawMode;
+      document.getElementById('modeToggle').textContent = drawMode ? '🖱️ Label Mode' : '✏️ Draw Mode';
     };
-    document.getElementById('finishPolygon').onclick=finishPolygon;
-    document.getElementById('cancelPolygon').onclick=clearSketch;
+    document.getElementById('finishPolygon').onclick = finishPolygon;
+    document.getElementById('cancelPolygon').onclick = clearSketch;
 
-    function finishPolygon(){
-      if(tempPoints.length>2){
-        const poly=L.polygon(tempPoints,{
-          color:document.getElementById('colorPicker').value,
-          weight:2,dashArray:"6,4",
+    function finishPolygon() {
+      if(tempPoints.length > 2) {
+        const style = {
+          color: document.getElementById('colorPicker').value,
+          weight: 2, dashArray: "6,4",
           fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
-        }).addTo(map);
-        poly.on('click',()=>selectPolygon(poly));
+        };
+        const poly = L.polygon(tempPoints, style).addTo(map);
+        poly.on('click', () => selectPolygon(poly));
         polygons.push(poly);
+        ydoc.transact(() => {
+          ypolygons.push({ latlngs: tempPoints, style });
+        });
       }
       clearSketch();
     }
-    function clearSketch(){ tempPoints=[]; tempLines.forEach(l=>map.removeLayer(l)); tempLines=[]; }
-    function selectPolygon(poly){ selected=poly; selectedLine=null; document.getElementById('polygonControls').style.display='flex'; }
-    function selectLine(line){ if(selectedLine) selectedLine.setStyle({weight:2}); selectedLine=line; selected=null; line.setStyle({weight:4}); document.getElementById('polygonControls').style.display='none'; }
-    document.getElementById('toggleFill').onclick=()=>{ if(!selected) return; selected.setStyle({fillOpacity: selected.options.fillOpacity>0 ? 0 : 0.25}); };
-    document.getElementById('deletePoly').onclick=()=>deleteSelectedShape();
-    document.addEventListener('keydown',e=>{ if(e.key==="Delete") deleteSelectedShape(); });
-    function deleteSelectedShape(){
-      if(selected){ map.removeLayer(selected); polygons=polygons.filter(p=>p!==selected); selected=null; document.getElementById('polygonControls').style.display='none'; }
-      if(selectedLine){ map.removeLayer(selectedLine); tempLines=tempLines.filter(l=>l!==selectedLine); selectedLine=null; }
+
+    function clearSketch() {
+      tempPoints = [];
+      tempLines.forEach(l => map.removeLayer(l));
+      tempLines = [];
     }
 
-    // ---------- Watermark (controls remain visible while watermark exists) ----------
-    const wm=document.getElementById('watermark'), wmImg=document.getElementById('watermarkImg'),
-          wmControls=document.getElementById('wmControls'), wmOpacity=document.getElementById('wmOpacity'), wmSize=document.getElementById('wmSize');
-    document.getElementById('logoBtn').onclick=()=>document.getElementById('logoFile').click();
-    document.getElementById('logoFile').addEventListener('change', e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader();
-      r.onload=ev=>{
-        wmImg.src=ev.target.result;
-        wm.style.display='block'; wmControls.style.display='flex';
-        wm.style.width=wmSize.value+'px'; wm.style.opacity=wmOpacity.value;
-        ensureWMLeftTop();
-      };
-      r.readAsDataURL(f);
-    });
-    wmOpacity.oninput=()=>{ wm.style.opacity=wmOpacity.value; };
-    wmSize.oninput=()=>{ wm.style.width=wmSize.value+'px'; };
-    document.getElementById('wmDelete').onclick=()=>{ wm.style.display='none'; wmControls.style.display='none'; wmImg.src=''; };
-    wm.addEventListener('click',()=>{ if(wm.style.display!=='none') wmControls.style.display='flex'; });
+    function selectPolygon(poly) {
+      selected = poly;
+      selectedLine = null;
+      document.getElementById('polygonControls').style.display = 'flex';
+    }
 
-    function ensureWMLeftTop(){
-      if(!wm.style.left && !wm.style.top){
-        wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
-        wm.style.top  = (document.getElementById('mapWrap').clientHeight - 150) + 'px';
-        wm.style.right='auto'; wm.style.bottom='auto'; wm.style.position='absolute';
+    function selectLine(line) {
+      if(selectedLine) selectedLine.setStyle({weight: 2});
+      selectedLine = line;
+      selected = null;
+      line.setStyle({weight: 4});
+      document.getElementById('polygonControls').style.display = 'none';
+    }
+
+    document.getElementById('toggleFill').onclick = () => {
+      if(!selected) return;
+      const newOpacity = selected.options.fillOpacity > 0 ? 0 : 0.25;
+      selected.setStyle({fillOpacity: newOpacity});
+      ydoc.transact(() => {
+        const idx = polygons.indexOf(selected);
+        if(idx > -1) {
+          const polyData = ypolygons.get(idx);
+          ypolygons.set(idx, { latlngs: polyData.latlngs, style: {...polyData.style, fillOpacity: newOpacity} });
+        }
+      });
+    };
+
+    document.getElementById('deletePoly').onclick = () => deleteSelectedShape();
+    document.addEventListener('keydown', e => { if(e.key === "Delete") deleteSelectedShape(); });
+
+    function deleteSelectedShape() {
+      if(selected) {
+        ydoc.transact(() => {
+          const idx = polygons.indexOf(selected);
+          if(idx > -1) {
+            ypolygons.delete(idx, 1);
+            map.removeLayer(selected);
+            polygons.splice(idx, 1);
+            selected = null;
+            document.getElementById('polygonControls').style.display = 'none';
+          }
+        });
+      }
+      if(selectedLine) {
+        map.removeLayer(selectedLine);
+        tempLines = tempLines.filter(l => l !== selectedLine);
+        selectedLine = null;
       }
     }
-    // Drag WM
-    let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
-    wm.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startY=e.clientY;const r=wm.getBoundingClientRect();startLeft=r.left;startTop=r.top;map.dragging.disable();});
-    window.addEventListener('mousemove',e=>{if(!dragging) return;const dx=e.clientX-startX,dy=e.clientY-startY;const wrap=document.getElementById('mapWrap').getBoundingClientRect();wm.style.left=(startLeft+dx-wrap.left)+'px';wm.style.top=(startTop+dy-wrap.top)+'px';wm.style.right='auto';wm.style.bottom='auto';wm.style.position='absolute';});
-    window.addEventListener('mouseup',()=>{dragging=false;map.dragging.enable();});
-    // Touch drag
-    let draggingT=false, tStart=null;
-    wm.addEventListener('touchstart',e=>{const t=e.touches[0];draggingT=true;tStart={x:t.clientX,y:t.clientY};const r=wm.getBoundingClientRect();startLeft=r.left;startTop=r.top;map.dragging.disable();},{passive:false});
-    window.addEventListener('touchmove',e=>{if(!draggingT) return;const t=e.touches[0];const dx=t.clientX-tStart.x,dy=t.clientY-tStart.y;const wrap=document.getElementById('mapWrap').getBoundingClientRect();wm.style.left=(startLeft+dx-wrap.left)+'px';wm.style.top=(startTop+dy-wrap.top)+'px';wm.style.right='auto';wm.style.bottom='auto';wm.style.position='absolute';e.preventDefault();},{passive:false});
-    window.addEventListener('touchend',()=>{draggingT=false;map.dragging.enable();});
 
-    // ---------- Export helpers ----------
-    function addWatermarkToCanvas(c){
-      return new Promise(resolve=>{
-        if(!wmImg.src || wm.style.display==='none'){ return resolve(c); }
-        const ctx=c.getContext('2d'); const wrap=document.getElementById('mapWrap').getBoundingClientRect(); const wmRect=wm.getBoundingClientRect();
-        const scaleX=c.width/wrap.width, scaleY=c.height/wrap.height;
-        const left=(wmRect.left-wrap.left)*scaleX, top=(wmRect.top-wrap.top)*scaleY, w=wmRect.width*scaleX, h=wmRect.height*scaleY;
-        ctx.globalAlpha=parseFloat(wm.style.opacity || 1); ctx.drawImage(wmImg,left,top,w,h); ctx.globalAlpha=1; resolve(c);
+    // Multiple Watermarks
+    function addWatermark(src, options = {}) {
+      const wm = document.createElement('div');
+      wm.className = 'watermark';
+      wm.style.display = 'block';
+      wm.style.opacity = options.opacity || 0.5;
+      wm.style.width = (options.width || 180) + 'px';
+      wm.style.position = 'absolute';
+      if(options.left && options.top) {
+        wm.style.left = options.left + 'px';
+        wm.style.top = options.top + 'px';
+      } else {
+        const mapWrap = document.getElementById('mapWrap').getBoundingClientRect();
+        wm.style.left = (mapWrap.width - 200) + 'px';
+        wm.style.top = (mapWrap.height - 150) + 'px';
+      }
+      wm.style.right = 'auto';
+      wm.style.bottom = 'auto';
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = 'watermark';
+      img.crossOrigin = 'anonymous';
+      wm.appendChild(img);
+      document.getElementById('mapWrap').appendChild(wm);
+      watermarks.push(wm);
+
+      let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+      wm.addEventListener('contextmenu', e => { e.preventDefault(); openWatermarkPopup(e, wm); });
+      wm.addEventListener('mousedown', e => {
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        const r = wm.getBoundingClientRect();
+        startLeft = r.left;
+        startTop = r.top;
+        map.dragging.disable();
+      });
+      wm.addEventListener('click', e => e.stopPropagation());
+      window.addEventListener('mousemove', e => {
+        if(!dragging || watermarks.indexOf(wm) === -1) return;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+        wm.style.left = (startLeft + dx - wrap.left) + 'px';
+        wm.style.top = (startTop + dy - wrap.top) + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+        ydoc.transact(() => {
+          const idx = watermarks.indexOf(wm);
+          if(idx > -1) {
+            ywatermarks.set(idx, {
+              src: img.src,
+              opacity: parseFloat(wm.style.opacity),
+              width: wm.offsetWidth,
+              left: parseFloat(wm.style.left),
+              top: parseFloat(wm.style.top)
+            });
+          }
+        });
+      });
+      window.addEventListener('mouseup', () => {
+        if(dragging) {
+          dragging = false;
+          map.dragging.enable();
+        }
+      });
+      let draggingT = false, tStart = null;
+      wm.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        draggingT = true;
+        tStart = { x: t.clientX, y: t.clientY };
+        const r = wm.getBoundingClientRect();
+        startLeft = r.left;
+        startTop = r.top;
+        map.dragging.disable();
+      }, { passive: false });
+      window.addEventListener('touchmove', e => {
+        if(!draggingT || watermarks.indexOf(wm) === -1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+        wm.style.left = (startLeft + dx - wrap.left) + 'px';
+        wm.style.top = (startTop + dy - wrap.top) + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+        ydoc.transact(() => {
+          const idx = watermarks.indexOf(wm);
+          if(idx > -1) {
+            ywatermarks.set(idx, {
+              src: img.src,
+              opacity: parseFloat(wm.style.opacity),
+              width: wm.offsetWidth,
+              left: parseFloat(wm.style.left),
+              top: parseFloat(wm.style.top)
+            });
+          }
+        });
+        e.preventDefault();
+      }, { passive: false });
+      window.addEventListener('touchend', () => {
+        if(draggingT) {
+          draggingT = false;
+          map.dragging.enable();
+        }
+      });
+      ydoc.transact(() => {
+        ywatermarks.push({
+          src: img.src,
+          opacity: parseFloat(wm.style.opacity),
+          width: wm.offsetWidth,
+          left: parseFloat(wm.style.left),
+          top: parseFloat(wm.style.top)
+        });
       });
     }
+
+    document.getElementById('logoBtn').onclick = () => document.getElementById('logoFile').click();
+    document.getElementById('logoFile').addEventListener('change', e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => addWatermark(ev.target.result);
+      r.readAsDataURL(f);
+    });
+
+    function openWatermarkPopup(e, wm) {
+      const wrap = document.createElement('div');
+      wrap.className = 'size-popup';
+      wrap.innerHTML = `
+        <label>Opacity <input type="range" min="0.05" max="1" step="0.05" value="${wm.style.opacity || 0.5}"></label>
+        <label>Size (px) <input type="range" min="60" max="800" step="10" value="${wm.offsetWidth || 180}"></label>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        </div>`;
+      const opacityInput = wrap.querySelector('input[min="0.05"]');
+      opacityInput.addEventListener('input', () => {
+        wm.style.opacity = opacityInput.value;
+        ydoc.transact(() => {
+          const idx = watermarks.indexOf(wm);
+          if(idx > -1) ywatermarks.set(idx, { ...ywatermarks.get(idx), opacity: parseFloat(wm.style.opacity) });
+        });
+      });
+      const sizeInput = wrap.querySelector('input[min="60"]');
+      sizeInput.addEventListener('input', () => {
+        wm.style.width = sizeInput.value + 'px';
+        ydoc.transact(() => {
+          const idx = watermarks.indexOf(wm);
+          if(idx > -1) ywatermarks.set(idx, { ...ywatermarks.get(idx), width: wm.offsetWidth });
+        });
+      });
+      wrap.querySelector('#delBtn').addEventListener('click', () => {
+        ydoc.transact(() => {
+          const idx = watermarks.indexOf(wm);
+          if(idx > -1) {
+            ywatermarks.delete(idx, 1);
+            watermarks.splice(idx, 1);
+            wm.remove();
+          }
+        });
+        popup.close();
+      });
+      const popup = L.popup().setContent(wrap).setLatLng(map.mouseEventToLatLng(e)).openOn(map);
+    }
+
+    // Export helpers
+    function addWatermarkToCanvas(canvas) {
+      return new Promise(resolve => {
+        console.log('Adding watermarks to canvas...');
+        const ctx = canvas.getContext('2d');
+        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+        const scaleX = canvas.width / wrap.width, scaleY = canvas.height / wrap.height;
+        let loaded = 0;
+        const visibleWatermarks = watermarks.filter(wm => wm.style.display !== 'none');
+        if(visibleWatermarks.length === 0) {
+          console.log('No watermarks to add.');
+          return resolve(canvas);
+        }
+        visibleWatermarks.forEach(wm => {
+          const img = wm.querySelector('img');
+          const wmRect = wm.getBoundingClientRect();
+          const left = (wmRect.left - wrap.left) * scaleX;
+          const top = (wmRect.top - wrap.top) * scaleY;
+          const w = wmRect.width * scaleX;
+          const h = wmRect.height * scaleY;
+          const newImg = new Image();
+          newImg.crossOrigin = 'anonymous';
+          newImg.onload = () => {
+            console.log(`Watermark loaded: ${img.src}`);
+            ctx.globalAlpha = parseFloat(wm.style.opacity || 1);
+            ctx.drawImage(newImg, left, top, w, h);
+            ctx.globalAlpha = 1;
+            loaded++;
+            if(loaded === visibleWatermarks.length) {
+              console.log('All watermarks added.');
+              resolve(canvas);
+            }
+          };
+          newImg.onerror = err => {
+            console.error(`Failed to load watermark: ${img.src}`, err);
+            loaded++;
+            if(loaded === visibleWatermarks.length) resolve(canvas);
+          };
+          newImg.src = img.src;
+        });
+      });
+    }
+
     function captureMapCanvas() {
-      return html2canvas(document.getElementById('mapWrap'), {
-        useCORS: true,
-        scale: 2,
-        backgroundColor: '#000',
-        foreignObjectRendering: true
-      }).then(addWatermarkToCanvas);
-    }
-    function exportPNG(){
-      captureMapCanvas().then(c=>{
-        const a=document.createElement('a'); a.download='event-map.png'; a.href=c.toDataURL('image/png'); a.click();
+      return new Promise((resolve, reject) => {
+        console.log('Starting canvas capture...');
+        map.invalidateSize();
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        map.setView(center, zoom);
+        let tileLoadCount = 0;
+        const tiles = tileLayer._tiles || {};
+        const expectedTiles = Object.keys(tiles).length;
+        console.log(`Expecting ${expectedTiles} tiles to load...`);
+        if(expectedTiles === 0) {
+          proceedWithCapture();
+        } else {
+          tileLayer.on('tileload', () => {
+            tileLoadCount++;
+            console.log(`Tile loaded: ${tileLoadCount}/${expectedTiles}`);
+            if(tileLoadCount >= expectedTiles) proceedWithCapture();
+          });
+          tileLayer.on('tileerror', err => {
+            console.error('Tile error:', err);
+            tileLoadCount++;
+            if(tileLoadCount >= expectedTiles) proceedWithCapture();
+          });
+          setTimeout(() => {
+            if(tileLoadCount < expectedTiles) {
+              console.warn('Tile loading timeout, proceeding with capture.');
+              proceedWithCapture();
+            }
+          }, 5000); // 5s timeout
+          map._onResize();
+        }
+        function proceedWithCapture() {
+          console.log('Proceeding with canvas capture...');
+          const polygonControls = document.getElementById('polygonControls');
+          const originalDisplay = polygonControls.style.display;
+          polygonControls.style.display = 'none';
+          map.eachLayer(layer => {
+            if(layer instanceof L.Popup) {
+              layer._tempHidden = true;
+              map.removeLayer(layer);
+            }
+          });
+          const imagesToLoad = [];
+          markers.forEach(marker => { if(marker.myMeta.imgSrc) imagesToLoad.push(marker.myMeta.imgSrc); });
+          watermarks.forEach(wm => { if(wm.style.display !== 'none') imagesToLoad.push(wm.querySelector('img').src); });
+          console.log(`Preloading ${imagesToLoad.length} images...`);
+          const loadImage = src => {
+            return new Promise((res, rej) => {
+              const img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = () => {
+                console.log(`Image preloaded: ${src}`);
+                res(img);
+              };
+              img.onerror = err => {
+                console.error(`Image preload failed: ${src}`, err);
+                res(null);
+              };
+              img.src = src;
+            });
+          };
+          Promise.all(imagesToLoad.map(loadImage)).then(() => {
+            console.log('Capturing map with html2canvas...');
+            html2canvas(document.getElementById('mapWrap'), {
+              useCORS: true,
+              scale: window.devicePixelRatio * 2,
+              backgroundColor: '#000',
+              foreignObjectRendering: true,
+              logging: true,
+              width: document.getElementById('mapWrap').offsetWidth,
+              height: document.getElementById('mapWrap').offsetHeight
+            }).then(canvas => {
+              console.log('html2canvas completed.');
+              polygonControls.style.display = originalDisplay;
+              map.eachLayer(layer => {
+                if(layer._tempHidden) {
+                  layer.addTo(map);
+                  delete layer._tempHidden;
+                }
+              });
+              addWatermarkToCanvas(canvas).then(resolve).catch(err => {
+                console.error('Watermark addition failed:', err);
+                reject(err);
+              });
+            }).catch(err => {
+              console.error('html2canvas failed:', err);
+              polygonControls.style.display = originalDisplay;
+              map.eachLayer(layer => {
+                if(layer._tempHidden) {
+                  layer.addTo(map);
+                  delete layer._tempHidden;
+                }
+              });
+              reject(err);
+            });
+          }).catch(err => {
+            console.error('Image preload failed:', err);
+            polygonControls.style.display = originalDisplay;
+            map.eachLayer(layer => {
+              if(layer._tempHidden) {
+                layer.addTo(map);
+                delete layer._tempHidden;
+              }
+            });
+            reject(err);
+          });
+        }
       });
     }
 
-    // ---------- PDF dialog ----------
-    const pdfBackdrop=document.getElementById('pdfBackdrop');
-    const pdfDialog=document.getElementById('pdfDialog');
-    function openPdfDialog(){ pdfBackdrop.style.display='block'; pdfDialog.style.display='block'; }
-    function closePdfDialog(){ pdfBackdrop.style.display='none'; pdfDialog.style.display='none'; }
-    pdfBackdrop.addEventListener('click', closePdfDialog);
+    function exportPNG() {
+      console.log('Initiating PNG export...');
+      captureMapCanvas().then(canvas => {
+        const dataUrl = canvas.toDataURL('image/png');
+        console.log('Canvas converted to data URL:', dataUrl.slice(0, 50) + '...');
+        const a = document.createElement('a');
+        a.download = 'event-map.png';
+        a.href = dataUrl;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        console.log('PNG download triggered.');
+      }).catch(err => {
+        console.error('PNG export failed:', err);
+        alert('Failed to export PNG. Check console for details.');
+      });
+    }
+
+    function openPdfDialog() {
+      document.getElementById('pdfBackdrop').style.display = 'block';
+      document.getElementById('pdfDialog').style.display = 'block';
+    }
+
+    function closePdfDialog() {
+      document.getElementById('pdfBackdrop').style.display = 'none';
+      document.getElementById('pdfDialog').style.display = 'none';
+    }
+
+    document.getElementById('pdfBackdrop').addEventListener('click', closePdfDialog);
     document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
 
-    document.getElementById('exportPdf').onclick=()=>{
+    document.getElementById('exportPdf').onclick = () => {
+      console.log('Initiating PDF export...');
       const { jsPDF } = window.jspdf;
-      const size=document.getElementById('pdfSize').value;
-      const orientation=document.getElementById('pdfOrientation').value;
-      const scaleMode=document.getElementById('pdfScaleMode').value;
-
-      const pdf=new jsPDF({orientation,unit:'mm',format:size});
-      captureMapCanvas().then(c=>{
-        const img=c.toDataURL('image/jpeg',1.0);
-        const pageW=pdf.internal.pageSize.getWidth();
-        const pageH=pdf.internal.pageSize.getHeight();
-        let imgW,imgH,x,y;
-        if(scaleMode==='fit'){ imgW=pageW; imgH=pageH; x=0; y=0; }
-        else{
-          const ratio=Math.min(pageW/c.width, pageH/c.height);
-          imgW=c.width*ratio; imgH=c.height*ratio;
-          x=(pageW-imgW)/2; y=(pageH-imgH)/2;
+      const size = document.getElementById('pdfSize').value;
+      const orientation = document.getElementById('pdfOrientation').value;
+      const scaleMode = document.getElementById('pdfScaleMode').value;
+      const pdf = new jsPDF({orientation, unit: 'mm', format: size});
+      captureMapCanvas().then(canvas => {
+        const img = canvas.toDataURL('image/jpeg', 1.0);
+        console.log('Canvas converted to JPEG for PDF:', img.slice(0, 50) + '...');
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        let imgW, imgH, x, y;
+        if(scaleMode === 'fit') {
+          imgW = pageW; imgH = pageH; x = 0; y = 0;
+        } else {
+          const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+          imgW = canvas.width * ratio; imgH = canvas.height * ratio;
+          x = (pageW - imgW) / 2; y = (pageH - imgH) / 2;
         }
-        pdf.addImage(img,'JPEG',x,y,imgW,imgH);
+        pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
         pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
+        console.log('PDF download triggered.');
+        closePdfDialog();
+      }).catch(err => {
+        console.error('PDF export failed:', err);
+        alert('Failed to export PDF. Check console for details.');
         closePdfDialog();
       });
     };
 
-    // ---------- JSON Export / Import ----------
-    const importJsonInput=document.getElementById('importJsonFile');
-    importJsonInput.addEventListener('change', e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader();
-      r.onload=ev=>{
-        try{ restoreProjectJSON(JSON.parse(ev.target.result)); }
-        catch(err){ alert('Invalid JSON'); }
+    // JSON Export / Import
+    const importJsonInput = document.getElementById('importJsonFile');
+    importJsonInput.addEventListener('change', e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try { restoreProjectJSON(JSON.parse(ev.target.result)); }
+        catch(err) { alert('Invalid JSON'); }
       };
       r.readAsText(f);
     });
-    function doExportJSON(){
+
+    function doExportJSON() {
       const data = buildProjectJSON();
-      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `event-map-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      a.download = `event-map-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
     }
 
-    function buildProjectJSON(){
-      const savedMarkers = markers.map(m=>{
-        const ll = m.getLatLng();
-        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta }; // {label, icon?, size, baseSize, isText?, color?, imgSrc?}
-      });
-      const savedPolys = polygons.map(p=>{
-        const rings = p.getLatLngs();
-        const latlngs = rings[0].map(ll=>[ll.lat,ll.lng]);
-        const {color,weight,dashArray,fillOpacity}=p.options;
-        return { latlngs, style:{color,weight,dashArray,fillOpacity} };
-      });
-      const savedLegend = Array.from(legendSet.entries()).map(([label,val])=>({label, icon:val.emoji || null, imgSrc:val.img || null}));
-      // Watermark
-      const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
-      const wmRect=wm.getBoundingClientRect();
-      const wmData = wmImg.src ? {
-        src: wmImg.src,
-        visible: wm.style.display !== 'none',
-        left: (wmRect.left - wrapRect.left),
-        top: (wmRect.top - wrapRect.top),
-        width: wm.offsetWidth,
-        opacity: parseFloat(wm.style.opacity || 1)
-      } : null;
-
+    function buildProjectJSON() {
+      const savedMarkers = ymarkers.toArray();
+      const savedPolys = ypolygons.toArray();
+      const savedLegend = Array.from(ylegend.entries()).map(([label, val]) => ({label, icon: val.emoji || null, imgSrc: val.img || null}));
+      const savedWatermarks = ywatermarks.toArray();
       return {
-        version: 6,
+        version: 5,
         createdAt: new Date().toISOString(),
-        view: { center: map.getCenter(), zoom: map.getZoom() },
+        view: { center: yview.get('center'), zoom: yview.get('zoom') },
         markers: savedMarkers,
         polygons: savedPolys,
         legend: savedLegend,
-        watermark: wmData
+        watermarks: savedWatermarks
       };
     }
 
-    function restoreProjectJSON(data){
-      // Clear existing
-      markers.forEach(m=>map.removeLayer(m)); markers.length=0;
-      polygons.forEach(p=>map.removeLayer(p)); polygons.length=0;
-      tempLines.forEach(l=>map.removeLayer(l)); tempLines.length=0;
-      legendSet.clear(); renderLegend();
-
-      // View
-      if(data.view && data.view.center && typeof data.view.zoom!=='undefined'){
-        map.setView([data.view.center.lat, data.view.center.lng], data.view.zoom);
-      }else{
-        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
-      }
-
-      // Legend
-      if(Array.isArray(data.legend)){
-        data.legend.forEach(item=>{
-          if(!item || !item.label) return;
-          if(item.imgSrc) legendSet.set(item.label,{img:item.imgSrc});
-          else if(item.icon) legendSet.set(item.label,{emoji:item.icon});
-        });
-        renderLegend();
-      }
-
-      // Markers (emoji, image, text)
-      if(Array.isArray(data.markers)){
-        data.markers.forEach(m=>{
-          const latlng = L.latLng(m.lat, m.lng);
-          const meta = m.meta && (m.meta.icon || m.meta.imgSrc)
-            ? m.meta
-            : {icon:'📍',label:'Marker',size:26};
-          if(!meta.baseSize && meta.size) meta.baseSize = meta.size; // ensure centered slider works after import
-          placeMarkerOrText(latlng, meta);
-        });
-      }
-
-      // Polygons
-      if(Array.isArray(data.polygons)){
-        data.polygons.forEach(p=>{
-          const poly=L.polygon(p.latlngs, p.style || {color:'#ff0000',weight:2,dashArray:'6,4',fillOpacity:0.25}).addTo(map);
-          poly.on('click',()=>selectPolygon(poly));
-          polygons.push(poly);
-        });
-      }
-
-      // Watermark
-      if(data.watermark && data.watermark.src){
-        wmImg.src = data.watermark.src;
-        wm.style.display = data.watermark.visible ? 'block' : 'none';
-        wmControls.style.display = data.watermark.visible ? 'flex' : 'none';
-        wm.style.position='absolute';
-        wm.style.left = (data.watermark.left||0)+'px';
-        wm.style.top  = (data.watermark.top||0)+'px';
-        wm.style.right='auto'; wm.style.bottom='auto';
-        wm.style.width = (data.watermark.width||180)+'px';
-        wm.style.opacity = (typeof data.watermark.opacity==='number'? data.watermark.opacity : 0.5);
-      }
+    function restoreProjectJSON(data) {
+      ydoc.transact(() => {
+        ymarkers.delete(0, ymarkers.length);
+        ypolygons.delete(0, ypolygons.length);
+        ywatermarks.delete(0, ywatermarks.length);
+        ylegend.clear();
+        if(data.view && data.view.center && typeof data.view.zoom !== 'undefined') {
+          yview.set('center', data.view.center);
+          yview.set('zoom', data.view.zoom);
+        } else {
+          yview.set('center', SOFALA_CENTER);
+          yview.set('zoom', SOFALA_ZOOM);
+        }
+        if(Array.isArray(data.legend)) {
+          data.legend.forEach(item => {
+            if(item && item.label) {
+              if(item.imgSrc) ylegend.set(item.label, {img: item.imgSrc});
+              else if(item.icon) ylegend.set(item.label, {emoji: item.icon});
+            }
+          });
+        }
+        if(Array.isArray(data.markers)) {
+          data.markers.forEach(m => {
+            const meta = m.meta && (m.meta.icon || m.meta.imgSrc) ? m.meta : {icon: '📍', label: 'Marker', size: 26};
+            ymarkers.push({ lat: m.lat, lng: m.lng, meta });
+          });
+        }
+        if(Array.isArray(data.polygons)) {
+          data.polygons.forEach(p => {
+            ypolygons.push({ latlngs: p.latlngs, style: p.style || {color: '#ff0000', weight: 2, dashArray: '6,4', fillOpacity: 0.25} });
+          });
+        }
+        if(Array.isArray(data.watermarks)) {
+          data.watermarks.forEach(wmData => {
+            if(wmData && wmData.src) {
+              ywatermarks.push({
+                src: wmData.src,
+                opacity: wmData.opacity,
+                width: wmData.width,
+                left: wmData.left,
+                top: wmData.top
+              });
+            }
+          });
+        }
+      });
     }
 
-    // PDF dialog open/close (extra safety)
-    function openPdfDialog(){ pdfBackdrop.style.display='block'; pdfDialog.style.display='block'; }
-    function closePdfDialog(){ pdfBackdrop.style.display='none'; pdfDialog.style.display='none'; }
-    pdfBackdrop.addEventListener('click', closePdfDialog);
-    document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
+    // Render from Yjs
+    function renderMapFromYjs() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      polygons.forEach(p => map.removeLayer(p));
+      polygons = [];
+      watermarks.forEach(wm => wm.remove());
+      watermarks = [];
+      ymarkers.toArray().forEach(m => {
+        const latlng = L.latLng(m.lat, m.lng);
+        const meta = m.meta;
+        const size = meta.size || 26;
+        let html;
+        if(meta.imgSrc) {
+          html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
+                    <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
+                  </div>`;
+        } else {
+          const colorStyle = meta.isText ? `color:${meta.color};` : '';
+          html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
+        }
+        const marker = L.marker(latlng, {
+          icon: L.divIcon({className: "custom-div-icon", html, iconSize: [size, size], iconAnchor: [size/2, size/2]}),
+          draggable: true
+        }).addTo(map);
+        marker.myMeta = {...meta, size};
+        markers.push(marker);
+        marker.on('click', () => { selectedMarker = marker; });
+        marker.on('contextmenu', () => openMarkerPopup(marker));
+        let lpTimer = null;
+        marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
+        marker.on('touchend', () => { if(lpTimer) clearTimeout(lpTimer); });
+        marker.on('dragend', () => {
+          ydoc.transact(() => {
+            const idx = markers.indexOf(marker);
+            if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
+          });
+        });
+      });
+      ypolygons.toArray().forEach(p => {
+        const poly = L.polygon(p.latlngs, p.style).addTo(map);
+        poly.on('click', () => selectPolygon(poly));
+        polygons.push(poly);
+      });
+      ywatermarks.toArray().forEach(wmData => {
+        addWatermark(wmData.src, {
+          opacity: wmData.opacity,
+          width: wmData.width,
+          left: wmData.left,
+          top: wmData.top
+        });
+      });
+      renderLegend();
+    }
+
+    ydoc.on('update', renderMapFromYjs);
+    yview.observe(() => {
+      const center = yview.get('center') || SOFALA_CENTER;
+      const zoom = yview.get('zoom') || SOFALA_ZOOM;
+      map.setView(center, zoom);
+    });
+
+    // Signaling
+    const socket = io(SIGNALING_URL);
+    socket.emit('join-room', roomId, userId);
+    socket.on('existing-users', existingUsers => {
+      existingUsers.forEach(user => {
+        const peer = new SimplePeer({ initiator: true, trickle: false });
+        peer.on('signal', signal => socket.emit('offer', { target: user.socketId, signal }));
+        peer.on('connect', () => console.log('P2P connected to', user.userId));
+      });
+    });
+    socket.on('user-joined', user => {
+      const peer = new SimplePeer({ initiator: false, trickle: false });
+      peer.on('signal', signal => socket.emit('answer', { target: user.socketId, signal }));
+    });
+    socket.on('offer', data => {
+      const peer = new SimplePeer({ initiator: false, trickle: false });
+      peer.signal(data.signal);
+      peer.on('signal', signal => socket.emit('answer', { target: data.socketId, signal }));
+    });
+    socket.on('answer', data => {
+      const peer = webrtcProvider.peers.find(p => p.id === data.socketId);
+      if(peer) peer.signal(data.signal);
+    });
+    socket.on('ice-candidate', data => {
+      const peer = webrtcProvider.peers.find(p => p.id === data.socketId);
+      if(peer) peer.signal(data.candidate);
+    });
+
+    console.log('Collaborative mode enabled! Share this URL with others.');
   </script>
 </body>
 </html>
