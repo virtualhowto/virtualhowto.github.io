@@ -43,9 +43,6 @@
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
     #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
     #watermark img{display:block;max-width:100%;max-height:100%}
-    #wmControls{position:absolute;bottom:110%;right:0;background:#0f141d;border:1px solid var(--border);border-radius:8px;padding:8px;display:none;gap:6px;z-index:851;width:260px}
-    #wmControls label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px;margin:4px 0}
-    #wmControls input[type="range"]{flex:1}
     .compass-control{width:80px;height:80px}
     .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
     .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
@@ -263,7 +260,7 @@
       btn.setAttribute('data-type','image');
       btn.setAttribute('data-label', label);
       btn.setAttribute('data-imgsrc', dataUrl);
-      btn.setAttribute('data-size', '26'); // Set default size to match emojis
+      btn.setAttribute('data-size', '26');
       btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt="${label}"/><span class="label">${label}</span>`;
       addCustomBtn.insertAdjacentElement('beforebegin', btn);
       attachToolHandlers();
@@ -582,61 +579,142 @@
     });
 
     // ---------- Export helpers ----------
-    function addWatermarkToCanvas(c){
+    function addWatermarkToCanvas(canvas){
       return new Promise(resolve=>{
-        if(!wmImg.src || wm.style.display==='none'){ return resolve(c); }
-        const ctx=c.getContext('2d'); 
+        if(!wmImg.src || wm.style.display==='none'){ return resolve(canvas); }
+        const ctx=canvas.getContext('2d'); 
         const wrap=document.getElementById('mapWrap').getBoundingClientRect(); 
         const wmRect=wm.getBoundingClientRect();
-        const scaleX=c.width/wrap.width, scaleY=c.height/wrap.height;
+        const scaleX=canvas.width/wrap.width, scaleY=canvas.height/wrap.height;
         const left=(wmRect.left-wrap.left)*scaleX, top=(wmRect.top-wrap.top)*scaleY, w=wmRect.width*scaleX, h=wmRect.height*scaleY;
-        ctx.globalAlpha=parseFloat(wm.style.opacity || 1); 
-        ctx.drawImage(wmImg,left,top,w,h); 
-        ctx.globalAlpha=1; 
-        resolve(c);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          ctx.globalAlpha = parseFloat(wm.style.opacity || 1); 
+          ctx.drawImage(img, left, top, w, h); 
+          ctx.globalAlpha = 1; 
+          resolve(canvas);
+        };
+        img.onerror = () => resolve(canvas); // Fallback if image fails to load
+        img.src = wmImg.src;
       });
     }
+
     function captureMapCanvas() {
       return new Promise((resolve, reject) => {
         // Ensure map is centered and tiles are loaded
         map.invalidateSize();
         const center = map.getCenter();
         const zoom = map.getZoom();
-        map.setView(center, zoom); // Re-center map
-        tileLayer.once('load', () => {
-          // Hide polygon controls to avoid capturing them
+        map.setView(center, zoom);
+        
+        // Wait for tiles to load
+        let tileLoadCount = 0;
+        const expectedTiles = tileLayer._tiles ? Object.keys(tileLayer._tiles).length : 0;
+        if (expectedTiles === 0) {
+          // No tiles to wait for, proceed immediately
+          proceedWithCapture();
+        } else {
+          tileLayer.on('tileload', () => {
+            tileLoadCount++;
+            if (tileLoadCount >= expectedTiles) {
+              proceedWithCapture();
+            }
+          });
+          tileLayer.on('tileerror', () => {
+            // Proceed even if some tiles fail to avoid hanging
+            tileLoadCount++;
+            if (tileLoadCount >= expectedTiles) {
+              proceedWithCapture();
+            }
+          });
+          // Trigger tile load
+          map._onResize();
+        }
+
+        function proceedWithCapture() {
+          // Hide UI elements
           const polygonControls = document.getElementById('polygonControls');
           const originalDisplay = polygonControls.style.display;
           polygonControls.style.display = 'none';
           
-          html2canvas(document.getElementById('mapWrap'), {
-            useCORS: true,
-            scale: 3, // Higher resolution for PDF
-            backgroundColor: '#000',
-            foreignObjectRendering: true,
-            logging: false
-          }).then(canvas => {
-            // Restore polygon controls
-            polygonControls.style.display = originalDisplay;
-            addWatermarkToCanvas(canvas).then(resolve).catch(reject);
+          // Temporarily hide popups
+          map.eachLayer(layer => {
+            if (layer instanceof L.Popup) {
+              layer._tempHidden = true;
+              map.removeLayer(layer);
+            }
+          });
+
+          // Ensure all images (e.g., no-detecting.png, custom icons) are preloaded
+          const imagesToLoad = [];
+          markers.forEach(marker => {
+            if (marker.myMeta.imgSrc) {
+              imagesToLoad.push(marker.myMeta.imgSrc);
+            }
+          });
+          if (wmImg.src && wm.style.display !== 'none') {
+            imagesToLoad.push(wmImg.src);
+          }
+
+          const loadImage = src => {
+            return new Promise((res, rej) => {
+              const img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = () => res(img);
+              img.onerror = () => res(null); // Continue even if an image fails
+              img.src = src;
+            });
+          };
+
+          Promise.all(imagesToLoad.map(loadImage)).then(() => {
+            html2canvas(document.getElementById('mapWrap'), {
+              useCORS: true,
+              scale: window.devicePixelRatio * 2, // Adjust for high-DPI displays
+              backgroundColor: '#000',
+              foreignObjectRendering: true,
+              logging: false,
+              width: document.getElementById('mapWrap').offsetWidth,
+              height: document.getElementById('mapWrap').offsetHeight
+            }).then(canvas => {
+              // Restore UI elements
+              polygonControls.style.display = originalDisplay;
+              // Restore popups
+              map.eachLayer(layer => {
+                if (layer._tempHidden) {
+                  layer.addTo(map);
+                  delete layer._tempHidden;
+                }
+              });
+              addWatermarkToCanvas(canvas).then(resolve).catch(reject);
+            }).catch(err => {
+              // Restore UI elements on error
+              polygonControls.style.display = originalDisplay;
+              map.eachLayer(layer => {
+                if (layer._tempHidden) {
+                  layer.addTo(map);
+                  delete layer._tempHidden;
+                }
+              });
+              reject(err);
+            });
           }).catch(err => {
-            polygonControls.style.display = originalDisplay;
+            console.error('Image preload failed:', err);
             reject(err);
           });
-        });
-        // Trigger tile load
-        map._onResize();
+        }
       });
     }
+
     function exportPNG(){
-      captureMapCanvas().then(c=>{
-        const a=document.createElement('a'); 
-        a.download='event-map.png'; 
-        a.href=c.toDataURL('image/png'); 
+      captureMapCanvas().then(canvas => {
+        const a = document.createElement('a'); 
+        a.download = 'event-map.png'; 
+        a.href = canvas.toDataURL('image/png'); 
         a.click();
       }).catch(err => {
         console.error('PNG export failed:', err);
-        alert('Failed to export PNG');
+        alert('Failed to export PNG. Check console for details.');
       });
     }
 
@@ -660,25 +738,25 @@
       const orientation=document.getElementById('pdfOrientation').value;
       const scaleMode=document.getElementById('pdfScaleMode').value;
 
-      const pdf=new jsPDF({orientation,unit:'mm',format:size});
-      captureMapCanvas().then(c=>{
-        const img=c.toDataURL('image/jpeg',1.0);
-        const pageW=pdf.internal.pageSize.getWidth();
-        const pageH=pdf.internal.pageSize.getHeight();
-        let imgW,imgH,x,y;
-        if(scaleMode==='fit'){
-          imgW=pageW; imgH=pageH; x=0; y=0;
-        }else{
-          const ratio=Math.min(pageW/c.width, pageH/c.height);
-          imgW=c.width*ratio; imgH=c.height*ratio;
-          x=(pageW-imgW)/2; y=(pageH-imgH)/2;
+      const pdf = new jsPDF({orientation, unit:'mm', format:size});
+      captureMapCanvas().then(canvas => {
+        const img = canvas.toDataURL('image/jpeg', 1.0);
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        let imgW, imgH, x, y;
+        if (scaleMode === 'fit') {
+          imgW = pageW; imgH = pageH; x = 0; y = 0;
+        } else {
+          const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+          imgW = canvas.width * ratio; imgH = canvas.height * ratio;
+          x = (pageW - imgW) / 2; y = (pageH - imgH) / 2;
         }
-        pdf.addImage(img,'JPEG',x,y,imgW,imgH);
+        pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
         pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
         closePdfDialog();
       }).catch(err => {
         console.error('PDF export failed:', err);
-        alert('Failed to export PDF');
+        alert('Failed to export PDF. Check console for details.');
         closePdfDialog();
       });
     };
@@ -707,7 +785,7 @@
     function buildProjectJSON(){
       const savedMarkers = markers.map(m=>{
         const ll = m.getLatLng();
-        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta }; // {label, icon?, size, isText?, color?, imgSrc?}
+        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta };
       });
       const savedPolys = polygons.map(p=>{
         const rings = p.getLatLngs();
