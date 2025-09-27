@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +11,7 @@
       display: flex; flex-direction: column; align-items: center;
       padding: 5px; cursor: grab;
     }
-    .tool img { width: 40px; height: 40px; }
+    .tool span.emoji { font-size: 32px; }
     #map-container {
       position: relative; margin: 10px auto; width: 90%; height: 80vh;
       border: 2px solid #444; background: #ddd; overflow: hidden;
@@ -24,8 +23,8 @@
       position: absolute; cursor: move; user-select: none;
       display: flex; flex-direction: column; align-items: center;
     }
-    .label img { width: 40px; height: 40px; }
-    .label span {
+    .label span.emoji { font-size: 32px; }
+    .label span.text {
       background: rgba(255,255,255,0.8); padding: 2px 4px; border-radius: 3px;
       font-size: 12px; margin-top: 2px;
     }
@@ -36,14 +35,25 @@
   <header><h2>Sofala Showground Event Map Builder</h2></header>
 
   <div id="toolbar">
-    <div class="tool" draggable="true" data-label="Stage"><img src="https://img.icons8.com/emoji/48/performing-arts.png"><span>Stage</span></div>
-    <div class="tool" draggable="true" data-label="Toilets"><img src="https://img.icons8.com/emoji/48/toilet.png"><span>Toilets</span></div>
-    <div class="tool" draggable="true" data-label="Parking"><img src="https://img.icons8.com/emoji/48/parking.png"><span>Parking</span></div>
-    <div class="tool" draggable="true" data-label="First Aid"><img src="https://img.icons8.com/emoji/48/hospital.png"><span>First Aid</span></div>
-    <div class="tool" draggable="true" data-label="Camping"><img src="https://img.icons8.com/emoji/48/tent.png"><span>Camping</span></div>
+    <div class="tool" draggable="true" data-label="Stage" data-icon="🎤">
+      <span class="emoji">🎤</span><span>Stage</span>
+    </div>
+    <div class="tool" draggable="true" data-label="Toilets" data-icon="🚻">
+      <span class="emoji">🚻</span><span>Toilets</span>
+    </div>
+    <div class="tool" draggable="true" data-label="Parking" data-icon="🅿️">
+      <span class="emoji">🅿️</span><span>Parking</span>
+    </div>
+    <div class="tool" draggable="true" data-label="First Aid" data-icon="⛑️">
+      <span class="emoji">⛑️</span><span>First Aid</span>
+    </div>
+    <div class="tool" draggable="true" data-label="Camping" data-icon="⛺">
+      <span class="emoji">⛺</span><span>Camping</span>
+    </div>
   </div>
 
   <div id="map-container">
+    <!-- Replace src with your own base image file -->
     <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Event Map Base">
   </div>
 
@@ -59,7 +69,7 @@
 
     // Drag from toolbar
     tools.forEach(tool => {
-      tool.addEventListener('dragstart', e => {
+      tool.addEventListener('dragstart', () => {
         dragItem = tool;
       });
     });
@@ -72,7 +82,7 @@
         const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left - 20;
         const y = e.clientY - rect.top - 20;
-        addLabel(dragItem.dataset.label, dragItem.querySelector('img').src, x, y);
+        addLabel(dragItem.dataset.label, dragItem.dataset.icon, x, y);
       }
     });
 
@@ -82,13 +92,13 @@
       label.className = 'label';
       label.style.left = x + 'px';
       label.style.top = y + 'px';
-      label.innerHTML = `<img src="${icon}"><span contenteditable="true">${text}</span>`;
+      label.innerHTML = `<span class="emoji">${icon}</span><span class="text" contenteditable="true">${text}</span>`;
       container.appendChild(label);
 
       // Make draggable
       let offsetX, offsetY;
       label.onmousedown = e => {
-        if (e.target.tagName === 'SPAN') return; // allow text edit
+        if (e.target.classList.contains('text')) return; // allow text edit
         offsetX = e.offsetX;
         offsetY = e.offsetY;
         function move(ev) {
