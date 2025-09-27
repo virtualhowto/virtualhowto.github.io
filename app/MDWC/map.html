@@ -126,11 +126,6 @@
     <!-- Watermark -->
     <div id="watermark">
       <img id="watermarkImg" alt="watermark"/>
-      <div id="wmControls">
-        <label>Opacity <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="0.5"></label>
-        <label>Size (px) <input id="wmSize" type="range" min="60" max="800" step="10" value="180"></label>
-        <button class="btn" id="wmDelete">Delete Watermark</button>
-      </div>
     </div>
   </div>
 
@@ -232,10 +227,6 @@
     exportBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMenu(exportMenu.style.display!=='block'); });
     document.addEventListener('click', (e)=>{
       toggleMenu(false);
-      if(!e.target.closest('#watermark') && !e.target.closest('#wmControls')) {
-        document.getElementById('wmControls').style.display='none';
-        clearTimeout(wm._hideTimer);
-      }
     });
     exportMenu.addEventListener('click',(e)=>e.stopPropagation());
     document.getElementById('menuPng').onclick=()=>{ toggleMenu(false); exportPNG(); };
@@ -478,27 +469,23 @@
     }
 
     // ---------- Watermark ----------
-    const wm=document.getElementById('watermark'), wmImg=document.getElementById('watermarkImg'),
-          wmControls=document.getElementById('wmControls'), wmOpacity=document.getElementById('wmOpacity'), wmSize=document.getElementById('wmSize');
+    const wm=document.getElementById('watermark'), wmImg=document.getElementById('watermarkImg');
     document.getElementById('logoBtn').onclick=()=>document.getElementById('logoFile').click();
     document.getElementById('logoFile').addEventListener('change', e=>{
       const f=e.target.files[0]; if(!f) return;
       const r=new FileReader();
       r.onload=ev=>{
         wmImg.src=ev.target.result;
-        wm.style.display='block'; wmControls.style.display='flex';
-        wm.style.width=wmSize.value+'px'; wm.style.opacity=wmOpacity.value;
+        wm.style.display='block';
+        wm.style.opacity = 0.5;
+        wm.style.width = '180px';
         ensureWMLeftTop();
       };
       r.readAsDataURL(f);
     });
-    wmOpacity.oninput=()=>{ wm.style.opacity=wmOpacity.value; hideWmControlsSoon(); };
-    wmSize.oninput=()=>{ wm.style.width=wmSize.value+'px'; hideWmControlsSoon(); };
-    document.getElementById('wmDelete').onclick=()=>{ wm.style.display='none'; wmControls.style.display='none'; wmImg.src=''; };
     wm.addEventListener('contextmenu', (e)=>{
       e.preventDefault();
-      wmControls.style.display='flex';
-      clearTimeout(wm._hideTimer);
+      openWatermarkPopup(e);
     });
     wm.addEventListener('mousedown', (e)=>{
       dragging=true;
@@ -508,17 +495,41 @@
       startLeft=r.left;
       startTop=r.top;
       map.dragging.disable();
-      wmControls.style.display='flex';
-      clearTimeout(wm._hideTimer);
     });
     wm.addEventListener('click', (e)=>{
       e.stopPropagation();
     });
 
-    function hideWmControlsSoon(){ 
-      clearTimeout(wm._hideTimer); 
-      wm._hideTimer=setTimeout(()=>{ wmControls.style.display='none'; },1200); 
+    function openWatermarkPopup(e) {
+      const wrap = document.createElement('div');
+      wrap.className='size-popup';
+      wrap.innerHTML = `
+        <label>Opacity <input type="range" min="0.05" max="1" step="0.05" value="${wm.style.opacity || 0.5}"></label>
+        <label>Size (px) <input type="range" min="60" max="800" step="10" value="${wm.offsetWidth || 180}"></label>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        </div>
+      `;
+      const opacityInput = wrap.querySelector('input[min="0.05"]');
+      opacityInput.addEventListener('input', () => {
+        wm.style.opacity = opacityInput.value;
+      });
+      const sizeInput = wrap.querySelector('input[min="60"]');
+      sizeInput.addEventListener('input', () => {
+        wm.style.width = sizeInput.value + 'px';
+      });
+      wrap.querySelector('#delBtn').addEventListener('click', () => {
+        wm.style.display = 'none';
+        wmImg.src = '';
+        popup.close();
+      });
+
+      const popup = L.popup()
+        .setContent(wrap)
+        .setLatLng(map.mouseEventToLatLng(e))
+        .openOn(map);
     }
+
     function ensureWMLeftTop(){
       if(!wm.style.left && !wm.style.top){
         wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
@@ -541,7 +552,6 @@
     window.addEventListener('mouseup',()=>{
       dragging=false;
       map.dragging.enable();
-      hideWmControlsSoon();
     });
     // Touch drag
     let draggingT=false, tStart=null;
@@ -553,8 +563,6 @@
       startLeft=r.left;
       startTop=r.top;
       map.dragging.disable();
-      wmControls.style.display='flex';
-      clearTimeout(wm._hideTimer);
     },{passive:false});
     window.addEventListener('touchmove',e=>{
       if(!draggingT) return;
@@ -571,7 +579,6 @@
     window.addEventListener('touchend',()=>{
       draggingT=false;
       map.dragging.enable();
-      hideWmControlsSoon();
     });
 
     // ---------- Export helpers ----------
@@ -778,7 +785,6 @@
       if(data.watermark && data.watermark.src){
         wmImg.src = data.watermark.src;
         wm.style.display = data.watermark.visible ? 'block' : 'none';
-        wmControls.style.display = data.watermark.visible ? 'flex' : 'none';
         wm.style.position='absolute';
         wm.style.left = (data.watermark.left||0)+'px';
         wm.style.top  = (data.watermark.top||0)+'px';
