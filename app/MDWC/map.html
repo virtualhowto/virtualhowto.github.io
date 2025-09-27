@@ -4,202 +4,615 @@
   <meta charset="UTF-8" />
   <title>Event Map Builder</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Leaflet + Esri-Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
+
+  <!-- Export libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:var(--ink)}
-    header{background:#121722;border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
-    header h1{font-size:18px;margin:0;font-weight:600}
-    #topbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
-    .btn{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:6px 12px;border-radius:10px;cursor:pointer}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink)}
+    header{background:#121722;border-bottom:1px solid var(--border);padding:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+    header h1{font-size:16px;margin:0;font-weight:600}
+    #topbar{display:flex;flex:1;flex-wrap:wrap;gap:8px;align-items:center}
+    .btn{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px}
     .btn.primary{background:var(--accent);color:#0a1524;border:none}
-    #toolbar{display:flex;gap:10px;padding:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);background:#1a1f29}
-    .tool{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 8px;border:1px dashed var(--border);border-radius:10px;cursor:grab;background:var(--panel)}
-    .tool span.emoji{font-size:28px}
-    .tool span.lbl{font-size:12px;color:var(--muted)}
-    #workspace{padding:12px}
-    #map-wrapper{width:min(1200px,94vw);height:76vh;margin:0 auto;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:#0c0f15;position:relative;cursor:grab}
-    #map-container{position:relative;transform-origin:0 0;}
-    #map{max-width:100%;max-height:100%;display:block}
-    canvas.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto}
-    .label{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:move;user-select:none;transform:translate(-50%,-100%);outline:0}
-    .label .emoji{font-size:30px}
-    .label .text{margin-top:2px;font-size:12px;background:rgba(18,23,34,.75);padding:2px 6px;border-radius:6px;border:1px solid var(--border);color:var(--ink)}
-    #hint{position:fixed;bottom:10px;left:10px;background:#0f141d;border:1px solid var(--border);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:12px;z-index:50}
-    #fileName{color:var(--muted);font-size:12px}
+    #searchBox{background:#fff;color:#000;border:1px solid var(--border);border-radius:6px;padding:6px;font-size:14px;flex:1;min-width:170px}
+
+    /* Export dropdown */
+    .dropdown{position:relative;display:inline-block}
+    .dropdown-menu{display:none;position:absolute;right:0;top:100%;margin-top:6px;background:#1a1f29;border:1px solid var(--border);border-radius:10px;min-width:180px;z-index:3000;box-shadow:0 10px 25px rgba(0,0,0,.4)}
+    .dropdown-menu button{width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--ink);cursor:pointer;font-size:14px}
+    .dropdown-menu button:hover{background:#0f141d}
+
+    /* Tools */
+    #toolbar{display:flex;overflow-x:auto;gap:8px;padding:6px;background:#1a1f29;border-bottom:1px solid var(--border)}
+    .tool{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel)}
+    .tool .emoji{font-size:22px}
+
+    /* Map & overlays */
+    #mapWrap{position:relative}
+    #map{width:100%;height:calc(100vh - 420px)}
+    #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:220px}
+    #legend h3{margin:0 0 6px 0;font-size:12px}
+    #legend ul{margin:0;padding:0;list-style:none}
+    #legend li{margin:2px 0}
+
+    /* Polygon selection floating controls */
+    #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
+
+    /* Watermark */
+    #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
+    #watermark img{display:block;max-width:100%;max-height:100%}
+    #wmControls{position:absolute;bottom:110%;right:0;background:#0f141d;border:1px solid var(--border);border-radius:8px;padding:8px;display:none;gap:6px;z-index:851;width:240px}
+    #wmControls label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px;margin:4px 0}
+    #wmControls input[type="range"]{flex:1}
+
+    /* Compass */
+    .compass-control{width:80px;height:80px}
+
+    /* Modal dialog for PDF */
+    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
+    .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
+    .modal h3{margin:0 0 10px 0;color:#fff;font-size:16px}
+    .modal label{display:block;margin:10px 0;color:var(--muted);font-size:13px}
+    .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
+    .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
+
+    /* Marker/text popup controls */
+    .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
+    .size-popup input[type="range"]{width:140px}
   </style>
 </head>
 <body>
   <header>
     <h1>Event Map Builder</h1>
     <div id="topbar">
-      <input type="file" id="baseImage" accept="image/*" style="display:none" />
-      <button class="btn" id="uploadBtn">📷 Upload Map</button>
-      <span id="fileName"></span>
+      <button class="btn" id="gpsBtn">📍 Use GPS</button>
+      <input type="text" id="searchBox" placeholder="Search location..." />
       <button class="btn" id="modeToggle">✏️ Draw Mode</button>
-      <input type="color" id="colorPicker" value="#ff0000" class="btn" />
-      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:13px;">
-        <input type="checkbox" id="fillToggle" checked /> Fill
+      <input type="color" id="colorPicker" value="#ff0000" class="btn" title="Polygon/line color" />
+      <button class="btn" id="finishPolygon">Finish</button>
+      <button class="btn" id="cancelPolygon">Cancel</button>
+      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
+        <input type="checkbox" id="defaultFill" checked /> Fill new polygon
       </label>
-      <button class="btn" id="finishPolygon">Finish Polygon</button>
-      <button class="btn" id="zoomIn">🔍 +</button>
-      <button class="btn" id="zoomOut">🔍 -</button>
-      <button class="btn primary" id="exportBtn">Export PNG</button>
+
+      <!-- Export menu -->
+      <div class="dropdown">
+        <button class="btn" id="exportMenuBtn">📤 Export ▼</button>
+        <div class="dropdown-menu" id="exportMenu">
+          <button id="menuPng">Export PNG</button>
+          <button id="menuPdf">Export PDF…</button>
+          <button id="menuJsonExport">Export JSON</button>
+          <button id="menuJsonImport">Import JSON</button>
+        </div>
+      </div>
+      <input type="file" id="importJsonFile" accept="application/json" style="display:none"/>
+
+      <!-- Watermark -->
+      <input type="file" id="logoFile" accept="image/*" style="display:none"/>
+      <button class="btn" id="logoBtn">Upload Logo</button>
+      <button class="btn" id="toggleWmPanel">WM Controls</button>
     </div>
   </header>
 
+  <!-- Emoji/Text toolbar -->
   <div id="toolbar">
-    <div class="tool" draggable="true" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span><span class="lbl">Stage</span></div>
-    <div class="tool" draggable="true" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span><span class="lbl">Toilets</span></div>
-    <div class="tool" draggable="true" data-label="Parking" data-icon="🅿️"><span class="emoji">🅿️</span><span class="lbl">Parking</span></div>
-    <div class="tool" draggable="true" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span><span class="lbl">First Aid</span></div>
-    <div class="tool" draggable="true" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span><span class="lbl">Camping</span></div>
-    <div class="tool" draggable="true" data-label="Competition Detecting" data-icon="🏆🔎"><span class="emoji">🏆🔎</span><span class="lbl">Competition</span></div>
-    <div class="tool" draggable="true" data-label="Free Detecting" data-icon="🆓🔎"><span class="emoji">🆓🔎</span><span class="lbl">Free Detecting</span></div>
-    <div class="tool" draggable="true" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span><span class="lbl">Sign-in Desk</span></div>
-    <div class="tool" draggable="true" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span><span class="lbl">Entry Gate</span></div>
-    <div class="tool" draggable="true" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span><span class="lbl">Food Area</span></div>
+    <div class="tool" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
+    <div class="tool" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
+    <div class="tool" data-label="Parking" data-icon="🅿️"><span class="emoji">🅿️</span></div>
+    <div class="tool" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span></div>
+    <div class="tool" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span></div>
+    <div class="tool" data-label="Competition Detecting" data-icon="🏆"><span class="emoji">🏆</span></div>
+    <div class="tool" data-label="Free Detecting" data-icon="🆓"><span class="emoji">🆓</span></div>
+    <div class="tool" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
+    <div class="tool" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
+    <div class="tool" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
+    <div class="tool" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
   </div>
 
-  <div id="workspace">
-    <div id="map-wrapper">
-      <div id="map-container">
-        <img id="map" src="0c8324fd-4fb8-4362-a5e6-5e841870a7df.png" alt="Base Map">
-        <canvas id="draw-layer" class="overlay"></canvas>
+  <div id="mapWrap">
+    <div id="map"></div>
+
+    <!-- Legend -->
+    <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
+
+    <!-- Watermark -->
+    <div id="watermark">
+      <img id="watermarkImg" alt="watermark"/>
+      <div id="wmControls">
+        <label>Opacity <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="0.5"></label>
+        <label>Size (px) <input id="wmSize" type="range" min="60" max="800" step="10" value="180"></label>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button class="btn" id="wmHide">Hide</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <div id="hint">💡 Upload a map • Drag icons • Draw polygons (fill optional) • Click polygon to select + Delete • Zoom with +/- • Drag map to pan</div>
+  <!-- Polygon selection controls -->
+  <div id="polygonControls" class="leaflet-top leaflet-right">
+    <button id="toggleFill" class="btn">Toggle Fill</button>
+    <button id="deletePoly" class="btn">Delete</button>
+  </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- PDF Options Modal -->
+  <div class="modal-backdrop" id="pdfBackdrop"></div>
+  <div class="modal" id="pdfDialog" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
+    <h3 id="pdfTitle">PDF Export Options</h3>
+    <label>Paper Size
+      <select id="pdfSize">
+        <option value="a4" selected>A4</option>
+        <option value="a3">A3</option>
+        <option value="a1">A1</option>
+      </select>
+    </label>
+    <label>Orientation
+      <select id="pdfOrientation">
+        <option value="portrait" selected>Portrait</option>
+        <option value="landscape">Landscape</option>
+      </select>
+    </label>
+    <label>Scale Mode
+      <select id="pdfScaleMode">
+        <option value="ratio" selected>Maintain Ratio</option>
+        <option value="fit">Fit to Page</option>
+      </select>
+    </label>
+    <div class="actions">
+      <button class="btn" id="cancelPdf">Cancel</button>
+      <button class="btn primary" id="exportPdf">Export</button>
+    </div>
+  </div>
+
   <script>
-    // --- State variables ---
-    let dragItem=null, drawMode=false, points=[], polygons=[], 
-        selectedPolygonIndex=null, selectedLabel=null;
+    /* =========================
+       Map init (no Leaflet attribution)
+       ========================= */
+    const map = L.map('map', { attributionControl: false });
+    L.esri.tiledMapLayer({
+      url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+      attribution:'Imagery © NSW Spatial Services'
+    }).addTo(map);
 
-    let zoom=1, panX=0, panY=0;
-    let isPanning=false, startX=0, startY=0;
-
-    const container=document.getElementById("map-container");
-    const baseImg=document.getElementById("map");
-    const canvas=document.getElementById("draw-layer");
-    const ctx=canvas.getContext("2d");
-    const fileInput=document.getElementById("baseImage");
-    const uploadBtn=document.getElementById("uploadBtn");
-    const fileName=document.getElementById("fileName");
-
-    // --- Pan / Drag Map Background ---
-    container.addEventListener("mousedown", (e) => {
-      if (e.target === baseImg || e.target === canvas) {
-        isPanning = true;
-        startX = e.clientX - panX;
-        startY = e.clientY - panY;
-        container.style.cursor = "grabbing";
+    /* GPS start with Sofala fallback */
+    const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
+    let userMarker=null, userAccuracy=null;
+    function centerOnUser({silent=false} = {}){
+      if(!navigator.geolocation){
+        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+        if(!silent) alert("Geolocation not supported.");
+        return;
       }
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!isPanning) return;
-      panX = e.clientX - startX;
-      panY = e.clientY - startY;
-      applyTransform();
-    });
-    window.addEventListener("mouseup", () => {
-      isPanning = false;
-      container.style.cursor = "default";
-    });
-
-    // --- Zoom & Pan combined ---
-    function applyTransform() {
-      container.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+      navigator.geolocation.getCurrentPosition(p=>{
+        const {latitude:lat, longitude:lng, accuracy:acc=0}=p.coords;
+        map.setView([lat,lng], 16);
+        userMarker ? userMarker.setLatLng([lat,lng]) : userMarker=L.marker([lat,lng],{title:"You are here"}).addTo(map);
+        userAccuracy ? userAccuracy.setLatLng([lat,lng]).setRadius(acc) :
+          userAccuracy=L.circle([lat,lng],{radius:acc,color:"#4aa3ff",fillOpacity:0.15}).addTo(map);
+      }, _=>{
+        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+        if(!silent) alert("Could not get your location. Defaulting to Sofala, NSW.");
+      }, {enableHighAccuracy:true, timeout:8000, maximumAge:0});
     }
-    document.getElementById("zoomIn").onclick=()=>{zoom=Math.min(zoom+0.2,3);applyTransform();}
-    document.getElementById("zoomOut").onclick=()=>{zoom=Math.max(zoom-0.2,0.4);applyTransform();}
-    applyTransform();
+    centerOnUser({silent:true});
+    document.getElementById('gpsBtn').addEventListener('click',()=>centerOnUser());
 
-    // --- Render helpers ---
-    function pathFromPoints(pts){const p=new Path2D();if(!pts.length)return p;p.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)p.lineTo(pts[i].x,pts[i].y);p.closePath();return p;}
-    function hitTestPolygon(x,y){for(let i=polygons.length-1;i>=0;i--){if(ctx.isPointInPath(pathFromPoints(polygons[i].points),x,y))return i;}return null;}
-    function hexToRgba(hex,a){let r=0,g=0,b=0;if(hex.length===7){r=parseInt(hex.slice(1,3),16);g=parseInt(hex.slice(3,5),16);b=parseInt(hex.slice(5,7),16);}return`rgba(${r},${g},${b},${a})`;}
-    function redraw(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      polygons.forEach((poly,i)=>{
-        const p=pathFromPoints(poly.points);
-        if(document.getElementById("fillToggle").checked){
-          ctx.fillStyle=hexToRgba(poly.color,0.25);
-          ctx.fill(p);
+    /* Compass rose (N/S/E/W) */
+    const compass = L.control({position:'topright'});
+    compass.onAdd=()=>{
+      const d=L.DomUtil.create('div','compass-control');
+      d.innerHTML=`
+        <div style="position:relative;width:80px;height:80px;border-radius:50%;background:#0f141d;border:2px solid #4aa3ff;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)">
+          <span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);font-weight:bold;color:#ff4444">N</span>
+          <span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%)">S</span>
+          <span style="position:absolute;left:2px;top:50%;transform:translateY(-50%)">W</span>
+          <span style="position:absolute;right:2px;top:50%;transform:translateY(-50%)">E</span>
+        </div>`;
+      return d;
+    };
+    compass.addTo(map);
+
+    /* Search (Enter) */
+    const searchBox=document.getElementById('searchBox');
+    searchBox.addEventListener('keydown',async e=>{
+      if(e.key!=="Enter") return;
+      const q=searchBox.value.trim(); if(!q) return;
+      try{
+        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+        const data=await res.json();
+        if(data && data.length){ map.setView([+data[0].lat, +data[0].lon], 15); }
+        else alert("Location not found");
+      }catch{ alert("Search error"); }
+    });
+
+    /* =========================
+       State
+       ========================= */
+    let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null;
+    const markers=[]; let selectedMarker=null;
+    const legendSet=new Map();
+
+    /* =========================
+       Export Menu
+       ========================= */
+    const exportBtn = document.getElementById('exportMenuBtn');
+    const exportMenu = document.getElementById('exportMenu');
+    const toggleMenu = (show)=>exportMenu.style.display = show ? 'block' : 'none';
+    exportBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMenu(exportMenu.style.display!=='block'); });
+    document.addEventListener('click', ()=>toggleMenu(false));
+    exportMenu.addEventListener('click',(e)=>e.stopPropagation());
+    document.getElementById('menuPng').onclick=()=>{ toggleMenu(false); exportPNG(); };
+    document.getElementById('menuPdf').onclick=()=>{ toggleMenu(false); openPdfDialog(); };
+    document.getElementById('menuJsonExport').onclick=()=>{ toggleMenu(false); doExportJSON(); };
+    document.getElementById('menuJsonImport').onclick=()=>{ toggleMenu(false); document.getElementById('importJsonFile').click(); };
+
+    /* =========================
+       Tools (emoji + text)
+       ========================= */
+    let activeTool=null;
+    document.querySelectorAll('.tool').forEach(t=>{ t.addEventListener('click',()=>{ activeTool=t; }); });
+
+    map.on('click',e=>{
+      if(activeTool && !drawMode){
+        const meta = {label:activeTool.dataset.label, icon:activeTool.dataset.icon};
+        placeMarkerOrText(e.latlng, meta);
+        activeTool=null;
+        return;
+      }
+      if(drawMode){
+        tempPoints.push([e.latlng.lat,e.latlng.lng]);
+        const N = tempPoints.length;
+        if(N>1){
+          const line=L.polyline([tempPoints[N-2], tempPoints[N-1]],{
+            color:document.getElementById('colorPicker').value,dashArray:"4,4",weight:2
+          }).addTo(map);
+          line.on('click',()=>selectLine(line));
+          tempLines.push(line);
         }
-        ctx.setLineDash([6,4]);
-        ctx.lineWidth=i===selectedPolygonIndex?3:2;
-        ctx.strokeStyle=i===selectedPolygonIndex?"#000":poly.color;
-        ctx.stroke(p);
-      });
-      if(points.length){
-        ctx.setLineDash([4,4]);
-        ctx.strokeStyle=document.getElementById("colorPicker").value;
-        ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
-        for(let i=1;i<points.length;i++) ctx.lineTo(points[i].x,points[i].y);
-        ctx.stroke();
+      }
+    });
+
+    function placeMarkerOrText(latlng, meta){
+      if(meta.label==="Text Label"){
+        const text = prompt("Enter label text:");
+        if(!text) return;
+        meta.icon = text;
+        meta.isText = true;
+        meta.color = "#ffffff"; // default for text
+      }
+      const size = meta.size || 26;
+      const colorStyle = meta.isText ? `color:${meta.color};` : '';
+      const html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
+
+      const marker = L.marker(latlng,{
+        icon: L.divIcon({className:"custom-div-icon",html,iconSize:[size,size],iconAnchor:[size/2,size/2]}),
+        draggable:true
+      }).addTo(map);
+
+      marker.myMeta = {...meta, size};
+      markers.push(marker);
+
+      marker.on('click',()=>{ selectedMarker = marker; });
+      marker.on('contextmenu',()=>openMarkerPopup(marker));
+      let lpTimer=null;
+      marker.on('touchstart',()=>{ lpTimer=setTimeout(()=>openMarkerPopup(marker),600); });
+      marker.on('touchend',()=>{ if(lpTimer) clearTimeout(lpTimer); });
+
+      if(meta.label !== "Text Label"){
+        legendSet.set(meta.label, meta.icon);
+        renderLegend();
       }
     }
 
-    // --- Canvas resize ---
-    function fitCanvas(){canvas.width=container.clientWidth;canvas.height=container.clientHeight;redraw();}
-    window.addEventListener("resize",fitCanvas);
-    baseImg.addEventListener("load",()=>{console.log("Image loaded:", baseImg.src);fitCanvas();});
-    fitCanvas();
+    function openMarkerPopup(marker){
+      const isText = !!marker.myMeta.isText;
+      const sizeNow = marker.myMeta.size || 26;
+      const colorNow = marker.myMeta.color || "#ffffff";
+      const wrap = document.createElement('div');
+      wrap.className='size-popup';
+      wrap.innerHTML = `
+        <label>Size <input type="range" min="12" max="96" step="2" value="${sizeNow}"></label>
+        ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        </div>
+      `;
+      const sizeInput = wrap.querySelector('input[type="range"]');
+      sizeInput.addEventListener('input',()=>{
+        const newSize = parseInt(sizeInput.value);
+        marker.myMeta.size = newSize;
+        refreshMarkerIcon(marker);
+      });
+      if(isText){
+        const colorInput = wrap.querySelector('#txtColor');
+        colorInput.addEventListener('input',()=>{
+          marker.myMeta.color = colorInput.value;
+          refreshMarkerIcon(marker);
+        });
+      }
+      wrap.querySelector('#delBtn').addEventListener('click',()=>{
+        map.removeLayer(marker);
+        const idx = markers.indexOf(marker); if(idx>-1) markers.splice(idx,1);
+        if(selectedMarker===marker) selectedMarker=null;
+        marker.closePopup();
+      });
 
-    // --- Upload ---
-    uploadBtn.onclick=()=>fileInput.click();
-    fileInput.addEventListener("change",(e)=>{
-      const f=e.target.files[0];
-      if(!f) return;
-      if(!f.type.startsWith("image/")){alert("Please select an image file");return;}
-      console.log("Selected file:", f.name);
-      fileName.textContent=f.name;
-      baseImg.src=URL.createObjectURL(f);
+      selectedMarker = marker;
+      marker.bindPopup(wrap,{autoPan:true}).openPopup();
+    }
+
+    function refreshMarkerIcon(marker){
+      const {icon,size,isText,color} = marker.myMeta;
+      const colorStyle = isText ? `color:${color};` : '';
+      marker.setIcon(L.divIcon({
+        className:"custom-div-icon",
+        html:`<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${icon}</div>`,
+        iconSize:[size,size], iconAnchor:[size/2,size/2]
+      }));
+    }
+
+    function renderLegend(){
+      const list=document.getElementById('legendList'); list.innerHTML='';
+      legendSet.forEach((icon,label)=>{ const li=document.createElement('li'); li.textContent=`${icon} ${label}`; list.appendChild(li); });
+    }
+
+    // Delete selected marker with keyboard
+    document.addEventListener('keydown',e=>{
+      if(e.key==="Delete" && selectedMarker){
+        map.removeLayer(selectedMarker);
+        const idx = markers.indexOf(selectedMarker); if(idx>-1) markers.splice(idx,1);
+        selectedMarker=null;
+      }
     });
 
-    // --- Labels ---
-    document.querySelectorAll(".tool").forEach(t=>t.addEventListener("dragstart",()=>{dragItem=t;}));
-    container.addEventListener("dragover",e=>e.preventDefault());
-    container.addEventListener("drop",e=>{
-      e.preventDefault();
-      if(!dragItem||drawMode) return;
-      const r=container.getBoundingClientRect(),x=(e.clientX-r.left)/zoom,y=(e.clientY-r.top)/zoom;
-      addLabel(dragItem.dataset.label,dragItem.dataset.icon,x,y);
-    });
+    /* =========================
+       Drawing polygons
+       ========================= */
+    document.getElementById('modeToggle').onclick=()=>{
+      drawMode=!drawMode;
+      document.getElementById('modeToggle').textContent=drawMode?'🖱️ Label Mode':'✏️ Draw Mode';
+    };
+    document.getElementById('finishPolygon').onclick=finishPolygon;
+    document.getElementById('cancelPolygon').onclick=clearSketch;
 
-    function addLabel(text,icon,x,y){
-      const l=document.createElement("div");
-      l.className="label"; l.style.left=x+"px"; l.style.top=y+"px";
-      l.innerHTML=`<span class="emoji">${icon}</span><span class="text" contenteditable="true">${text}</span>`;
-      container.appendChild(l);
-      l.addEventListener("mousedown",ev=>{
-        if(drawMode) return; selectedLabel=l;
-        if(ev.target.classList.contains("text")) return;
-        const c=container.getBoundingClientRect(),offX=ev.offsetX,offY=ev.offsetY;
-        function move(e2){l.style.left=(e2.clientX-c.left-offX)/zoom+"px"; l.style.top=(e2.clientY-c.top-offY)/zoom+"px";}
-        function up(){document.removeEventListener("mousemove",move);document.removeEventListener("mouseup",up);}
-        document.addEventListener("mousemove",move);document.addEventListener("mouseup",up);
+    function finishPolygon(){
+      if(tempPoints.length>2){
+        const poly=L.polygon(tempPoints,{
+          color:document.getElementById('colorPicker').value,
+          weight:2,dashArray:"6,4",
+          fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
+        }).addTo(map);
+        poly.on('click',()=>selectPolygon(poly));
+        polygons.push(poly);
+      }
+      clearSketch();
+    }
+    function clearSketch(){ tempPoints=[]; tempLines.forEach(l=>map.removeLayer(l)); tempLines=[]; }
+    function selectPolygon(poly){ selected=poly; selectedLine=null; document.getElementById('polygonControls').style.display='flex'; }
+    function selectLine(line){ if(selectedLine) selectedLine.setStyle({weight:2}); selectedLine=line; selected=null; line.setStyle({weight:4}); document.getElementById('polygonControls').style.display='none'; }
+    document.getElementById('toggleFill').onclick=()=>{ if(!selected) return; selected.setStyle({fillOpacity: selected.options.fillOpacity>0 ? 0 : 0.25}); };
+    document.getElementById('deletePoly').onclick=()=>deleteSelectedShape();
+    document.addEventListener('keydown',e=>{ if(e.key==="Delete") deleteSelectedShape(); });
+    function deleteSelectedShape(){
+      if(selected){ map.removeLayer(selected); polygons=polygons.filter(p=>p!==selected); selected=null; document.getElementById('polygonControls').style.display='none'; }
+      if(selectedLine){ map.removeLayer(selectedLine); tempLines=tempLines.filter(l=>l!==selectedLine); selectedLine=null; }
+    }
+
+    /* =========================
+       Watermark
+       ========================= */
+    const wm=document.getElementById('watermark'), wmImg=document.getElementById('watermarkImg'),
+          wmControls=document.getElementById('wmControls'), wmOpacity=document.getElementById('wmOpacity'), wmSize=document.getElementById('wmSize');
+    document.getElementById('logoBtn').onclick=()=>document.getElementById('logoFile').click();
+    document.getElementById('logoFile').addEventListener('change', e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=ev=>{
+        wmImg.src=ev.target.result;
+        wm.style.display='block'; wmControls.style.display='flex';
+        wm.style.width=wmSize.value+'px'; wm.style.opacity=wmOpacity.value;
+        ensureWMLeftTop();
+      };
+      r.readAsDataURL(f);
+    });
+    document.getElementById('toggleWmPanel').onclick=()=>{ wmControls.style.display=(wmControls.style.display==='flex'?'none':'flex'); };
+    wmOpacity?.addEventListener('input',()=>wm.style.opacity=wmOpacity.value);
+    wmSize?.addEventListener('input',()=>wm.style.width=wmSize.value+'px');
+    document.getElementById('wmHide').onclick=()=>{ wm.style.display='none'; wmControls.style.display='none'; };
+    function ensureWMLeftTop(){
+      if(!wm.style.left && !wm.style.top){
+        wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
+        wm.style.top  = (document.getElementById('mapWrap').clientHeight - 150) + 'px';
+        wm.style.right='auto'; wm.style.bottom='auto'; wm.style.position='absolute';
+      }
+    }
+    // Drag watermark (mouse)
+    let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
+    wm.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startY=e.clientY;const r=wm.getBoundingClientRect();startLeft=r.left;startTop=r.top;map.dragging.disable();});
+    window.addEventListener('mousemove',e=>{if(!dragging) return;const dx=e.clientX-startX,dy=e.clientY-startY;const wrap=document.getElementById('mapWrap').getBoundingClientRect();wm.style.left=(startLeft+dx-wrap.left)+'px';wm.style.top=(startTop+dy-wrap.top)+'px';wm.style.right='auto';wm.style.bottom='auto';wm.style.position='absolute';});
+    window.addEventListener('mouseup',()=>{dragging=false;map.dragging.enable();});
+    // Drag WM (touch)
+    let draggingT=false, tStart=null;
+    wm.addEventListener('touchstart',e=>{const t=e.touches[0];draggingT=true;tStart={x:t.clientX,y:t.clientY};const r=wm.getBoundingClientRect();startLeft=r.left;startTop=r.top;map.dragging.disable();},{passive:false});
+    window.addEventListener('touchmove',e=>{if(!draggingT) return;const t=e.touches[0];const dx=t.clientX-tStart.x,dy=t.clientY-tStart.y;const wrap=document.getElementById('mapWrap').getBoundingClientRect();wm.style.left=(startLeft+dx-wrap.left)+'px';wm.style.top=(startTop+dy-wrap.top)+'px';wm.style.right='auto';wm.style.bottom='auto';wm.style.position='absolute';e.preventDefault();},{passive:false});
+    window.addEventListener('touchend',()=>{draggingT=false;map.dragging.enable();});
+
+    /* =========================
+       Export helpers (PNG / PDF)
+       ========================= */
+    function addWatermarkToCanvas(c){
+      return new Promise(resolve=>{
+        if(!wmImg.src || wm.style.display==='none'){ return resolve(c); }
+        const ctx=c.getContext('2d'); const wrap=document.getElementById('mapWrap').getBoundingClientRect(); const wmRect=wm.getBoundingClientRect();
+        const scaleX=c.width/wrap.width, scaleY=c.height/wrap.height;
+        const left=(wmRect.left-wrap.left)*scaleX, top=(wmRect.top-wrap.top)*scaleY, w=wmRect.width*scaleX, h=wmRect.height*scaleY;
+        ctx.globalAlpha=parseFloat(wmOpacity.value || wm.style.opacity || 1); ctx.drawImage(wmImg,left,top,w,h); ctx.globalAlpha=1; resolve(c);
       });
     }
 
-    // --- Draw polygons ---
-    document.getElementById("modeToggle").onclick=()=>{drawMode=!drawMode;document.getElementById("modeToggle").textContent=drawMode?"🖱️ Label Mode":"✏️ Draw Mode";};
-    canvas.addEventListener("click",e=>{
-      const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/zoom,y=(e.clientY-r.top)/zoom;
-      if(drawMode){points.push({x,y});redraw();}
-      else{selectedPolygonIndex=hitTestPolygon(x,y);redraw();}
-    });
-    document.getElementById("finishPolygon").onclick=()=>{if(points.length>2){polygons.push({points:[...points],color:document.getElementById("colorPicker").value});}points=[];redraw();};
+    function exportPNG(){
+      html2canvas(document.getElementById('mapWrap'),{useCORS:true,scale:2,backgroundColor:'#000'})
+      .then(addWatermarkToCanvas)
+      .then(c=>{
+        const a=document.createElement('a'); a.download='event-map.png'; a.href=c.toDataURL('image/png'); a.click();
+      });
+    }
 
-    // --- Delete ---
-    document.addEventListener("keydown",e=>{
-      if(e.key==="Delete"){if(selectedLabel){selectedLabel.remove();selectedLabel=null;}if(selectedPolygonIndex!=null){polygons.splice(selectedPolygonIndex,1);selectedPolygonIndex=null;redraw();}}
-    });
+    // PDF modal
+    const pdfBackdrop=document.getElementById('pdfBackdrop');
+    const pdfDialog=document.getElementById('pdfDialog');
+    function openPdfDialog(){ pdfBackdrop.style.display='block'; pdfDialog.style.display='block'; }
+    function closePdfDialog(){ pdfBackdrop.style.display='none'; pdfDialog.style.display='none'; }
+    pdfBackdrop.addEventListener('click', closePdfDialog);
+    document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
 
-    // --- Export ---
-    document.getElementById("exportBtn").onclick=()=>{html2canvas(document.getElementById("map-wrapper"),{backgroundColor:null,scale:2}).then(c=>{const a=document.createElement("a");a.download="event-map.png";a.href=c.toDataURL();a.click();});};
+    document.getElementById('exportPdf').onclick=()=>{
+      const { jsPDF } = window.jspdf;
+      const size=document.getElementById('pdfSize').value;
+      const orientation=document.getElementById('pdfOrientation').value;
+      const scaleMode=document.getElementById('pdfScaleMode').value;
+
+      const pdf=new jsPDF({orientation,unit:'mm',format:size});
+      html2canvas(document.getElementById('mapWrap'),{useCORS:true,scale:2,backgroundColor:'#000'})
+      .then(addWatermarkToCanvas)
+      .then(c=>{
+        const img=c.toDataURL('image/jpeg',1.0);
+        const pageW=pdf.internal.pageSize.getWidth();
+        const pageH=pdf.internal.pageSize.getHeight();
+        let imgW,imgH,x,y;
+        if(scaleMode==='fit'){ imgW=pageW; imgH=pageH; x=0; y=0; }
+        else{
+          const ratio=Math.min(pageW/c.width, pageH/c.height);
+          imgW=c.width*ratio; imgH=c.height*ratio;
+          x=(pageW-imgW)/2; y=(pageH-imgH)/2;
+        }
+        pdf.addImage(img,'JPEG',x,y,imgW,imgH);
+        pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
+        closePdfDialog();
+      });
+    };
+
+    /* =========================
+       JSON Export / Import
+       ========================= */
+    const importJsonInput=document.getElementById('importJsonFile');
+    importJsonInput.addEventListener('change', e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=ev=>{
+        try{ restoreProjectJSON(JSON.parse(ev.target.result)); }
+        catch(err){ alert('Invalid JSON'); }
+      };
+      r.readAsText(f);
+    });
+    function doExportJSON(){
+      const data = buildProjectJSON();
+      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `event-map-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function buildProjectJSON(){
+      const savedMarkers = markers.map(m=>{
+        const ll = m.getLatLng();
+        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta }; // includes {label,icon,size,isText,color?}
+      });
+      const savedPolys = polygons.map(p=>{
+        const rings = p.getLatLngs();
+        const latlngs = rings[0].map(ll=>[ll.lat,ll.lng]);
+        const {color,weight,dashArray,fillOpacity}=p.options;
+        return { latlngs, style:{color,weight,dashArray,fillOpacity} };
+      });
+      const savedLegend = Array.from(legendSet.entries()).map(([label,icon])=>({label,icon}));
+      // Watermark
+      const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
+      const wmRect=document.getElementById('watermark').getBoundingClientRect();
+      const wmImgEl=document.getElementById('watermarkImg');
+      const wmData = wmImgEl.src ? {
+        src: wmImgEl.src,
+        visible: document.getElementById('watermark').style.display !== 'none',
+        left: (wmRect.left - wrapRect.left),
+        top: (wmRect.top - wrapRect.top),
+        width: document.getElementById('watermark').offsetWidth,
+        opacity: parseFloat(document.getElementById('watermark').style.opacity || 1)
+      } : null;
+
+      return {
+        version: 3,
+        createdAt: new Date().toISOString(),
+        view: { center: map.getCenter(), zoom: map.getZoom() },
+        markers: savedMarkers,
+        polygons: savedPolys,
+        legend: savedLegend,
+        watermark: wmData
+      };
+    }
+
+    function restoreProjectJSON(data){
+      // Clear existing
+      markers.forEach(m=>map.removeLayer(m)); markers.length=0;
+      polygons.forEach(p=>map.removeLayer(p)); polygons.length=0;
+      tempLines.forEach(l=>map.removeLayer(l)); tempLines.length=0;
+      legendSet.clear(); renderLegend();
+
+      // View
+      if(data.view && data.view.center && typeof data.view.zoom!=='undefined'){
+        map.setView([data.view.center.lat, data.view.center.lng], data.view.zoom);
+      }else{
+        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+      }
+
+      // Legend
+      if(Array.isArray(data.legend)){
+        data.legend.forEach(item=>{ if(item && item.label && item.icon){ legendSet.set(item.label,item.icon); }});
+        renderLegend();
+      }
+
+      // Markers (includes text labels)
+      if(Array.isArray(data.markers)){
+        data.markers.forEach(m=>{
+          const latlng = L.latLng(m.lat, m.lng);
+          const meta = m.meta && m.meta.icon ? m.meta : {icon:'📍',label:'Marker',size:26};
+          placeMarkerOrText(latlng, meta);
+        });
+      }
+
+      // Polygons
+      if(Array.isArray(data.polygons)){
+        data.polygons.forEach(p=>{
+          const poly=L.polygon(p.latlngs, p.style || {color:'#ff0000',weight:2,dashArray:'6,4',fillOpacity:0.25}).addTo(map);
+          poly.on('click',()=>selectPolygon(poly));
+          polygons.push(poly);
+        });
+      }
+
+      // Watermark
+      if(data.watermark && data.watermark.src){
+        const wmEl=document.getElementById('watermark');
+        const wmImgEl=document.getElementById('watermarkImg');
+        const wmControls=document.getElementById('wmControls');
+        wmImgEl.src = data.watermark.src;
+        wmEl.style.display = data.watermark.visible ? 'block' : 'none';
+        wmControls.style.display = data.watermark.visible ? 'flex' : 'none';
+        wmEl.style.position='absolute';
+        wmEl.style.left = (data.watermark.left||0)+'px';
+        wmEl.style.top  = (data.watermark.top||0)+'px';
+        wmEl.style.right='auto'; wmEl.style.bottom='auto';
+        wmEl.style.width = (data.watermark.width||180)+'px';
+        wmEl.style.opacity = (typeof data.watermark.opacity==='number'? data.watermark.opacity : 0.5);
+      }
+    }
   </script>
 </body>
 </html>
