@@ -50,8 +50,6 @@
     .modal label{display:block;margin:10px 0;color:var(--muted);font-size:13px}
     .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
     .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
-    .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
-    .size-popup input[type="range"]{width:140px}
   </style>
 </head>
 <body>
@@ -94,7 +92,8 @@
     <div class="tool" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span></div>
     <div class="tool" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span></div>
     <div class="tool" data-label="Competition Detecting" data-icon="🏆"><span class="emoji">🏆</span></div>
-    <div class="tool" data-label="Free Detecting" data-icon="🆓"><span class="emoji">🆓</span></div>
+    <!-- CHANGED: Free Detecting is now a magnifying glass -->
+    <div class="tool" data-label="Free Detecting" data-icon="🔍"><span class="emoji">🔍</span></div>
     <div class="tool" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
     <div class="tool" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
@@ -208,7 +207,7 @@
     const markers=[]; let selectedMarker=null;
     const legendSet=new Map();
 
-    // ---------- Export dropdown (fix: proper toggle) ----------
+    // ---------- Export dropdown (working toggle) ----------
     const exportBtn = document.getElementById('exportMenuBtn');
     const exportMenu = document.getElementById('exportMenu');
     const toggleMenu = (show)=>exportMenu.style.display = show ? 'block' : 'none';
