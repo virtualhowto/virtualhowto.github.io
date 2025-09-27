@@ -17,7 +17,7 @@
     .tool span.emoji{font-size:28px}
     .tool span.lbl{font-size:12px;color:var(--muted)}
     #workspace{padding:12px}
-    #map-wrapper{width:min(1200px,94vw);height:76vh;margin:0 auto;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:#0c0f15;position:relative}
+    #map-wrapper{width:min(1200px,94vw);height:76vh;margin:0 auto;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:#0c0f15;position:relative;cursor:grab}
     #map-container{position:relative;transform-origin:0 0;}
     #map{max-width:100%;max-height:100%;display:block}
     canvas.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto}
@@ -45,6 +45,9 @@
       <span id="fileName"></span>
       <button class="btn" id="modeToggle">✏️ Draw Mode</button>
       <input type="color" id="colorPicker" value="#ff0000" class="btn" />
+      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:13px;">
+        <input type="checkbox" id="fillToggle" checked /> Fill
+      </label>
       <button class="btn" id="finishPolygon">Finish Polygon</button>
       <button class="btn" id="zoomIn">🔍 +</button>
       <button class="btn" id="zoomOut">🔍 -</button>
@@ -61,6 +64,7 @@
     <div class="tool" draggable="true" data-label="Competition Detecting" data-icon="🏆🔎"><span class="emoji">🏆🔎</span><span class="lbl">Competition</span></div>
     <div class="tool" draggable="true" data-label="Free Detecting" data-icon="🆓🔎"><span class="emoji">🆓🔎</span><span class="lbl">Free Detecting</span></div>
     <div class="tool" draggable="true" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span><span class="lbl">Sign-in Desk</span></div>
+    <div class="tool" draggable="true" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span><span class="lbl">Entry Gate</span></div>
   </div>
 
   <div id="workspace">
@@ -72,7 +76,7 @@
     </div>
   </div>
 
-  <div id="hint">💡 Upload a map image, drag icons, draw polygons, click polygon to select + Delete, zoom with +/-</div>
+  <div id="hint">💡 Upload a map image • Drag icons • Draw polygons (fill optional) • Click polygon to select + Delete • Zoom with +/- • Drag map to pan</div>
 
   <div id="signin-screen">
     <div id="signin-card">
@@ -89,9 +93,20 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    // --- State variables must be declared first ---
+    // --- State variables ---
     let dragItem=null, drawMode=false, points=[], polygons=[], 
         selectedPolygonIndex=null, selectedLabel=null;
+
+    let zoom=1, panX=0, panY=0;
+    let isPanning=false, startX=0, startY=0;
+
+    const container=document.getElementById("map-container");
+    const baseImg=document.getElementById("map");
+    const canvas=document.getElementById("draw-layer");
+    const ctx=canvas.getContext("2d");
+    const fileInput=document.getElementById("baseImage");
+    const uploadBtn=document.getElementById("uploadBtn");
+    const fileName=document.getElementById("fileName");
 
     // --- Sign in ---
     const validUser="admin", validPass="detector123";
@@ -102,26 +117,59 @@
       else document.getElementById("signin-msg").style.display="block";
     };
 
-    const container=document.getElementById("map-container");
-    const baseImg=document.getElementById("map");
-    const canvas=document.getElementById("draw-layer");
-    const ctx=canvas.getContext("2d");
-    const fileInput=document.getElementById("baseImage");
-    const uploadBtn=document.getElementById("uploadBtn");
-    const fileName=document.getElementById("fileName");
+    // --- Pan / Drag Map Background ---
+    container.addEventListener("mousedown", (e) => {
+      if (e.target === baseImg || e.target === canvas) {
+        isPanning = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+        container.style.cursor = "grabbing";
+      }
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!isPanning) return;
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
+      applyTransform();
+    });
+    window.addEventListener("mouseup", () => {
+      isPanning = false;
+      container.style.cursor = "default";
+    });
 
-    // --- Zoom ---
-    let zoom=1;
-    function applyZoom(){container.style.transform=`scale(${zoom})`;}
-    document.getElementById("zoomIn").onclick=()=>{zoom=Math.min(zoom+0.2,3);applyZoom();}
-    document.getElementById("zoomOut").onclick=()=>{zoom=Math.max(zoom-0.2,0.4);applyZoom();}
-    applyZoom();
+    // --- Zoom & Pan combined ---
+    function applyTransform() {
+      container.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    }
+    document.getElementById("zoomIn").onclick=()=>{zoom=Math.min(zoom+0.2,3);applyTransform();}
+    document.getElementById("zoomOut").onclick=()=>{zoom=Math.max(zoom-0.2,0.4);applyTransform();}
+    applyTransform();
 
     // --- Render helpers ---
     function pathFromPoints(pts){const p=new Path2D();if(!pts.length)return p;p.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)p.lineTo(pts[i].x,pts[i].y);p.closePath();return p;}
     function hitTestPolygon(x,y){for(let i=polygons.length-1;i>=0;i--){if(ctx.isPointInPath(pathFromPoints(polygons[i].points),x,y))return i;}return null;}
     function hexToRgba(hex,a){let r=0,g=0,b=0;if(hex.length===7){r=parseInt(hex.slice(1,3),16);g=parseInt(hex.slice(3,5),16);b=parseInt(hex.slice(5,7),16);}return`rgba(${r},${g},${b},${a})`;}
-    function redraw(){ctx.clearRect(0,0,canvas.width,canvas.height);polygons.forEach((poly,i)=>{const p=pathFromPoints(poly.points);ctx.fillStyle=hexToRgba(poly.color,0.25);ctx.fill(p);ctx.setLineDash([6,4]);ctx.lineWidth=i===selectedPolygonIndex?3:2;ctx.strokeStyle=i===selectedPolygonIndex?"#000":poly.color;ctx.stroke(p);});if(points.length){ctx.setLineDash([4,4]);ctx.strokeStyle=document.getElementById("colorPicker").value;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);ctx.stroke();}}
+    function redraw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      polygons.forEach((poly,i)=>{
+        const p=pathFromPoints(poly.points);
+        if(document.getElementById("fillToggle").checked){
+          ctx.fillStyle=hexToRgba(poly.color,0.25);
+          ctx.fill(p);
+        }
+        ctx.setLineDash([6,4]);
+        ctx.lineWidth=i===selectedPolygonIndex?3:2;
+        ctx.strokeStyle=i===selectedPolygonIndex?"#000":poly.color;
+        ctx.stroke(p);
+      });
+      if(points.length){
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle=document.getElementById("colorPicker").value;
+        ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+        for(let i=1;i<points.length;i++) ctx.lineTo(points[i].x,points[i].y);
+        ctx.stroke();
+      }
+    }
 
     // --- Canvas resize ---
     function fitCanvas(){canvas.width=container.clientWidth;canvas.height=container.clientHeight;redraw();}
@@ -159,7 +207,7 @@
         if(drawMode) return; selectedLabel=l;
         if(ev.target.classList.contains("text")) return;
         const c=container.getBoundingClientRect(),offX=ev.offsetX,offY=ev.offsetY;
-        function move(e2){l.style.left=(e2.clientX-c.left-offX)/zoom+"px";l.style.top=(e2.clientY-c.top-offY)/zoom+"px";}
+        function move(e2){l.style.left=(e2.clientX-c.left-offX)/zoom+"px"; l.style.top=(e2.clientY-c.top-offY)/zoom+"px";}
         function up(){document.removeEventListener("mousemove",move);document.removeEventListener("mouseup",up);}
         document.addEventListener("mousemove",move);document.addEventListener("mouseup",up);
       });
