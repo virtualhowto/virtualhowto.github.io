@@ -41,8 +41,8 @@
     #legend li{margin:4px 0;display:flex;align-items:center;gap:6px}
     #legend img{width:14px;height:14px;object-fit:contain;display:inline-block;background:#fff;border-radius:2px}
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
-    #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
-    #watermark img{display:block;max-width:100%;max-height:100%}
+    .watermark{position:absolute;z-index:850;display:none;cursor:move;user-select:none}
+    .watermark img{display:block;max-width:100%;max-height:100%}
     .compass-control{width:80px;height:80px}
     .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
     .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
@@ -98,15 +98,15 @@
     <div class="tool" data-type="emoji" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
     <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
-    <div class="tool" data-type="text"  data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
+    <div class="tool" data-type="text" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
 
-    <!-- Permanent PNG icon in the same folder; change filename if needed -->
+    <!-- Permanent PNG icon in the same folder -->
     <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" data-size="26" title="No Detecting">
       <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
       <span class="label">No Detecting</span>
     </div>
 
-    <!-- Custom icon uploader (optional) -->
+    <!-- Custom icon uploader -->
     <input id="customIconInput" type="file" accept="image/*" style="display:none">
     <button class="tool" id="addCustomIconBtn" title="Add custom PNG icon">
       <span class="emoji" style="font-size:18px">➕</span>
@@ -119,11 +119,6 @@
 
     <!-- Legend -->
     <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
-
-    <!-- Watermark -->
-    <div id="watermark">
-      <img id="watermarkImg" alt="watermark"/>
-    </div>
   </div>
 
   <!-- Polygon selection controls -->
@@ -216,6 +211,7 @@
     let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null;
     const markers=[]; let selectedMarker=null;
     const legendSet=new Map();
+    const watermarks=[];
 
     // ---------- Export dropdown ----------
     const exportBtn = document.getElementById('exportMenuBtn');
@@ -240,7 +236,7 @@
     }
     attachToolHandlers();
 
-    // Custom icon uploader (optional)
+    // Custom icon uploader
     const customInput = document.getElementById('customIconInput');
     const addCustomBtn = document.getElementById('addCustomIconBtn');
     addCustomBtn.addEventListener('click', ()=> customInput.click());
@@ -465,41 +461,108 @@
       if(selectedLine){ map.removeLayer(selectedLine); tempLines=tempLines.filter(l=>l!==selectedLine); selectedLine=null; }
     }
 
-    // ---------- Watermark ----------
-    const wm=document.getElementById('watermark'), wmImg=document.getElementById('watermarkImg');
-    document.getElementById('logoBtn').onclick=()=>document.getElementById('logoFile').click();
-    document.getElementById('logoFile').addEventListener('change', e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader();
-      r.onload=ev=>{
-        wmImg.src=ev.target.result;
-        wm.style.display='block';
-        wm.style.opacity = 0.5;
-        wm.style.width = '180px';
-        ensureWMLeftTop();
+    // ---------- Multiple Watermarks ----------
+    function addWatermark(src, options = {}){
+      const wm = document.createElement('div');
+      wm.className = 'watermark';
+      wm.style.display = 'block';
+      wm.style.opacity = options.opacity || 0.5;
+      wm.style.width = (options.width || 180) + 'px';
+      wm.style.position = 'absolute';
+      if(options.left && options.top){
+        wm.style.left = options.left + 'px';
+        wm.style.top = options.top + 'px';
+      } else {
+        const mapWrap = document.getElementById('mapWrap').getBoundingClientRect();
+        wm.style.left = (mapWrap.width - 200) + 'px';
+        wm.style.top = (mapWrap.height - 150) + 'px';
+      }
+      wm.style.right = 'auto';
+      wm.style.bottom = 'auto';
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = 'watermark';
+      wm.appendChild(img);
+      document.getElementById('mapWrap').appendChild(wm);
+      watermarks.push(wm);
+
+      // Event handlers
+      let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+      wm.addEventListener('contextmenu', (e)=>{
+        e.preventDefault();
+        openWatermarkPopup(e, wm);
+      });
+      wm.addEventListener('mousedown', (e)=>{
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        const r = wm.getBoundingClientRect();
+        startLeft = r.left;
+        startTop = r.top;
+        map.dragging.disable();
+      });
+      wm.addEventListener('click', (e)=>{
+        e.stopPropagation();
+      });
+      // Mouse drag
+      window.addEventListener('mousemove', (e) => {
+        if(!dragging || wm !== watermarks[watermarks.indexOf(wm)]) return;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+        wm.style.left = (startLeft + dx - wrap.left) + 'px';
+        wm.style.top = (startTop + dy - wrap.top) + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+      });
+      window.addEventListener('mouseup', () => {
+        if(dragging) {
+          dragging = false;
+          map.dragging.enable();
+        }
+      });
+      // Touch drag
+      let draggingT = false, tStart = null;
+      wm.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        draggingT = true;
+        tStart = { x: t.clientX, y: t.clientY };
+        const r = wm.getBoundingClientRect();
+        startLeft = r.left;
+        startTop = r.top;
+        map.dragging.disable();
+      }, { passive: false });
+      window.addEventListener('touchmove', (e) => {
+        if(!draggingT || wm !== watermarks[watermarks.indexOf(wm)]) return;
+        const t = e.touches[0];
+        const dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+        wm.style.left = (startLeft + dx - wrap.left) + 'px';
+        wm.style.top = (startTop + dy - wrap.top) + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+        e.preventDefault();
+      }, { passive: false });
+      window.addEventListener('touchend', () => {
+        if(draggingT) {
+          draggingT = false;
+          map.dragging.enable();
+        }
+      });
+    }
+
+    document.getElementById('logoBtn').onclick = () => document.getElementById('logoFile').click();
+    document.getElementById('logoFile').addEventListener('change', e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        addWatermark(ev.target.result);
       };
       r.readAsDataURL(f);
     });
-    wm.addEventListener('contextmenu', (e)=>{
-      e.preventDefault();
-      openWatermarkPopup(e);
-    });
-    wm.addEventListener('mousedown', (e)=>{
-      dragging=true;
-      startX=e.clientX;
-      startY=e.clientY;
-      const r=wm.getBoundingClientRect();
-      startLeft=r.left;
-      startTop=r.top;
-      map.dragging.disable();
-    });
-    wm.addEventListener('click', (e)=>{
-      e.stopPropagation();
-    });
 
-    function openWatermarkPopup(e) {
+    function openWatermarkPopup(e, wm) {
       const wrap = document.createElement('div');
-      wrap.className='size-popup';
+      wrap.className = 'size-popup';
       wrap.innerHTML = `
         <label>Opacity <input type="range" min="0.05" max="1" step="0.05" value="${wm.style.opacity || 0.5}"></label>
         <label>Size (px) <input type="range" min="60" max="800" step="10" value="${wm.offsetWidth || 180}"></label>
@@ -516,8 +579,11 @@
         wm.style.width = sizeInput.value + 'px';
       });
       wrap.querySelector('#delBtn').addEventListener('click', () => {
-        wm.style.display = 'none';
-        wmImg.src = '';
+        const idx = watermarks.indexOf(wm);
+        if(idx > -1) {
+          watermarks.splice(idx, 1);
+          wm.remove();
+        }
         popup.close();
       });
 
@@ -527,92 +593,52 @@
         .openOn(map);
     }
 
-    function ensureWMLeftTop(){
-      if(!wm.style.left && !wm.style.top){
-        wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
-        wm.style.top  = (document.getElementById('mapWrap').clientHeight - 150) + 'px';
-        wm.style.right='auto'; wm.style.bottom='auto'; wm.style.position='absolute';
-      }
-    }
-    // Drag WM
-    let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
-    window.addEventListener('mousemove',e=>{
-      if(!dragging) return;
-      const dx=e.clientX-startX,dy=e.clientY-startY;
-      const wrap=document.getElementById('mapWrap').getBoundingClientRect();
-      wm.style.left=(startLeft+dx-wrap.left)+'px';
-      wm.style.top=(startTop+dy-wrap.top)+'px';
-      wm.style.right='auto'; 
-      wm.style.bottom='auto'; 
-      wm.style.position='absolute';
-    });
-    window.addEventListener('mouseup',()=>{
-      dragging=false;
-      map.dragging.enable();
-    });
-    // Touch drag
-    let draggingT=false, tStart=null;
-    wm.addEventListener('touchstart',e=>{
-      const t=e.touches[0];
-      draggingT=true;
-      tStart={x:t.clientX,y:t.clientY};
-      const r=wm.getBoundingClientRect();
-      startLeft=r.left;
-      startTop=r.top;
-      map.dragging.disable();
-    },{passive:false});
-    window.addEventListener('touchmove',e=>{
-      if(!draggingT) return;
-      const t=e.touches[0];
-      const dx=t.clientX-tStart.x,dy=t.clientY-tStart.y;
-      const wrap=document.getElementById('mapWrap').getBoundingClientRect();
-      wm.style.left=(startLeft+dx-wrap.left)+'px';
-      wm.style.top=(startTop+dy-wrap.top)+'px';
-      wm.style.right='auto'; 
-      wm.style.bottom='auto'; 
-      wm.style.position='absolute';
-      e.preventDefault();
-    },{passive:false});
-    window.addEventListener('touchend',()=>{
-      draggingT=false;
-      map.dragging.enable();
-    });
-
     // ---------- Export helpers ----------
     function addWatermarkToCanvas(canvas){
-      return new Promise(resolve=>{
-        if(!wmImg.src || wm.style.display==='none'){ return resolve(canvas); }
-        const ctx=canvas.getContext('2d'); 
-        const wrap=document.getElementById('mapWrap').getBoundingClientRect(); 
-        const wmRect=wm.getBoundingClientRect();
-        const scaleX=canvas.width/wrap.width, scaleY=canvas.height/wrap.height;
-        const left=(wmRect.left-wrap.left)*scaleX, top=(wmRect.top-wrap.top)*scaleY, w=wmRect.width*scaleX, h=wmRect.height*scaleY;
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          ctx.globalAlpha = parseFloat(wm.style.opacity || 1); 
-          ctx.drawImage(img, left, top, w, h); 
-          ctx.globalAlpha = 1; 
-          resolve(canvas);
-        };
-        img.onerror = () => resolve(canvas); // Fallback if image fails to load
-        img.src = wmImg.src;
+      return new Promise(resolve => {
+        const ctx = canvas.getContext('2d');
+        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+        const scaleX = canvas.width / wrap.width, scaleY = canvas.height / wrap.height;
+        let loaded = 0;
+        const total = watermarks.filter(wm => wm.style.display !== 'none').length;
+        if(total === 0) return resolve(canvas);
+
+        watermarks.forEach(wm => {
+          if(wm.style.display === 'none') return;
+          const img = wm.querySelector('img');
+          const wmRect = wm.getBoundingClientRect();
+          const left = (wmRect.left - wrap.left) * scaleX;
+          const top = (wmRect.top - wrap.top) * scaleY;
+          const w = wmRect.width * scaleX;
+          const h = wmRect.height * scaleY;
+          const newImg = new Image();
+          newImg.crossOrigin = 'anonymous';
+          newImg.onload = () => {
+            ctx.globalAlpha = parseFloat(wm.style.opacity || 1);
+            ctx.drawImage(newImg, left, top, w, h);
+            ctx.globalAlpha = 1;
+            loaded++;
+            if(loaded === total) resolve(canvas);
+          };
+          newImg.onerror = () => {
+            loaded++;
+            if(loaded === total) resolve(canvas);
+          };
+          newImg.src = img.src;
+        });
       });
     }
 
     function captureMapCanvas() {
       return new Promise((resolve, reject) => {
-        // Ensure map is centered and tiles are loaded
         map.invalidateSize();
         const center = map.getCenter();
         const zoom = map.getZoom();
         map.setView(center, zoom);
         
-        // Wait for tiles to load
         let tileLoadCount = 0;
         const expectedTiles = tileLayer._tiles ? Object.keys(tileLayer._tiles).length : 0;
         if (expectedTiles === 0) {
-          // No tiles to wait for, proceed immediately
           proceedWithCapture();
         } else {
           tileLayer.on('tileload', () => {
@@ -622,23 +648,19 @@
             }
           });
           tileLayer.on('tileerror', () => {
-            // Proceed even if some tiles fail to avoid hanging
             tileLoadCount++;
             if (tileLoadCount >= expectedTiles) {
               proceedWithCapture();
             }
           });
-          // Trigger tile load
           map._onResize();
         }
 
         function proceedWithCapture() {
-          // Hide UI elements
           const polygonControls = document.getElementById('polygonControls');
           const originalDisplay = polygonControls.style.display;
           polygonControls.style.display = 'none';
           
-          // Temporarily hide popups
           map.eachLayer(layer => {
             if (layer instanceof L.Popup) {
               layer._tempHidden = true;
@@ -646,23 +668,24 @@
             }
           });
 
-          // Ensure all images (e.g., no-detecting.png, custom icons) are preloaded
           const imagesToLoad = [];
           markers.forEach(marker => {
             if (marker.myMeta.imgSrc) {
               imagesToLoad.push(marker.myMeta.imgSrc);
             }
           });
-          if (wmImg.src && wm.style.display !== 'none') {
-            imagesToLoad.push(wmImg.src);
-          }
+          watermarks.forEach(wm => {
+            if (wm.style.display !== 'none') {
+              imagesToLoad.push(wm.querySelector('img').src);
+            }
+          });
 
           const loadImage = src => {
             return new Promise((res, rej) => {
               const img = new Image();
               img.crossOrigin = 'anonymous';
               img.onload = () => res(img);
-              img.onerror = () => res(null); // Continue even if an image fails
+              img.onerror = () => res(null);
               img.src = src;
             });
           };
@@ -670,16 +693,14 @@
           Promise.all(imagesToLoad.map(loadImage)).then(() => {
             html2canvas(document.getElementById('mapWrap'), {
               useCORS: true,
-              scale: window.devicePixelRatio * 2, // Adjust for high-DPI displays
+              scale: window.devicePixelRatio * 2,
               backgroundColor: '#000',
               foreignObjectRendering: true,
               logging: false,
               width: document.getElementById('mapWrap').offsetWidth,
               height: document.getElementById('mapWrap').offsetHeight
             }).then(canvas => {
-              // Restore UI elements
               polygonControls.style.display = originalDisplay;
-              // Restore popups
               map.eachLayer(layer => {
                 if (layer._tempHidden) {
                   layer.addTo(map);
@@ -688,7 +709,6 @@
               });
               addWatermarkToCanvas(canvas).then(resolve).catch(reject);
             }).catch(err => {
-              // Restore UI elements on error
               polygonControls.style.display = originalDisplay;
               map.eachLayer(layer => {
                 if (layer._tempHidden) {
@@ -794,17 +814,20 @@
         return { latlngs, style:{color,weight,dashArray,fillOpacity} };
       });
       const savedLegend = Array.from(legendSet.entries()).map(([label,val])=>({label, icon:val.emoji || null, imgSrc:val.img || null}));
-      // Watermark
-      const wrapRect=document.getElementById('mapWrap').getBoundingClientRect();
-      const wmRect=wm.getBoundingClientRect();
-      const wmData = wmImg.src ? {
-        src: wmImg.src,
-        visible: wm.style.display !== 'none',
-        left: (wmRect.left - wrapRect.left),
-        top: (wmRect.top - wrapRect.top),
-        width: wm.offsetWidth,
-        opacity: parseFloat(wm.style.opacity || 1)
-      } : null;
+      // Watermarks
+      const wrapRect = document.getElementById('mapWrap').getBoundingClientRect();
+      const savedWatermarks = watermarks.map(wm => {
+        if(wm.style.display === 'none') return null;
+        const wmRect = wm.getBoundingClientRect();
+        return {
+          src: wm.querySelector('img').src,
+          visible: wm.style.display !== 'none',
+          left: (wmRect.left - wrapRect.left),
+          top: (wmRect.top - wrapRect.top),
+          width: wm.offsetWidth,
+          opacity: parseFloat(wm.style.opacity || 1)
+        };
+      }).filter(wm => wm);
 
       return {
         version: 5,
@@ -813,7 +836,7 @@
         markers: savedMarkers,
         polygons: savedPolys,
         legend: savedLegend,
-        watermark: wmData
+        watermarks: savedWatermarks
       };
     }
 
@@ -822,6 +845,7 @@
       markers.forEach(m=>map.removeLayer(m)); markers.length=0;
       polygons.forEach(p=>map.removeLayer(p)); polygons.length=0;
       tempLines.forEach(l=>map.removeLayer(l)); tempLines.length=0;
+      watermarks.forEach(wm=>wm.remove()); watermarks.length=0;
       legendSet.clear(); renderLegend();
 
       // View
@@ -859,16 +883,19 @@
         });
       }
 
-      // Watermark
-      if(data.watermark && data.watermark.src){
-        wmImg.src = data.watermark.src;
-        wm.style.display = data.watermark.visible ? 'block' : 'none';
-        wm.style.position='absolute';
-        wm.style.left = (data.watermark.left||0)+'px';
-        wm.style.top  = (data.watermark.top||0)+'px';
-        wm.style.right='auto'; wm.style.bottom='auto';
-        wm.style.width = (data.watermark.width||180)+'px';
-        wm.style.opacity = (typeof data.watermark.opacity==='number'? data.watermark.opacity : 0.5);
+      // Watermarks
+      if(Array.isArray(data.watermarks)){
+        data.watermarks.forEach(wmData => {
+          if(wmData && wmData.src){
+            addWatermark(wmData.src, {
+              visible: wmData.visible,
+              left: wmData.left,
+              top: wmData.top,
+              width: wmData.width,
+              opacity: wmData.opacity
+            });
+          }
+        });
       }
     }
 
