@@ -894,4 +894,186 @@
       captureMapCanvas().then(canvas => {
         const img = canvas.toDataURL('image/jpeg', 1.0);
         const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight()
+        const pageH = pdf.internal.pageSize.getHeight();
+        let imgW, imgH, x, y;
+        if (scaleMode === 'fit') {
+          imgW = pageW; imgH = pageH; x = 0; y = 0;
+        } else {
+          const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+          imgW = canvas.width * ratio; imgH = canvas.height * ratio;
+          x = (pageW - imgW) / 2; y = (pageH - imgH) / 2;
+        }
+        pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
+        pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
+        closePdfDialog();
+      }).catch(() => {
+        alert('Failed to export PDF. Check console for details.');
+        closePdfDialog();
+      });
+    };
+
+    // JSON Export / Import
+    const importJsonInput = document.getElementById('importJsonFile');
+    importJsonInput.addEventListener('change', e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try { restoreProjectJSON(JSON.parse(ev.target.result)); }
+        catch { alert('Invalid JSON'); }
+      };
+      r.readAsText(f);
+    });
+
+    function doExportJSON() {
+      const data = buildProjectJSON();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `event-map-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }
+
+    function buildProjectJSON() {
+      const savedMarkers = ymarkers.toArray();
+      const savedPolys = ypolygons.toArray();
+      const savedLegend = [];
+      ylegend.forEach((val, label) => savedLegend.push({label, icon: val.emoji || null, imgSrc: val.img || null}));
+      const savedWatermarks = ywatermarks.toArray();
+      return {
+        version: 5,
+        createdAt: new Date().toISOString(),
+        view: { center: yview.get('center'), zoom: yview.get('zoom') },
+        markers: savedMarkers,
+        polygons: savedPolys,
+        legend: savedLegend,
+        watermarks: savedWatermarks
+      };
+    }
+
+    function restoreProjectJSON(data) {
+      ydoc.transact(() => {
+        ymarkers.delete(0, ymarkers.length);
+        ypolygons.delete(0, ypolygons.length);
+        ywatermarks.delete(0, ywatermarks.length);
+        ylegend.clear();
+        if(data.view && data.view.center && typeof data.view.zoom !== 'undefined') {
+          yview.set('center', data.view.center);
+          yview.set('zoom', data.view.zoom);
+        } else {
+          yview.set('center', SOFALA_CENTER);
+          yview.set('zoom', SOFALA_ZOOM);
+        }
+        if(Array.isArray(data.legend)) {
+          data.legend.forEach(item => {
+            if(item && item.label) {
+              if(item.imgSrc) ylegend.set(item.label, {img: item.imgSrc});
+              else if(item.icon) ylegend.set(item.label, {emoji: item.icon});
+            }
+          });
+        }
+        if(Array.isArray(data.markers)) {
+          data.markers.forEach(m => {
+            const meta = m.meta && (m.meta.icon || m.meta.imgSrc) ? m.meta : {icon: '📍', label: 'Marker', size: 26};
+            ymarkers.push({ lat: m.lat, lng: m.lng, meta });
+          });
+        }
+        if(Array.isArray(data.polygons)) {
+          data.polygons.forEach(p => {
+            ypolygons.push({ latlngs: p.latlngs, style: p.style || {color: '#ff0000', weight: 2, dashArray: '6,4', fillOpacity: 0.25} });
+          });
+        }
+        if(Array.isArray(data.watermarks)) {
+          data.watermarks.forEach(wmData => {
+            if(wmData && wmData.src) {
+              ywatermarks.push({
+                src: wmData.src,
+                opacity: wmData.opacity,
+                width: wmData.width,
+                left: wmData.left,
+                top: wmData.top
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // Render from Yjs
+    function renderMapFromYjs() {
+      // clear existing
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      polygons.forEach(p => map.removeLayer(p));
+      polygons = [];
+      watermarks.forEach(wm => wm.remove());
+      watermarks.length = 0;
+
+      // markers
+      ymarkers.toArray().forEach(m => {
+        const latlng = L.latLng(m.lat, m.lng);
+        const meta = m.meta;
+        const size = meta.size || 26;
+        let html;
+        if(meta.imgSrc) {
+          html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center"><img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/></div>`;
+        } else {
+          const colorStyle = meta.isText ? `color:${meta.color};` : '';
+          html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
+        }
+        const marker = L.marker(latlng, {
+          icon: L.divIcon({className: "custom-div-icon", html, iconSize: [size, size], iconAnchor: [size/2, size/2]}),
+          draggable: true
+        }).addTo(map);
+        marker.myMeta = {...meta, size};
+        markers.push(marker);
+        marker.on('click', () => { selectedMarker = marker; });
+        marker.on('contextmenu', () => openMarkerPopup(marker));
+        let lpTimer = null;
+        marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
+        marker.on('touchend', () => { if(lpTimer) clearTimeout(lpTimer); });
+        marker.on('dragend', () => {
+          const idx = markers.indexOf(marker);
+          if(idx > -1) {
+            ydoc.transact(() => {
+              ymarkers.delete(idx, 1);
+              ymarkers.insert(idx, [{ lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta }]);
+            });
+          }
+        });
+      });
+
+      // polygons
+      ypolygons.toArray().forEach(p => {
+        const poly = L.polygon(p.latlngs, p.style).addTo(map);
+        poly.on('click', () => selectPolygon(poly));
+        polygons.push(poly);
+      });
+
+      // watermarks
+      ywatermarks.toArray().forEach(wmData => {
+        addWatermark(wmData.src, {
+          opacity: wmData.opacity,
+          width: wmData.width,
+          left: wmData.left,
+          top: wmData.top
+        });
+      });
+
+      renderLegend();
+    }
+
+    ydoc.on('update', renderMapFromYjs);
+    yview.observe(() => {
+      const center = yview.get('center') || SOFALA_CENTER;
+      const zoom = yview.get('zoom') || SOFALA_ZOOM;
+      map.setView(center, zoom);
+    });
+
+    // Nudge layout in case flex sizing races Leaflet
+    setTimeout(() => map.invalidateSize(), 0);
+  </script>
+</body>
+</html>
