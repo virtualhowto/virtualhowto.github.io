@@ -14,11 +14,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- WebRTC & Collaboration -->
-  <script src="https://unpkg.com/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
-  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+  <!-- Yjs realtime (WebSocket, no signaling server needed) -->
   <script src="https://unpkg.com/yjs@13/dist/y.js"></script>
-  <script src="https://unpkg.com/y-webrtc@10.0.7/dist/y-webrtc.js"></script>
+  <script src="https://unpkg.com/y-websocket@1/dist/y-websocket.js"></script>
 
   <style>
     :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
@@ -88,6 +86,7 @@
       <button class="btn" id="logoBtn">Upload Logo</button>
     </div>
   </header>
+
   <div id="toolbar">
     <div class="tool" data-type="emoji" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
     <div class="tool" data-type="emoji" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
@@ -110,15 +109,18 @@
       <span class="label">Custom Icon</span>
     </button>
   </div>
+
   <div id="mapWrap">
     <div id="map"></div>
     <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
     <div id="status">Connecting collaborators...</div>
   </div>
+
   <div id="polygonControls" class="leaflet-top leaflet-right">
     <button id="toggleFill" class="btn">Toggle Fill</button>
     <button id="deletePoly" class="btn">Delete</button>
   </div>
+
   <div class="modal-backdrop" id="pdfBackdrop"></div>
   <div class="modal" id="pdfDialog">
     <h3 id="pdfTitle">PDF Export Options</h3>
@@ -146,6 +148,7 @@
       <button class="btn primary" id="exportPdf">Export</button>
     </div>
   </div>
+
   <script>
     // ---------- Collaboration Setup ----------
     const urlParams = new URLSearchParams(window.location.search);
@@ -153,28 +156,35 @@
     const userId = Math.random().toString(36).substring(7);
     const statusDiv = document.getElementById('status');
     statusDiv.textContent = `Room: ${roomId} | User: ${userId}`;
-    const SIGNALING_URL = window.location.protocol + '//' + window.location.host;
 
-    // Yjs document
+    // Yjs document + shared types
     const ydoc = new Y.Doc();
     const ymap = ydoc.getMap('mapState');
-    const ymarkers = ymap.get('markers') || ydoc.getArray('markers');
-    const ypolygons = ymap.get('polygons') || ydoc.getArray('polygons');
-    const ywatermarks = ymap.get('watermarks') || ydoc.getArray('watermarks');
-    const yview = ymap.get('view') || ydoc.getMap('view');
-    const ylegend = ymap.get('legend') || ydoc.getMap('legend');
 
-    // WebRTC provider
-    const webrtcProvider = new WebrtcProvider(roomId, ydoc, {
-      signaling: [SIGNALING_URL],
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    const ymarkers = ydoc.getArray('markers');
+    const ypolygons = ydoc.getArray('polygons');
+    const ywatermarks = ydoc.getArray('watermarks');
+    const yview = ydoc.getMap('view');
+    const ylegend = ydoc.getMap('legend');
+
+    if (!ymap.get('markers')) ymap.set('markers', ymarkers);
+    if (!ymap.get('polygons')) ymap.set('polygons', ypolygons);
+    if (!ymap.get('watermarks')) ymap.set('watermarks', ywatermarks);
+    if (!ymap.get('view')) ymap.set('view', yview);
+    if (!ymap.get('legend')) ymap.set('legend', ylegend);
+
+    // ✅ WebSocket provider (hosted demo server)
+    const wsUrl = 'wss://demos.yjs.dev';
+    const wsProvider = new WebsocketProvider(wsUrl, `event-map-${roomId}`, ydoc, { connect: true });
+
+    wsProvider.on('status', e => {
+      statusDiv.textContent = `Room: ${roomId} | ${e.status === 'connected' ? 'Connected' : 'Disconnected'}`;
     });
 
     // Local state
     let drawMode = false, tempPoints = [], tempLines = [], polygons = [], selected = null, selectedLine = null;
     let markers = [], selectedMarker = null;
     const watermarks = [];
-    const legendSet = new Map();
     const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
 
     // Map init
@@ -330,19 +340,25 @@
       let lpTimer = null;
       marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
       marker.on('touchend', () => { if(lpTimer) clearTimeout(lpTimer); });
-      marker.on('dragend', () => {
-        ydoc.transact(() => {
-          const idx = markers.indexOf(marker);
-          if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
-        });
-      });
-      if(!meta.isText) {
-        ydoc.transact(() => {
+
+      // persist add
+      ydoc.transact(() => {
+        if(!meta.isText) {
           ylegend.set(meta.label, meta.imgSrc ? {img: meta.imgSrc} : {emoji: meta.icon});
-          ymarkers.push({ lat: latlng.lat, lng: latlng.lng, meta });
-        });
-        renderLegend();
-      }
+          renderLegend();
+        }
+        ymarkers.push({ lat: latlng.lat, lng: latlng.lng, meta });
+      });
+
+      marker.on('dragend', () => {
+        const idx = markers.indexOf(marker);
+        if(idx > -1) {
+          ydoc.transact(() => {
+            ymarkers.delete(idx, 1);
+            ymarkers.insert(idx, [{ lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta }]);
+          });
+        }
+      });
     }
 
     function updateLegendAfterDelete(marker) {
@@ -372,20 +388,26 @@
       sizeInput.addEventListener('input', () => {
         marker.myMeta.size = parseInt(sizeInput.value);
         refreshMarkerIcon(marker);
-        ydoc.transact(() => {
-          const idx = markers.indexOf(marker);
-          if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
-        });
+        const idx = markers.indexOf(marker);
+        if(idx > -1) {
+          ydoc.transact(() => {
+            ymarkers.delete(idx, 1);
+            ymarkers.insert(idx, [{ lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta }]);
+          });
+        }
       });
       if(isText) {
         const colorInput = wrap.querySelector('#txtColor');
         colorInput.addEventListener('input', () => {
           marker.myMeta.color = colorInput.value;
           refreshMarkerIcon(marker);
-          ydoc.transact(() => {
-            const idx = markers.indexOf(marker);
-            if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
-          });
+          const idx = markers.indexOf(marker);
+          if(idx > -1) {
+            ydoc.transact(() => {
+              ymarkers.delete(idx, 1);
+              ymarkers.insert(idx, [{ lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta }]);
+            });
+          }
         });
       }
       wrap.querySelector('#delBtn').addEventListener('click', () => {
@@ -510,13 +532,14 @@
       if(!selected) return;
       const newOpacity = selected.options.fillOpacity > 0 ? 0 : 0.25;
       selected.setStyle({fillOpacity: newOpacity});
-      ydoc.transact(() => {
-        const idx = polygons.indexOf(selected);
-        if(idx > -1) {
+      const idx = polygons.indexOf(selected);
+      if(idx > -1) {
+        ydoc.transact(() => {
           const polyData = ypolygons.get(idx);
-          ypolygons.set(idx, { latlngs: polyData.latlngs, style: {...polyData.style, fillOpacity: newOpacity} });
-        }
-      });
+          ypolygons.delete(idx, 1);
+          ypolygons.insert(idx, [{ latlngs: polyData.latlngs, style: {...polyData.style, fillOpacity: newOpacity} }]);
+        });
+      }
     };
 
     document.getElementById('deletePoly').onclick = () => deleteSelectedShape();
@@ -524,16 +547,16 @@
 
     function deleteSelectedShape() {
       if(selected) {
-        ydoc.transact(() => {
-          const idx = polygons.indexOf(selected);
-          if(idx > -1) {
+        const idx = polygons.indexOf(selected);
+        if(idx > -1) {
+          ydoc.transact(() => {
             ypolygons.delete(idx, 1);
             map.removeLayer(selected);
             polygons.splice(idx, 1);
             selected = null;
             document.getElementById('polygonControls').style.display = 'none';
-          }
-        });
+          });
+        }
       }
       if(selectedLine) {
         map.removeLayer(selectedLine);
@@ -547,16 +570,16 @@
       const wm = document.createElement('div');
       wm.className = 'watermark';
       wm.style.display = 'block';
-      wm.style.opacity = options.opacity || 0.5;
+      wm.style.opacity = options.opacity ?? 0.5;
       wm.style.width = (options.width || 180) + 'px';
       wm.style.position = 'absolute';
-      if(options.left && options.top) {
+      const mapWrapRect = document.getElementById('mapWrap').getBoundingClientRect();
+      if(typeof options.left === 'number' && typeof options.top === 'number') {
         wm.style.left = options.left + 'px';
         wm.style.top = options.top + 'px';
       } else {
-        const mapWrap = document.getElementById('mapWrap').getBoundingClientRect();
-        wm.style.left = (mapWrap.width - 200) + 'px';
-        wm.style.top = (mapWrap.height - 150) + 'px';
+        wm.style.left = (mapWrapRect.width - 200) + 'px';
+        wm.style.top = (mapWrapRect.height - 150) + 'px';
       }
       wm.style.right = 'auto';
       wm.style.bottom = 'auto';
@@ -588,18 +611,19 @@
         wm.style.top = (startTop + dy - wrap.top) + 'px';
         wm.style.right = 'auto';
         wm.style.bottom = 'auto';
-        ydoc.transact(() => {
-          const idx = watermarks.indexOf(wm);
-          if(idx > -1) {
-            ywatermarks.set(idx, {
+        const idx = watermarks.indexOf(wm);
+        if(idx > -1) {
+          ydoc.transact(() => {
+            ywatermarks.delete(idx, 1);
+            ywatermarks.insert(idx, [{
               src: img.src,
               opacity: parseFloat(wm.style.opacity),
               width: wm.offsetWidth,
               left: parseFloat(wm.style.left),
               top: parseFloat(wm.style.top)
-            });
-          }
-        });
+            }]);
+          });
+        }
       });
       window.addEventListener('mouseup', () => {
         if(dragging) {
@@ -607,6 +631,8 @@
           map.dragging.enable();
         }
       });
+
+      // touch
       let draggingT = false, tStart = null;
       wm.addEventListener('touchstart', e => {
         const t = e.touches[0];
@@ -626,18 +652,19 @@
         wm.style.top = (startTop + dy - wrap.top) + 'px';
         wm.style.right = 'auto';
         wm.style.bottom = 'auto';
-        ydoc.transact(() => {
-          const idx = watermarks.indexOf(wm);
-          if(idx > -1) {
-            ywatermarks.set(idx, {
+        const idx = watermarks.indexOf(wm);
+        if(idx > -1) {
+          ydoc.transact(() => {
+            ywatermarks.delete(idx, 1);
+            ywatermarks.insert(idx, [{
               src: img.src,
               opacity: parseFloat(wm.style.opacity),
               width: wm.offsetWidth,
               left: parseFloat(wm.style.left),
               top: parseFloat(wm.style.top)
-            });
-          }
-        });
+            }]);
+          });
+        }
         e.preventDefault();
       }, { passive: false });
       window.addEventListener('touchend', () => {
@@ -646,6 +673,8 @@
           map.dragging.enable();
         }
       });
+
+      // persist add
       ydoc.transact(() => {
         ywatermarks.push({
           src: img.src,
@@ -677,18 +706,26 @@
       const opacityInput = wrap.querySelector('input[min="0.05"]');
       opacityInput.addEventListener('input', () => {
         wm.style.opacity = opacityInput.value;
-        ydoc.transact(() => {
-          const idx = watermarks.indexOf(wm);
-          if(idx > -1) ywatermarks.set(idx, { ...ywatermarks.get(idx), opacity: parseFloat(wm.style.opacity) });
-        });
+        const idx = watermarks.indexOf(wm);
+        if(idx > -1) {
+          ydoc.transact(() => {
+            const cur = ywatermarks.get(idx) || {};
+            ywatermarks.delete(idx, 1);
+            ywatermarks.insert(idx, [{ ...cur, src: wm.querySelector('img').src, opacity: parseFloat(wm.style.opacity), width: wm.offsetWidth, left: parseFloat(wm.style.left), top: parseFloat(wm.style.top) }]);
+          });
+        }
       });
       const sizeInput = wrap.querySelector('input[min="60"]');
       sizeInput.addEventListener('input', () => {
         wm.style.width = sizeInput.value + 'px';
-        ydoc.transact(() => {
-          const idx = watermarks.indexOf(wm);
-          if(idx > -1) ywatermarks.set(idx, { ...ywatermarks.get(idx), width: wm.offsetWidth });
-        });
+        const idx = watermarks.indexOf(wm);
+        if(idx > -1) {
+          ydoc.transact(() => {
+            const cur = ywatermarks.get(idx) || {};
+            ywatermarks.delete(idx, 1);
+            ywatermarks.insert(idx, [{ ...cur, src: wm.querySelector('img').src, opacity: parseFloat(wm.style.opacity), width: wm.offsetWidth, left: parseFloat(wm.style.left), top: parseFloat(wm.style.top) }]);
+          });
+        }
       });
       wrap.querySelector('#delBtn').addEventListener('click', () => {
         ydoc.transact(() => {
@@ -707,16 +744,12 @@
     // Export helpers
     function addWatermarkToCanvas(canvas) {
       return new Promise(resolve => {
-        console.log('Adding watermarks to canvas...');
         const ctx = canvas.getContext('2d');
         const wrap = document.getElementById('mapWrap').getBoundingClientRect();
         const scaleX = canvas.width / wrap.width, scaleY = canvas.height / wrap.height;
-        let loaded = 0;
         const visibleWatermarks = watermarks.filter(wm => wm.style.display !== 'none');
-        if(visibleWatermarks.length === 0) {
-          console.log('No watermarks to add.');
-          return resolve(canvas);
-        }
+        if(visibleWatermarks.length === 0) return resolve(canvas);
+        let loaded = 0;
         visibleWatermarks.forEach(wm => {
           const img = wm.querySelector('img');
           const wmRect = wm.getBoundingClientRect();
@@ -727,21 +760,13 @@
           const newImg = new Image();
           newImg.crossOrigin = 'anonymous';
           newImg.onload = () => {
-            console.log(`Watermark loaded: ${img.src}`);
             ctx.globalAlpha = parseFloat(wm.style.opacity || 1);
             ctx.drawImage(newImg, left, top, w, h);
             ctx.globalAlpha = 1;
             loaded++;
-            if(loaded === visibleWatermarks.length) {
-              console.log('All watermarks added.');
-              resolve(canvas);
-            }
-          };
-          newImg.onerror = err => {
-            console.error(`Failed to load watermark: ${img.src}`, err);
-            loaded++;
             if(loaded === visibleWatermarks.length) resolve(canvas);
           };
+          newImg.onerror = () => { loaded++; if(loaded === visibleWatermarks.length) resolve(canvas); };
           newImg.src = img.src;
         });
       });
@@ -749,7 +774,6 @@
 
     function captureMapCanvas() {
       return new Promise((resolve, reject) => {
-        console.log('Starting canvas capture...');
         map.invalidateSize();
         const center = map.getCenter();
         const zoom = map.getZoom();
@@ -757,30 +781,21 @@
         let tileLoadCount = 0;
         const tiles = tileLayer._tiles || {};
         const expectedTiles = Object.keys(tiles).length;
-        console.log(`Expecting ${expectedTiles} tiles to load...`);
         if(expectedTiles === 0) {
           proceedWithCapture();
         } else {
           tileLayer.on('tileload', () => {
             tileLoadCount++;
-            console.log(`Tile loaded: ${tileLoadCount}/${expectedTiles}`);
             if(tileLoadCount >= expectedTiles) proceedWithCapture();
           });
-          tileLayer.on('tileerror', err => {
-            console.error('Tile error:', err);
+          tileLayer.on('tileerror', () => {
             tileLoadCount++;
             if(tileLoadCount >= expectedTiles) proceedWithCapture();
           });
-          setTimeout(() => {
-            if(tileLoadCount < expectedTiles) {
-              console.warn('Tile loading timeout, proceeding with capture.');
-              proceedWithCapture();
-            }
-          }, 5000); // 5s timeout
+          setTimeout(() => { if(tileLoadCount < expectedTiles) proceedWithCapture(); }, 5000);
           map._onResize();
         }
         function proceedWithCapture() {
-          console.log('Proceeding with canvas capture...');
           const polygonControls = document.getElementById('polygonControls');
           const originalDisplay = polygonControls.style.display;
           polygonControls.style.display = 'none';
@@ -793,34 +808,20 @@
           const imagesToLoad = [];
           markers.forEach(marker => { if(marker.myMeta.imgSrc) imagesToLoad.push(marker.myMeta.imgSrc); });
           watermarks.forEach(wm => { if(wm.style.display !== 'none') imagesToLoad.push(wm.querySelector('img').src); });
-          console.log(`Preloading ${imagesToLoad.length} images...`);
-          const loadImage = src => {
-            return new Promise((res, rej) => {
-              const img = new Image();
-              img.crossOrigin = 'anonymous';
-              img.onload = () => {
-                console.log(`Image preloaded: ${src}`);
-                res(img);
-              };
-              img.onerror = err => {
-                console.error(`Image preload failed: ${src}`, err);
-                res(null);
-              };
-              img.src = src;
-            });
-          };
+          const loadImage = src => new Promise(res => {
+            const img = new Image(); img.crossOrigin = 'anonymous';
+            img.onload = () => res(img); img.onerror = () => res(null); img.src = src;
+          });
           Promise.all(imagesToLoad.map(loadImage)).then(() => {
-            console.log('Capturing map with html2canvas...');
             html2canvas(document.getElementById('mapWrap'), {
               useCORS: true,
               scale: window.devicePixelRatio * 2,
               backgroundColor: '#000',
               foreignObjectRendering: true,
-              logging: true,
+              logging: false,
               width: document.getElementById('mapWrap').offsetWidth,
               height: document.getElementById('mapWrap').offsetHeight
             }).then(canvas => {
-              console.log('html2canvas completed.');
               polygonControls.style.display = originalDisplay;
               map.eachLayer(layer => {
                 if(layer._tempHidden) {
@@ -828,12 +829,8 @@
                   delete layer._tempHidden;
                 }
               });
-              addWatermarkToCanvas(canvas).then(resolve).catch(err => {
-                console.error('Watermark addition failed:', err);
-                reject(err);
-              });
+              addWatermarkToCanvas(canvas).then(resolve).catch(reject);
             }).catch(err => {
-              console.error('html2canvas failed:', err);
               polygonControls.style.display = originalDisplay;
               map.eachLayer(layer => {
                 if(layer._tempHidden) {
@@ -843,54 +840,34 @@
               });
               reject(err);
             });
-          }).catch(err => {
-            console.error('Image preload failed:', err);
-            polygonControls.style.display = originalDisplay;
-            map.eachLayer(layer => {
-              if(layer._tempHidden) {
-                layer.addTo(map);
-                delete layer._tempHidden;
-              }
-            });
-            reject(err);
-          });
+          }).catch(reject);
         }
       });
     }
 
     function exportPNG() {
-      console.log('Initiating PNG export...');
       captureMapCanvas().then(canvas => {
         const dataUrl = canvas.toDataURL('image/png');
-        console.log('Canvas converted to data URL:', dataUrl.slice(0, 50) + '...');
         const a = document.createElement('a');
         a.download = 'event-map.png';
         a.href = dataUrl;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        console.log('PNG download triggered.');
-      }).catch(err => {
-        console.error('PNG export failed:', err);
-        alert('Failed to export PNG. Check console for details.');
-      });
+      }).catch(() => alert('Failed to export PNG. Check console for details.'));
     }
 
     function openPdfDialog() {
       document.getElementById('pdfBackdrop').style.display = 'block';
       document.getElementById('pdfDialog').style.display = 'block';
     }
-
     function closePdfDialog() {
       document.getElementById('pdfBackdrop').style.display = 'none';
       document.getElementById('pdfDialog').style.display = 'none';
     }
-
     document.getElementById('pdfBackdrop').addEventListener('click', closePdfDialog);
     document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
-
     document.getElementById('exportPdf').onclick = () => {
-      console.log('Initiating PDF export...');
       const { jsPDF } = window.jspdf;
       const size = document.getElementById('pdfSize').value;
       const orientation = document.getElementById('pdfOrientation').value;
@@ -898,23 +875,19 @@
       const pdf = new jsPDF({orientation, unit: 'mm', format: size});
       captureMapCanvas().then(canvas => {
         const img = canvas.toDataURL('image/jpeg', 1.0);
-        console.log('Canvas converted to JPEG for PDF:', img.slice(0, 50) + '...');
         const pageW = pdf.internal.pageSize.getWidth();
         const pageH = pdf.internal.pageSize.getHeight();
         let imgW, imgH, x, y;
-        if(scaleMode === 'fit') {
-          imgW = pageW; imgH = pageH; x = 0; y = 0;
-        } else {
+        if(scaleMode === 'fit') { imgW = pageW; imgH = pageH; x = 0; y = 0; }
+        else {
           const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
           imgW = canvas.width * ratio; imgH = canvas.height * ratio;
           x = (pageW - imgW) / 2; y = (pageH - imgH) / 2;
         }
         pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
         pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
-        console.log('PDF download triggered.');
         closePdfDialog();
-      }).catch(err => {
-        console.error('PDF export failed:', err);
+      }).catch(() => {
         alert('Failed to export PDF. Check console for details.');
         closePdfDialog();
       });
@@ -927,7 +900,7 @@
       const r = new FileReader();
       r.onload = ev => {
         try { restoreProjectJSON(JSON.parse(ev.target.result)); }
-        catch(err) { alert('Invalid JSON'); }
+        catch { alert('Invalid JSON'); }
       };
       r.readAsText(f);
     });
@@ -947,7 +920,8 @@
     function buildProjectJSON() {
       const savedMarkers = ymarkers.toArray();
       const savedPolys = ypolygons.toArray();
-      const savedLegend = Array.from(ylegend.entries()).map(([label, val]) => ({label, icon: val.emoji || null, imgSrc: val.img || null}));
+      const savedLegend = [];
+      ylegend.forEach((val, label) => savedLegend.push({label, icon: val.emoji || null, imgSrc: val.img || null}));
       const savedWatermarks = ywatermarks.toArray();
       return {
         version: 5,
@@ -1015,16 +989,15 @@
       polygons.forEach(p => map.removeLayer(p));
       polygons = [];
       watermarks.forEach(wm => wm.remove());
-      watermarks = [];
+      watermarks.length = 0;
+
       ymarkers.toArray().forEach(m => {
         const latlng = L.latLng(m.lat, m.lng);
         const meta = m.meta;
         const size = meta.size || 26;
         let html;
         if(meta.imgSrc) {
-          html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
-                    <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
-                  </div>`;
+          html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center"><img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/></div>`;
         } else {
           const colorStyle = meta.isText ? `color:${meta.color};` : '';
           html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
@@ -1041,17 +1014,22 @@
         marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
         marker.on('touchend', () => { if(lpTimer) clearTimeout(lpTimer); });
         marker.on('dragend', () => {
-          ydoc.transact(() => {
-            const idx = markers.indexOf(marker);
-            if(idx > -1) ymarkers.set(idx, { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta });
-          });
+          const idx = markers.indexOf(marker);
+          if(idx > -1) {
+            ydoc.transact(() => {
+              ymarkers.delete(idx, 1);
+              ymarkers.insert(idx, [{ lat: marker.getLatLng().lat, lng: marker.getLatLng().lng, meta: marker.myMeta }]);
+            });
+          }
         });
       });
+
       ypolygons.toArray().forEach(p => {
         const poly = L.polygon(p.latlngs, p.style).addTo(map);
         poly.on('click', () => selectPolygon(poly));
         polygons.push(poly);
       });
+
       ywatermarks.toArray().forEach(wmData => {
         addWatermark(wmData.src, {
           opacity: wmData.opacity,
@@ -1060,6 +1038,7 @@
           top: wmData.top
         });
       });
+
       renderLegend();
     }
 
@@ -1070,35 +1049,7 @@
       map.setView(center, zoom);
     });
 
-    // Signaling
-    const socket = io(SIGNALING_URL);
-    socket.emit('join-room', roomId, userId);
-    socket.on('existing-users', existingUsers => {
-      existingUsers.forEach(user => {
-        const peer = new SimplePeer({ initiator: true, trickle: false });
-        peer.on('signal', signal => socket.emit('offer', { target: user.socketId, signal }));
-        peer.on('connect', () => console.log('P2P connected to', user.userId));
-      });
-    });
-    socket.on('user-joined', user => {
-      const peer = new SimplePeer({ initiator: false, trickle: false });
-      peer.on('signal', signal => socket.emit('answer', { target: user.socketId, signal }));
-    });
-    socket.on('offer', data => {
-      const peer = new SimplePeer({ initiator: false, trickle: false });
-      peer.signal(data.signal);
-      peer.on('signal', signal => socket.emit('answer', { target: data.socketId, signal }));
-    });
-    socket.on('answer', data => {
-      const peer = webrtcProvider.peers.find(p => p.id === data.socketId);
-      if(peer) peer.signal(data.signal);
-    });
-    socket.on('ice-candidate', data => {
-      const peer = webrtcProvider.peers.find(p => p.id === data.socketId);
-      if(peer) peer.signal(data.candidate);
-    });
-
-    console.log('Collaborative mode enabled! Share this URL with others.');
+    console.log('Collaborative mode (WebSocket) enabled! Share this URL with others.');
   </script>
 </body>
 </html>
