@@ -14,8 +14,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Yjs realtime (WebSocket, no signaling server needed) -->
-  <script src="https://unpkg.com/yjs@13/dist/y.js"></script>
+  <!-- Yjs realtime (UMD globals, no signaling server needed) -->
+  <script src="https://unpkg.com/yjs@13/dist/yjs.js"></script>
   <script src="https://unpkg.com/y-websocket@1/dist/y-websocket.js"></script>
 
   <style>
@@ -113,7 +113,7 @@
   <div id="mapWrap">
     <div id="map"></div>
     <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
-    <div id="status">Connecting collaborators...</div>
+    <div id="status">Connecting…</div>
   </div>
 
   <div id="polygonControls" class="leaflet-top leaflet-right">
@@ -153,9 +153,7 @@
     // ---------- Collaboration Setup ----------
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default-room';
-    const userId = Math.random().toString(36).substring(7);
     const statusDiv = document.getElementById('status');
-    statusDiv.textContent = `Room: ${roomId} | User: ${userId}`;
 
     // Yjs document + shared types
     const ydoc = new Y.Doc();
@@ -167,17 +165,18 @@
     const yview = ydoc.getMap('view');
     const ylegend = ydoc.getMap('legend');
 
+    // Attach shared types to the mapState (idempotent across peers)
     if (!ymap.get('markers')) ymap.set('markers', ymarkers);
     if (!ymap.get('polygons')) ymap.set('polygons', ypolygons);
     if (!ymap.get('watermarks')) ymap.set('watermarks', ywatermarks);
     if (!ymap.get('view')) ymap.set('view', yview);
     if (!ymap.get('legend')) ymap.set('legend', ylegend);
 
-    // ✅ WebSocket provider (hosted demo server)
+    // WebSocket provider (hosted demo server)
     const wsUrl = 'wss://demos.yjs.dev';
-    const wsProvider = new WebsocketProvider(wsUrl, `event-map-${roomId}`, ydoc, { connect: true });
+    const provider = new WebsocketProvider(wsUrl, `event-map-${roomId}`, ydoc, { connect: true });
 
-    wsProvider.on('status', e => {
+    provider.on('status', e => {
       statusDiv.textContent = `Room: ${roomId} | ${e.status === 'connected' ? 'Connected' : 'Disconnected'}`;
     });
 
