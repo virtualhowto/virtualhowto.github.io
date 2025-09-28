@@ -14,7 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Yjs realtime (UMD globals, no signaling server needed) -->
+  <!-- Yjs realtime (UMD globals, no custom signaling server) -->
   <script src="https://unpkg.com/yjs@13/dist/yjs.js"></script>
   <script src="https://unpkg.com/y-websocket@1/dist/y-websocket.js"></script>
 
@@ -396,11 +396,11 @@
       const wrap = document.createElement('div');
       wrap.className = 'size-popup';
       wrap.innerHTML = `
-        <label>Size <input type="range" min="12" max="120" step="2" value="${sizeNow}"></label>
-        ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
-        <div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">
-          <button type="button" id="cloneBtn" style="background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Clone</button>
-          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        <label>Size <input type=\"range\" min=\"12\" max=\"120\" step=\"2\" value=\"${sizeNow}\"></label>
+        ${isText ? `<label>Color <input type=\"color\" value=\"${colorNow}\" id=\"txtColor\"></label>` : ``}
+        <div style=\"margin-top:8px;display:flex;gap:8px;justify-content:space-between\">
+          <button type=\"button\" id=\"cloneBtn\" style=\"background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer\">Clone</button>
+          <button type=\"button\" id=\"delBtn\" style=\"background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer\">Delete</button>
         </div>`;
       const sizeInput = wrap.querySelector('input[type="range"]');
       sizeInput.addEventListener('input', () => {
@@ -454,12 +454,12 @@
       const {icon, size, isText, color, imgSrc} = marker.myMeta;
       let html;
       if(imgSrc) {
-        html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
-                  <img src="${imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
+        html = `<div style=\"width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center\">
+                  <img src=\"${imgSrc}\" style=\"max-width:100%;max-height:100%;display:block\"/>
                 </div>`;
       } else {
         const colorStyle = isText ? `color:${color};` : '';
-        html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${icon}</div>`;
+        html = `<div style=\"font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap\">${icon}</div>`;
       }
       marker.setIcon(L.divIcon({
         className: "custom-div-icon",
@@ -716,10 +716,10 @@
       const wrap = document.createElement('div');
       wrap.className = 'size-popup';
       wrap.innerHTML = `
-        <label>Opacity <input type="range" min="0.05" max="1" step="0.05" value="${wm.style.opacity || 0.5}"></label>
-        <label>Size (px) <input type="range" min="60" max="800" step="10" value="${wm.offsetWidth || 180}"></label>
-        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
-          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        <label>Opacity <input type=\"range\" min=\"0.05\" max=\"1\" step=\"0.05\" value=\"${wm.style.opacity || 0.5}\"></label>
+        <label>Size (px) <input type=\"range\" min=\"60\" max=\"800\" step=\"10\" value=\"${wm.offsetWidth || 180}\"></label>
+        <div style=\"margin-top:8px;display:flex;gap:8px;justify-content:flex-end\">
+          <button type=\"button\" id=\"delBtn\" style=\"background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer\">Delete</button>
         </div>`;
       const opacityInput = wrap.querySelector('input[min="0.05"]');
       opacityInput.addEventListener('input', () => {
@@ -894,6 +894,4 @@
       captureMapCanvas().then(canvas => {
         const img = canvas.toDataURL('image/jpeg', 1.0);
         const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        let imgW, imgH, x, y;
-        if(scaleMode === 'fit') { 
+        const pageH = pdf.internal.pageSize.getHeight()
