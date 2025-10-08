@@ -520,7 +520,51 @@
         ctx.globalAlpha=parseFloat(wm.style.opacity || 1); ctx.drawImage(wmImg,left,top,w,h); ctx.globalAlpha=1; resolve(c);
       });
     }
+
+    // Preload external images (icons/watermarks) with CORS to prevent tainted canvas
+    function preloadImages(urls){
+      const unique = Array.from(new Set(urls.filter(Boolean)));
+      return Promise.all(unique.map(src=>new Promise(res=>{
+        const img=new Image(); img.crossOrigin='anonymous';
+        img.onload=()=>res(true); img.onerror=()=>res(false); img.src=src;
+      })));
+    }
+
     async function captureMapCanvas() {
+      // 1) Ensure NSW tiles fully loaded (avoids X tiles)
+      await ensureTilesLoaded();
+
+      // 2) Temporarily hide UI that shouldn't appear in export
+      const polygonControls = document.getElementById('polygonControls');
+      const prevDisplay = polygonControls.style.display;
+      polygonControls.style.display = 'none';
+
+      // Hide any open Leaflet popups while capturing
+      const hiddenPopups = [];
+      map.eachLayer(l=>{ if(l instanceof L.Popup){ hiddenPopups.push(l); map.removeLayer(l); }});
+
+      // 3) Preload any external images used as markers/watermark
+      const imgUrls = [];
+      markers.forEach(m=>{ if(m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
+      if(wmImg && wmImg.src && wm.style.display!=='none') imgUrls.push(wmImg.src);
+      await preloadImages(imgUrls);
+
+      // 4) Snapshot the map wrapper
+      const canvas = await html2canvas(document.getElementById('mapWrap'), {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#000',
+        foreignObjectRendering: false,
+        scale: window.devicePixelRatio > 1 ? 2 : 1
+      });
+
+      // 5) Restore UI & popups
+      polygonControls.style.display = prevDisplay;
+      hiddenPopups.forEach(p=>p.addTo(map));
+
+      // 6) Composite watermark and return
+      return addWatermarkToCanvas(canvas);
+    }() {
       // Wait for tiles to finish loading to avoid broken/X tiles in the export
       await ensureTilesLoaded();
       const canvas = await html2canvas(document.getElementById('mapWrap'), {
@@ -533,9 +577,10 @@
       return addWatermarkToCanvas(canvas);
     }
     function exportPNG(){
-      captureMapCanvas().then(c=>{
-        const a=document.createElement('a'); a.download='event-map.png'; a.href=c.toDataURL('image/png'); a.click();
-      });
+      captureMapCanvas()
+        .then(c=>{ const a=document.createElement('a'); a.download='event-map.png'; a.href=c.toDataURL('image/png'); a.click(); })
+        .catch(err=>{ console.error('PNG export failed:', err); alert('PNG export failed (likely CORS on imagery). Try again, or switch to a CORS-safe basemap for export.'); });
+    });
     }
 
     // ---------- PDF dialog ----------
@@ -548,6 +593,27 @@
 
     document.getElementById('exportPdf').onclick=()=>{
       const { jsPDF } = window.jspdf;
+      const size=document.getElementById('pdfSize').value;
+      const orientation=document.getElementById('pdfOrientation').value;
+      const scaleMode=document.getElementById('pdfScaleMode').value;
+
+      const pdf=new jsPDF({orientation,unit:'mm',format:size});
+      captureMapCanvas().then(c=>{
+        const img=c.toDataURL('image/jpeg',1.0);
+        const pageW=pdf.internal.pageSize.getWidth();
+        const pageH=pdf.internal.pageSize.getHeight();
+        let imgW,imgH,x,y;
+        if(scaleMode==='fit'){ imgW=pageW; imgH=pageH; x=0; y=0; }
+        else{
+          const ratio=Math.min(pageW/c.width, pageH/c.height);
+          imgW=c.width*ratio; imgH=c.height*ratio;
+          x=(pageW-imgW)/2; y=(pageH-imgH)/2;
+        }
+        pdf.addImage(img,'JPEG',x,y,imgW,imgH);
+        pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
+        closePdfDialog();
+      }).catch(err=>{ console.error('PDF export failed:', err); alert('PDF export failed (likely CORS on imagery). Try again, or switch to a CORS-safe basemap for export.'); closePdfDialog(); });
+    };
       const size=document.getElementById('pdfSize').value;
       const orientation=document.getElementById('pdfOrientation').value;
       const scaleMode=document.getElementById('pdfScaleMode').value;
