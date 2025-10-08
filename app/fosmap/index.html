@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Historic Map Overlay Viewer — Wayback + AU Presets</title>
+<title>Historic Map Overlay Viewer — Wayback Import + AU Presets</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -65,11 +65,11 @@
         <button class="btn" id="deactivateYear">Hide year overlay</button>
       </div>
       <div class="hint" style="margin-top:8px">
-        Pre-wired with Australia sources (VIC/QLD/WA + GA DEM) and Esri Wayback (all dates).
+        Ready for Esri Wayback (import single link or load all dates) + Australia presets (VIC/QLD/WA + GA DEM).
       </div>
     </div>
 
-    <!-- PRESETS (AUTO-CATALOG) -->
+    <!-- PRESETS & IMPORTS -->
     <div class="card">
       <h2>Presets & Loaders</h2>
       <div class="row">
@@ -82,10 +82,13 @@
       </div>
       <div class="row" style="margin-top:8px">
         <button class="btn" id="loadWaybackAll">Load Wayback (all dates)</button>
+        <button class="btn" id="importWaybackLink">Import Wayback link</button>
+      </div>
+      <div class="row" style="margin-top:8px">
         <button class="btn" id="addNLS">Add NLS demo</button>
       </div>
       <div class="hint" style="margin-top:8px">
-        Buttons scan official services and add **year-labelled** layers to the dropdown. They also run on startup.
+        The Wayback importer reads a Living Atlas Wayback share URL and auto-loads the versions & swipe state.
       </div>
     </div>
 
@@ -384,7 +387,7 @@ async function loadWMTSYears({capUrl, templateHint, namePrefix='', attribution='
 async function loadVICPreset(){
   await loadWMTSYears({
     capUrl: 'https://base.maps.vic.gov.au/service?service=wmts&request=GetCapabilities',
-    templateHint: '', // leave blank; WMS below usually provides the dated layers
+    templateHint: '', // WMS below usually provides the dated layers
     namePrefix: 'VIC • ',
     attribution: '&copy; State of Victoria'
   });
@@ -443,6 +446,79 @@ function addNLS(){
   });
 }
 
+/* =============== WAYBACK LINK IMPORTER =============== */
+// Accepts a Living Atlas Wayback share URL (or just the #... hash).
+// Parses mapCenter, active/selected/swipeWidget to pull version IDs, centers map,
+// loads those Wayback versions, and enables swipe if two are present.
+function importWaybackFromLink(raw) {
+  if (!raw) return toast('No link provided.');
+  try {
+    let url;
+    if (raw.startsWith('#')) {
+      url = new URL('https://livingatlas.arcgis.com/wayback/' + raw);
+    } else if (/^https?:\/\//i.test(raw)) {
+      url = new URL(raw);
+    } else {
+      url = new URL('https://livingatlas.arcgis.com/wayback/#' + raw);
+    }
+
+    const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+    const sp = new URLSearchParams(hash);
+
+    // Map center: "lon,lat,zoom"
+    const mc = sp.get('mapCenter');
+    if (mc) {
+      const [lonStr, latStr, zoomStr] = mc.split(',');
+      const lat = parseFloat(latStr), lon = parseFloat(lonStr), z = parseInt(zoomStr, 10);
+      if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+        map.setView([lat, lon], !Number.isNaN(z) ? z : map.getZoom());
+      }
+    }
+
+    // Extract version ids
+    const candidates = new Set();
+    const addCandidates = (key) => {
+      const v = sp.get(key);
+      if (!v) return;
+      v.split(',').forEach(s => {
+        const n = parseInt(s.replace(/[^\d]/g, ''), 10);
+        if (Number.isInteger(n) && n >= 1000) candidates.add(n);
+      });
+    };
+    addCandidates('active');
+    addCandidates('selected');
+    addCandidates('swipeWidget');
+
+    if (candidates.size === 0) {
+      toast('No Wayback version ids found in the link.');
+      return;
+    }
+
+    // Add overlays for each version
+    const ids = [];
+    for (const ver of candidates) {
+      const name = `Wayback v${ver}`;
+      const template = `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${ver}/{level}/{row}/{col}`;
+      const id = addWMTS({ name, template, attribution: 'Esri Wayback' });
+      ids.push(id);
+    }
+
+    // Auto-swipe if two or more
+    if (ids.length >= 2) {
+      swipeA = ids[0];
+      swipeB = ids[1];
+      $('swipeRange').value = 50;
+      updateSwipeClip();
+      toast('Loaded Wayback versions and enabled swipe.');
+    } else {
+      toast('Loaded Wayback version.');
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Could not parse that Wayback link.');
+  }
+}
+
 /* Wire buttons */
 $('loadVIC').onclick=loadVICPreset;
 $('loadQLD').onclick=loadQLDPreset;
@@ -450,15 +526,19 @@ $('loadWA').onclick=loadWAPreset;
 $('addGADEM').onclick=addGADEM;
 $('addNLS').onclick=addNLS;
 $('loadWaybackAll').onclick=loadWaybackAll;
+$('importWaybackLink').onclick=()=> {
+  const link = prompt('Paste a Wayback share link (or just the #... part):');
+  if (link) importWaybackFromLink(link.trim());
+};
 
 /* =============== AUTORUN ON STARTUP =============== */
 (async function bootstrap(){
   // Always add GA DEM + NLS so you have something even if others fail
   addGADEM();
   addNLS();
-  // Try Esri Wayback (all dates)
+  // Load Wayback catalog in the background (optional; you can remove this if you prefer manual)
   loadWaybackAll();
-  // Load the AU state services (non-blocking)
+  // Load AU state services (non-blocking)
   loadVICPreset();
   loadQLDPreset();
   loadWAPreset();
