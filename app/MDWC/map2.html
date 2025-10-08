@@ -17,7 +17,8 @@
   <style>
     :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink);display:flex;flex-direction:column}
     header{background:#121722;border-bottom:1px solid var(--border);padding:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
     header h1{font-size:16px;margin:0;font-weight:600}
     #topbar{display:flex;flex:1;flex-wrap:wrap;gap:8px;align-items:center}
@@ -33,7 +34,7 @@
     .tool .emoji{font-size:22px}
     .tool .thumb{width:22px;height:22px;object-fit:contain;display:block}
     .tool .label{font-size:12px;color:var(--muted)}
-    #mapWrap{position:relative;flex:1}
+    #mapWrap{position:relative;flex:1;min-height:0}
     #map{width:100%;height:100%}
     #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:260px}
     #legend h3{margin:0 0 6px 0;font-size:12px}
@@ -172,21 +173,17 @@
   <script>
     // ---------- Map init (no Leaflet attribution) ----------
     const map = L.map('map', { attributionControl: false });
-const base = L.esri.tiledMapLayer({
-  url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
-  attribution:'Imagery © NSW Spatial Services'
-}).addTo(map);
-
-// Try to set crossOrigin on tiles (helps html2canvas when server sends CORS headers)
-base.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch(_){} });
-
-// Helper: wait until basemap tiles are loaded before snapshot (prevents X tiles)
-function ensureTilesLoaded(){
-  return new Promise(resolve => {
-    if (!base._loading) return resolve();
-    base.once('load', resolve);
-  });
-}
+    const base = L.esri.tiledMapLayer({
+      url:'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+      attribution:'Imagery © NSW Spatial Services'
+    }).addTo(map);
+    base.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch(_){} });
+    function ensureTilesLoaded(){
+      return new Promise(resolve => {
+        if (!base._loading) return resolve();
+        base.once('load', resolve);
+      });
+    }
 
     // GPS + Sofala fallback
     const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
@@ -363,7 +360,7 @@ function ensureTilesLoaded(){
         <label>Scale
           <input id="scaleSlider" type="range" min="-50" max="50" step="1" value="${sliderVal}">
         </label>
-        ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
+        ${isText ? `<label>Color <input type=\"color\" value=\"${colorNow}\" id=\"txtColor\"></label>` : ``}
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">
           <button type="button" id="cloneBtn" style="background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Clone</button>
           <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
@@ -524,17 +521,16 @@ function ensureTilesLoaded(){
       });
     }
     async function captureMapCanvas() {
-  // Wait for tiles to finish loading to avoid broken/X tiles in the export
-  await ensureTilesLoaded();
-  const canvas = await html2canvas(document.getElementById('mapWrap'), {
-    useCORS: true,
-    allowTaint: false,
-    backgroundColor: '#000',
-    foreignObjectRendering: false,
-    scale: window.devicePixelRatio > 1 ? 2 : 1
-  });
-  return addWatermarkToCanvas(canvas);
-}).then(addWatermarkToCanvas);
+      // Wait for tiles to finish loading to avoid broken/X tiles in the export
+      await ensureTilesLoaded();
+      const canvas = await html2canvas(document.getElementById('mapWrap'), {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#000',
+        foreignObjectRendering: false,
+        scale: window.devicePixelRatio > 1 ? 2 : 1
+      });
+      return addWatermarkToCanvas(canvas);
     }
     function exportPNG(){
       captureMapCanvas().then(c=>{
