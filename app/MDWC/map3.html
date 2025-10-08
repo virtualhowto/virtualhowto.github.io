@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Event Map Builder</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Leaflet + Esri-Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
+
+  <!-- Leaflet.draw -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <!-- Export libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink);display:flex;flex-direction:column}
+    header{background:#121722;border-bottom:1px solid var(--border);padding:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+    header h1{font-size:16px;margin:0;font-weight:600}
+    #topbar{display:flex;flex:1;flex-wrap:wrap;gap:8px;align-items:center}
+    .btn{background:var(--panel);border:1px solid var(--border);color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px}
+    .btn.primary{background:var(--accent);color:#0a1524;border:none}
+    #searchBox{background:#fff;color:#000;border:1px solid var(--border);border-radius:6px;padding:6px;font-size:14px;flex:1;min-width:170px}
+    .dropdown{position:relative;display:inline-block}
+    .dropdown-menu{display:none;position:absolute;right:0;top:100%;margin-top:6px;background:#1a1f29;border:1px solid var(--border);border-radius:10px;min-width:200px;z-index:3000;box-shadow:0 10px 25px rgba(0,0,0,.4)}
+    .dropdown-menu button{width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--ink);cursor:pointer;font-size:14px}
+    .dropdown-menu button:hover{background:#0f141d}
+    #toolbar{display:flex;overflow-x:auto;gap:8px;padding:6px;background:#1a1f29;border-bottom:1px solid var(--border)}
+    .tool{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:6px 8px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--panel);gap:6px}
+    .tool .emoji{font-size:22px}
+    .tool .thumb{width:22px;height:22px;object-fit:contain;display:block}
+    .tool .label{font-size:12px;color:var(--muted)}
+    #mapWrap{position:relative;flex:1;min-height:0}
+    #map{width:100%;height:100%}
+    #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:260px}
+    #legend h3{margin:0 0 6px 0;font-size:12px}
+    #legend ul{margin:0;padding:0;list-style:none}
+    #legend li{margin:4px 0;display:flex;align-items:center;gap:6px}
+    #legend img{width:14px;height:14px;object-fit:contain;display:inline-block;background:#fff;border-radius:2px}
+    #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
+    #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
+    #watermark img{display:block;max-width:100%;max-height:100%}
+    #wmControls{position:absolute;bottom:110%;right:0;background:#0f141d;border:1px solid var(--border);border-radius:8px;padding:8px;display:none;gap:6px;z-index:851;width:260px}
+    #wmControls label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px;margin:4px 0}
+    #wmControls input[type="range"]{flex:1}
+    .compass-control{width:80px;height:80px}
+    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
+    .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
+    .modal h3{margin:0 0 10px 0;color:#fff;font-size:16px}
+    .modal label{display:block;margin:10px 0;color:var(--muted);font-size:13px}
+    .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
+    .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
+    .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
+    .size-popup input[type="range"]{width:160px}
+    /* Leaflet.draw custom styles */
+    .leaflet-draw-toolbar a { background-color: var(--panel); border-color: var(--border); color: var(--ink); }
+    .leaflet-draw-toolbar a:hover { background-color: var(--accent); color: #0a1524; } 
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Event Map Builder</h1>
+    <div id="topbar">
+      <button class="btn" id="gpsBtn">📍 Use GPS</button>
+      <input type="text" id="searchBox" placeholder="Search location..." />
+      <input type="color" id="colorPicker" value="#ff0000" class="btn" title="Polygon/line color" />
+      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
+        <input type="checkbox" id="defaultFill" checked /> Fill new polygon
+      </label>
+      <div class="dropdown">
+        <button class="btn" id="exportMenuBtn">📤 Export ▼</button>
+        <div class="dropdown-menu" id="exportMenu">
+          <button id="menuPng">Export PNG</button>
+          <button id="menuPdf">Export PDF…</button>
+          <button id="menuJsonExport">Export JSON</button>
+          <button id="menuJsonImport">Import JSON</button>
+        </div>
+      </div>
+      <input type="file" id="importJsonFile" accept="application/json" style="display:none"/>
+      <input type="file" id="logoFile" accept="image/*" style="display:none"/>
+      <button class="btn" id="logoBtn">Upload Logo</button>
+    </div>
+  </header>
+
+  <div id="toolbar">
+    <div class="tool" data-type="emoji" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
+    <div class="tool" data-type="emoji" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
+    <div class="tool" data-type="emoji" data-label="Parking" data-icon="🅿️"><span class="emoji">🅿️</span></div>
+    <div class="tool" data-type="emoji" data-label="First Aid" data-icon="⛑️"><span class="emoji">⛑️</span></div>
+    <div class="tool" data-type="emoji" data-label="Camping" data-icon="⛺"><span class="emoji">⛺</span></div>
+    <div class="tool" data-type="emoji" data-label="Competition Detecting" data-icon="🏆"><span class="emoji">🏆</span></div>
+    <div class="tool" data-type="emoji" data-label="Free Detecting" data-icon="🔍"><span class="emoji">🔍</span></div>
+    <div class="tool" data-type="emoji" data-label="Sign-in Desk" data-icon="🛎️"><span class="emoji">🛎️</span></div>
+    <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
+    <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
+    <div class="tool" data-type="text" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
+    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" title="No Detecting">
+      <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
+      <span class="label">No Detecting</span>
+    </div>
+    <input id="customIconInput" type="file" accept="image/*" style="display:none">
+    <button class="tool" id="addCustomIconBtn" title="Add custom PNG icon">
+      <span class="emoji" style="font-size:18px">➕</span>
+      <span class="label">Custom Icon</span>
+    </button>
+  </div>
+
+  <div id="mapWrap">
+    <div id="map"></div>
+    <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
+    <div id="watermark">
+      <img id="watermarkImg" alt="watermark"/>
+      <div id="wmControls">
+        <label>Opacity <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="0.5"></label>
+        <label>Size (px) <input id="wmSize" type="range" min="60" max="800" step="10" value="180"></label>
+        <button class="btn" id="wmDelete">Delete Watermark</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="polygonControls" class="leaflet-top leaflet-right">
+    <button id="toggleFill" class="btn">Toggle Fill</button>
+    <button id="deletePoly" class="btn">Delete</button>
+  </div>
+
+  <div class="modal-backdrop" id="pdfBackdrop"></div>
+  <div class="modal" id="pdfDialog" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
+    <h3 id="pdfTitle">PDF Export Options</h3>
+    <label>Paper Size
+      <select id="pdfSize">
+        <option value="a4" selected>A4</option>
+        <option value="a3">A3</option>
+        <option value="a1">A1</option>
+      </select>
+    </label>
+    <label>Orientation
+      <select id="pdfOrientation">
+        <option value="portrait" selected>Portrait</option>
+        <option value="landscape">Landscape</option>
+      </select>
+    </label>
+    <label>Scale Mode
+      <select id="pdfScaleMode">
+        <option value="ratio" selected>Maintain Ratio</option>
+        <option value="fit">Fit to Page</option>
+      </select>
+    </label>
+    <div class="actions">
+      <button class="btn" id="cancelPdf">Cancel</button>
+      <button class="btn primary" id="exportPdf">Export</button>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Map init ----------
+    const map = L.map('map', { attributionControl: false });
+    const base = L.esri.tiledMapLayer({
+      url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+      attribution: 'Imagery © NSW Spatial Services'
+    }).addTo(map);
+    base.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch(e){} });
+
+    function ensureTilesLoaded() {
+      return new Promise(resolve => {
+        if (!base._loading) return resolve();
+        base.once('load', resolve);
+      });
+    }
+
+    // GPS + Sofala fallback
+    const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
+    function centerOnUser({ silent = false } = {}) {
+      if (!navigator.geolocation) {
+        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+        if (!silent) alert("No geolocation.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        p => map.setView([p.coords.latitude, p.coords.longitude], 16),
+        _ => {
+          map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+          if (!silent) alert("Could not get your location. Defaulting to Sofala, NSW.");
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    }
+    centerOnUser({ silent: true });
+    document.getElementById('gpsBtn').addEventListener('click', () => centerOnUser());
+
+    // Search via Nominatim
+    const searchBox = document.getElementById('searchBox');
+    searchBox.addEventListener('keydown', async e => {
+      if (e.key !== "Enter") return;
+      const q = searchBox.value.trim();
+      if (!q) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data && data.length) map.setView([+data[0].lat, +data[0].lon], 15);
+        else alert("Location not found");
+      } catch {
+        alert("Search error");
+      }
+    });
+
+    // Compass
+    const compass = L.control({ position: 'topright' });
+    compass.onAdd = () => {
+      const d = L.DomUtil.create('div', 'compass-control');
+      d.innerHTML = `
+        <div style="position:relative;width:80px;height:80px;border-radius:50%;background:#0f141d;border:2px solid #4aa3ff;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)">
+          <span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);font-weight:bold;color:#ff4444">N</span>
+          <span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%)">S</span>
+          <span style="position:absolute;left:2px;top:50%;transform:translateY(-50%)">W</span>
+          <span style="position:absolute;right:2px;top:50%;transform:translateY(-50%)">E</span>
+        </div>`;
+      return d;
+    };
+    compass.addTo(map);
+
+    // ---------- Leaflet.draw Setup ----------
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    const drawControl = new L.Control.Draw({
+      position: 'topleft',
+      draw: {
+        polygon: {
+          shapeOptions: {
+            color: '#ff0000', // Default, updated by colorPicker
+            weight: 2,
+            dashArray: '6,4',
+            fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
+          },
+          allowIntersection: false,
+          showArea: true
+        },
+        polyline: false,
+        circle: false,
+        rectangle: false,
+        marker: false,
+        circlemarker: false
+      },
+      edit: {
+        featureGroup: drawnItems,
+        remove: true,
+        edit: true
+      }
+    });
+    map.addControl(drawControl);
+
+    // Update polygon color dynamically
+    document.getElementById('colorPicker').addEventListener('input', () => {
+      drawControl.setDrawingOptions({
+        polygon: {
+          shapeOptions: {
+            color: document.getElementById('colorPicker').value,
+            weight: 2,
+            dashArray: '6,4',
+            fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
+          }
+        }
+      });
+    });
+
+    // Update fill opacity
+    document.getElementById('defaultFill').addEventListener('change', () => {
+      drawControl.setDrawingOptions({
+        polygon: {
+          shapeOptions: {
+            color: document.getElementById('colorPicker').value,
+            weight: 2,
+            dashArray: '6,4',
+            fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
+          }
+        }
+      });
+    });
+
+    // Handle new polygon creation
+    let polygons = [];
+    let selected = null;
+    map.on(L.Draw.Event.CREATED, e => {
+      const layer = e.layer;
+      layer.on('click', () => selectPolygon(layer));
+      drawnItems.addLayer(layer);
+      polygons.push(layer);
+    });
+
+    // Handle polygon edit
+    map.on(L.Draw.Event.EDITED, e => {
+      e.layers.eachLayer(layer => {
+        // Update polygons array if needed
+      });
+    });
+
+    // Handle polygon deletion via Leaflet.draw
+    map.on(L.Draw.Event.DELETED, e => {
+      e.layers.eachLayer(layer => {
+        polygons = polygons.filter(p => p !== layer);
+        if (selected === layer) {
+          selected = null;
+          document.getElementById('polygonControls').style.display = 'none';
+        }
+      });
+    });
+
+    // ---------- State ----------
+    let selectedMarker = null;
+    const markers = [];
+    const legendSet = new Map();
+
+    // ---------- Export dropdown ----------
+    const exportBtn = document.getElementById('exportMenuBtn');
+    const exportMenu = document.getElementById('exportMenu');
+    const toggleMenu = (show) => exportMenu.style.display = show ? 'block' : 'none';
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu(exportMenu.style.display !== 'block');
+    });
+    document.addEventListener('click', () => toggleMenu(false));
+    exportMenu.addEventListener('click', (e) => e.stopPropagation());
+    document.getElementById('menuPng').onclick = () => { toggleMenu(false); exportPNG(); };
+    document.getElementById('menuPdf').onclick = () => { toggleMenu(false); openPdfDialog(); };
+    document.getElementById('menuJsonExport').onclick = () => { toggleMenu(false); doExportJSON(); };
+    document.getElementById('menuJsonImport').onclick = () => { toggleMenu(false); document.getElementById('importJsonFile').click(); };
+
+    // ---------- Tools (emoji/text/permanent image/custom image) ----------
+    let activeTool = null;
+    function attachToolHandlers() {
+      document.querySelectorAll('.tool[data-type]').forEach(t => {
+        t.onclick = () => { activeTool = t; };
+      });
+    }
+    attachToolHandlers();
+
+    // Custom icon uploader
+    const customInput = document.getElementById('customIconInput');
+    const addCustomBtn = document.getElementById('addCustomIconBtn');
+    addCustomBtn.addEventListener('click', () => customInput.click());
+    customInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        const label = prompt("Label for this icon (for legend):", "Custom");
+        addCustomTool(label || "Custom", ev.target.result);
+        customInput.value = "";
+      };
+      r.readAsDataURL(f);
+    });
+    function addCustomTool(label, dataUrl) {
+      const btn = document.createElement('button');
+      btn.className = 'tool';
+      btn.setAttribute('data-type', 'image');
+      btn.setAttribute('data-label', label);
+      btn.setAttribute('data-imgsrc', dataUrl);
+      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt=""><span class="label">${label}</span>`;
+      addCustomBtn.insertAdjacentElement('beforebegin', btn);
+      attachToolHandlers();
+    }
+
+    map.on('click', e => {
+      if (activeTool && !map._handlers.some(h => h instanceof L.Draw.Polygon)) {
+        const type = activeTool.dataset.type;
+        const label = activeTool.dataset.label;
+        if (type === 'emoji' || type === 'text' || type === 'image') {
+          const meta = { label };
+          if (type === 'emoji') meta.icon = activeTool.dataset.icon;
+          if (type === 'text') meta.icon = '✏️', meta.isText = true;
+          if (type === 'image') meta.imgSrc = activeTool.dataset.imgsrc;
+          placeMarkerOrText(e.latlng, meta);
+          activeTool = null;
+        }
+      }
+    });
+
+    // ---------- Place marker ----------
+    function placeMarkerOrText(latlng, meta) {
+      if (meta.isText) {
+        const text = prompt("Enter label text:");
+        if (!text) return;
+        meta.icon = text;
+        meta.color = "#ffffff";
+      }
+
+      const size = meta.size || 26;
+      let html;
+      if (meta.imgSrc) {
+        html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
+                  <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
+                </div>`;
+      } else {
+        const colorStyle = meta.isText ? `color:${meta.color};` : '';
+        html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
+      }
+
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({ className: "custom-div-icon", html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+        draggable: true
+      }).addTo(map);
+
+      marker.myMeta = { ...meta, size, baseSize: meta.baseSize || size };
+      markers.push(marker);
+
+      marker.on('click', () => { selectedMarker = marker; });
+      marker.on('contextmenu', () => openMarkerPopup(marker));
+      let lpTimer = null;
+      marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
+      marker.on('touchend', () => { if (lpTimer) clearTimeout(lpTimer); });
+
+      if (!meta.isText) {
+        legendSet.set(meta.label, meta.imgSrc ? { img: meta.imgSrc } : { emoji: meta.icon });
+        renderLegend();
+      }
+    }
+
+    function openMarkerPopup(marker) {
+      const isText = !!marker.myMeta.isText;
+      const sizeNow = marker.myMeta.size || 26;
+      if (!marker.myMeta.baseSize) marker.myMeta.baseSize = sizeNow;
+      const sliderVal = Math.round(50 * Math.log(sizeNow / marker.myMeta.baseSize) / Math.log(2));
+      const colorNow = marker.myMeta.color || "#ffffff";
+
+      const wrap = document.createElement('div');
+      wrap.className = 'size-popup';
+      wrap.innerHTML = `
+        <label>Scale
+          <input id="scaleSlider" type="range" min="-50" max="50" step="1" value="${sliderVal}">
+        </label>
+        ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">
+          <button type="button" id="cloneBtn" style="background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Clone</button>
+          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        </div>
+      `;
+
+      const slider = wrap.querySelector('#scaleSlider');
+      slider.addEventListener('input', () => {
+        const val = parseInt(slider.value, 10);
+        const scale = Math.pow(2, val / 50);
+        marker.myMeta.size = Math.max(6, marker.myMeta.baseSize * scale);
+        refreshMarkerIcon(marker);
+      });
+
+      if (isText) {
+        const colorInput = wrap.querySelector('#txtColor');
+        colorInput.addEventListener('input', () => {
+          marker.myMeta.color = colorInput.value;
+          refreshMarkerIcon(marker);
+        });
+      }
+
+      wrap.querySelector('#delBtn').addEventListener('click', () => {
+        map.removeLayer(marker);
+        const idx = markers.indexOf(marker);
+        if (idx > -1) markers.splice(idx, 1);
+        if (selectedMarker === marker) selectedMarker = null;
+        updateLegendAfterDelete(marker);
+        marker.closePopup();
+      });
+
+      wrap.querySelector('#cloneBtn').addEventListener('click', () => {
+        const ll = marker.getLatLng();
+        const offset = 0.0002;
+        const metaCopy = JSON.parse(JSON.stringify(marker.myMeta));
+        placeMarkerOrText(L.latLng(ll.lat + offset, ll.lng + offset), metaCopy);
+      });
+
+      selectedMarker = marker;
+      marker.bindPopup(wrap, { autoPan: true }).openPopup();
+    }
+
+    function refreshMarkerIcon(marker) {
+      const { icon, size, isText, color, imgSrc } = marker.myMeta;
+      let html;
+      if (imgSrc) {
+        html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
+                  <img src="${imgSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
+                </div>`;
+      } else {
+        const colorStyle = isText ? `color:${color};` : '';
+        html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${icon}</div>`;
+      }
+      marker.setIcon(L.divIcon({
+        className: "custom-div-icon",
+        html, iconSize: [size, size], iconAnchor: [size / 2, size / 2]
+      }));
+    }
+
+    function updateLegendAfterDelete(marker) {
+      if (marker.myMeta.isText) return;
+      const label = marker.myMeta.label;
+      const count = markers.filter(m => m.myMeta.label === label && !m.myMeta.isText).length;
+      if (count === 0) {
+        legendSet.delete(label);
+        renderLegend();
+      }
+    }
+
+    function renderLegend() {
+      const list = document.getElementById('legendList');
+      list.innerHTML = '';
+      legendSet.forEach((val, label) => {
+        const li = document.createElement('li');
+        if (val.img) {
+          const img = document.createElement('img');
+          img.src = val.img;
+          li.appendChild(img);
+          const span = document.createElement('span');
+          span.textContent = ' ' + label;
+          li.appendChild(span);
+        } else {
+          li.textContent = `${val.emoji} ${label}`;
+        }
+        list.appendChild(li);
+      });
+    }
+
+    // Delete selected marker with keyboard
+    document.addEventListener('keydown', e => {
+      if (e.key === "Delete" && selectedMarker) {
+        map.removeLayer(selectedMarker);
+        const idx = markers.indexOf(selectedMarker);
+        if (idx > -1) markers.splice(idx, 1);
+        updateLegendAfterDelete(selectedMarker);
+        selectedMarker = null;
+      }
+    });
+
+    // ---------- Polygon controls ----------
+    function selectPolygon(poly) {
+      selected = poly;
+      document.getElementById('polygonControls').style.display = 'flex';
+    }
+
+    document.getElementById('toggleFill').onclick = () => {
+      if (!selected) return;
+      selected.setStyle({ fillOpacity: selected.options.fillOpacity > 0 ? 0 : 0.25 });
+    };
+
+    document.getElementById('deletePoly').onclick = () => {
+      if (selected) {
+        drawnItems.removeLayer(selected);
+        polygons = polygons.filter(p => p !== selected);
+        selected = null;
+        document.getElementById('polygonControls').style.display = 'none';
+      }
+    };
+
+    document.addEventListener('keydown', e => {
+      if (e.key === "Delete" && selected) {
+        drawnItems.removeLayer(selected);
+        polygons = polygons.filter(p => p !== selected);
+        selected = null;
+        document.getElementById('polygonControls').style.display = 'none';
+      }
+    });
+
+    // ---------- Watermark ----------
+    const wm = document.getElementById('watermark'),
+          wmImg = document.getElementById('watermarkImg'),
+          wmControls = document.getElementById('wmControls'),
+          wmOpacity = document.getElementById('wmOpacity'),
+          wmSize = document.getElementById('wmSize');
+    document.getElementById('logoBtn').onclick = () => document.getElementById('logoFile').click();
+    document.getElementById('logoFile').addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        wmImg.src = ev.target.result;
+        wm.style.display = 'block';
+        wmControls.style.display = 'flex';
+        wm.style.width = wmSize.value + 'px';
+        wm.style.opacity = wmOpacity.value;
+        ensureWMLeftTop();
+      };
+      r.readAsDataURL(f);
+    });
+    wmOpacity.oninput = () => { wm.style.opacity = wmOpacity.value; };
+    wmSize.oninput = () => { wm.style.width = wmSize.value + 'px'; };
+    document.getElementById('wmDelete').onclick = () => {
+      wm.style.display = 'none';
+      wmControls.style.display = 'none';
+      wmImg.src = '';
+    };
+    wm.addEventListener('click', () => {
+      if (wm.style.display !== 'none') wmControls.style.display = 'flex';
+    });
+
+    function ensureWMLeftTop() {
+      if (!wm.style.left && !wm.style.top) {
+        wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
+        wm.style.top = (document.getElementById('mapWrap').clientHeight - 150) + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+        wm.style.position = 'absolute';
+      }
+    }
+
+    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    wm.addEventListener('mousedown', e => {
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const r = wm.getBoundingClientRect();
+      startLeft = r.left;
+      startTop = r.top;
+      map.dragging.disable();
+    });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+      wm.style.left = (startLeft + dx - wrap.left) + 'px';
+      wm.style.top = (startTop + dy - wrap.top) + 'px';
+      wm.style.right = 'auto';
+      wm.style.bottom = 'auto';
+      wm.style.position = 'absolute';
+    });
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+      map.dragging.enable();
+    });
+
+    let draggingT = false, tStart = null;
+    wm.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      draggingT = true;
+      tStart = { x: t.clientX, y: t.clientY };
+      const r = wm.getBoundingClientRect();
+      startLeft = r.left;
+      startTop = r.top;
+      map.dragging.disable();
+    }, { passive: false });
+    window.addEventListener('touchmove', e => {
+      if (!draggingT) return;
+      const t = e.touches[0];
+      const dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+      const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+      wm.style.left = (startLeft + dx - wrap.left) + 'px';
+      wm.style.top = (startTop + dy - wrap.top) + 'px';
+      wm.style.right = 'auto';
+      wm.style.bottom = 'auto';
+      wm.style.position = 'absolute';
+      e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchend', () => {
+      draggingT = false;
+      map.dragging.enable();
+    });
+
+    // ---------- Export helpers ----------
+    function addWatermarkToCanvas(c) {
+      return new Promise(resolve => {
+        if (!wmImg.src || wm.style.display === 'none') return resolve(c);
+        const ctx = c.getContext('2d');
+        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+        const wmRect = wm.getBoundingClientRect();
+        const scaleX = c.width / wrap.width, scaleY = c.height / wrap.height;
+        const left = (wmRect.left - wrap.left) * scaleX, top = (wmRect.top - wrap.top) * scaleY;
+        const w = wmRect.width * scaleX, h = wmRect.height * scaleY;
+        ctx.globalAlpha = parseFloat(wm.style.opacity || 1);
+        ctx.drawImage(wmImg, left, top, w, h);
+        ctx.globalAlpha = 1;
+        resolve(c);
+      });
+    }
+
+    function preloadImages(urls) {
+      const unique = Array.from(new Set(urls.filter(Boolean)));
+      return Promise.all(unique.map(src => new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => res(true);
+        img.onerror = () => res(false);
+        img.src = src;
+      })));
+    }
+
+    async function captureMapCanvas() {
+      await ensureTilesLoaded();
+      const polygonControls = document.getElementById('polygonControls');
+      const prevDisplay = polygonControls.style.display;
+      polygonControls.style.display = 'none';
+      const hiddenPopups = [];
+      map.eachLayer(l => {
+        if (l instanceof L.Popup) {
+          hiddenPopups.push(l);
+          map.removeLayer(l);
+        }
+      });
+
+      const imgUrls = [];
+      markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
+      if (wmImg && wmImg.src && wm.style.display !== 'none') imgUrls.push(wmImg.src);
+      await preloadImages(imgUrls);
+
+      const canvas = await html2canvas(document.getElementById('mapWrap'), {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#000',
+        foreignObjectRendering: false,
+        scale: window.devicePixelRatio > 1 ? 2 : 1
+      });
+
+      polygonControls.style.display = prevDisplay;
+      hiddenPopups.forEach(p => p.addTo(map));
+      return addWatermarkToCanvas(canvas);
+    }
+
+    function exportPNG() {
+      captureMapCanvas()
+        .then(c => {
+          const a = document.createElement('a');
+          a.download = 'event-map.png';
+          a.href = c.toDataURL('image/png');
+          a.click();
+        })
+        .catch(err => {
+          console.error('PNG export failed:', err);
+          alert('PNG export failed (likely CORS on imagery). Try again, or switch to a CORS-safe basemap for export.');
+        });
+    }
+
+    // ---------- PDF dialog ----------
+    const pdfBackdrop = document.getElementById('pdfBackdrop');
+    const pdfDialog = document.getElementById('pdfDialog');
+    function openPdfDialog() {
+      pdfBackdrop.style.display = 'block';
+      pdfDialog.style.display = 'block';
+    }
+    function closePdfDialog() {
+      pdfBackdrop.style.display = 'none';
+      pdfDialog.style.display = 'none';
+    }
+    pdfBackdrop.addEventListener('click', closePdfDialog);
+    document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
+
+    document.getElementById('exportPdf').onclick = () => {
+      const { jsPDF } = window.jspdf;
+      const size = document.getElementById('pdfSize').value;
+      const orientation = document.getElementById('pdfOrientation').value;
+      const scaleMode = document.getElementById('pdfScaleMode').value;
+
+      const pdf = new jsPDF({ orientation, unit: 'mm', format: size });
+      captureMapCanvas().then(c => {
+        const img = c.toDataURL('image/jpeg', 1.0);
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        let imgW, imgH, x, y;
+        if (scaleMode === 'fit') {
+          imgW = pageW;
+          imgH = pageH;
+          x = 0;
+          y = 0;
+        } else {
+          const ratio = Math.min(pageW / c.width, pageH / c.height);
+          imgW = c.width * ratio;
+          imgH = c.height * ratio;
+          x = (pageW - imgW) / 2;
+          y = (pageH - imgH) / 2;
+        }
+        pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
+        pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
+        closePdfDialog();
+      }).catch(err => {
+        console.error('PDF export failed:', err);
+        alert('PDF export failed (likely CORS on imagery). Try again, or switch to a CORS-safe basemap for export.');
+        closePdfDialog();
+      });
+    };
+
+    // ---------- JSON Export / Import ----------
+    const importJsonInput = document.getElementById('importJsonFile');
+    importJsonInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try {
+          restoreProjectJSON(JSON.parse(ev.target.result));
+        } catch (err) {
+          alert('Invalid JSON');
+        }
+      };
+      r.readAsText(f);
+    });
+
+    function doExportJSON() {
+      const data = buildProjectJSON();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `event-map-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function buildProjectJSON() {
+     amente
+      const savedMarkers = markers.map(m => {
+        const ll = m.getLatLng();
+        return { lat: ll.lat, lng: ll.lng, meta: m.myMeta };
+      });
+      const savedPolys = polygons.map(p => {
+        const rings = p.getLatLngs();
+        const latlngs = rings[0].map(ll => [ll.lat, ll.lng]);
+        const { color, weight, dashArray, fillOpacity } = p.options;
+        return { latlngs, style: { color, weight, dashArray, fillOpacity } };
+      });
+      const savedLegend = Array.from(legendSet.entries()).map(([label, val]) => ({
+        label,
+        icon: val.emoji || null,
+        imgSrc: val.img || null
+      }));
+      const wrapRect = document.getElementById('mapWrap').getBoundingClientRect();
+      const wmRect = wm.getBoundingClientRect();
+      const wmData = wmImg.src ? {
+        src: wmImg.src,
+        visible: wm.style.display !== 'none',
+        left: (wmRect.left - wrapRect.left),
+        top: (wmRect.top - wrapRect.top),
+        width: wm.offsetWidth,
+        opacity: parseFloat(wm.style.opacity || 1)
+      } : null;
+
+      return {
+        version: 6,
+        createdAt: new Date().toISOString(),
+        view: { center: map.getCenter(), zoom: map.getZoom() },
+        markers: savedMarkers,
+        polygons: savedPolys,
+        legend: savedLegend,
+        watermark: wmData
+      };
+    }
+
+    function restoreProjectJSON(data) {
+      markers.forEach(m => map.removeLayer(m));
+      markers.length = 0;
+      drawnItems.clearLayers();
+      polygons.length = 0;
+      legendSet.clear();
+      renderLegend();
+
+      if (data.view && data.view.center && typeof data.view.zoom !== 'undefined') {
+        map.setView([data.view.center.lat, data.view.center.lng], data.view.zoom);
+      } else {
+        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+      }
+
+      if (Array.isArray(data.legend)) {
+        data.legend.forEach(item => {
+          if (!item || !item.label) return;
+          if (item.imgSrc) legendSet.set(item.label, { img: item.imgSrc });
+          else if (item.icon) legendSet.set(item.label, { emoji: item.icon });
+        });
+        renderLegend();
+      }
+
+      if (Array.isArray(data.markers)) {
+        data.markers.forEach(m => {
+          const latlng = L.latLng(m.lat, m.lng);
+          const meta = m.meta && (m.meta.icon || m.meta.imgSrc)
+            ? m.meta
+            : { icon: '📍', label: 'Marker', size: 26 };
+          if (!meta.baseSize && meta.size) meta.baseSize = meta.size;
+          placeMarkerOrText(latlng, meta);
+        });
+      }
+
+      if (Array.isArray(data.polygons)) {
+        data.polygons.forEach(p => {
+          const poly = L.polygon(p.latlngs, p.style || {
+            color: '#ff0000',
+            weight: 2,
+            dashArray: '6,4',
+            fillOpacity: 0.25
+          }).addTo(drawnItems);
+          poly.on('click', () => selectPolygon(poly));
+          polygons.push(poly);
+        });
+      }
+
+      if (data.watermark && data.watermark.src) {
+        wmImg.src = data.watermark.src;
+        wm.style.display = data.watermark.visible ? 'block' : 'none';
+        wmControls.style.display = data.watermark.visible ? 'flex' : 'none';
+        wm.style.position = 'absolute';
+        wm.style.left = (data.watermark.left || 0) + 'px';
+        wm.style.top = (data.watermark.top || 0) + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+        wm.style.width = (data.watermark.width || 180) + 'px';
+        wm.style.opacity = (typeof data.watermark.opacity === 'number' ? data.watermark.opacity : 0.5);
+      }
+    }
+  </script>
+</body>
+</html>
