@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Historic Map Overlay Viewer — Australia Presets</title>
+<title>Historic Map Overlay Viewer — Wayback + AU Presets</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -65,13 +65,13 @@
         <button class="btn" id="deactivateYear">Hide year overlay</button>
       </div>
       <div class="hint" style="margin-top:8px">
-        Pre-wired with **Australia** sources (VIC/QLD/WA + GA DEM). If a server blocks CORS or needs login, you’ll see a note.
+        Pre-wired with Australia sources (VIC/QLD/WA + GA DEM) and Esri Wayback (all dates).
       </div>
     </div>
 
     <!-- PRESETS (AUTO-CATALOG) -->
     <div class="card">
-      <h2>Australia Presets</h2>
+      <h2>Presets & Loaders</h2>
       <div class="row">
         <button class="btn" id="loadVIC">Load VIC (Vicmap)</button>
         <button class="btn" id="loadQLD">Load QLD Imagery</button>
@@ -81,11 +81,11 @@
         <button class="btn" id="addGADEM">Add GA DEM 2024</button>
       </div>
       <div class="row" style="margin-top:8px">
-        <button class="btn" id="loadWayback">Load Esri Wayback</button>
+        <button class="btn" id="loadWaybackAll">Load Wayback (all dates)</button>
         <button class="btn" id="addNLS">Add NLS demo</button>
       </div>
       <div class="hint" style="margin-top:8px">
-        These buttons scan the official services and add **yeared layers** into the dropdown. Already auto-loaded on startup.
+        Buttons scan official services and add **year-labelled** layers to the dropdown. They also run on startup.
       </div>
     </div>
 
@@ -93,7 +93,7 @@
     <div class="card">
       <h2>Overlays</h2>
       <div id="overlayList" class="list"></div>
-      <div class="hint">Double-click an overlay row to add it to the swipe tool.</div>
+      <div class="hint">Double-click an overlay to assign it to the swipe tool.</div>
     </div>
 
     <!-- Swipe -->
@@ -115,7 +115,7 @@
 
 <script>
 /* =============== MAP SETUP =============== */
-const map = L.map('map',{center:[-33.865,151.209],zoom:10});
+const map = L.map('map',{center:[-33.865,151.209],zoom:10}); // Sydney default
 const baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 const baseSAT = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,attribution:'Imagery &copy; Esri'});
 let activeBase = baseOSM;
@@ -218,7 +218,7 @@ $('pickSwipeB').onclick=()=>{const id=prompt('Overlay ID for RIGHT (e.g., ov_2)'
 $('clearSwipe').onclick=()=>{swipeA=null;swipeB=null;refreshSwipeMasks();};
 
 /* =============== YEAR CATALOG =============== */
-const catalog = []; // filled by preset loaders
+const catalog = []; // gets filled by loaders
 let activeYearOverlayId = null;
 const yearSelect = $('yearSelect');
 const yearInfo = $('yearInfo');
@@ -262,14 +262,72 @@ $('deactivateYear').onclick=()=>{
   yearSelect.value=''; yearInfo.textContent='—';
 };
 
-/* =============== PRESET LOADERS =============== */
-// Helper: add many WMS layers from GetCapabilities if name/title contains a 4-digit year.
+/* =============== LOADERS =============== */
+const WAYBACK_GROUP_ID = '0f3189e1d1414edfad860b697b7d8311'; // Esri Living Atlas Wayback group
+
+// Wayback: fetch all items, read templateUrl, add by year
+async function loadWaybackAll(){
+  try{
+    const searchUrl = `https://www.arcgis.com/sharing/rest/content/groups/${WAYBACK_GROUP_ID}/search?f=json&num=1000&sortField=title&sortOrder=desc`;
+    const res = await fetch(searchUrl);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    if(!json.results?.length){ toast('Wayback: no items found.'); return; }
+
+    const yearRe = /\b(20|19)\d{2}\b/;
+    let added = 0;
+
+    async function fetchItemData(id){
+      const r = await fetch(`https://www.arcgis.com/sharing/rest/content/items/${id}/data?f=json`);
+      if(!r.ok) return null;
+      return r.json();
+    }
+
+    for (let i = 0; i < json.results.length; i += 20) {
+      const chunk = json.results.slice(i, i+20);
+      const datas = await Promise.all(chunk.map(it => fetchItemData(it.id).catch(()=>null)));
+
+      datas.forEach((data, idx) => {
+        if(!data) return;
+        const op = (data.operationalLayers && data.operationalLayers[0]) || null;
+        const template = op?.templateUrl || op?.urlTemplate || null;
+        if(!template) return;
+
+        const item = chunk[idx];
+        const title = item.title || 'Wayback';
+        const mYear = title.match(yearRe);
+        const year = mYear ? parseInt(mYear[0],10) : null;
+        if(!year) return;
+
+        addCatalogEntry({
+          year,
+          name: `Wayback ${title}`,
+          type: 'wmts',
+          params: { template },
+          attribution: 'Esri Wayback'
+        });
+        added++;
+      });
+    }
+
+    if(added===0){
+      toast('Wayback: found items, but no tile templates detected.');
+    } else {
+      toast(`Wayback: added ${added} dated layers. Pick a year!`);
+    }
+  } catch(e){
+    console.error(e);
+    toast('Wayback: could not load catalog (network/CORS?)');
+  }
+}
+
+// Generic WMS scanner: add layers that look year-labelled
 async function loadWMSYears({url, namePrefix='', attribution=''}) {
   try{
     const res = await fetch(`${url}?request=GetCapabilities&service=WMS`);
     if(!res.ok){ throw new Error('HTTP '+res.status); }
     const txt = await res.text(); const doc = xml(txt);
-    const layers = [...doc.querySelectorAll('Layer > Layer')]; // top-level children
+    const layers = [...doc.querySelectorAll('Layer > Layer')];
     const yearRe = /\b(19|20)\d{2}\b/;
     let added = 0;
     function walk(layerEl){
@@ -287,7 +345,6 @@ async function loadWMSYears({url, namePrefix='', attribution=''}) {
         });
         added++;
       }
-      // recurse
       layerEl.querySelectorAll(':scope > Layer').forEach(walk);
     }
     layers.forEach(walk);
@@ -297,7 +354,7 @@ async function loadWMSYears({url, namePrefix='', attribution=''}) {
   }
 }
 
-// Helper: WMTS GetCapabilities, find layers with a year in Identifier/Title, then build WMTS templates.
+// Generic WMTS scanner (uses a template hint for tile path)
 async function loadWMTSYears({capUrl, templateHint, namePrefix='', attribution=''}) {
   try{
     const res = await fetch(capUrl);
@@ -310,15 +367,11 @@ async function loadWMTSYears({capUrl, templateHint, namePrefix='', attribution='
       const id = LA.querySelector('ows\\:Identifier, Identifier')?.textContent || '';
       const title = LA.querySelector('ows\\:Title, Title')?.textContent || id;
       const m = (id.match(yearRe) || title.match(yearRe));
-      if(m){
+      if(m && templateHint){
         const year = parseInt(m[0],10);
-        // Try to build a {level}/{row}/{col} template. If templateHint provided, use it.
-        const template = templateHint || ''; // user-supplied fallback
-        if(template){
-          addCatalogEntry({year, name:`${namePrefix}${title}`, type:'wmts',
-            params:{ template }, attribution});
-          added++;
-        }
+        addCatalogEntry({year, name:`${namePrefix}${title}`, type:'wmts',
+          params:{ template: templateHint }, attribution});
+        added++;
       }
     });
     if(added===0) toast(`No year-labelled WMTS layers discovered (${capUrl}).`);
@@ -329,16 +382,12 @@ async function loadWMTSYears({capUrl, templateHint, namePrefix='', attribution='
 
 /* VIC (Vicmap) */
 async function loadVICPreset(){
-  // WMTS GetCapabilities
   await loadWMTSYears({
     capUrl: 'https://base.maps.vic.gov.au/service?service=wmts&request=GetCapabilities',
-    // For most ArcGIS REST WMTS tiles, the tile path is /tile/{level}/{row}/{col} but needs the layer/version.
-    // We can't derive per-layer version IDs robustly client-side; many Vicmap tiles are XYZ/WMS anyway.
-    templateHint: '', // leave blank; WMS below will fill years
+    templateHint: '', // leave blank; WMS below usually provides the dated layers
     namePrefix: 'VIC • ',
     attribution: '&copy; State of Victoria'
   });
-  // WMS GetCapabilities (often includes year-named layers)
   await loadWMSYears({
     url: 'https://base.maps.vic.gov.au/service',
     namePrefix: 'VIC • ',
@@ -348,15 +397,12 @@ async function loadVICPreset(){
 
 /* QLD (Latest State Program) */
 async function loadQLDPreset(){
-  // QLD ImageServer advertises WMTS capabilities at a standard path:
   await loadWMTSYears({
     capUrl: 'https://spatial-img.information.qld.gov.au/arcgis/rest/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/WMTS/1.0.0/WMTSCapabilities.xml',
-    // The ImageServer supports /tile/{level}/{row}/{col}
     templateHint: 'https://spatial-img.information.qld.gov.au/arcgis/rest/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/tile/{level}/{row}/{col}',
     namePrefix: 'QLD • ',
     attribution: '&copy; Queensland Government'
   });
-  // And WMS:
   await loadWMSYears({
     url: 'https://spatial-img.information.qld.gov.au/arcgis/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/WMSServer',
     namePrefix: 'QLD • ',
@@ -373,7 +419,7 @@ async function loadWAPreset(){
   });
 }
 
-/* GA DEM (LiDAR-derived SRTM 1s, 2024) — WMTS-like tile path */
+/* GA DEM (LiDAR-derived SRTM 1s, 2024) — WMTS-like tiles */
 function addGADEM(){
   addCatalogEntry({
     year: 2024,
@@ -383,22 +429,6 @@ function addGADEM(){
       template: 'https://services.ga.gov.au/gis/rest/services/DEM_SRTM_1Second_Hydro_Enforced_2024/MapServer/tile/{level}/{row}/{col}'
     },
     attribution: '&copy; Geoscience Australia'
-  });
-}
-
-/* Esri Wayback quick loader: ask for a version ID, add as one year */
-function loadWayback(){
-  const version = prompt('Enter Esri Wayback version ID (e.g., 11509):');
-  if(!version) return;
-  // We don’t know the acquisition year programmatically here; store under a pseudo-year grouping
-  const yr = parseInt(prompt('Map to which year (e.g., 2016)?')||'',10);
-  if(!yr){ toast('Wayback: year not set; skipping.'); return; }
-  addCatalogEntry({
-    year: yr,
-    name: `Esri Wayback v${version}`,
-    type: 'wmts',
-    params: { template: `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${version}/{level}/{row}/{col}` },
-    attribution: 'Esri Wayback'
   });
 }
 
@@ -418,15 +448,17 @@ $('loadVIC').onclick=loadVICPreset;
 $('loadQLD').onclick=loadQLDPreset;
 $('loadWA').onclick=loadWAPreset;
 $('addGADEM').onclick=addGADEM;
-$('loadWayback').onclick=loadWayback;
 $('addNLS').onclick=addNLS;
+$('loadWaybackAll').onclick=loadWaybackAll;
 
-/* =============== AUTO-LOAD PRESETS ON STARTUP =============== */
+/* =============== AUTORUN ON STARTUP =============== */
 (async function bootstrap(){
-  // Always add GA DEM + NLS demo so you have something even offline
+  // Always add GA DEM + NLS so you have something even if others fail
   addGADEM();
   addNLS();
-  // Try to load state services (non-blocking)
+  // Try Esri Wayback (all dates)
+  loadWaybackAll();
+  // Load the AU state services (non-blocking)
   loadVICPreset();
   loadQLDPreset();
   loadWAPreset();
