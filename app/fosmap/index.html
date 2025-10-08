@@ -3,550 +3,473 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Historic Map Overlay Viewer — Wayback Import + AU Presets</title>
+<title>Wayback+ — Historic Imagery & Extras</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
 
 <style>
   :root{--bg:#0f1220;--panel:#151a2c;--muted:#8da2c0;--text:#e8efff;--accent:#5fb3ff;--border:#27304a}
   *{box-sizing:border-box}
-  body{margin:0;display:grid;height:100vh;grid-template-columns:400px 1fr;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  #sidebar{border-right:1px solid var(--border);padding:14px 14px 120px;overflow:auto;background:var(--panel)}
+  body{margin:0;height:100vh;display:grid;grid-template-columns:420px 1fr;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  #sidebar{border-right:1px solid var(--border);background:var(--panel);padding:14px 14px 140px;overflow:auto}
   #map{width:100%;height:100vh}
-  h1{font-size:18px;margin:0 0 12px}
+  h1{font-size:18px;margin:0 0 8px}
   h2{font-size:13px;margin:18px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
   .card{background:#101528;border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
   label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-  input[type="text"],input[type="number"],select,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0b1020;color:var(--text);outline:none}
+  input[type="text"],select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0b1020;color:var(--text);}
   input[type="range"]{width:100%}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0b1020;color:var(--text);cursor:pointer;font-weight:600}
   .btn:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(95,179,255,.15)}
-  .list{display:grid;gap:8px}
-  .overlay-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#0b1020}
-  .overlay-head{display:flex;align-items:center;gap:8px;justify-content:space-between}
-  .overlay-title{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
-  .chip{font-size:11px;color:var(--muted);padding:2px 8px;border:1px solid var(--border);border-radius:999px}
-  .controls{display:flex;gap:8px;flex-wrap:wrap}
-  .hr{height:1px;background:var(--border);margin:10px 0;border:0}
-  .footer{position:fixed;bottom:0;left:0;width:400px;padding:10px 14px;background:linear-gradient(180deg,rgba(21,26,44,0),rgba(21,26,44,.95) 20%,rgba(21,26,44,1) 60%);border-top:1px solid var(--border)}
-  .swipeWrap{display:flex;align-items:center;gap:10px}
-  .hint{font-size:12px;color:var(--muted)}
+  .muted{color:var(--muted);font-size:12px}
   .toast{position:fixed;right:12px;bottom:12px;background:#0b1020;border:1px solid var(--border);padding:10px 12px;border-radius:12px;color:var(--text);max-width:420px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .overlay-item{background:#0b1020;border:1px solid var(--border);border-radius:12px;padding:8px;margin-top:8px}
+  .overlay-title{font-size:14px;font-weight:700}
+  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;font-size:11px;color:var(--muted)}
+  .timeline{display:grid;gap:8px}
+  .timeline-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+  .timeline-year{width:64px;text-align:center;font-weight:700}
   .blend-normal{mix-blend-mode:normal}.blend-multiply{mix-blend-mode:multiply}.blend-overlay{mix-blend-mode:overlay}.blend-screen{mix-blend-mode:screen}
   #swipe-mask{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
   #swipe-divider{position:absolute;top:0;width:2px;height:100%;background:#ffffffaa;pointer-events:none;box-shadow:0 0 0 1px #00000040}
-  code{background:#0b1020;border:1px solid var(--border);border-radius:6px;padding:2px 6px}
-  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
   <aside id="sidebar">
-    <h1>Historic Map Overlay Viewer</h1>
-
-    <!-- Basemap -->
+    <h1>Wayback+ (Remix)</h1>
     <div class="card">
-      <h2>Basemap</h2>
+      <h2>Search & View</h2>
       <div class="row">
         <button class="btn" id="baseOSM">OSM</button>
         <button class="btn" id="baseSAT">Satellite</button>
       </div>
-    </div>
-
-    <!-- YEAR PICKER -->
-    <div class="card">
-      <h2>Year Picker</h2>
-      <label>Select year to activate</label>
-      <select id="yearSelect"></select>
-      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span class="pill" id="yearInfo">—</span>
-        <button class="btn" id="deactivateYear">Hide year overlay</button>
+      <label style="margin-top:8px">Find a place</label>
+      <input id="searchBox" type="text" placeholder="e.g. Newcastle NSW or -32.74, 152.14"/>
+      <div style="margin-top:8px" class="row">
+        <button class="btn" id="searchBtn">Go</button>
+        <button class="btn" id="hereBtn">Use current view</button>
       </div>
-      <div class="hint" style="margin-top:8px">
-        Ready for Esri Wayback (import single link or load all dates) + Australia presets (VIC/QLD/WA + GA DEM).
+      <div class="muted" style="margin-top:8px">Paste a Wayback link to replicate a view:</div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn" id="importWayback">Import Wayback link</button>
+        <button class="btn" id="loadWaybackAll">Load all Wayback dates</button>
       </div>
     </div>
 
-    <!-- PRESETS & IMPORTS -->
     <div class="card">
-      <h2>Presets & Loaders</h2>
+      <h2>Timeline (Wayback)</h2>
+      <div class="timeline">
+        <div class="timeline-row">
+          <button class="btn" id="prevDate">&laquo;</button>
+          <input id="dateSlider" type="range" min="0" max="0" value="0">
+          <button class="btn" id="nextDate">&raquo;</button>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-year" id="currentLabel">—</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button class="btn" id="activateDate">Show</button>
+            <button class="btn" id="addToSwipe">Set as LEFT/RIGHT</button>
+            <span class="pill" id="dateInfo">No date loaded</span>
+          </div>
+        </div>
+        <div class="muted">Tip: Use “Set as LEFT/RIGHT” twice to compare two dates with the swipe tool.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Extra Layers (AU & global)</h2>
       <div class="row">
-        <button class="btn" id="loadVIC">Load VIC (Vicmap)</button>
-        <button class="btn" id="loadQLD">Load QLD Imagery</button>
+        <button class="btn" id="addGADEM">GA DEM (terrain)</button>
+        <button class="btn" id="addNLS">NLS demo</button>
       </div>
       <div class="row" style="margin-top:8px">
-        <button class="btn" id="loadWA">Load WA Mosaic</button>
-        <button class="btn" id="addGADEM">Add GA DEM 2024</button>
+        <button class="btn" id="loadVIC">VIC catalog</button>
+        <button class="btn" id="loadQLD">QLD catalog</button>
       </div>
       <div class="row" style="margin-top:8px">
-        <button class="btn" id="loadWaybackAll">Load Wayback (all dates)</button>
-        <button class="btn" id="importWaybackLink">Import Wayback link</button>
+        <button class="btn" id="loadWA">WA catalog</button>
+        <button class="btn" id="clearYearOverlay">Hide current</button>
+      </div>
+      <div style="margin-top:8px">
+        <label>Pick year from loaded catalogs</label>
+        <select id="yearSelect"></select>
       </div>
       <div class="row" style="margin-top:8px">
-        <button class="btn" id="addNLS">Add NLS demo</button>
-      </div>
-      <div class="hint" style="margin-top:8px">
-        The Wayback importer reads a Living Atlas Wayback share URL and auto-loads the versions & swipe state.
+        <button class="btn" id="activateYear">Activate</button>
+        <button class="btn" id="removeYear">Remove</button>
       </div>
     </div>
 
-    <!-- Overlays -->
     <div class="card">
-      <h2>Overlays</h2>
-      <div id="overlayList" class="list"></div>
-      <div class="hint">Double-click an overlay to assign it to the swipe tool.</div>
-    </div>
-
-    <!-- Swipe -->
-    <div class="footer card">
       <h2>Swipe compare</h2>
-      <div class="swipeWrap">
-        <input id="swipeRange" type="range" min="0" max="100" value="50">
-        <span class="muted" id="swipePct">50%</span>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
+      <div class="row">
         <button class="btn" id="pickSwipeA">Set Left</button>
         <button class="btn" id="pickSwipeB">Set Right</button>
-        <button class="btn" id="clearSwipe">Clear</button>
       </div>
+      <input id="swipeRange" type="range" min="0" max="100" value="50" style="margin-top:8px">
+      <div class="muted">Drag to reveal left/right overlays. Double-click an overlay row to assign quickly.</div>
+    </div>
+
+    <div class="card">
+      <h2>Overlays</h2>
+      <div id="overlayList"></div>
     </div>
   </aside>
 
   <div id="map"></div>
 
 <script>
-/* =============== MAP SETUP =============== */
-const map = L.map('map',{center:[-33.865,151.209],zoom:10}); // Sydney default
-const baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
-const baseSAT = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,attribution:'Imagery &copy; Esri'});
+/* =========================== MAP =========================== */
+const map = L.map('map',{center:[-32.74246,152.13975],zoom:15}); // start near your sample
+const baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:20, attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+const baseSAT = L.tileLayer(
+  'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { maxZoom:20, attribution:'Imagery &copy; Esri' }
+);
 let activeBase = baseOSM;
-document.getElementById('baseOSM').onclick=()=>{map.removeLayer(activeBase);activeBase=baseOSM;activeBase.addTo(map);};
-document.getElementById('baseSAT').onclick=()=>{map.removeLayer(activeBase);activeBase=baseSAT;activeBase.addTo(map);};
+document.getElementById('baseOSM').onclick=()=>{ map.removeLayer(activeBase); activeBase=baseOSM; activeBase.addTo(map); };
+document.getElementById('baseSAT').onclick=()=>{ map.removeLayer(activeBase); activeBase=baseSAT; activeBase.addTo(map); };
 
-/* =============== UTILITIES =============== */
+/* ======================== UTILITIES ======================== */
 const $ = (id)=>document.getElementById(id);
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),5200); }
 function xml(text){ try{ return (new window.DOMParser()).parseFromString(text,'text/xml'); } catch(e){ return null; }}
+function clamp(v,min,max){return Math.max(min, Math.min(max,v));}
 
-/* =============== OVERLAY MGMT =============== */
+/* ===================== OVERLAY MANAGEMENT ================== */
 const overlays = new Map(); // id -> {id,name,type,layer,pane}
 let overlaySeq = 0;
-const listEl = $('overlayList');
-
-function makePane(id,z=450){const pn=`pane_${id}`;map.createPane(pn);const pane=map.getPane(pn);pane.style.zIndex=String(z);return {pn,pane};}
+function makePane(id,z=450){const pn=`pane_${id}`; map.createPane(pn); const pane=map.getPane(pn); pane.style.zIndex=String(z); return {pn,pane};}
 function setBlendMode(p,mode){p.classList.remove('blend-normal','blend-multiply','blend-overlay','blend-screen');
   p.classList.add({normal:'blend-normal',multiply:'blend-multiply',overlay:'blend-overlay',screen:'blend-screen'}[mode]||'blend-normal');}
 
-function renderOverlayList(){
-  listEl.innerHTML='';
-  overlays.forEach(o=>{
-    const item=document.createElement('div');item.className='overlay-item';
-    const head=document.createElement('div');head.className='overlay-head';
-    const title=document.createElement('div');title.className='overlay-title';title.textContent=o.name;
-    const chip=document.createElement('div');chip.className='chip';chip.textContent=o.type.toUpperCase();
-    head.appendChild(title);head.appendChild(chip);item.appendChild(head);
-
-    const controls=document.createElement('div');controls.className='controls';controls.style.marginTop='8px';
-
-    const toggle=document.createElement('button');toggle.className='btn';
-    const updToggle=()=>toggle.textContent=map.hasLayer(o.layer)?'Hide':'Show';
-    toggle.onclick=()=>{if(map.hasLayer(o.layer)) map.removeLayer(o.layer); else o.layer.addTo(map);updToggle();};
-    updToggle();controls.appendChild(toggle);
-
-    const opWrap=document.createElement('div');opWrap.style.width='100%';
-    const opLab=document.createElement('label');opLab.textContent='Opacity';
-    const op=document.createElement('input');op.type='range';op.min=0;op.max=1;op.step=0.01;op.value=0.6;
-    op.oninput=()=>{if(o.type==='image'){o.layer.setOpacity(parseFloat(op.value));} else {o.pane.style.opacity=op.value;}};
-    if(o.type==='image') o.layer.setOpacity(parseFloat(op.value)); else o.pane.style.opacity=op.value;
-    opWrap.appendChild(opLab);opWrap.appendChild(op);controls.appendChild(opWrap);
-
-    const bmWrap=document.createElement('div');bmWrap.style.width='100%';
-    const bmLab=document.createElement('label');bmLab.textContent='Blend';
-    const bm=document.createElement('select');['normal','multiply','overlay','screen'].forEach(m=>{const opt=document.createElement('option');opt.value=m;opt.textContent=m;bm.appendChild(opt);});
-    bm.value='multiply';setBlendMode(o.pane,bm.value);bm.onchange=()=>setBlendMode(o.pane,bm.value);
-    bmWrap.appendChild(bmLab);bmWrap.appendChild(bm);controls.appendChild(bmWrap);
-
-    const zRow=document.createElement('div');zRow.style.display='flex';zRow.style.gap='8px';
-    const up=document.createElement('button');up.className='btn';up.textContent='Bring front';up.onclick=()=>o.pane.style.zIndex=String((+o.pane.style.zIndex||450)+1);
-    const dn=document.createElement('button');dn.className='btn';dn.textContent='Send back';dn.onclick=()=>o.pane.style.zIndex=String((+o.pane.style.zIndex||450)-1);
-    zRow.appendChild(up);zRow.appendChild(dn);
-
-    const rm=document.createElement('button');rm.className='btn';rm.textContent='Remove';
-    rm.onclick=()=>{if(map.hasLayer(o.layer)) map.removeLayer(o.layer);overlays.delete(o.id);renderOverlayList();refreshSwipeMasks();};
-
-    item.appendChild(controls);item.appendChild(zRow);item.appendChild(document.createElement('hr')).className='hr';item.appendChild(rm);
-
-    item.ondblclick=()=>assignSwipeCandidate(o.id);
-    listEl.appendChild(item);
-  });
-}
 function addXYZ({name,url,minZoom=0,maxZoom=20,attribution=''}) {
-  const id=`ov_${++overlaySeq}`;const {pn,pane}=makePane(id,450);
-  const layer=L.tileLayer(url,{pane:pn,minZoom,maxZoom,attribution});overlays.set(id,{id,name,type:'xyz',layer,pane});layer.addTo(map);renderOverlayList();return id;
+  const id=`ov_${++overlaySeq}`; const {pn,pane}=makePane(id,450);
+  const layer=L.tileLayer(url,{pane:pn,minZoom,maxZoom,attribution}); overlays.set(id,{id,name,type:'xyz',layer,pane}); layer.addTo(map); renderOverlayList(); return id;
 }
 function addWMTS({name,template,attribution=''}) {
-  const id=`ov_${++overlaySeq}`;const {pn,pane}=makePane(id,455);
+  const id=`ov_${++overlaySeq}`; const {pn,pane}=makePane(id,455);
   const layer=L.tileLayer('',{
-    pane:pn,attribution,tileSize:256,minZoom:0,maxZoom:22,
+    pane:pn, attribution, tileSize:256, minZoom:0, maxZoom:22,
     getTileUrl:(c)=>template
       .replace('{level}',c.z).replace('{TileMatrix}',c.z)
       .replace('{row}',c.y).replace('{TileRow}',c.y)
       .replace('{col}',c.x).replace('{TileCol}',c.x)
   });
-  overlays.set(id,{id,name,type:'wmts',layer,pane});layer.addTo(map);renderOverlayList();return id;
+  overlays.set(id,{id,name,type:'wmts',layer,pane}); layer.addTo(map); renderOverlayList(); return id;
 }
 function addWMS({name,url,layers,format='image/png',transparent=true,attribution=''}) {
-  const id=`ov_${++overlaySeq}`;const {pn,pane}=makePane(id,460);
+  const id=`ov_${++overlaySeq}`; const {pn,pane}=makePane(id,460);
   const layer=L.tileLayer.wms(url,{pane:pn,layers,format,transparent,version:'1.3.0',attribution});
-  overlays.set(id,{id,name,type:'wms',layer,pane});layer.addTo(map);renderOverlayList();return id;
+  overlays.set(id,{id,name,type:'wms',layer,pane}); layer.addTo(map); renderOverlayList(); return id;
 }
 
-/* =============== SWIPE =============== */
-let swipeA=null, swipeB=null;
-const swipeMask=document.createElement('div');swipeMask.id='swipe-mask';
-const swipeDivider=document.createElement('div');swipeDivider.id='swipe-divider';
-swipeMask.appendChild(swipeDivider);map.getPanes().overlayPane.appendChild(swipeMask);
-function getPaneFor(id){const o=overlays.get(id);return o?o.pane:null;}
-function refreshSwipeMasks(){[swipeA,swipeB].forEach(id=>{const p=getPaneFor(id);if(p)p.style.clipPath='';});updateSwipeClip();}
-function updateSwipeClip(){const pct=+$('swipeRange').value;$('swipePct').textContent=pct+'%';
-  const r=map.getContainer().getBoundingClientRect();const x=pct/100*r.width;swipeDivider.style.left=x+'px';
-  const left=`inset(0 ${r.width-x}px 0 0)`, right=`inset(0 0 0 ${x}px)`;overlays.forEach(o=>o.pane.style.clipPath='');
-  const pa=getPaneFor(swipeA), pb=getPaneFor(swipeB); if(pa) pa.style.clipPath=left; if(pb) pb.style.clipPath=right;}
-$('swipeRange').addEventListener('input',updateSwipeClip);window.addEventListener('resize',updateSwipeClip);
-function assignSwipeCandidate(id){if(!swipeA) swipeA=id; else if(!swipeB&&id!==swipeA) swipeB=id; updateSwipeClip();}
-$('pickSwipeA').onclick=()=>{const id=prompt('Overlay ID for LEFT (e.g., ov_1)'); if(id&&overlays.has(id)) swipeA=id; updateSwipeClip();};
-$('pickSwipeB').onclick=()=>{const id=prompt('Overlay ID for RIGHT (e.g., ov_2)'); if(id&&overlays.has(id)) swipeB=id; updateSwipeClip();};
-$('clearSwipe').onclick=()=>{swipeA=null;swipeB=null;refreshSwipeMasks();};
+/* Overlay list UI */
+function renderOverlayList(){
+  const list = $('overlayList'); list.innerHTML='';
+  overlays.forEach(o=>{
+    const row = document.createElement('div'); row.className='overlay-item';
+    const title = document.createElement('div'); title.className='overlay-title'; title.textContent = `${o.id} — ${o.name}`;
+    const controls = document.createElement('div'); controls.style.display='grid'; controls.style.gridTemplateColumns='1fr 1fr'; controls.style.gap='8px'; controls.style.marginTop='6px';
 
-/* =============== YEAR CATALOG =============== */
-const catalog = []; // gets filled by loaders
-let activeYearOverlayId = null;
-const yearSelect = $('yearSelect');
-const yearInfo = $('yearInfo');
+    const toggle = document.createElement('button'); toggle.className='btn';
+    const upd = ()=>toggle.textContent = map.hasLayer(o.layer) ? 'Hide' : 'Show';
+    toggle.onclick = ()=>{ if(map.hasLayer(o.layer)) map.removeLayer(o.layer); else o.layer.addTo(map); upd(); };
+    upd();
 
-function rebuildYearSelect(){
-  const opts = catalog.slice().sort((a,b)=>a.year-b.year);
-  yearSelect.innerHTML = '';
-  const blank = document.createElement('option'); blank.value=''; blank.textContent='— Select year —'; yearSelect.appendChild(blank);
-  opts.forEach(e=>{
-    const o=document.createElement('option');o.value=String(e.year);o.textContent=`${e.year} — ${e.name}`;yearSelect.appendChild(o);
+    const rm = document.createElement('button'); rm.className='btn'; rm.textContent='Remove';
+    rm.onclick = ()=>{ if(map.hasLayer(o.layer)) map.removeLayer(o.layer); overlays.delete(o.id); renderOverlayList(); refreshSwipeMasks(); };
+
+    const opLab = document.createElement('label'); opLab.textContent='Opacity'; opLab.style.gridColumn='1 / -1';
+    const op = document.createElement('input'); op.type='range'; op.min=0; op.max=1; op.step=0.01; op.value=0.6;
+    op.oninput = ()=>{ if(o.type==='image') o.layer.setOpacity(parseFloat(op.value)); else o.pane.style.opacity = op.value; };
+    if(o.type==='image') o.layer.setOpacity(parseFloat(op.value)); else o.pane.style.opacity=op.value;
+
+    const blend = document.createElement('select'); ['normal','multiply','overlay','screen'].forEach(m=>{const opt=document.createElement('option'); opt.value=m; opt.textContent=m; blend.appendChild(opt);});
+    blend.onchange=()=>setBlendMode(o.pane, blend.value); blend.value='multiply'; setBlendMode(o.pane,'multiply');
+
+    const front = document.createElement('button'); front.className='btn'; front.textContent='Bring front';
+    front.onclick=()=>{ o.pane.style.zIndex = String((+o.pane.style.zIndex||450)+1); };
+    const back = document.createElement('button'); back.className='btn'; back.textContent='Send back';
+    back.onclick=()=>{ o.pane.style.zIndex = String((+o.pane.style.zIndex||450)-1); };
+
+    controls.appendChild(toggle); controls.appendChild(rm);
+    controls.appendChild(opLab); controls.appendChild(op);
+    controls.appendChild(blend); controls.appendChild(front);
+    controls.appendChild(back);
+
+    row.appendChild(title); row.appendChild(controls);
+    row.ondblclick = ()=>assignSwipeCandidate(o.id);
+    list.appendChild(row);
   });
 }
-function addCatalogEntry(entry){
-  const idx = catalog.findIndex(e=>e.year===entry.year && e.name===entry.name);
-  if(idx>=0) catalog[idx]=entry; else catalog.push(entry);
-  rebuildYearSelect();
-}
-function activateYear(yearStr){
-  const year = parseInt(yearStr,10); if(isNaN(year)) return;
-  const entry = catalog.find(e=>e.year===year); if(!entry){toast('No catalog entry for that year'); return;}
-  if(activeYearOverlayId && overlays.has(activeYearOverlayId)){
-    const prev = overlays.get(activeYearOverlayId); if(map.hasLayer(prev.layer)) map.removeLayer(prev.layer);
-    overlays.delete(activeYearOverlayId); activeYearOverlayId=null; renderOverlayList();
-  }
-  let id=null;
-  if(entry.type==='xyz'){
-    const p=entry.params; id = addXYZ({name:entry.name, url:p.url, minZoom:p.minZoom??0, maxZoom:p.maxZoom??20, attribution:entry.attribution||''});
-  } else if(entry.type==='wmts'){
-    const p=entry.params; id = addWMTS({name:entry.name, template:p.template, attribution:entry.attribution||''});
-  } else if(entry.type==='wms'){
-    const p=entry.params; id = addWMS({name:entry.name, url:p.url, layers:p.layers, format:p.format||'image/png', transparent:(p.transparent!==false), attribution:entry.attribution||''});
-  }
-  activeYearOverlayId = id; yearInfo.textContent = `${entry.year} • ${entry.type.toUpperCase()}`;
-}
-yearSelect.addEventListener('change', e=>activateYear(e.target.value));
-$('deactivateYear').onclick=()=>{
-  if(activeYearOverlayId && overlays.has(activeYearOverlayId)){
-    const prev=overlays.get(activeYearOverlayId); if(map.hasLayer(prev.layer)) map.removeLayer(prev.layer);
-    overlays.delete(activeYearOverlayId); activeYearOverlayId=null; renderOverlayList();
-  }
-  yearSelect.value=''; yearInfo.textContent='—';
-};
 
-/* =============== LOADERS =============== */
+/* ====================== SWIPE COMPARE ====================== */
+let swipeA=null, swipeB=null;
+const swipeMask=document.createElement('div'); swipeMask.id='swipe-mask';
+const swipeDivider=document.createElement('div'); swipeDivider.id='swipe-divider';
+swipeMask.appendChild(swipeDivider); map.getPanes().overlayPane.appendChild(swipeMask);
+
+function getPaneFor(id){const o=overlays.get(id);return o?o.pane:null;}
+function refreshSwipeMasks(){[swipeA,swipeB].forEach(id=>{const p=getPaneFor(id); if(p) p.style.clipPath='';}); updateSwipeClip();}
+function updateSwipeClip(){
+  const range = $('swipeRange'); const pct = +range.value;
+  const r = map.getContainer().getBoundingClientRect(); const x = pct/100 * r.width;
+  swipeDivider.style.left = x + 'px';
+  const left=`inset(0 ${r.width-x}px 0 0)`, right=`inset(0 0 0 ${x}px)`;
+  overlays.forEach(o=>o.pane.style.clipPath='');
+  const pa=getPaneFor(swipeA), pb=getPaneFor(swipeB);
+  if(pa) pa.style.clipPath=left; if(pb) pb.style.clipPath=right;
+}
+$('swipeRange').addEventListener('input', updateSwipeClip); window.addEventListener('resize', updateSwipeClip);
+function assignSwipeCandidate(id){ if(!swipeA) swipeA=id; else if(!swipeB && id!==swipeA) swipeB=id; updateSwipeClip(); }
+$('pickSwipeA').onclick=()=>{ const id=prompt('Overlay ID for LEFT (e.g., ov_1)'); if(id&&overlays.has(id)) swipeA=id; updateSwipeClip(); };
+$('pickSwipeB').onclick=()=>{ const id=prompt('Overlay ID for RIGHT (e.g., ov_2)'); if(id&&overlays.has(id)) swipeB=id; updateSwipeClip(); };
+
+/* ===================== WAYBACK CATALOG ===================== */
 const WAYBACK_GROUP_ID = '0f3189e1d1414edfad860b697b7d8311'; // Esri Living Atlas Wayback group
+// store [{year, label, template, id, arcgisItemId}]
+let wayback = [];
+let timelineIndex = 0;
 
-// Wayback: fetch all items, read templateUrl, add by year
 async function loadWaybackAll(){
   try{
-    const searchUrl = `https://www.arcgis.com/sharing/rest/content/groups/${WAYBACK_GROUP_ID}/search?f=json&num=1000&sortField=title&sortOrder=desc`;
-    const res = await fetch(searchUrl);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json = await res.json();
-    if(!json.results?.length){ toast('Wayback: no items found.'); return; }
-
-    const yearRe = /\b(20|19)\d{2}\b/;
-    let added = 0;
-
-    async function fetchItemData(id){
-      const r = await fetch(`https://www.arcgis.com/sharing/rest/content/items/${id}/data?f=json`);
-      if(!r.ok) return null;
-      return r.json();
-    }
-
-    for (let i = 0; i < json.results.length; i += 20) {
-      const chunk = json.results.slice(i, i+20);
-      const datas = await Promise.all(chunk.map(it => fetchItemData(it.id).catch(()=>null)));
-
-      datas.forEach((data, idx) => {
-        if(!data) return;
-        const op = (data.operationalLayers && data.operationalLayers[0]) || null;
-        const template = op?.templateUrl || op?.urlTemplate || null;
+    const url = `https://www.arcgis.com/sharing/rest/content/groups/${WAYBACK_GROUP_ID}/search?f=json&num=1000&sortField=title&sortOrder=desc`;
+    const res = await fetch(url); if(!res.ok) throw new Error('http '+res.status);
+    const j = await res.json(); const items = j.results||[];
+    const yearRe = /\b(19|20)\d{2}\b/; const out = [];
+    async function itemData(id){ const r=await fetch(`https://www.arcgis.com/sharing/rest/content/items/${id}/data?f=json`); if(!r.ok) return null; return r.json(); }
+    for(let i=0;i<items.length;i+=20){
+      const chunk = items.slice(i,i+20);
+      const datas = await Promise.all(chunk.map(it => itemData(it.id).catch(()=>null)));
+      datas.forEach((data,idx)=>{
+        const it = chunk[idx];
+        const op = data?.operationalLayers?.[0];
+        const template = op?.templateUrl || op?.urlTemplate;
         if(!template) return;
-
-        const item = chunk[idx];
-        const title = item.title || 'Wayback';
-        const mYear = title.match(yearRe);
-        const year = mYear ? parseInt(mYear[0],10) : null;
-        if(!year) return;
-
-        addCatalogEntry({
-          year,
-          name: `Wayback ${title}`,
-          type: 'wmts',
-          params: { template },
-          attribution: 'Esri Wayback'
-        });
-        added++;
+        const title = it.title||'Wayback';
+        const ym = title.match(yearRe);
+        const year = ym ? parseInt(ym[0],10) : null;
+        out.push({ year, label:title, template, itemId: it.id });
       });
     }
-
-    if(added===0){
-      toast('Wayback: found items, but no tile templates detected.');
-    } else {
-      toast(`Wayback: added ${added} dated layers. Pick a year!`);
-    }
-  } catch(e){
-    console.error(e);
-    toast('Wayback: could not load catalog (network/CORS?)');
-  }
+    // sort ascending by year/title
+    wayback = out.sort((a,b)=> (a.year??0) - (b.year??0) || a.label.localeCompare(b.label));
+    buildTimeline();
+    toast(`Wayback: loaded ${wayback.length} dates`);
+  }catch(e){ console.error(e); toast('Failed to load Wayback catalog (CORS/network).'); }
 }
 
-// Generic WMS scanner: add layers that look year-labelled
+function buildTimeline(){
+  const slider = $('dateSlider');
+  slider.min = 0; slider.max = Math.max(0, wayback.length-1); slider.value = timelineIndex = clamp(timelineIndex, 0, wayback.length-1);
+  updateTimelineLabel();
+}
+function updateTimelineLabel(){
+  const cur = wayback[timelineIndex];
+  $('currentLabel').textContent = cur ? (cur.year||'—') : '—';
+  $('dateInfo').textContent = cur ? cur.label : 'No date loaded';
+}
+$('prevDate').onclick=()=>{ timelineIndex = clamp(timelineIndex-1, 0, Math.max(0, wayback.length-1)); $('dateSlider').value=timelineIndex; updateTimelineLabel(); };
+$('nextDate').onclick=()=>{ timelineIndex = clamp(timelineIndex+1, 0, Math.max(0, wayback.length-1)); $('dateSlider').value=timelineIndex; updateTimelineLabel(); };
+$('dateSlider').addEventListener('input', e=>{ timelineIndex = +e.target.value; updateTimelineLabel(); });
+
+/* Activate current timeline date as an overlay */
+let currentWaybackOverlayId = null;
+$('activateDate').onclick = ()=> {
+  const cur = wayback[timelineIndex]; if(!cur) return;
+  // remove previously-activated timeline overlay
+  if(currentWaybackOverlayId && overlays.has(currentWaybackOverlayId)){ const prev=overlays.get(currentWaybackOverlayId); if(map.hasLayer(prev.layer)) map.removeLayer(prev.layer); overlays.delete(currentWaybackOverlayId); }
+  currentWaybackOverlayId = addWMTS({ name:`Wayback ${cur.label}`, template:cur.template, attribution:'Esri Wayback' });
+};
+/* Put current date into Swipe (first LEFT then RIGHT) */
+$('addToSwipe').onclick = ()=> {
+  const cur = wayback[timelineIndex]; if(!cur) return;
+  const id = addWMTS({ name:`Wayback ${cur.label}`, template:cur.template, attribution:'Esri Wayback' });
+  if(!swipeA) swipeA = id; else if(!swipeB && id!==swipeA) swipeB = id; updateSwipeClip();
+};
+
+/* Wayback link importer */
+function importWaybackFromLink(raw) {
+  if (!raw) return toast('No link provided.');
+  try {
+    let url;
+    if (raw.startsWith('#')) url = new URL('https://livingatlas.arcgis.com/wayback/' + raw);
+    else if (/^https?:\/\//i.test(raw)) url = new URL(raw);
+    else url = new URL('https://livingatlas.arcgis.com/wayback/#' + raw);
+
+    const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+    const sp = new URLSearchParams(hash);
+
+    const mc = sp.get('mapCenter'); // lon,lat,zoom
+    if (mc) {
+      const [lonStr, latStr, zStr] = mc.split(',');
+      const lat = parseFloat(latStr), lon = parseFloat(lonStr), z = parseInt(zStr, 10);
+      if (!Number.isNaN(lat) && !Number.isNaN(lon)) map.setView([lat,lon], !Number.isNaN(z)?z:map.getZoom());
+    }
+
+    const candidates = new Set();
+    const addKey = (k)=>{ const v = sp.get(k); if(!v) return; v.split(',').forEach(s=>{ const n=parseInt(s.replace(/[^\d]/g,''),10); if(Number.isInteger(n) && n>=1000) candidates.add(n); }); };
+    addKey('active'); addKey('selected'); addKey('swipeWidget');
+
+    if(candidates.size===0) return toast('No Wayback version IDs detected.');
+    const ids=[];
+    for(const ver of candidates){
+      const template = `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${ver}/{level}/{row}/{col}`;
+      ids.push( addWMTS({ name:`Wayback v${ver}`, template, attribution:'Esri Wayback' }) );
+    }
+    if(ids.length>=2){ swipeA=ids[0]; swipeB=ids[1]; $('swipeRange').value=50; updateSwipeClip(); }
+    toast('Wayback link imported.');
+  } catch(e){ console.error(e); toast('Could not parse Wayback link.'); }
+}
+$('importWayback').onclick = ()=> {
+  const link = prompt('Paste a Wayback share link (or just the #... part):');
+  if (link) importWaybackFromLink(link.trim());
+};
+
+/* ======================= AU CATALOGS ======================= */
+const yearCatalog = []; // {year, name, type, params, attribution}
+function addCatalogEntry(entry){
+  const i = yearCatalog.findIndex(e=>e.year===entry.year && e.name===entry.name);
+  if(i>=0) yearCatalog[i]=entry; else yearCatalog.push(entry);
+  rebuildYearDropdown();
+}
+function rebuildYearDropdown(){
+  const s = $('yearSelect'); s.innerHTML='';
+  const opts = yearCatalog.slice().sort((a,b)=>a.year-b.year);
+  const blank = document.createElement('option'); blank.value=''; blank.textContent='— Select year —'; s.appendChild(blank);
+  opts.forEach(e=>{ const o=document.createElement('option'); o.value=String(e.year); o.textContent=`${e.year} — ${e.name}`; s.appendChild(o); });
+}
+let activeYearOverlayId = null;
+$('activateYear').onclick=()=>{
+  const v = $('yearSelect').value; const y = parseInt(v,10); if(!y) return;
+  const e = yearCatalog.find(x=>x.year===y); if(!e) return;
+  if(activeYearOverlayId && overlays.has(activeYearOverlayId)){ const prev=overlays.get(activeYearOverlayId); if(map.hasLayer(prev.layer)) map.removeLayer(prev.layer); overlays.delete(activeYearOverlayId); }
+  if(e.type==='wms') activeYearOverlayId = addWMS({name:e.name, url:e.params.url, layers:e.params.layers, format:e.params.format||'image/png', transparent:(e.params.transparent!==false), attribution:e.attribution||''});
+  else if(e.type==='wmts') activeYearOverlayId = addWMTS({name:e.name, template:e.params.template, attribution:e.attribution||''});
+  else if(e.type==='xyz') activeYearOverlayId = addXYZ({name:e.name, url:e.params.url, minZoom:e.params.minZoom??0, maxZoom:e.params.maxZoom??20, attribution:e.attribution||''});
+};
+$('removeYear').onclick=()=>{ if(activeYearOverlayId && overlays.has(activeYearOverlayId)){ const p=overlays.get(activeYearOverlayId); if(map.hasLayer(p.layer)) map.removeLayer(p.layer); overlays.delete(activeYearOverlayId); activeYearOverlayId=null; renderOverlayList(); } };
+$('clearYearOverlay').onclick=()=>$('removeYear').click();
+
+/* WMS & WMTS scanners */
 async function loadWMSYears({url, namePrefix='', attribution=''}) {
   try{
-    const res = await fetch(`${url}?request=GetCapabilities&service=WMS`);
-    if(!res.ok){ throw new Error('HTTP '+res.status); }
-    const txt = await res.text(); const doc = xml(txt);
+    const res = await fetch(`${url}?service=WMS&request=GetCapabilities`); if(!res.ok) throw new Error('http '+res.status);
+    const txt = await res.text(); const doc = xml(txt); if(!doc) throw new Error('xml parse');
     const layers = [...doc.querySelectorAll('Layer > Layer')];
-    const yearRe = /\b(19|20)\d{2}\b/;
-    let added = 0;
-    function walk(layerEl){
-      const layerName = layerEl.querySelector('Name')?.textContent || '';
-      const layerTitle = layerEl.querySelector('Title')?.textContent || '';
-      const m = (layerName.match(yearRe) || layerTitle.match(yearRe));
-      if(m){
-        const year = parseInt(m[0],10);
-        addCatalogEntry({
-          year,
-          name: `${namePrefix}${layerTitle || layerName}`,
-          type: 'wms',
-          params: { url, layers: layerName || layerTitle, format:'image/png', transparent:true },
-          attribution
-        });
+    const yearRe = /\b(19|20)\d{2}\b/; let added=0;
+    function walk(L){
+      const name = L.querySelector('Name')?.textContent||''; const title = L.querySelector('Title')?.textContent||'';
+      const m = (name.match(yearRe) || title.match(yearRe));
+      if(m){ const year = parseInt(m[0],10);
+        addCatalogEntry({ year, name: `${namePrefix}${title||name}`, type:'wms', params:{url, layers:name||title, format:'image/png', transparent:true}, attribution });
         added++;
       }
-      layerEl.querySelectorAll(':scope > Layer').forEach(walk);
+      L.querySelectorAll(':scope > Layer').forEach(walk);
     }
     layers.forEach(walk);
-    if(added===0) toast(`No year-labelled WMS layers discovered at ${url}`);
-  }catch(e){
-    toast(`Could not load WMS capabilities (${url}). CORS/login may be required.`);
-  }
+    toast(added?`Loaded ${added} WMS year layers`:`No year-labelled WMS layers at ${url}`);
+  }catch(e){ console.error(e); toast('WMS load failed (CORS/login?)'); }
 }
-
-// Generic WMTS scanner (uses a template hint for tile path)
 async function loadWMTSYears({capUrl, templateHint, namePrefix='', attribution=''}) {
   try{
-    const res = await fetch(capUrl);
-    if(!res.ok){ throw new Error('HTTP '+res.status); }
-    const txt = await res.text(); const doc = xml(txt);
+    const res = await fetch(capUrl); if(!res.ok) throw new Error('http '+res.status);
+    const txt = await res.text(); const doc = xml(txt); if(!doc) throw new Error('xml parse');
     const layers = [...doc.querySelectorAll('Layer')];
-    const yearRe = /\b(19|20)\d{2}\b/;
-    let added = 0;
+    const yearRe = /\b(19|20)\d{2}\b/; let added=0;
     layers.forEach(LA=>{
-      const id = LA.querySelector('ows\\:Identifier, Identifier')?.textContent || '';
+      const id = LA.querySelector('ows\\:Identifier, Identifier')?.textContent||'';
       const title = LA.querySelector('ows\\:Title, Title')?.textContent || id;
       const m = (id.match(yearRe) || title.match(yearRe));
       if(m && templateHint){
         const year = parseInt(m[0],10);
-        addCatalogEntry({year, name:`${namePrefix}${title}`, type:'wmts',
-          params:{ template: templateHint }, attribution});
+        addCatalogEntry({ year, name:`${namePrefix}${title}`, type:'wmts', params:{ template: templateHint }, attribution });
         added++;
       }
     });
-    if(added===0) toast(`No year-labelled WMTS layers discovered (${capUrl}).`);
-  }catch(e){
-    toast(`Could not load WMTS capabilities (${capUrl}). CORS/login may be required.`);
-  }
+    toast(added?`Loaded ${added} WMTS year layers`:`No year-labelled WMTS layers`);
+  }catch(e){ console.error(e); toast('WMTS load failed (CORS/login?)'); }
 }
 
-/* VIC (Vicmap) */
-async function loadVICPreset(){
+/* Buttons to load AU catalogs & extras */
+document.getElementById('loadVIC').onclick = async()=> {
+  await loadWMTSYears({ capUrl:'https://base.maps.vic.gov.au/service?service=wmts&request=GetCapabilities', templateHint:'', namePrefix:'VIC • ', attribution:'&copy; State of Victoria' });
+  await loadWMSYears({ url:'https://base.maps.vic.gov.au/service', namePrefix:'VIC • ', attribution:'&copy; State of Victoria' });
+};
+document.getElementById('loadQLD').onclick = async()=> {
   await loadWMTSYears({
-    capUrl: 'https://base.maps.vic.gov.au/service?service=wmts&request=GetCapabilities',
-    templateHint: '', // WMS below usually provides the dated layers
-    namePrefix: 'VIC • ',
-    attribution: '&copy; State of Victoria'
+    capUrl:'https://spatial-img.information.qld.gov.au/arcgis/rest/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/WMTS/1.0.0/WMTSCapabilities.xml',
+    templateHint:'https://spatial-img.information.qld.gov.au/arcgis/rest/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/tile/{level}/{row}/{col}',
+    namePrefix:'QLD • ', attribution:'&copy; Queensland Government'
   });
   await loadWMSYears({
-    url: 'https://base.maps.vic.gov.au/service',
-    namePrefix: 'VIC • ',
-    attribution: '&copy; State of Victoria'
+    url:'https://spatial-img.information.qld.gov.au/arcgis/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/WMSServer',
+    namePrefix:'QLD • ', attribution:'&copy; Queensland Government'
   });
-}
-
-/* QLD (Latest State Program) */
-async function loadQLDPreset(){
-  await loadWMTSYears({
-    capUrl: 'https://spatial-img.information.qld.gov.au/arcgis/rest/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/WMTS/1.0.0/WMTSCapabilities.xml',
-    templateHint: 'https://spatial-img.information.qld.gov.au/arcgis/rest/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/tile/{level}/{row}/{col}',
-    namePrefix: 'QLD • ',
-    attribution: '&copy; Queensland Government'
-  });
+};
+document.getElementById('loadWA').onclick = async()=> {
   await loadWMSYears({
-    url: 'https://spatial-img.information.qld.gov.au/arcgis/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/WMSServer',
-    namePrefix: 'QLD • ',
-    attribution: '&copy; Queensland Government'
+    url:'https://services.slip.wa.gov.au/arcgis/services/Landgate_Subscription_Imagery/WA_Regional/MapServer/WMSServer',
+    namePrefix:'WA • ', attribution:'&copy; Landgate/SLIP'
   });
-}
+};
 
-/* WA (Landgate / SLIP) — may require account; WMS only here */
-async function loadWAPreset(){
-  await loadWMSYears({
-    url: 'https://services.slip.wa.gov.au/arcgis/services/Landgate_Subscription_Imagery/WA_Regional/MapServer/WMSServer',
-    namePrefix: 'WA • ',
-    attribution: '&copy; Landgate/SLIP'
-  });
-}
-
-/* GA DEM (LiDAR-derived SRTM 1s, 2024) — WMTS-like tiles */
 function addGADEM(){
   addCatalogEntry({
     year: 2024,
     name: 'GA DEM SRTM 1s (Hydro Enforced)',
     type: 'wmts',
-    params: {
-      template: 'https://services.ga.gov.au/gis/rest/services/DEM_SRTM_1Second_Hydro_Enforced_2024/MapServer/tile/{level}/{row}/{col}'
-    },
+    params: { template:'https://services.ga.gov.au/gis/rest/services/DEM_SRTM_1Second_Hydro_Enforced_2024/MapServer/tile/{level}/{row}/{col}' },
     attribution: '&copy; Geoscience Australia'
   });
 }
-
-/* NLS demo (XYZ) — handy test */
 function addNLS(){
   addCatalogEntry({
-    year: 1905,
-    name: 'NLS 1/4 Inch (UK c.1900s)',
-    type: 'xyz',
-    params: { url: 'https://geo.nls.uk/mapdata3/os/quarter5/{z}/{x}/{y}.png', minZoom:1, maxZoom:18 },
-    attribution: '&copy; National Library of Scotland'
+    year: 1905, name:'NLS 1/4 Inch (UK c.1900s)', type:'xyz',
+    params:{ url:'https://geo.nls.uk/mapdata3/os/quarter5/{z}/{x}/{y}.png', minZoom:1, maxZoom:18 },
+    attribution:'&copy; National Library of Scotland'
   });
 }
+document.getElementById('addGADEM').onclick = addGADEM;
+document.getElementById('addNLS').onclick = addNLS;
 
-/* =============== WAYBACK LINK IMPORTER =============== */
-// Accepts a Living Atlas Wayback share URL (or just the #... hash).
-// Parses mapCenter, active/selected/swipeWidget to pull version IDs, centers map,
-// loads those Wayback versions, and enables swipe if two are present.
-function importWaybackFromLink(raw) {
-  if (!raw) return toast('No link provided.');
-  try {
-    let url;
-    if (raw.startsWith('#')) {
-      url = new URL('https://livingatlas.arcgis.com/wayback/' + raw);
-    } else if (/^https?:\/\//i.test(raw)) {
-      url = new URL(raw);
-    } else {
-      url = new URL('https://livingatlas.arcgis.com/wayback/#' + raw);
+/* ==================== SEARCH / “HERE” ====================== */
+async function geocode(q){
+  // Very light geocoder: Nominatim (anonymous). Consider adding your own proxy/key for production.
+  try{
+    if(/-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?/.test(q)){ // lat,lng
+      const [lat,lng]=q.split(',').map(s=>parseFloat(s.trim())); map.setView([lat,lng], 14); return;
     }
-
-    const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
-    const sp = new URLSearchParams(hash);
-
-    // Map center: "lon,lat,zoom"
-    const mc = sp.get('mapCenter');
-    if (mc) {
-      const [lonStr, latStr, zoomStr] = mc.split(',');
-      const lat = parseFloat(latStr), lon = parseFloat(lonStr), z = parseInt(zoomStr, 10);
-      if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
-        map.setView([lat, lon], !Number.isNaN(z) ? z : map.getZoom());
-      }
-    }
-
-    // Extract version ids
-    const candidates = new Set();
-    const addCandidates = (key) => {
-      const v = sp.get(key);
-      if (!v) return;
-      v.split(',').forEach(s => {
-        const n = parseInt(s.replace(/[^\d]/g, ''), 10);
-        if (Number.isInteger(n) && n >= 1000) candidates.add(n);
-      });
-    };
-    addCandidates('active');
-    addCandidates('selected');
-    addCandidates('swipeWidget');
-
-    if (candidates.size === 0) {
-      toast('No Wayback version ids found in the link.');
-      return;
-    }
-
-    // Add overlays for each version
-    const ids = [];
-    for (const ver of candidates) {
-      const name = `Wayback v${ver}`;
-      const template = `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${ver}/{level}/{row}/{col}`;
-      const id = addWMTS({ name, template, attribution: 'Esri Wayback' });
-      ids.push(id);
-    }
-
-    // Auto-swipe if two or more
-    if (ids.length >= 2) {
-      swipeA = ids[0];
-      swipeB = ids[1];
-      $('swipeRange').value = 50;
-      updateSwipeClip();
-      toast('Loaded Wayback versions and enabled swipe.');
-    } else {
-      toast('Loaded Wayback version.');
-    }
-  } catch (e) {
-    console.error(e);
-    toast('Could not parse that Wayback link.');
-  }
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+    const res = await fetch(url,{headers:{'Accept-Language':'en'}}); if(!res.ok) throw new Error('http '+res.status);
+    const j = await res.json(); if(!j.length) return toast('No results');
+    const lat = parseFloat(j[0].lat), lon = parseFloat(j[0].lon); map.setView([lat,lon], 14);
+  }catch(e){ console.error(e); toast('Search failed.'); }
 }
+$('searchBtn').onclick=()=>{ const q=$('searchBox').value.trim(); if(q) geocode(q); };
+$('hereBtn').onclick=()=>{ const c=map.getCenter(); $('searchBox').value = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`; };
 
-/* Wire buttons */
-$('loadVIC').onclick=loadVICPreset;
-$('loadQLD').onclick=loadQLDPreset;
-$('loadWA').onclick=loadWAPreset;
-$('addGADEM').onclick=addGADEM;
-$('addNLS').onclick=addNLS;
-$('loadWaybackAll').onclick=loadWaybackAll;
-$('importWaybackLink').onclick=()=> {
-  const link = prompt('Paste a Wayback share link (or just the #... part):');
-  if (link) importWaybackFromLink(link.trim());
-};
+/* ======================== WIRING =========================== */
+document.getElementById('loadWaybackAll').onclick = loadWaybackAll;
 
-/* =============== AUTORUN ON STARTUP =============== */
-(async function bootstrap(){
-  // Always add GA DEM + NLS so you have something even if others fail
-  addGADEM();
-  addNLS();
-  // Load Wayback catalog in the background (optional; you can remove this if you prefer manual)
+/* Year dropdown actions */
+document.getElementById('activateYear').onclick = ()=>$('activateYear').click(); // already wired above
+
+/* Import Wayback UI already wired in importer section */
+
+/* =================== BOOTSTRAP ON LOAD ==================== */
+(function init(){
+  addGADEM(); addNLS(); rebuildYearDropdown();
+  // Preload Wayback catalog in background so timeline works
   loadWaybackAll();
-  // Load AU state services (non-blocking)
-  loadVICPreset();
-  loadQLDPreset();
-  loadWAPreset();
+  // Start swipe centered
+  $('swipeRange').value = 50; updateSwipeClip();
 })();
-
-/* =============== INIT =============== */
-function renderAndInit(){ renderOverlayList(); rebuildYearSelect(); }
-renderAndInit();
 </script>
 </body>
 </html>
