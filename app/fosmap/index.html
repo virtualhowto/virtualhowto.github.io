@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Historic Map Overlay Viewer (XYZ • WMTS • WMS)</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- (Optional) Esri Leaflet: not strictly required here, but handy if you later want ArcGIS Feature/Map services -->
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+
+  <style>
+    :root { --bg:#0f1220; --panel:#151a2c; --muted:#8da2c0; --text:#e8efff; --accent:#5fb3ff; --border:#27304a; }
+    *{box-sizing:border-box}
+    body{margin:0;display:grid;height:100vh;grid-template-columns:360px 1fr;background:var(--bg);color:var(--text);
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";}
+    #sidebar{border-right:1px solid var(--border);padding:14px 14px 100px;overflow:auto;background:var(--panel)}
+    #map{width:100%;height:100vh}
+    h1{font-size:18px;margin:0 0 12px;letter-spacing:.2px}
+    h2{font-size:13px;margin:18px 0 8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+    .card{background:#101528;border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type="text"],input[type="number"],select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0b1020;color:var(--text);outline:none}
+    input[type="range"]{width:100%}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0b1020;color:var(--text);cursor:pointer;text-decoration:none;font-weight:600}
+    .btn:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(95,179,255,.15)}
+    .muted{color:var(--muted);font-size:12px}
+    .list{display:grid;gap:8px}
+    .overlay-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#0b1020}
+    .overlay-head{display:flex;align-items:center;gap:8px;justify-content:space-between}
+    .overlay-title{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+    .chip{font-size:11px;color:var(--muted);padding:2px 8px;border:1px solid var(--border);border-radius:999px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    .hr{height:1px;background:var(--border);margin:10px 0;border:0}
+    .footer{position:fixed;bottom:0;left:0;width:360px;padding:10px 14px;background:linear-gradient(180deg,rgba(21,26,44,0),rgba(21,26,44,.95) 20%,rgba(21,26,44,1) 60%);border-top:1px solid var(--border)}
+    .swipeWrap{display:flex;align-items:center;gap:10px}
+    .leaflet-control-attribution{background:rgba(0,0,0,.45)!important;backdrop-filter:blur(6px);border-radius:8px!important}
+    .hint{font-size:12px;color:var(--muted)}
+
+    .blend-normal{mix-blend-mode:normal}
+    .blend-multiply{mix-blend-mode:multiply}
+    .blend-overlay{mix-blend-mode:overlay}
+    .blend-screen{mix-blend-mode:screen}
+
+    #swipe-mask{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+    #swipe-divider{position:absolute;top:0;width:2px;height:100%;background:#ffffffaa;pointer-events:none;box-shadow:0 0 0 1px #00000040}
+    code{background:#0b1020;border:1px solid var(--border);border-radius:6px;padding:2px 6px}
+  </style>
+</head>
+<body>
+  <aside id="sidebar">
+    <h1>Historic Map Overlay Viewer</h1>
+
+    <!-- Basemaps -->
+    <div class="card">
+      <h2>Basemap</h2>
+      <div class="row">
+        <button class="btn" id="baseOSM">OSM</button>
+        <button class="btn" id="baseSAT">Satellite</button>
+      </div>
+      <div class="hr"></div>
+      <div class="hint">Tip: zoom/pan the map, then add overlays below.</div>
+    </div>
+
+    <!-- XYZ overlay -->
+    <div class="card">
+      <h2>Add overlay (XYZ)</h2>
+      <label>Overlay name</label>
+      <input id="xyzName" type="text" placeholder="e.g. 1920s Parish Map"/>
+      <label>Tile URL template (XYZ)</label>
+      <input id="xyzURL" type="text" placeholder="https://server/tiles/{z}/{x}/{y}.png"/>
+      <div class="row" style="margin-top:8px">
+        <div><label>Min zoom</label><input id="xyzMinZoom" type="number" value="0" min="0" max="24"/></div>
+        <div><label>Max zoom</label><input id="xyzMaxZoom" type="number" value="20" min="0" max="24"/></div>
+      </div>
+      <label style="margin-top:8px">Attribution (optional)</label>
+      <input id="xyzAttrib" type="text" placeholder='&copy; Provider'/>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="addXYZBtn">Add XYZ</button>
+        <button class="btn" id="addSampleNLS">Add sample (NLS)</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Requires CORS. Placeholders: <code>{z}</code>, <code>{x}</code>, <code>{y}</code>.</div>
+    </div>
+
+    <!-- WMTS overlay -->
+    <div class="card">
+      <h2>Add overlay (WMTS / Wayback)</h2>
+      <label>Overlay name</label>
+      <input id="wmtsName" type="text" placeholder="e.g. Esri Wayback 2016"/>
+      <label>WMTS tile template</label>
+      <input id="wmtsURL" type="text" placeholder="https://.../tile/{version}/{level}/{row}/{col}"/>
+      <div class="row" style="margin-top:8px">
+        <div><label>Version/Variant (optional)</label><input id="wmtsVersion" type="text" placeholder="e.g. 11509"/></div>
+        <div><label>Attribution</label><input id="wmtsAttrib" type="text" placeholder="&copy; Source"/></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="addWMTSBtn">Add WMTS</button>
+        <button class="btn" id="quickWayback">Quick add Wayback</button>
+      </div>
+      <div class="hint" style="margin-top:8px">
+        Use WMTS placeholders <code>{level}</code>, <code>{row}</code>, <code>{col}</code>. For Esri Wayback:<br>
+        <code>https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{version}/{level}/{row}/{col}</code>
+      </div>
+    </div>
+
+    <!-- WMS overlay -->
+    <div class="card">
+      <h2>Add overlay (WMS)</h2>
+      <label>WMS base URL</label>
+      <input id="wmsURL" type="text" placeholder="http://maps.six.nsw.gov.au/arcgis/services/public/NSW_Imagery/MapServer/WMSServer"/>
+      <label>Layers (comma-separated)</label>
+      <input id="wmsLayers" type="text" placeholder="0 or layer names, e.g. NSW_Imagery"/>
+      <div class="row" style="margin-top:8px">
+        <div><label>Format</label>
+          <select id="wmsFormat">
+            <option value="image/png">image/png</option>
+            <option value="image/jpeg">image/jpeg</option>
+          </select>
+        </div>
+        <div><label>Transparent</label>
+          <select id="wmsTransparent">
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:10px"><button class="btn" id="addWMSBtn">Add WMS</button></div>
+      <div class="hint" style="margin-top:8px">If a service lists multiple yearly layers, enter the desired layer name(s).</div>
+    </div>
+
+    <!-- Single image overlay -->
+    <div class="card">
+      <h2>Image overlay (georeferenced)</h2>
+      <label>Image URL</label><input id="imgURL" type="text" placeholder="https://…/map.png (CORS required)"/>
+      <div class="row" style="margin-top:8px">
+        <div><label>North (lat)</label><input id="imgNorth" type="number" step="any" placeholder="-33.5"/></div>
+        <div><label>West (lng)</label><input id="imgWest" type="number" step="any" placeholder="149.6"/></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><label>South (lat)</label><input id="imgSouth" type="number" step="any" placeholder="-33.9"/></div>
+        <div><label>East (lng)</label><input id="imgEast" type="number" step="any" placeholder="150.1"/></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="addImageBtn">Add image</button>
+        <button class="btn" id="fitImageBtn" title="Fit to last image overlay">Fit last</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Use when you have a single georeferenced image with known bounds.</div>
+    </div>
+
+    <!-- Overlay list -->
+    <div class="card">
+      <h2>Overlays</h2>
+      <div id="overlayList" class="list"></div>
+      <div class="hint">Double-click an overlay row to assign it to the swipe tool.</div>
+    </div>
+
+    <!-- Swipe footer -->
+    <div class="footer card">
+      <h2>Swipe compare</h2>
+      <div class="swipeWrap">
+        <input id="swipeRange" type="range" min="0" max="100" value="50">
+        <span class="muted" id="swipePct">50%</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="pickSwipeA" title="Set left-side layer">Set Left</button>
+        <button class="btn" id="pickSwipeB" title="Set right-side layer">Set Right</button>
+        <button class="btn" id="clearSwipe">Clear</button>
+      </div>
+      <div class="hint" style="margin-top:6px">Choose two overlays, then drag the slider.</div>
+    </div>
+  </aside>
+
+  <div id="map"></div>
+
+  <script>
+    // --- Map init ---
+    const map = L.map('map', { zoomControl: true, center: [-33.865, 151.209], zoom: 10 }); // Sydney default
+
+    // Basemaps
+    const baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 20, attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const baseSAT = L.tileLayer(
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 20, attribution: 'Imagery &copy; Esri' }
+    );
+
+    let activeBase = baseOSM;
+    document.getElementById('baseOSM').onclick = () => { map.removeLayer(activeBase); activeBase = baseOSM; activeBase.addTo(map); };
+    document.getElementById('baseSAT').onclick = () => { map.removeLayer(activeBase); activeBase = baseSAT; activeBase.addTo(map); };
+
+    // --- Overlay book-keeping ---
+    const overlays = new Map(); // id -> { id, name, type, layer, pane, extra... }
+    let overlaySeq = 0;
+    const listEl = document.getElementById('overlayList');
+
+    function makePaneFor(id, z=450){
+      const paneName = `pane_${id}`;
+      map.createPane(paneName);
+      const pane = map.getPane(paneName);
+      pane.style.zIndex = z.toString();
+      return {paneName, pane};
+    }
+
+    function setBlendMode(container, mode) {
+      container.classList.remove('blend-normal','blend-multiply','blend-overlay','blend-screen');
+      container.classList.add({normal:'blend-normal',multiply:'blend-multiply',overlay:'blend-overlay',screen:'blend-screen'}[mode] || 'blend-normal');
+    }
+
+    function renderOverlayList(){
+      listEl.innerHTML = '';
+      overlays.forEach(o => {
+        const item = document.createElement('div'); item.className = 'overlay-item';
+        const head = document.createElement('div'); head.className = 'overlay-head';
+        const title = document.createElement('div'); title.className = 'overlay-title'; title.textContent = o.name;
+        const chip = document.createElement('div'); chip.className = 'chip'; chip.textContent = o.type.toUpperCase();
+        head.appendChild(title); head.appendChild(chip); item.appendChild(head);
+
+        const controls = document.createElement('div'); controls.className = 'controls'; controls.style.marginTop = '8px';
+
+        // Toggle show/hide
+        const toggle = document.createElement('button'); toggle.className='btn';
+        const updToggle = () => { toggle.textContent = map.hasLayer(o.layer) ? 'Hide' : 'Show'; };
+        toggle.onclick = () => { if(map.hasLayer(o.layer)) map.removeLayer(o.layer); else o.layer.addTo(map); updToggle(); };
+        updToggle(); controls.appendChild(toggle);
+
+        // Opacity
+        const opWrap = document.createElement('div'); opWrap.style.width='100%';
+        const opLab = document.createElement('label'); opLab.textContent='Opacity';
+        const op = document.createElement('input'); op.type='range'; op.min=0; op.max=1; op.step=0.01; op.value = 0.6;
+        op.oninput = () => {
+          if(o.type === 'image'){ o.layer.setOpacity(parseFloat(op.value)); }
+          else { o.pane.style.opacity = op.value; }
+        };
+        if(o.type==='image') o.layer.setOpacity(parseFloat(op.value)); else o.pane.style.opacity = op.value;
+        opWrap.appendChild(opLab); opWrap.appendChild(op); controls.appendChild(opWrap);
+
+        // Blend mode
+        const bmWrap = document.createElement('div'); bmWrap.style.width='100%';
+        const bmLab = document.createElement('label'); bmLab.textContent='Blend';
+        const bm = document.createElement('select');
+        ['normal','multiply','overlay','screen'].forEach(m=>{const opt=document.createElement('option');opt.value=m;opt.textContent=m;bm.appendChild(opt);});
+        bm.value='multiply'; setBlendMode(o.pane, bm.value);
+        bm.onchange=()=> setBlendMode(o.pane, bm.value);
+        bmWrap.appendChild(bmLab); bmWrap.appendChild(bm); controls.appendChild(bmWrap);
+
+        // Z-order
+        const zRow = document.createElement('div'); zRow.style.display='flex'; zRow.style.gap='8px';
+        const upBtn = document.createElement('button'); upBtn.className='btn'; upBtn.textContent='Bring front';
+        upBtn.onclick = () => { o.pane.style.zIndex = (parseInt(o.pane.style.zIndex||'450',10)+1).toString(); };
+        const dnBtn = document.createElement('button'); dnBtn.className='btn'; dnBtn.textContent='Send back';
+        dnBtn.onclick = () => { o.pane.style.zIndex = (parseInt(o.pane.style.zIndex||'450',10)-1).toString(); };
+        zRow.appendChild(upBtn); zRow.appendChild(dnBtn);
+
+        // Remove
+        const rm = document.createElement('button'); rm.className='btn'; rm.textContent='Remove';
+        rm.onclick = () => { if(map.hasLayer(o.layer)) map.removeLayer(o.layer); overlays.delete(o.id); renderOverlayList(); refreshSwipeMasks(); };
+
+        item.appendChild(controls); item.appendChild(zRow); item.appendChild(document.createElement('hr')).className='hr'; item.appendChild(rm);
+
+        // Double-click to add to swipe
+        item.ondblclick = () => assignSwipeCandidate(o.id);
+
+        listEl.appendChild(item);
+      });
+    }
+
+    // --- Add XYZ ---
+    function addXYZ({name,url,minZoom=0,maxZoom=20,attribution=''}) {
+      const id = `ov_${++overlaySeq}`;
+      const {paneName,pane} = makePaneFor(id, 450);
+      const layer = L.tileLayer(url, { pane:paneName, minZoom, maxZoom, attribution });
+      overlays.set(id,{id,name,type:'xyz',layer,pane});
+      layer.addTo(map);
+      renderOverlayList();
+      return id;
+    }
+
+    document.getElementById('addXYZBtn').onclick = () => {
+      const name = (document.getElementById('xyzName').value||'XYZ overlay').trim();
+      const url  = (document.getElementById('xyzURL').value||'').trim();
+      const minz = parseInt(document.getElementById('xyzMinZoom').value||'0',10);
+      const maxz = parseInt(document.getElementById('xyzMaxZoom').value||'20',10);
+      const att  = (document.getElementById('xyzAttrib').value||'').trim();
+      if(!url || !url.includes('{z}') || !url.includes('{x}') || !url.includes('{y}')) { alert('Provide a valid XYZ template with {z}/{x}/{y}.'); return; }
+      addXYZ({name,url,minZoom:minz,maxZoom:maxz,attribution:att});
+    };
+
+    document.getElementById('addSampleNLS').onclick = () => {
+      addXYZ({
+        name:'Sample: NLS 1/4 Inch (UK, c.1900s)',
+        url:'https://geo.nls.uk/mapdata3/os/quarter5/{z}/{x}/{y}.png',
+        minZoom:1,maxZoom:18,attribution:'&copy; National Library of Scotland'
+      });
+    };
+
+    // --- Add WMTS ---
+    // We implement a tiny WMTS adapter that maps Leaflet's z/x/y to {level}/{row}/{col}.
+    function addWMTS({name, template, attribution=''}) {
+      const id = `ov_${++overlaySeq}`;
+      const {paneName,pane} = makePaneFor(id, 455);
+      const layer = L.tileLayer('', {
+        pane:paneName,
+        attribution,
+        tileSize: 256,
+        minZoom: 0, maxZoom: 22,
+        // Create URLs on the fly
+        getTileUrl: function(coords){
+          // Leaflet uses z (zoom), x (col), y (row), but TMS/WMTS often flips Y.
+          // WMTS typically expects {level}={z}, {row}={y}, {col}={x} in the service's tiling scheme.
+          const z = coords.z, x = coords.x, y = coords.y;
+          return template
+            .replace('{level}', z)
+            .replace('{Layer}', z) // friendly fallback if someone pasted alternative tokens
+            .replace('{Style}', 'default')
+            .replace('{TileMatrix}', z)
+            .replace('{TileRow}', y)
+            .replace('{TileCol}', x)
+            .replace('{row}', y).replace('{col}', x);
+        }
+      });
+      overlays.set(id,{id,name,type:'wmts',layer,pane});
+      layer.addTo(map);
+      renderOverlayList();
+      return id;
+    }
+
+    document.getElementById('addWMTSBtn').onclick = () => {
+      const name = (document.getElementById('wmtsName').value||'WMTS overlay').trim();
+      let tmpl  = (document.getElementById('wmtsURL').value||'').trim();
+      const ver = (document.getElementById('wmtsVersion').value||'').trim();
+      const att = (document.getElementById('wmtsAttrib').value||'').trim();
+      if(!tmpl) { alert('Provide a WMTS tile template URL.'); return; }
+      // If user provided {version} token, substitute it
+      if(ver && tmpl.includes('{version}')) tmpl = tmpl.replace('{version}', ver);
+      // Sanity: require {level} & {row} & {col}
+      if(!(tmpl.includes('{level}') && tmpl.includes('{row}') && tmpl.includes('{col}'))) {
+        alert('WMTS template must include {level}/{row}/{col}.');
+        return;
+      }
+      addWMTS({name, template: tmpl, attribution: att});
+    };
+
+    // Quick Wayback helper: ask for version id and add
+    document.getElementById('quickWayback').onclick = () => {
+      const version = prompt('Enter Esri Wayback version ID (e.g., 11509):');
+      if(!version) return;
+      const url = `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{version}/{level}/{row}/{col}`;
+      addWMTS({name:`Esri Wayback ${version}`, template:url.replace('{version}', version), attribution:'Esri Wayback Imagery'});
+    };
+
+    // --- Add WMS ---
+    function addWMS({name,url,layers,format='image/png',transparent=true}) {
+      const id = `ov_${++overlaySeq}`;
+      const {paneName,pane} = makePaneFor(id, 460);
+      const layer = L.tileLayer.wms(url, {
+        pane:paneName,
+        layers: layers,
+        format: format,
+        transparent: transparent,
+        version: '1.3.0'
+      });
+      overlays.set(id,{id,name,type:'wms',layer,pane});
+      layer.addTo(map);
+      renderOverlayList();
+      return id;
+    }
+
+    document.getElementById('addWMSBtn').onclick = () => {
+      const url = (document.getElementById('wmsURL').value||'').trim();
+      const layers = (document.getElementById('wmsLayers').value||'').trim();
+      const fmt = document.getElementById('wmsFormat').value || 'image/png';
+      const tr  = document.getElementById('wmsTransparent').value === 'true';
+      if(!url || !layers) { alert('Provide WMS URL and layer name(s).'); return; }
+      const name = `WMS: ${layers}`;
+      addWMS({name,url,layers,format:fmt,transparent:tr});
+    };
+
+    // --- Image overlay ---
+    let lastImageBounds = null;
+    function addImageOverlay({name,url,north,west,south,east}) {
+      const id = `ov_${++overlaySeq}`;
+      const {paneName,pane} = makePaneFor(id, 470);
+      const bounds = [[south, west],[north, east]];
+      const layer = L.imageOverlay(url, bounds, {pane:paneName, opacity: 1});
+      overlays.set(id,{id,name,type:'image',layer,pane,bounds});
+      layer.addTo(map);
+      lastImageBounds = bounds;
+      renderOverlayList();
+      return id;
+    }
+
+    document.getElementById('addImageBtn').onclick = () => {
+      const url = document.getElementById('imgURL').value.trim();
+      const n = parseFloat(document.getElementById('imgNorth').value);
+      const w = parseFloat(document.getElementById('imgWest').value);
+      const s = parseFloat(document.getElementById('imgSouth').value);
+      const e = parseFloat(document.getElementById('imgEast').value);
+      if(!url || [n,w,s,e].some(Number.isNaN)) { alert('Provide image URL and numeric bounds.'); return; }
+      addImageOverlay({name:'Georef Image', url, north:n, west:w, south:s, east:e});
+    };
+    document.getElementById('fitImageBtn').onclick = () => { if(lastImageBounds) map.fitBounds(lastImageBounds); };
+
+    // --- Swipe compare ---
+    let swipeA=null, swipeB=null;
+    const swipeMask = document.createElement('div'); swipeMask.id='swipe-mask';
+    const swipeDivider = document.createElement('div'); swipeDivider.id='swipe-divider';
+    swipeMask.appendChild(swipeDivider);
+    map.getPanes().overlayPane.appendChild(swipeMask);
+
+    function getPaneFor(id){ const o = overlays.get(id); return o ? o.pane : null; }
+    function refreshSwipeMasks(){ [swipeA,swipeB].forEach(id=>{const p=getPaneFor(id); if(p) p.style.clipPath='';}); updateSwipeClip(); }
+    function updateSwipeClip(){
+      const pct = parseInt(document.getElementById('swipeRange').value,10);
+      document.getElementById('swipePct').textContent = pct + '%';
+      const mapRect = map.getContainer().getBoundingClientRect();
+      const x = (pct/100)*mapRect.width;
+      swipeDivider.style.left = x + 'px';
+      const leftClip = `inset(0 ${mapRect.width - x}px 0 0)`;
+      const rightClip = `inset(0 0 0 ${x}px)`;
+      overlays.forEach(o => { o.pane.style.clipPath=''; });
+      const paneA = getPaneFor(swipeA), paneB = getPaneFor(swipeB);
+      if(paneA) paneA.style.clipPath = leftClip;
+      if(paneB) paneB.style.clipPath = rightClip;
+    }
+    document.getElementById('swipeRange').addEventListener('input', updateSwipeClip);
+    window.addEventListener('resize', updateSwipeClip);
+
+    function assignSwipeCandidate(id){ if(!swipeA) swipeA=id; else if(!swipeB && id!==swipeA) swipeB=id; updateSwipeClip(); }
+    document.getElementById('pickSwipeA').onclick = () => {
+      const id = prompt('Enter overlay ID for LEFT side (e.g., ov_1). Double-click an overlay row to set quickly.');
+      if(id && overlays.has(id)) swipeA=id; updateSwipeClip();
+    };
+    document.getElementById('pickSwipeB').onclick = () => {
+      const id = prompt('Enter overlay ID for RIGHT side (e.g., ov_2). Double-click an overlay row to set quickly.');
+      if(id && overlays.has(id)) swipeB=id; updateSwipeClip();
+    };
+    document.getElementById('clearSwipe').onclick = () => { swipeA=null; swipeB=null; refreshSwipeMasks(); };
+
+    // --- Wire UI buttons ---
+    function renderOnce(){ renderOverlayList(); }
+    renderOnce();
+  </script>
+</body>
+</html>
