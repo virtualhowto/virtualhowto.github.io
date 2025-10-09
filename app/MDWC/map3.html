@@ -5,12 +5,10 @@
   <title>Event Map Builder</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- Leaflet + Esri-Leaflet -->
+  <!-- Leaflet + Esri-Leaflet + Leaflet.draw -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
-
-  <!-- Leaflet.draw -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
@@ -60,9 +58,8 @@
     .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
     .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
     .size-popup input[type="range"]{width:160px}
-    /* Leaflet.draw custom styles */
     .leaflet-draw-toolbar a { background-color: var(--panel); border-color: var(--border); color: var(--ink); }
-    .leaflet-draw-toolbar a:hover { background-color: var(--accent); color: #0a1524; } 
+    .leaflet-draw-toolbar a:hover { background-color: var(--accent); color: #0a1524; }
   </style>
 </head>
 <body>
@@ -87,6 +84,9 @@
       <input type="file" id="importJsonFile" accept="application/json" style="display:none"/>
       <input type="file" id="logoFile" accept="image/*" style="display:none"/>
       <button class="btn" id="logoBtn">Upload Logo</button>
+      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
+        <input type="checkbox" id="useOSM" /> Use OpenStreetMap (CORS-safe)
+      </label>
     </div>
   </header>
 
@@ -102,8 +102,8 @@
     <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
     <div class="tool" data-type="text" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
-    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" title="No Detecting">
-      <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
+    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="./no-detecting.png" title="No Detecting">
+      <img class="thumb" src="./no-detecting.png" alt="No Detecting"/>
       <span class="label">No Detecting</span>
     </div>
     <input id="customIconInput" type="file" accept="image/*" style="display:none">
@@ -160,22 +160,39 @@
   </div>
 
   <script>
+    // Base path for GitHub Pages (adjust if hosted at root or different subpath)
+    const BASE_PATH = '/event-map-builder'; // Set to '' if hosted at root (e.g., username.github.io)
+
     // ---------- Map init ----------
     const map = L.map('map', { attributionControl: false });
-    const base = L.esri.tiledMapLayer({
-      url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
-      attribution: 'Imagery © NSW Spatial Services'
-    }).addTo(map);
-    base.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch(e){} });
+    let baseLayer;
+
+    function setBaseLayer(useOSM) {
+      if (baseLayer) map.removeLayer(baseLayer);
+      if (useOSM) {
+        baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          crossOrigin: 'anonymous'
+        }).addTo(map);
+      } else {
+        baseLayer = L.esri.tiledMapLayer({
+          url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+          attribution: 'Imagery © NSW Spatial Services'
+        }).addTo(map);
+        baseLayer.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch(e) {} });
+      }
+    }
 
     function ensureTilesLoaded() {
       return new Promise(resolve => {
-        if (!base._loading) return resolve();
-        base.once('load', resolve);
+        if (!baseLayer._loading) return resolve();
+        baseLayer.once('load', () => setTimeout(resolve, 100));
       });
     }
 
-    // GPS + Sofala fallback
+    setBaseLayer(false);
+    document.getElementById('useOSM').addEventListener('change', e => setBaseLayer(e.target.checked));
+
     const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
     function centerOnUser({ silent = false } = {}) {
       if (!navigator.geolocation) {
@@ -195,7 +212,6 @@
     centerOnUser({ silent: true });
     document.getElementById('gpsBtn').addEventListener('click', () => centerOnUser());
 
-    // Search via Nominatim
     const searchBox = document.getElementById('searchBox');
     searchBox.addEventListener('keydown', async e => {
       if (e.key !== "Enter") return;
@@ -211,7 +227,6 @@
       }
     });
 
-    // Compass
     const compass = L.control({ position: 'topright' });
     compass.onAdd = () => {
       const d = L.DomUtil.create('div', 'compass-control');
@@ -235,7 +250,7 @@
       draw: {
         polygon: {
           shapeOptions: {
-            color: '#ff0000', // Default, updated by colorPicker
+            color: '#ff0000',
             weight: 2,
             dashArray: '6,4',
             fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
@@ -257,7 +272,6 @@
     });
     map.addControl(drawControl);
 
-    // Update polygon color dynamically
     document.getElementById('colorPicker').addEventListener('input', () => {
       drawControl.setDrawingOptions({
         polygon: {
@@ -271,7 +285,6 @@
       });
     });
 
-    // Update fill opacity
     document.getElementById('defaultFill').addEventListener('change', () => {
       drawControl.setDrawingOptions({
         polygon: {
@@ -285,7 +298,6 @@
       });
     });
 
-    // Handle new polygon creation
     let polygons = [];
     let selected = null;
     map.on(L.Draw.Event.CREATED, e => {
@@ -295,14 +307,7 @@
       polygons.push(layer);
     });
 
-    // Handle polygon edit
-    map.on(L.Draw.Event.EDITED, e => {
-      e.layers.eachLayer(layer => {
-        // Update polygons array if needed
-      });
-    });
-
-    // Handle polygon deletion via Leaflet.draw
+    map.on(L.Draw.Event.EDITED, e => {});
     map.on(L.Draw.Event.DELETED, e => {
       e.layers.eachLayer(layer => {
         polygons = polygons.filter(p => p !== layer);
@@ -326,7 +331,10 @@
       e.stopPropagation();
       toggleMenu(exportMenu.style.display !== 'block');
     });
-    document.addEventListener('click', () => toggleMenu(false));
+    document.addEventListener('click', () => {
+      toggleMenu(false);
+      document.getElementById('wmControls').style.display = 'none'; // Hide watermark controls on outside click
+    });
     exportMenu.addEventListener('click', (e) => e.stopPropagation());
     document.getElementById('menuPng').onclick = () => { toggleMenu(false); exportPNG(); };
     document.getElementById('menuPdf').onclick = () => { toggleMenu(false); openPdfDialog(); };
@@ -342,7 +350,6 @@
     }
     attachToolHandlers();
 
-    // Custom icon uploader
     const customInput = document.getElementById('customIconInput');
     const addCustomBtn = document.getElementById('addCustomIconBtn');
     addCustomBtn.addEventListener('click', () => customInput.click());
@@ -395,8 +402,9 @@
       const size = meta.size || 26;
       let html;
       if (meta.imgSrc) {
+        const adjustedSrc = meta.imgSrc.startsWith('data:') ? meta.imgSrc : `${BASE_PATH}/${meta.imgSrc}`;
         html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
-                  <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
+                  <img src="${adjustedSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
                 </div>`;
       } else {
         const colorStyle = meta.isText ? `color:${meta.color};` : '';
@@ -483,8 +491,9 @@
       const { icon, size, isText, color, imgSrc } = marker.myMeta;
       let html;
       if (imgSrc) {
+        const adjustedSrc = imgSrc.startsWith('data:') ? imgSrc : `${BASE_PATH}/${imgSrc}`;
         html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
-                  <img src="${imgSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
+                  <img src="${adjustedSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
                 </div>`;
       } else {
         const colorStyle = isText ? `color:${color};` : '';
@@ -513,7 +522,7 @@
         const li = document.createElement('li');
         if (val.img) {
           const img = document.createElement('img');
-          img.src = val.img;
+          img.src = val.img.startsWith('data:') ? val.img : `${BASE_PATH}/${val.img}`;
           li.appendChild(img);
           const span = document.createElement('span');
           span.textContent = ' ' + label;
@@ -525,7 +534,6 @@
       });
     }
 
-    // Delete selected marker with keyboard
     document.addEventListener('keydown', e => {
       if (e.key === "Delete" && selectedMarker) {
         map.removeLayer(selectedMarker);
@@ -571,6 +579,7 @@
           wmControls = document.getElementById('wmControls'),
           wmOpacity = document.getElementById('wmOpacity'),
           wmSize = document.getElementById('wmSize');
+
     document.getElementById('logoBtn').onclick = () => document.getElementById('logoFile').click();
     document.getElementById('logoFile').addEventListener('change', e => {
       const f = e.target.files[0];
@@ -579,13 +588,13 @@
       r.onload = ev => {
         wmImg.src = ev.target.result;
         wm.style.display = 'block';
-        wmControls.style.display = 'flex';
         wm.style.width = wmSize.value + 'px';
         wm.style.opacity = wmOpacity.value;
         ensureWMLeftTop();
       };
       r.readAsDataURL(f);
     });
+
     wmOpacity.oninput = () => { wm.style.opacity = wmOpacity.value; };
     wmSize.oninput = () => { wm.style.width = wmSize.value + 'px'; };
     document.getElementById('wmDelete').onclick = () => {
@@ -593,8 +602,37 @@
       wmControls.style.display = 'none';
       wmImg.src = '';
     };
-    wm.addEventListener('click', () => {
-      if (wm.style.display !== 'none') wmControls.style.display = 'flex';
+
+    // Show watermark controls on right-click
+    wm.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (wm.style.display !== 'none') {
+        wmControls.style.display = 'flex';
+      }
+    });
+
+    // Show watermark controls on long-press
+    let wmLongPressTimer = null;
+    wm.addEventListener('touchstart', e => {
+      e.stopPropagation();
+      wmLongPressTimer = setTimeout(() => {
+        if (wm.style.display !== 'none') {
+          wmControls.style.display = 'flex';
+        }
+      }, 600);
+    }, { passive: false });
+    wm.addEventListener('touchend', () => {
+      if (wmLongPressTimer) clearTimeout(wmLongPressTimer);
+    });
+
+    // Prevent context menu on watermark controls
+    wmControls.addEventListener('contextmenu', e => {
+      e.stopPropagation();
+    });
+
+    // Hide watermark controls on click inside controls
+    wmControls.addEventListener('click', e => {
+      e.stopPropagation();
     });
 
     function ensureWMLeftTop() {
@@ -609,6 +647,8 @@
 
     let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
     wm.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      if (e.button === 2) return; // Ignore right-click for dragging
       dragging = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -683,15 +723,18 @@
         img.crossOrigin = 'anonymous';
         img.onload = () => res(true);
         img.onerror = () => res(false);
-        img.src = src;
+        img.src = src.startsWith('data:') ? src : `${BASE_PATH}/${src}`;
       })));
     }
 
     async function captureMapCanvas() {
       await ensureTilesLoaded();
       const polygonControls = document.getElementById('polygonControls');
-      const prevDisplay = polygonControls.style.display;
+      const wmControls = document.getElementById('wmControls');
+      const prevPolyDisplay = polygonControls.style.display;
+      const prevWmDisplay = wmControls.style.display;
       polygonControls.style.display = 'none';
+      wmControls.style.display = 'none';
       const hiddenPopups = [];
       map.eachLayer(l => {
         if (l instanceof L.Popup) {
@@ -713,7 +756,8 @@
         scale: window.devicePixelRatio > 1 ? 2 : 1
       });
 
-      polygonControls.style.display = prevDisplay;
+      polygonControls.style.display = prevPolyDisplay;
+      wmControls.style.display = prevWmDisplay;
       hiddenPopups.forEach(p => p.addTo(map));
       return addWatermarkToCanvas(canvas);
     }
@@ -728,11 +772,10 @@
         })
         .catch(err => {
           console.error('PNG export failed:', err);
-          alert('PNG export failed (likely CORS on imagery). Try again, or switch to a CORS-safe basemap for export.');
+          alert('PNG export failed (likely CORS on imagery). Try enabling OpenStreetMap or uploading images to the repository.');
         });
     }
 
-    // ---------- PDF dialog ----------
     const pdfBackdrop = document.getElementById('pdfBackdrop');
     const pdfDialog = document.getElementById('pdfDialog');
     function openPdfDialog() {
@@ -775,7 +818,7 @@
         closePdfDialog();
       }).catch(err => {
         console.error('PDF export failed:', err);
-        alert('PDF export failed (likely CORS on imagery). Try again, or switch to a CORS-safe basemap for export.');
+        alert('PDF export failed (likely CORS on imagery). Try enabling OpenStreetMap or uploading images to the repository.');
         closePdfDialog();
       });
     };
@@ -807,7 +850,6 @@
     }
 
     function buildProjectJSON() {
-     amente
       const savedMarkers = markers.map(m => {
         const ll = m.getLatLng();
         return { lat: ll.lat, lng: ll.lng, meta: m.myMeta };
@@ -841,7 +883,8 @@
         markers: savedMarkers,
         polygons: savedPolys,
         legend: savedLegend,
-        watermark: wmData
+        watermark: wmData,
+        useOSM: document.getElementById('useOSM').checked
       };
     }
 
@@ -895,7 +938,7 @@
       if (data.watermark && data.watermark.src) {
         wmImg.src = data.watermark.src;
         wm.style.display = data.watermark.visible ? 'block' : 'none';
-        wmControls.style.display = data.watermark.visible ? 'flex' : 'none';
+        wmControls.style.display = 'none'; // Ensure controls are hidden on load
         wm.style.position = 'absolute';
         wm.style.left = (data.watermark.left || 0) + 'px';
         wm.style.top = (data.watermark.top || 0) + 'px';
@@ -903,6 +946,11 @@
         wm.style.bottom = 'auto';
         wm.style.width = (data.watermark.width || 180) + 'px';
         wm.style.opacity = (typeof data.watermark.opacity === 'number' ? data.watermark.opacity : 0.5);
+      }
+
+      if (typeof data.useOSM === 'boolean') {
+        document.getElementById('useOSM').checked = data.useOSM;
+        setBaseLayer(data.useOSM);
       }
     }
   </script>
