@@ -46,9 +46,6 @@
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
     #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
     #watermark img{display:block;max-width:100%;max-height:100%}
-    #wmControls{position:absolute;bottom:110%;right:0;background:#0f141d;border:1px solid var(--border);border-radius:8px;padding:8px;display:none;gap:6px;z-index:851;width:260px}
-    #wmControls label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px;margin:4px 0}
-    #wmControls input[type="range"]{flex:1}
     .compass-control{width:80px;height:80px}
     .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
     .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
@@ -102,8 +99,8 @@
     <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
     <div class="tool" data-type="text" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
-    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" title="No Detecting">
-      <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
+    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="./no-detecting.png" title="No Detecting">
+      <img class="thumb" src="./no-detecting.png" alt="No Detecting"/>
       <span class="label">No Detecting</span>
     </div>
     <input id="customIconInput" type="file" accept="image/*" style="display:none">
@@ -118,11 +115,6 @@
     <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
     <div id="watermark">
       <img id="watermarkImg" alt="watermark"/>
-      <div id="wmControls">
-        <label>Opacity <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="0.5"></label>
-        <label>Size (px) <input id="wmSize" type="range" min="60" max="800" step="10" value="180"></label>
-        <button class="btn" id="wmDelete">Delete Watermark</button>
-      </div>
     </div>
   </div>
 
@@ -161,12 +153,12 @@
 
   <script>
     // Base path for GitHub Pages (adjust if hosted at root or different subpath)
-    const BASE_PATH = '/event-map-builder'; // Set to '' if hosted at root (e.g., username.github.io)
+    const BASE_PATH = '/app/MDWC/'; // Set to '' if hosted at root (e.g., username.github.io)
 
     // ---------- Map init ----------
     const map = L.map('map', {
       attributionControl: false,
-      renderer: L.svg() // Use SVG renderer for better polygon export
+      renderer: L.svg()
     });
     let baseLayer;
 
@@ -334,10 +326,7 @@
       e.stopPropagation();
       toggleMenu(exportMenu.style.display !== 'block');
     });
-    document.addEventListener('click', () => {
-      toggleMenu(false);
-      document.getElementById('wmControls').style.display = 'none';
-    });
+    document.addEventListener('click', () => toggleMenu(false));
     exportMenu.addEventListener('click', (e) => e.stopPropagation());
     document.getElementById('menuPng').onclick = () => { toggleMenu(false); exportPNG(); };
     document.getElementById('menuPdf').onclick = () => { toggleMenu(false); openPdfDialog(); };
@@ -578,10 +567,56 @@
 
     // ---------- Watermark ----------
     const wm = document.getElementById('watermark'),
-          wmImg = document.getElementById('watermarkImg'),
-          wmControls = document.getElementById('wmControls'),
-          wmOpacity = document.getElementById('wmOpacity'),
-          wmSize = document.getElementById('wmSize');
+          wmImg = document.getElementById('watermarkImg');
+    let watermarkMeta = { opacity: 0.5, size: 180, left: 0, top: 0, visible: false, src: '' };
+    let wmPopup = null;
+
+    function openWatermarkPopup() {
+      if (!watermarkMeta.visible) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'size-popup';
+      wrap.innerHTML = `
+        <label>Opacity
+          <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="${watermarkMeta.opacity}">
+        </label>
+        <label>Size (px)
+          <input id="wmSize" type="range" min="60" max="800" step="10" value="${watermarkMeta.size}">
+        </label>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="wmDelete" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        </div>
+      `;
+
+      wrap.querySelector('#wmOpacity').addEventListener('input', () => {
+        watermarkMeta.opacity = parseFloat(wrap.querySelector('#wmOpacity').value);
+        wm.style.opacity = watermarkMeta.opacity;
+      });
+
+      wrap.querySelector('#wmSize').addEventListener('input', () => {
+        watermarkMeta.size = parseInt(wrap.querySelector('#wmSize').value, 10);
+        wm.style.width = watermarkMeta.size + 'px';
+      });
+
+      wrap.querySelector('#wmDelete').addEventListener('click', () => {
+        watermarkMeta.visible = false;
+        watermarkMeta.src = '';
+        wm.style.display = 'none';
+        wmImg.src = '';
+        if (wmPopup) wmPopup.remove();
+        wmPopup = null;
+      });
+
+      const mapWrap = document.getElementById('mapWrap').getBoundingClientRect();
+      const wmRect = wm.getBoundingClientRect();
+      const centerX = wmRect.left - mapWrap.left + wmRect.width / 2;
+      const centerY = wmRect.top - mapWrap.top + wmRect.height / 2;
+      const latlng = map.containerPointToLatLng([centerX, centerY]);
+
+      wmPopup = L.popup({ autoPan: true })
+        .setLatLng(latlng)
+        .setContent(wrap)
+        .openOn(map);
+    }
 
     document.getElementById('logoBtn').onclick = () => document.getElementById('logoFile').click();
     document.getElementById('logoFile').addEventListener('change', e => {
@@ -589,55 +624,40 @@
       if (!f) return;
       const r = new FileReader();
       r.onload = ev => {
-        wmImg.src = ev.target.result;
+        watermarkMeta.src = ev.target.result;
+        watermarkMeta.visible = true;
+        watermarkMeta.opacity = 0.5;
+        watermarkMeta.size = 180;
+        wmImg.src = watermarkMeta.src;
         wm.style.display = 'block';
-        wm.style.width = wmSize.value + 'px';
-        wm.style.opacity = wmOpacity.value;
+        wm.style.width = watermarkMeta.size + 'px';
+        wm.style.opacity = watermarkMeta.opacity;
         ensureWMLeftTop();
       };
       r.readAsDataURL(f);
     });
 
-    wmOpacity.oninput = () => { wm.style.opacity = wmOpacity.value; };
-    wmSize.oninput = () => { wm.style.width = wmSize.value + 'px'; };
-    document.getElementById('wmDelete').onclick = () => {
-      wm.style.display = 'none';
-      wmControls.style.display = 'none';
-      wmImg.src = '';
-    };
-
     wm.addEventListener('contextmenu', e => {
       e.preventDefault();
-      if (wm.style.display !== 'none') {
-        wmControls.style.display = 'flex';
-      }
+      openWatermarkPopup();
     });
 
     let wmLongPressTimer = null;
     wm.addEventListener('touchstart', e => {
       e.stopPropagation();
-      wmLongPressTimer = setTimeout(() => {
-        if (wm.style.display !== 'none') {
-          wmControls.style.display = 'flex';
-        }
-      }, 600);
+      wmLongPressTimer = setTimeout(() => openWatermarkPopup(), 600);
     }, { passive: false });
     wm.addEventListener('touchend', () => {
       if (wmLongPressTimer) clearTimeout(wmLongPressTimer);
     });
 
-    wmControls.addEventListener('contextmenu', e => {
-      e.stopPropagation();
-    });
-
-    wmControls.addEventListener('click', e => {
-      e.stopPropagation();
-    });
-
     function ensureWMLeftTop() {
       if (!wm.style.left && !wm.style.top) {
-        wm.style.left = (document.getElementById('mapWrap').clientWidth - 200) + 'px';
-        wm.style.top = (document.getElementById('mapWrap').clientHeight - 150) + 'px';
+        const mapWrap = document.getElementById('mapWrap');
+        watermarkMeta.left = mapWrap.clientWidth - 200;
+        watermarkMeta.top = mapWrap.clientHeight - 150;
+        wm.style.left = watermarkMeta.left + 'px';
+        wm.style.top = watermarkMeta.top + 'px';
         wm.style.right = 'auto';
         wm.style.bottom = 'auto';
         wm.style.position = 'absolute';
@@ -655,13 +675,16 @@
       startLeft = r.left;
       startTop = r.top;
       map.dragging.disable();
+      if (wmPopup) wmPopup.remove();
     });
     window.addEventListener('mousemove', e => {
       if (!dragging) return;
       const dx = e.clientX - startX, dy = e.clientY - startY;
       const wrap = document.getElementById('mapWrap').getBoundingClientRect();
-      wm.style.left = (startLeft + dx - wrap.left) + 'px';
-      wm.style.top = (startTop + dy - wrap.top) + 'px';
+      watermarkMeta.left = startLeft + dx - wrap.left;
+      watermarkMeta.top = startTop + dy - wrap.top;
+      wm.style.left = watermarkMeta.left + 'px';
+      wm.style.top = watermarkMeta.top + 'px';
       wm.style.right = 'auto';
       wm.style.bottom = 'auto';
       wm.style.position = 'absolute';
@@ -680,14 +703,17 @@
       startLeft = r.left;
       startTop = r.top;
       map.dragging.disable();
+      if (wmPopup) wmPopup.remove();
     }, { passive: false });
     window.addEventListener('touchmove', e => {
       if (!draggingT) return;
       const t = e.touches[0];
       const dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
       const wrap = document.getElementById('mapWrap').getBoundingClientRect();
-      wm.style.left = (startLeft + dx - wrap.left) + 'px';
-      wm.style.top = (startTop + dy - wrap.top) + 'px';
+      watermarkMeta.left = startLeft + dx - wrap.left;
+      watermarkMeta.top = startTop + dy - wrap.top;
+      wm.style.left = watermarkMeta.left + 'px';
+      wm.style.top = watermarkMeta.top + 'px';
       wm.style.right = 'auto';
       wm.style.bottom = 'auto';
       wm.style.position = 'absolute';
@@ -701,27 +727,38 @@
     // ---------- Export helpers ----------
     function addWatermarkToCanvas(c) {
       return new Promise(resolve => {
-        if (!wmImg.src || wm.style.display === 'none') return resolve(c);
+        if (!watermarkMeta.src || !watermarkMeta.visible) return resolve(c);
         const ctx = c.getContext('2d');
         const wrap = document.getElementById('mapWrap').getBoundingClientRect();
-        const wmRect = wm.getBoundingClientRect();
         const scaleX = c.width / wrap.width, scaleY = c.height / wrap.height;
-        const left = (wmRect.left - wrap.left) * scaleX, top = (wmRect.top - wrap.top) * scaleY;
-        const w = wmRect.width * scaleX, h = wmRect.height * scaleY;
-        ctx.globalAlpha = parseFloat(wm.style.opacity || 1);
-        ctx.drawImage(wmImg, left, top, w, h);
-        ctx.globalAlpha = 1;
-        resolve(c);
+        const left = watermarkMeta.left * scaleX, top = watermarkMeta.top * scaleY;
+        const w = watermarkMeta.size * scaleX, h = watermarkMeta.size * scaleY;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          ctx.globalAlpha = watermarkMeta.opacity;
+          ctx.drawImage(img, left, top, w, h);
+          ctx.globalAlpha = 1;
+          resolve(c);
+        };
+        img.onerror = () => {
+          console.warn('Watermark image failed to load:', watermarkMeta.src);
+          resolve(c);
+        };
+        img.src = watermarkMeta.src;
       });
     }
 
     function preloadImages(urls) {
       const unique = Array.from(new Set(urls.filter(Boolean)));
-      return Promise.all(unique.map(src => new Promise(res => {
+      return Promise.all(unique.map(src => new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => res(true);
-        img.onerror = () => res(false);
+        img.onload = () => resolve(true);
+        img.onerror = () => {
+          console.warn(`Image failed to load: ${src}`);
+          reject(new Error(`Image failed to load: ${src}`));
+        };
         img.src = src.startsWith('data:') ? src : `${BASE_PATH}/${src}`;
       })));
     }
@@ -775,11 +812,18 @@
           img.crossOrigin = 'anonymous';
           const adjustedSrc = meta.imgSrc.startsWith('data:') ? meta.imgSrc : `${BASE_PATH}/${meta.imgSrc}`;
           await new Promise(resolve => {
-            img.onload = resolve;
-            img.onerror = resolve;
+            img.onload = () => resolve(true);
+            img.onerror = () => {
+              console.warn(`Marker image failed to load: ${adjustedSrc}`);
+              ctx.fillStyle = '#ff0000';
+              ctx.fillRect(x - size / 2, y - size / 2, size, size);
+              resolve(false);
+            };
             img.src = adjustedSrc;
           });
-          ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+          if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+          }
         } else {
           ctx.font = `${size}px system-ui, Segoe UI, Roboto, Arial`;
           ctx.fillStyle = meta.color || '#000000';
@@ -793,11 +837,8 @@
     async function captureMapCanvas() {
       await ensureTilesLoaded();
       const polygonControls = document.getElementById('polygonControls');
-      const wmControls = document.getElementById('wmControls');
       const prevPolyDisplay = polygonControls.style.display;
-      const prevWmDisplay = wmControls.style.display;
       polygonControls.style.display = 'none';
-      wmControls.style.display = 'none';
       const hiddenPopups = [];
       map.eachLayer(l => {
         if (l instanceof L.Popup) {
@@ -808,8 +849,12 @@
 
       const imgUrls = [];
       markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
-      if (wmImg && wmImg.src && wm.style.display !== 'none') imgUrls.push(wmImg.src);
-      await preloadImages(imgUrls);
+      if (watermarkMeta.src && watermarkMeta.visible) imgUrls.push(watermarkMeta.src);
+      try {
+        await preloadImages(imgUrls);
+      } catch (err) {
+        throw new Error('Failed to load one or more images. Try enabling OpenStreetMap or ensuring all images are accessible.');
+      }
 
       const mapWrap = document.getElementById('mapWrap');
       const mapBounds = map.getPixelBounds();
@@ -848,7 +893,6 @@
       await addWatermarkToCanvas(canvas);
 
       polygonControls.style.display = prevPolyDisplay;
-      wmControls.style.display = prevWmDisplay;
       hiddenPopups.forEach(p => p.addTo(map));
       return canvas;
     }
@@ -863,7 +907,7 @@
         })
         .catch(err => {
           console.error('PNG export failed:', err);
-          alert('PNG export failed (likely CORS on imagery). Try enabling OpenStreetMap or uploading images to the repository.');
+          alert('PNG export failed: ' + err.message);
         });
     }
 
@@ -909,7 +953,7 @@
         closePdfDialog();
       }).catch(err => {
         console.error('PDF export failed:', err);
-        alert('PDF export failed (likely CORS on imagery). Try enabling OpenStreetMap or uploading images to the repository.');
+        alert('PDF export failed: ' + err.message);
         closePdfDialog();
       });
     };
@@ -956,15 +1000,13 @@
         icon: val.emoji || null,
         imgSrc: val.img || null
       }));
-      const wrapRect = document.getElementById('mapWrap').getBoundingClientRect();
-      const wmRect = wm.getBoundingClientRect();
-      const wmData = wmImg.src ? {
-        src: wmImg.src,
-        visible: wm.style.display !== 'none',
-        left: (wmRect.left - wrapRect.left),
-        top: (wmRect.top - wrapRect.top),
-        width: wm.offsetWidth,
-        opacity: parseFloat(wm.style.opacity || 1)
+      const wmData = watermarkMeta.src ? {
+        src: watermarkMeta.src,
+        visible: watermarkMeta.visible,
+        left: watermarkMeta.left,
+        top: watermarkMeta.top,
+        width: watermarkMeta.size,
+        opacity: watermarkMeta.opacity
       } : null;
 
       return {
@@ -986,6 +1028,8 @@
       polygons.length = 0;
       legendSet.clear();
       renderLegend();
+      if (wmPopup) wmPopup.remove();
+      wmPopup = null;
 
       if (data.view && data.view.center && typeof data.view.zoom !== 'undefined') {
         map.setView([data.view.center.lat, data.view.center.lng], data.view.zoom);
@@ -1027,16 +1071,23 @@
       }
 
       if (data.watermark && data.watermark.src) {
-        wmImg.src = data.watermark.src;
-        wm.style.display = data.watermark.visible ? 'block' : 'none';
-        wmControls.style.display = 'none';
+        watermarkMeta = {
+          src: data.watermark.src,
+          visible: data.watermark.visible,
+          left: data.watermark.left || 0,
+          top: data.watermark.top || 0,
+          size: data.watermark.width || 180,
+          opacity: typeof data.watermark.opacity === 'number' ? data.watermark.opacity : 0.5
+        };
+        wmImg.src = watermarkMeta.src;
+        wm.style.display = watermarkMeta.visible ? 'block' : 'none';
         wm.style.position = 'absolute';
-        wm.style.left = (data.watermark.left || 0) + 'px';
-        wm.style.top = (data.watermark.top || 0) + 'px';
+        wm.style.left = watermarkMeta.left + 'px';
+        wm.style.top = watermarkMeta.top + 'px';
         wm.style.right = 'auto';
         wm.style.bottom = 'auto';
-        wm.style.width = (data.watermark.width || 180) + 'px';
-        wm.style.opacity = (typeof data.watermark.opacity === 'number' ? data.watermark.opacity : 0.5);
+        wm.style.width = watermarkMeta.size + 'px';
+        wm.style.opacity = watermarkMeta.opacity;
       }
 
       if (typeof data.useOSM === 'boolean') {
