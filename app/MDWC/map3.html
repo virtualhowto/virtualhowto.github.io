@@ -763,19 +763,30 @@
       })));
     }
 
-    async function drawPolygonsToCanvas(ctx, canvas, mapBounds, canvasBounds) {
-      const scaleX = canvas.width / mapBounds.width;
-      const scaleY = canvas.height / mapBounds.height;
+    async function drawPolygonsToCanvas(ctx, canvas, map) {
+      const scale = window.devicePixelRatio > 1 ? 2 : 1;
+      const mapSize = map.getSize();
+      const mapBounds = map.getBounds();
+      const topLeft = map.latLngToContainerPoint(mapBounds.getNorthWest());
+      const bottomRight = map.latLngToContainerPoint(mapBounds.getSouthEast());
+      const pixelWidth = bottomRight.x - topLeft.x;
+      const pixelHeight = bottomRight.y - topLeft.y;
+
+      // Calculate scaling factors to map pixel coordinates to canvas
+      const scaleX = canvas.width / pixelWidth;
+      const scaleY = canvas.height / pixelHeight;
+
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
       for (const poly of polygons) {
         const latlngs = poly.getLatLngs()[0];
-        const points = latlngs.map(ll => map.latLngToContainerPoint(ll));
         ctx.beginPath();
-        points.forEach((p, i) => {
-          const x = (p.x - mapBounds.minX) * scaleX;
-          const y = (p.y - mapBounds.minY) * scaleY;
+        latlngs.forEach((ll, i) => {
+          const point = map.latLngToContainerPoint(ll);
+          // Adjust coordinates relative to the map's top-left corner
+          const x = (point.x - topLeft.x) * scaleX;
+          const y = (point.y - topLeft.y) * scaleY;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         });
@@ -796,15 +807,21 @@
       }
     }
 
-    async function drawMarkersToCanvas(ctx, canvas, mapBounds, canvasBounds) {
-      const scaleX = canvas.width / mapBounds.width;
-      const scaleY = canvas.height / mapBounds.height;
+    async function drawMarkersToCanvas(ctx, canvas, map) {
+      const mapBounds = map.getBounds();
+      const topLeft = map.latLngToContainerPoint(mapBounds.getNorthWest());
+      const bottomRight = map.latLngToContainerPoint(mapBounds.getSouthEast());
+      const pixelWidth = bottomRight.x - topLeft.x;
+      const pixelHeight = bottomRight.y - topLeft.y;
+
+      const scaleX = canvas.width / pixelWidth;
+      const scaleY = canvas.height / pixelHeight;
 
       for (const marker of markers) {
         const meta = marker.myMeta;
         const pos = map.latLngToContainerPoint(marker.getLatLng());
-        const x = (pos.x - mapBounds.minX) * scaleX;
-        const y = (pos.y - mapBounds.minY) * scaleY;
+        const x = (pos.x - topLeft.x) * scaleX;
+        const y = (pos.y - topLeft.y) * scaleY;
         const size = (meta.size || 26) * scaleX;
 
         if (meta.imgSrc) {
@@ -857,7 +874,6 @@
       }
 
       const mapWrap = document.getElementById('mapWrap');
-      const mapBounds = map.getPixelBounds();
       const mapSize = map.getSize();
       const scale = window.devicePixelRatio > 1 ? 2 : 1;
       const canvas = document.createElement('canvas');
@@ -877,19 +893,10 @@
 
       ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
 
-      const canvasBounds = { minX: 0, minY: 0, width: canvas.width, height: canvas.height };
-      await drawPolygonsToCanvas(ctx, canvas, {
-        minX: mapBounds.min.x,
-        minY: mapBounds.min.y,
-        width: mapBounds.max.x - mapBounds.min.x,
-        height: mapBounds.max.y - mapBounds.min.y
-      }, canvasBounds);
-      await drawMarkersToCanvas(ctx, canvas, {
-        minX: mapBounds.min.x,
-        minY: mapBounds.min.y,
-        width: mapBounds.max.x - mapBounds.min.x,
-        height: mapBounds.max.y - mapBounds.min.y
-      }, canvasBounds);
+      // Draw polygons and markers using the map's current coordinate system
+      await drawPolygonsToCanvas(ctx, canvas, map);
+      await drawMarkersToCanvas(ctx, canvas, map);
+
       await addWatermarkToCanvas(canvas);
 
       polygonControls.style.display = prevPolyDisplay;
