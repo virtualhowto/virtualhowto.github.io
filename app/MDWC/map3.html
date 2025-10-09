@@ -164,7 +164,10 @@
     const BASE_PATH = '/event-map-builder'; // Set to '' if hosted at root (e.g., username.github.io)
 
     // ---------- Map init ----------
-    const map = L.map('map', { attributionControl: false });
+    const map = L.map('map', {
+      attributionControl: false,
+      renderer: L.svg() // Use SVG renderer for better polygon export
+    });
     let baseLayer;
 
     function setBaseLayer(useOSM) {
@@ -333,7 +336,7 @@
     });
     document.addEventListener('click', () => {
       toggleMenu(false);
-      document.getElementById('wmControls').style.display = 'none'; // Hide watermark controls on outside click
+      document.getElementById('wmControls').style.display = 'none';
     });
     exportMenu.addEventListener('click', (e) => e.stopPropagation());
     document.getElementById('menuPng').onclick = () => { toggleMenu(false); exportPNG(); };
@@ -603,7 +606,6 @@
       wmImg.src = '';
     };
 
-    // Show watermark controls on right-click
     wm.addEventListener('contextmenu', e => {
       e.preventDefault();
       if (wm.style.display !== 'none') {
@@ -611,7 +613,6 @@
       }
     });
 
-    // Show watermark controls on long-press
     let wmLongPressTimer = null;
     wm.addEventListener('touchstart', e => {
       e.stopPropagation();
@@ -625,12 +626,10 @@
       if (wmLongPressTimer) clearTimeout(wmLongPressTimer);
     });
 
-    // Prevent context menu on watermark controls
     wmControls.addEventListener('contextmenu', e => {
       e.stopPropagation();
     });
 
-    // Hide watermark controls on click inside controls
     wmControls.addEventListener('click', e => {
       e.stopPropagation();
     });
@@ -648,7 +647,7 @@
     let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
     wm.addEventListener('mousedown', e => {
       e.stopPropagation();
-      if (e.button === 2) return; // Ignore right-click for dragging
+      if (e.button === 2) return;
       dragging = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -727,6 +726,70 @@
       })));
     }
 
+    async function drawPolygonsToCanvas(ctx, canvas, mapBounds, canvasBounds) {
+      const scaleX = canvas.width / mapBounds.width;
+      const scaleY = canvas.height / mapBounds.height;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (const poly of polygons) {
+        const latlngs = poly.getLatLngs()[0];
+        const points = latlngs.map(ll => map.latLngToContainerPoint(ll));
+        ctx.beginPath();
+        points.forEach((p, i) => {
+          const x = (p.x - mapBounds.minX) * scaleX;
+          const y = (p.y - mapBounds.minY) * scaleY;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.strokeStyle = poly.options.color || '#ff0000';
+        ctx.lineWidth = (poly.options.weight || 2) * scaleX;
+        if (poly.options.dashArray) {
+          ctx.setLineDash(poly.options.dashArray.split(',').map(Number).map(n => n * scaleX));
+        }
+        ctx.stroke();
+        if (poly.options.fillOpacity > 0) {
+          ctx.fillStyle = poly.options.color || '#ff0000';
+          ctx.globalAlpha = poly.options.fillOpacity || 0.25;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.setLineDash([]);
+      }
+    }
+
+    async function drawMarkersToCanvas(ctx, canvas, mapBounds, canvasBounds) {
+      const scaleX = canvas.width / mapBounds.width;
+      const scaleY = canvas.height / mapBounds.height;
+
+      for (const marker of markers) {
+        const meta = marker.myMeta;
+        const pos = map.latLngToContainerPoint(marker.getLatLng());
+        const x = (pos.x - mapBounds.minX) * scaleX;
+        const y = (pos.y - mapBounds.minY) * scaleY;
+        const size = (meta.size || 26) * scaleX;
+
+        if (meta.imgSrc) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          const adjustedSrc = meta.imgSrc.startsWith('data:') ? meta.imgSrc : `${BASE_PATH}/${meta.imgSrc}`;
+          await new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+            img.src = adjustedSrc;
+          });
+          ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+        } else {
+          ctx.font = `${size}px system-ui, Segoe UI, Roboto, Arial`;
+          ctx.fillStyle = meta.color || '#000000';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(meta.icon, x, y);
+        }
+      }
+    }
+
     async function captureMapCanvas() {
       await ensureTilesLoaded();
       const polygonControls = document.getElementById('polygonControls');
@@ -748,18 +811,46 @@
       if (wmImg && wmImg.src && wm.style.display !== 'none') imgUrls.push(wmImg.src);
       await preloadImages(imgUrls);
 
-      const canvas = await html2canvas(document.getElementById('mapWrap'), {
+      const mapWrap = document.getElementById('mapWrap');
+      const mapBounds = map.getPixelBounds();
+      const mapSize = map.getSize();
+      const scale = window.devicePixelRatio > 1 ? 2 : 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = mapSize.x * scale;
+      canvas.height = mapSize.y * scale;
+      const ctx = canvas.getContext('2d');
+
+      const tileCanvas = await html2canvas(mapWrap, {
         useCORS: true,
         allowTaint: false,
         backgroundColor: '#000',
-        foreignObjectRendering: false,
-        scale: window.devicePixelRatio > 1 ? 2 : 1
+        width: mapSize.x,
+        height: mapSize.y,
+        scale,
+        foreignObjectRendering: false
       });
+
+      ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
+
+      const canvasBounds = { minX: 0, minY: 0, width: canvas.width, height: canvas.height };
+      await drawPolygonsToCanvas(ctx, canvas, {
+        minX: mapBounds.min.x,
+        minY: mapBounds.min.y,
+        width: mapBounds.max.x - mapBounds.min.x,
+        height: mapBounds.max.y - mapBounds.min.y
+      }, canvasBounds);
+      await drawMarkersToCanvas(ctx, canvas, {
+        minX: mapBounds.min.x,
+        minY: mapBounds.min.y,
+        width: mapBounds.max.x - mapBounds.min.x,
+        height: mapBounds.max.y - mapBounds.min.y
+      }, canvasBounds);
+      await addWatermarkToCanvas(canvas);
 
       polygonControls.style.display = prevPolyDisplay;
       wmControls.style.display = prevWmDisplay;
       hiddenPopups.forEach(p => p.addTo(map));
-      return addWatermarkToCanvas(canvas);
+      return canvas;
     }
 
     function exportPNG() {
@@ -938,7 +1029,7 @@
       if (data.watermark && data.watermark.src) {
         wmImg.src = data.watermark.src;
         wm.style.display = data.watermark.visible ? 'block' : 'none';
-        wmControls.style.display = 'none'; // Ensure controls are hidden on load
+        wmControls.style.display = 'none';
         wm.style.position = 'absolute';
         wm.style.left = (data.watermark.left || 0) + 'px';
         wm.style.top = (data.watermark.top || 0) + 'px';
