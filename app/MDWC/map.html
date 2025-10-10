@@ -5,10 +5,12 @@
   <title>Event Map Builder</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- Leaflet + Esri-Leaflet -->
+  <!-- Leaflet + Esri-Leaflet + Leaflet.draw -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
   <!-- Export libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -17,7 +19,8 @@
   <style>
     :root{--bg:#0e1116;--panel:#1a1f29;--ink:#e8eef7;--muted:#aab3c5;--accent:#4aa3ff;--border:#2a3342;}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink);display:flex;flex-direction:column}
     header{background:#121722;border-bottom:1px solid var(--border);padding:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
     header h1{font-size:16px;margin:0;font-weight:600}
     #topbar{display:flex;flex:1;flex-wrap:wrap;gap:8px;align-items:center}
@@ -33,7 +36,7 @@
     .tool .emoji{font-size:22px}
     .tool .thumb{width:22px;height:22px;object-fit:contain;display:block}
     .tool .label{font-size:12px;color:var(--muted)}
-    #mapWrap{position:relative;flex:1}
+    #mapWrap{position:relative;flex:1;min-height:0}
     #map{width:100%;height:100%}
     #legend{position:absolute;bottom:10px;left:10px;background:#000;border:1px solid var(--border);padding:8px;border-radius:10px;font-size:12px;z-index:800;color:#fff;max-width:260px}
     #legend h3{margin:0 0 6px 0;font-size:12px}
@@ -41,8 +44,8 @@
     #legend li{margin:4px 0;display:flex;align-items:center;gap:6px}
     #legend img{width:14px;height:14px;object-fit:contain;display:inline-block;background:#fff;border-radius:2px}
     #polygonControls{position:fixed;bottom:70px;right:10px;display:none;flex-direction:column;gap:6px;z-index:1200}
-    .watermark{position:absolute;z-index:850;display:none;cursor:move;user-select:none}
-    .watermark img{display:block;max-width:100%;max-height:100%}
+    #watermark{position:absolute;bottom:10px;right:10px;z-index:850;display:none;cursor:move;user-select:none}
+    #watermark img{display:block;max-width:100%;max-height:100%}
     .compass-control{width:80px;height:80px}
     .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500}
     .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1f29;border:1px solid var(--border);border-radius:12px;padding:18px;z-index:3600;width:min(90vw,360px)}
@@ -51,7 +54,11 @@
     .modal select{width:100%;padding:8px;border-radius:8px;background:#0b0f16;color:#fff;border:1px solid var(--border)}
     .modal .actions{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
     .size-popup label{font-size:12px;color:#000;display:flex;align-items:center;gap:6px}
-    .size-popup input[type="range"]{width:140px}
+    .size-popup input[type="range"]{width:160px}
+    .leaflet-draw-toolbar a { background-color: var(--panel); border-color: var(--border); color: var(--ink); }
+    .leaflet-draw-toolbar a:hover { background-color: var(--accent); color: #0a1524; }
+    .leaflet-draw-toolbar .draw-controls { display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #1a1f29; border: 1px solid var(--border); border-radius: 8px; padding: 8px; z-index: 1000; flex-direction: column; gap: 6px; }
+    .leaflet-draw-toolbar .leaflet-draw-draw-polygon.active ~ .draw-controls { display: flex; }
   </style>
 </head>
 <body>
@@ -60,15 +67,6 @@
     <div id="topbar">
       <button class="btn" id="gpsBtn">📍 Use GPS</button>
       <input type="text" id="searchBox" placeholder="Search location..." />
-      <button class="btn" id="modeToggle">✏️ Draw Mode</button>
-      <input type="color" id="colorPicker" value="#ff0000" class="btn" title="Polygon/line color" />
-      <button class="btn" id="finishPolygon">Finish</button>
-      <button class="btn" id="cancelPolygon">Cancel</button>
-      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
-        <input type="checkbox" id="defaultFill" checked /> Fill new polygon
-      </label>
-
-      <!-- Export dropdown -->
       <div class="dropdown">
         <button class="btn" id="exportMenuBtn">📤 Export ▼</button>
         <div class="dropdown-menu" id="exportMenu">
@@ -79,14 +77,14 @@
         </div>
       </div>
       <input type="file" id="importJsonFile" accept="application/json" style="display:none"/>
-
-      <!-- Watermark -->
       <input type="file" id="logoFile" accept="image/*" style="display:none"/>
       <button class="btn" id="logoBtn">Upload Logo</button>
+      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
+        <input type="checkbox" id="useOSM" /> Use OpenStreetMap (CORS-safe)
+      </label>
     </div>
   </header>
 
-  <!-- Emoji/Text + Permanent PNG + Uploader toolbar -->
   <div id="toolbar">
     <div class="tool" data-type="emoji" data-label="Stage" data-icon="🎤"><span class="emoji">🎤</span></div>
     <div class="tool" data-type="emoji" data-label="Toilets" data-icon="🚻"><span class="emoji">🚻</span></div>
@@ -99,14 +97,10 @@
     <div class="tool" data-type="emoji" data-label="Entry Gate" data-icon="⛩️"><span class="emoji">⛩️</span></div>
     <div class="tool" data-type="emoji" data-label="Food Area" data-icon="🍽️"><span class="emoji">🍽️</span></div>
     <div class="tool" data-type="text" data-label="Text Label" data-icon="✏️"><span class="emoji">✏️</span></div>
-
-    <!-- Permanent PNG icon in the same folder -->
-    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="no-detecting.png" data-size="26" title="No Detecting">
-      <img class="thumb" src="no-detecting.png" alt="No Detecting"/>
+    <div class="tool" data-type="image" data-label="No Detecting" data-imgsrc="./no-detecting.png" title="No Detecting">
+      <img class="thumb" src="./no-detecting.png" alt="No Detecting"/>
       <span class="label">No Detecting</span>
     </div>
-
-    <!-- Custom icon uploader -->
     <input id="customIconInput" type="file" accept="image/*" style="display:none">
     <button class="tool" id="addCustomIconBtn" title="Add custom PNG icon">
       <span class="emoji" style="font-size:18px">➕</span>
@@ -116,18 +110,17 @@
 
   <div id="mapWrap">
     <div id="map"></div>
-
-    <!-- Legend -->
     <div id="legend"><h3>Legend</h3><ul id="legendList"></ul></div>
+    <div id="watermark">
+      <img id="watermarkImg" alt="watermark"/>
+    </div>
   </div>
 
-  <!-- Polygon selection controls -->
   <div id="polygonControls" class="leaflet-top leaflet-right">
     <button id="toggleFill" class="btn">Toggle Fill</button>
     <button id="deletePoly" class="btn">Delete</button>
   </div>
 
-  <!-- PDF Options Modal -->
   <div class="modal-backdrop" id="pdfBackdrop"></div>
   <div class="modal" id="pdfDialog" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
     <h3 id="pdfTitle">PDF Export Options</h3>
@@ -150,6 +143,13 @@
         <option value="fit">Fit to Page</option>
       </select>
     </label>
+    <label>Resolution
+      <select id="pdfResolution">
+        <option value="2" selected>Medium (2x)</option>
+        <option value="3">High (3x)</option>
+        <option value="4">Ultra (4x)</option>
+      </select>
+    </label>
     <div class="actions">
       <button class="btn" id="cancelPdf">Cancel</button>
       <button class="btn primary" id="exportPdf">Export</button>
@@ -157,46 +157,80 @@
   </div>
 
   <script>
-    // ---------- Map init (no Leaflet attribution) ----------
-    const map = L.map('map', { attributionControl: false, preferCanvas: true });
-    const tileLayer = L.esri.tiledMapLayer({
-      url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
-      attribution: 'Imagery © NSW Spatial Services',
-      crossOrigin: 'anonymous'
-    }).addTo(map);
+    // Base path for GitHub Pages (adjust if hosted at root or different subpath)
+    const BASE_PATH = '/app/MDWC/'; // Set to '' if hosted at root (e.g., username.github.io)
 
-    // GPS + Sofala fallback
-    const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
-    function centerOnUser({silent=false} = {}){
-      if(!navigator.geolocation){ map.setView(SOFALA_CENTER, SOFALA_ZOOM); if(!silent) alert("No geolocation."); return; }
-      navigator.geolocation.getCurrentPosition(p=>{
-        map.setView([p.coords.latitude,p.coords.longitude], 16);
-      }, _=>{
-        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
-        if(!silent) alert("Could not get your location. Defaulting to Sofala, NSW.");
-      }, {enableHighAccuracy:true, timeout:8000, maximumAge:0});
+    // ---------- Map init ----------
+    const map = L.map('map', {
+      attributionControl: false,
+      renderer: L.svg()
+    });
+    let baseLayer;
+
+    function setBaseLayer(useOSM) {
+      if (baseLayer) map.removeLayer(baseLayer);
+      if (useOSM) {
+        baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          crossOrigin: 'anonymous'
+        }).addTo(map);
+      } else {
+        baseLayer = L.esri.tiledMapLayer({
+          url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+          attribution: 'Imagery © NSW Spatial Services'
+        }).addTo(map);
+        baseLayer.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch(e) {} });
+      }
     }
-    centerOnUser({silent:true});
-    document.getElementById('gpsBtn').addEventListener('click',()=>centerOnUser());
 
-    // Search (Enter) via Nominatim
-    const searchBox=document.getElementById('searchBox');
-    searchBox.addEventListener('keydown',async e=>{
-      if(e.key!=="Enter") return;
-      const q=searchBox.value.trim(); if(!q) return;
-      try{
-        const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
-        const data=await res.json();
-        if(data && data.length){ map.setView([+data[0].lat, +data[0].lon], 15); }
+    function ensureTilesLoaded() {
+      return new Promise(resolve => {
+        if (!baseLayer._loading) return resolve();
+        baseLayer.once('load', () => setTimeout(resolve, 100));
+      });
+    }
+
+    setBaseLayer(false);
+    document.getElementById('useOSM').addEventListener('change', e => setBaseLayer(e.target.checked));
+
+    const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
+    function centerOnUser({ silent = false } = {}) {
+      if (!navigator.geolocation) {
+        map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+        if (!silent) alert("No geolocation.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        p => map.setView([p.coords.latitude, p.coords.longitude], 16),
+        _ => {
+          map.setView(SOFALA_CENTER, SOFALA_ZOOM);
+          if (!silent) alert("Could not get your location. Defaulting to Sofala, NSW.");
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    }
+    centerOnUser({ silent: true });
+    document.getElementById('gpsBtn').addEventListener('click', () => centerOnUser());
+
+    const searchBox = document.getElementById('searchBox');
+    searchBox.addEventListener('keydown', async e => {
+      if (e.key !== "Enter") return;
+      const q = searchBox.value.trim();
+      if (!q) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data && data.length) map.setView([+data[0].lat, +data[0].lon], 15);
         else alert("Location not found");
-      }catch{ alert("Search error"); }
+      } catch {
+        alert("Search error");
+      }
     });
 
-    // Compass
-    const compass = L.control({position:'topright'});
-    compass.onAdd=()=>{
-      const d=L.DomUtil.create('div','compass-control');
-      d.innerHTML=`
+    const compass = L.control({ position: 'topright' });
+    compass.onAdd = () => {
+      const d = L.DomUtil.create('div', 'compass-control');
+      d.innerHTML = `
         <div style="position:relative;width:80px;height:80px;border-radius:50%;background:#0f141d;border:2px solid #4aa3ff;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)">
           <span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);font-weight:bold;color:#ff4444">N</span>
           <span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%)">S</span>
@@ -207,709 +241,1018 @@
     };
     compass.addTo(map);
 
+    // ---------- Leaflet.draw Setup ----------
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    // Custom draw control with color picker and fill toggle
+    let polygonHandler = null;
+
+    const drawControl = new L.Control.Draw({
+      position: 'topleft',
+      draw: {
+        polygon: {
+          shapeOptions: {
+            color: '#ff0000',
+            weight: 2,
+            dashArray: '6,4',
+            fillOpacity: 0.25
+          },
+          allowIntersection: false,
+          showArea: true
+        },
+        polyline: false,
+        circle: false,
+        rectangle: false,
+        marker: false,
+        circlemarker: false
+      },
+      edit: {
+        featureGroup: drawnItems,
+        remove: true,
+        edit: true
+      }
+    });
+
+    // Override the default toolbar to add custom controls
+    drawControl.onAdd = function(map) {
+      const container = L.DomUtil.create('div', 'leaflet-draw leaflet-control');
+      const toolbar = L.DomUtil.create('div', 'leaflet-draw-toolbar leaflet-bar', container);
+      const polygonBtn = L.DomUtil.create('a', 'leaflet-draw-draw-polygon', toolbar);
+      polygonBtn.href = '#';
+      polygonBtn.title = 'Draw a polygon';
+      const drawControls = L.DomUtil.create('div', 'draw-controls', toolbar);
+      drawControls.innerHTML = `
+        <label style="display:flex;align-items:center;gap:4px;color:#fff;font-size:12px;">
+          <span>Color</span>
+          <input type="color" id="drawColorPicker" value="#ff0000" style="width:30px;height:20px;border:none;cursor:pointer" title="Polygon color" />
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;color:#fff;font-size:12px;">
+          <input type="checkbox" id="drawFill" checked />
+          <span>Fill polygon</span>
+        </label>
+      `;
+
+      // Initialize polygon handler
+      polygonHandler = new L.Draw.Polygon(map, this.options.draw.polygon);
+
+      L.DomEvent.on(polygonBtn, 'click', e => {
+        L.DomEvent.stopPropagation(e);
+        L.DomEvent.preventDefault(e);
+        const isActive = L.DomUtil.hasClass(polygonBtn, 'active');
+        if (!isActive) {
+          polygonHandler.enable();
+          L.DomUtil.addClass(polygonBtn, 'active');
+        } else {
+          polygonHandler.disable();
+          L.DomUtil.removeClass(polygonBtn, 'active');
+        }
+      });
+
+      const colorPicker = drawControls.querySelector('#drawColorPicker');
+      const fillCheckbox = drawControls.querySelector('#drawFill');
+
+      colorPicker.addEventListener('input', () => {
+        this.setDrawingOptions({
+          polygon: {
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          }
+        });
+        if (polygonHandler) {
+          polygonHandler.setOptions({
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          });
+        }
+      });
+
+      fillCheckbox.addEventListener('change', () => {
+        this.setDrawingOptions({
+          polygon: {
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          }
+        });
+        if (polygonHandler) {
+          polygonHandler.setOptions({
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          });
+        }
+      });
+
+      return container;
+    };
+
+    map.addControl(drawControl);
+
+    let polygons = [];
+    let selected = null;
+    map.on(L.Draw.Event.CREATED, e => {
+      const layer = e.layer;
+      layer.on('click', () => selectPolygon(layer));
+      drawnItems.addLayer(layer);
+      polygons.push(layer);
+      // Deactivate drawing and remove active class
+      const polygonBtn = document.querySelector('.leaflet-draw-draw-polygon');
+      if (polygonBtn) {
+        L.DomUtil.removeClass(polygonBtn, 'active');
+        if (polygonHandler) polygonHandler.disable();
+      }
+    });
+
+    map.on(L.Draw.Event.EDITED, e => {});
+    map.on(L.Draw.Event.DELETED, e => {
+      e.layers.eachLayer(layer => {
+        polygons = polygons.filter(p => p !== layer);
+        if (selected === layer) {
+          selected = null;
+          document.getElementById('polygonControls').style.display = 'none';
+        }
+      });
+    });
+
     // ---------- State ----------
-    let drawMode=false, tempPoints=[], tempLines=[], polygons=[], selected=null, selectedLine=null;
-    const markers=[]; let selectedMarker=null;
-    const legendSet=new Map();
-    const watermarks=[];
+    let selectedMarker = null;
+    const markers = [];
+    const legendSet = new Map();
 
     // ---------- Export dropdown ----------
     const exportBtn = document.getElementById('exportMenuBtn');
     const exportMenu = document.getElementById('exportMenu');
-    const toggleMenu = (show)=>exportMenu.style.display = show ? 'block' : 'none';
-    exportBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMenu(exportMenu.style.display!=='block'); });
-    document.addEventListener('click', (e)=>{
-      toggleMenu(false);
+    const toggleMenu = (show) => exportMenu.style.display = show ? 'block' : 'none';
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu(exportMenu.style.display !== 'block');
     });
-    exportMenu.addEventListener('click',(e)=>e.stopPropagation());
-    document.getElementById('menuPng').onclick=()=>{ toggleMenu(false); exportPNG(); };
-    document.getElementById('menuPdf').onclick=()=>{ toggleMenu(false); openPdfDialog(); };
-    document.getElementById('menuJsonExport').onclick=()=>{ toggleMenu(false); doExportJSON(); };
-    document.getElementById('menuJsonImport').onclick=()=>{ toggleMenu(false); document.getElementById('importJsonFile').click(); };
+    document.addEventListener('click', () => toggleMenu(false));
+    exportMenu.addEventListener('click', (e) => e.stopPropagation());
+    document.getElementById('menuPng').onclick = () => { toggleMenu(false); exportPNG(); };
+    document.getElementById('menuPdf').onclick = () => { toggleMenu(false); openPdfDialog(); };
+    document.getElementById('menuJsonExport').onclick = () => { toggleMenu(false); doExportJSON(); };
+    document.getElementById('menuJsonImport').onclick = () => { toggleMenu(false); document.getElementById('importJsonFile').click(); };
 
     // ---------- Tools (emoji/text/permanent image/custom image) ----------
-    let activeTool=null;
-    function attachToolHandlers(){
-      document.querySelectorAll('.tool[data-type]').forEach(t=>{
-        t.onclick=()=>{ activeTool=t; };
+    let activeTool = null;
+    function attachToolHandlers() {
+      // Remove existing listeners to prevent duplicates
+      document.querySelectorAll('.tool[data-type]').forEach(t => {
+        // Clone the node to remove existing event listeners
+        const newTool = t.cloneNode(true);
+        t.parentNode.replaceChild(newTool, t);
+        newTool.onclick = () => { activeTool = newTool; };
       });
     }
+
+    // Initialize default tools
     attachToolHandlers();
 
-    // Custom icon uploader
     const customInput = document.getElementById('customIconInput');
     const addCustomBtn = document.getElementById('addCustomIconBtn');
-    addCustomBtn.addEventListener('click', ()=> customInput.click());
-    customInput.addEventListener('change', e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader();
-      r.onload=ev=>{
-        const label = prompt("Label for this icon (for legend):","Custom");
-        addCustomTool(label || "Custom", ev.target.result);
+    addCustomBtn.addEventListener('click', () => customInput.click());
+    customInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        const label = prompt("Label for this icon (for legend):", "Custom");
+        if (label) addCustomTool(label, ev.target.result);
         customInput.value = "";
       };
       r.readAsDataURL(f);
     });
-    function addCustomTool(label, dataUrl){
+
+    function addCustomTool(label, dataUrl) {
+      // Check if tool with the same label and imgsrc already exists
+      const existingTool = document.querySelector(`.tool[data-label="${label}"][data-imgsrc="${dataUrl}"]`);
+      if (existingTool) return; // Prevent duplicate tool
+
       const btn = document.createElement('button');
       btn.className = 'tool';
-      btn.setAttribute('data-type','image');
+      btn.setAttribute('data-type', 'image');
       btn.setAttribute('data-label', label);
       btn.setAttribute('data-imgsrc', dataUrl);
-      btn.setAttribute('data-size', '26');
-      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt="${label}"/><span class="label">${label}</span>`;
+      btn.innerHTML = `<img class="thumb" src="${dataUrl}" alt=""><span class="label">${label}</span>`;
       addCustomBtn.insertAdjacentElement('beforebegin', btn);
       attachToolHandlers();
     }
 
-    map.on('click',e=>{
-      if(activeTool && !drawMode){
-        const type  = activeTool.dataset.type;
+    map.on('click', e => {
+      if (activeTool && !map._handlers.some(h => h instanceof L.Draw.Polygon)) {
+        const type = activeTool.dataset.type;
         const label = activeTool.dataset.label;
-        if(type==='emoji' || type==='text' || type==='image'){
+        if (type === 'emoji' || type === 'text' || type === 'image') {
           const meta = { label };
-          if(type==='emoji'){ meta.icon = activeTool.dataset.icon; meta.size = parseInt(activeTool.dataset.size) || 26; }
-          if(type==='text'){  meta.icon = '✏️'; meta.isText = true; meta.size = 26; }
-          if(type==='image'){ meta.imgSrc = activeTool.dataset.imgsrc; meta.size = parseInt(activeTool.dataset.size) || 26; }
+          if (type === 'emoji') meta.icon = activeTool.dataset.icon;
+          if (type === 'text') meta.icon = '✏️', meta.isText = true;
+          if (type === 'image') meta.imgSrc = activeTool.dataset.imgsrc;
           placeMarkerOrText(e.latlng, meta);
-          activeTool=null;
-          return;
-        }
-      }
-      // Draw mode: helper lines
-      if(drawMode){
-        tempPoints.push([e.latlng.lat,e.latlng.lng]);
-        const N = tempPoints.length;
-        if(N>1){
-          const line=L.polyline([tempPoints[N-2], tempPoints[N-1]],{
-            color:document.getElementById('colorPicker').value,dashArray:"4,4",weight:2
-          }).addTo(map);
-          line.on('click',()=>selectLine(line));
-          tempLines.push(line);
+          activeTool = null;
         }
       }
     });
 
-    function placeMarkerOrText(latlng, meta){
-      // Text label -> prompt content
-      if(meta.isText){
+    // ---------- Place marker ----------
+    function placeMarkerOrText(latlng, meta) {
+      if (meta.isText) {
         const text = prompt("Enter label text:");
-        if(!text) return;
+        if (!text) return;
         meta.icon = text;
         meta.color = "#ffffff";
       }
 
       const size = meta.size || 26;
       let html;
-      if(meta.imgSrc){
+      if (meta.imgSrc) {
+        const adjustedSrc = meta.imgSrc.startsWith('data:') ? meta.imgSrc : `${BASE_PATH}/${meta.imgSrc}`;
         html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
-                  <img src="${meta.imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
+                  <img src="${adjustedSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
                 </div>`;
-      }else{
+      } else {
         const colorStyle = meta.isText ? `color:${meta.color};` : '';
         html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${meta.icon}</div>`;
       }
 
-      const marker = L.marker(latlng,{
-        icon: L.divIcon({className:"custom-div-icon",html,iconSize:[size,size],iconAnchor:[size/2,size/2]}),
-        draggable:true
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({ className: "custom-div-icon", html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+        draggable: true
       }).addTo(map);
 
-      marker.myMeta = {...meta, size};
+      marker.myMeta = { ...meta, size, baseSize: meta.baseSize || size };
       markers.push(marker);
 
-      marker.on('click',()=>{ selectedMarker = marker; });
-      marker.on('contextmenu',()=>openMarkerPopup(marker));
-      let lpTimer=null;
-      marker.on('touchstart',()=>{ lpTimer=setTimeout(()=>openMarkerPopup(marker),600); });
-      marker.on('touchend',()=>{ if(lpTimer) clearTimeout(lpTimer); });
+      marker.on('click', () => { selectedMarker = marker; });
+      marker.on('contextmenu', () => openMarkerPopup(marker));
+      let lpTimer = null;
+      marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
+      marker.on('touchend', () => { if (lpTimer) clearTimeout(lpTimer); });
 
-      // Legend entry (use emoji or image thumbnail)
-      if(!meta.isText){
-        legendSet.set(meta.label, meta.imgSrc ? {img:meta.imgSrc} : {emoji:meta.icon});
+      if (!meta.isText && !legendSet.has(meta.label)) {
+        legendSet.set(meta.label, meta.imgSrc ? { img: meta.imgSrc } : { emoji: meta.icon });
         renderLegend();
       }
     }
 
-    function updateLegendAfterDelete(marker){
-      if(marker.myMeta.isText) return; // Text markers aren't in legend
-      const label = marker.myMeta.label;
-      // Count markers with the same label
-      const count = markers.filter(m => m.myMeta.label === label && !m.myMeta.isText).length;
-      if(count === 0){
-        legendSet.delete(label);
-        renderLegend();
-      }
-    }
-
-    function openMarkerPopup(marker){
+    function openMarkerPopup(marker) {
       const isText = !!marker.myMeta.isText;
       const sizeNow = marker.myMeta.size || 26;
+      if (!marker.myMeta.baseSize) marker.myMeta.baseSize = sizeNow;
+      const sliderVal = Math.round(50 * Math.log(sizeNow / marker.myMeta.baseSize) / Math.log(2));
       const colorNow = marker.myMeta.color || "#ffffff";
+
       const wrap = document.createElement('div');
-      wrap.className='size-popup';
+      wrap.className = 'size-popup';
       wrap.innerHTML = `
-        <label>Size <input type="range" min="12" max="120" step="2" value="${sizeNow}"></label>
+        <label>Scale
+          <input id="scaleSlider" type="range" min="-50" max="50" step="1" value="${sliderVal}">
+        </label>
         ${isText ? `<label>Color <input type="color" value="${colorNow}" id="txtColor"></label>` : ``}
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:space-between">
           <button type="button" id="cloneBtn" style="background:#2b5a66;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Clone</button>
           <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
         </div>
       `;
-      const sizeInput = wrap.querySelector('input[type="range"]');
-      sizeInput.addEventListener('input',()=>{
-        const newSize = parseInt(sizeInput.value);
-        marker.myMeta.size = newSize;
+
+      const slider = wrap.querySelector('#scaleSlider');
+      slider.addEventListener('input', () => {
+        const val = parseInt(slider.value, 10);
+        const scale = Math.pow(2, val / 50);
+        marker.myMeta.size = Math.max(6, marker.myMeta.baseSize * scale);
         refreshMarkerIcon(marker);
       });
-      if(isText){
+
+      if (isText) {
         const colorInput = wrap.querySelector('#txtColor');
-        colorInput.addEventListener('input',()=>{
+        colorInput.addEventListener('input', () => {
           marker.myMeta.color = colorInput.value;
           refreshMarkerIcon(marker);
         });
       }
-      // Delete
-      wrap.querySelector('#delBtn').addEventListener('click',()=>{
+
+      wrap.querySelector('#delBtn').addEventListener('click', () => {
         map.removeLayer(marker);
-        const idx = markers.indexOf(marker); if(idx>-1) markers.splice(idx,1);
-        if(selectedMarker===marker) selectedMarker=null;
-        updateLegendAfterDelete(marker); // Update legend
+        const idx = markers.indexOf(marker);
+        if (idx > -1) markers.splice(idx, 1);
+        if (selectedMarker === marker) selectedMarker = null;
+        updateLegendAfterDelete(marker);
         marker.closePopup();
       });
-      // Clone
-      wrap.querySelector('#cloneBtn').addEventListener('click',()=>{
+
+      wrap.querySelector('#cloneBtn').addEventListener('click', () => {
         const ll = marker.getLatLng();
-        const offset = 0.0002; // ~20m-ish
+        const offset = 0.0002;
         const metaCopy = JSON.parse(JSON.stringify(marker.myMeta));
-        placeMarkerOrText(L.latLng(ll.lat+offset, ll.lng+offset), metaCopy);
+        placeMarkerOrText(L.latLng(ll.lat + offset, ll.lng + offset), metaCopy);
       });
 
       selectedMarker = marker;
-      marker.bindPopup(wrap,{autoPan:true}).openPopup();
+      marker.bindPopup(wrap, { autoPan: true }).openPopup();
     }
 
-    function refreshMarkerIcon(marker){
-      const {icon,size,isText,color,imgSrc} = marker.myMeta;
+    function refreshMarkerIcon(marker) {
+      const { icon, size, isText, color, imgSrc } = marker.myMeta;
       let html;
-      if(imgSrc){
+      if (imgSrc) {
+        const adjustedSrc = imgSrc.startsWith('data:') ? imgSrc : `${BASE_PATH}/${imgSrc}`;
         html = `<div style="width:${size}px;height:${size}px;cursor:move;display:flex;align-items:center;justify-content:center">
-                  <img src="${imgSrc}" style="max-width:100%;max-height:100%;display:block"/>
+                  <img src="${adjustedSrc}" style="max-width:100%;max-height:100%;display:block;width:${size}px;height:${size}px"/>
                 </div>`;
-      }else{
+      } else {
         const colorStyle = isText ? `color:${color};` : '';
         html = `<div style="font-size:${size}px;${colorStyle}cursor:move;white-space:nowrap">${icon}</div>`;
       }
       marker.setIcon(L.divIcon({
-        className:"custom-div-icon",
-        html, iconSize:[size,size], iconAnchor:[size/2,size/2]
+        className: "custom-div-icon",
+        html, iconSize: [size, size], iconAnchor: [size / 2, size / 2]
       }));
     }
 
-    function renderLegend(){
-      const list=document.getElementById('legendList'); list.innerHTML='';
-      legendSet.forEach((val,label)=>{
-        const li=document.createElement('li');
-        if(val.img){
-          const img=document.createElement('img'); img.src=val.img; li.appendChild(img);
-          const span=document.createElement('span'); span.textContent=' '+label; li.appendChild(span);
-        }else{
-          li.textContent=`${val.emoji} ${label}`;
+    function updateLegendAfterDelete(marker) {
+      if (marker.myMeta.isText) return;
+      const label = marker.myMeta.label;
+      const count = markers.filter(m => m.myMeta.label === label && !m.myMeta.isText).length;
+      if (count === 0) {
+        legendSet.delete(label);
+        renderLegend();
+      }
+    }
+
+    function renderLegend() {
+      const list = document.getElementById('legendList');
+      list.innerHTML = '';
+      legendSet.forEach((val, label) => {
+        const li = document.createElement('li');
+        if (val.img) {
+          const img = document.createElement('img');
+          img.src = val.img.startsWith('data:') ? val.img : `${BASE_PATH}/${val.img}`;
+          li.appendChild(img);
+          const span = document.createElement('span');
+          span.textContent = ' ' + label;
+          li.appendChild(span);
+        } else {
+          li.textContent = `${val.emoji} ${label}`;
         }
         list.appendChild(li);
       });
     }
 
-    // Delete selected marker with keyboard
-    document.addEventListener('keydown',e=>{
-      if(e.key==="Delete" && selectedMarker){
+    document.addEventListener('keydown', e => {
+      if (e.key === "Delete" && selectedMarker) {
         map.removeLayer(selectedMarker);
-        const idx = markers.indexOf(selectedMarker); if(idx>-1) markers.splice(idx,1);
-        updateLegendAfterDelete(selectedMarker); // Update legend
-        selectedMarker=null;
+        const idx = markers.indexOf(selectedMarker);
+        if (idx > -1) markers.splice(idx, 1);
+        updateLegendAfterDelete(selectedMarker);
+        selectedMarker = null;
       }
     });
 
-    // ---------- Drawing polygons ----------
-    document.getElementById('modeToggle').onclick=()=>{
-      drawMode=!drawMode;
-      document.getElementById('modeToggle').textContent=drawMode?'🖱️ Label Mode':'✏️ Draw Mode';
+    // ---------- Polygon controls ----------
+    function selectPolygon(poly) {
+      selected = poly;
+      document.getElementById('polygonControls').style.display = 'flex';
+    }
+
+    document.getElementById('toggleFill').onclick = () => {
+      if (!selected) return;
+      selected.setStyle({ fillOpacity: selected.options.fillOpacity > 0 ? 0 : 0.25 });
     };
-    document.getElementById('finishPolygon').onclick=finishPolygon;
-    document.getElementById('cancelPolygon').onclick=clearSketch;
 
-    function finishPolygon(){
-      if(tempPoints.length>2){
-        const poly=L.polygon(tempPoints,{
-          color:document.getElementById('colorPicker').value,
-          weight:2,dashArray:"6,4",
-          fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
-        }).addTo(map);
-        poly.on('click',()=>selectPolygon(poly));
-        polygons.push(poly);
+    document.getElementById('deletePoly').onclick = () => {
+      if (selected) {
+        drawnItems.removeLayer(selected);
+        polygons = polygons.filter(p => p !== selected);
+        selected = null;
+        document.getElementById('polygonControls').style.display = 'none';
       }
-      clearSketch();
-    }
-    function clearSketch(){ tempPoints=[]; tempLines.forEach(l=>map.removeLayer(l)); tempLines=[]; }
-    function selectPolygon(poly){ selected=poly; selectedLine=null; document.getElementById('polygonControls').style.display='flex'; }
-    function selectLine(line){ if(selectedLine) selectedLine.setStyle({weight:2}); selectedLine=line; selected=null; line.setStyle({weight:4}); document.getElementById('polygonControls').style.display='none'; }
-    document.getElementById('toggleFill').onclick=()=>{ if(!selected) return; selected.setStyle({fillOpacity: selected.options.fillOpacity>0 ? 0 : 0.25}); };
-    document.getElementById('deletePoly').onclick=()=>deleteSelectedShape();
-    document.addEventListener('keydown',e=>{ if(e.key==="Delete") deleteSelectedShape(); });
-    function deleteSelectedShape(){
-      if(selected){ map.removeLayer(selected); polygons=polygons.filter(p=>p!==selected); selected=null; document.getElementById('polygonControls').style.display='none'; }
-      if(selectedLine){ map.removeLayer(selectedLine); tempLines=tempLines.filter(l=>l!==selectedLine); selectedLine=null; }
-    }
+    };
 
-    // ---------- Multiple Watermarks ----------
-    function addWatermark(src, options = {}){
-      const wm = document.createElement('div');
-      wm.className = 'watermark';
-      wm.style.display = 'block';
-      wm.style.opacity = options.opacity || 0.5;
-      wm.style.width = (options.width || 180) + 'px';
-      wm.style.position = 'absolute';
-      if(options.left && options.top){
-        wm.style.left = options.left + 'px';
-        wm.style.top = options.top + 'px';
-      } else {
-        const mapWrap = document.getElementById('mapWrap').getBoundingClientRect();
-        wm.style.left = (mapWrap.width - 200) + 'px';
-        wm.style.top = (mapWrap.height - 150) + 'px';
+    document.addEventListener('keydown', e => {
+      if (e.key === "Delete" && selected) {
+        drawnItems.removeLayer(selected);
+        polygons = polygons.filter(p => p !== selected);
+        selected = null;
+        document.getElementById('polygonControls').style.display = 'none';
       }
-      wm.style.right = 'auto';
-      wm.style.bottom = 'auto';
-      const img = document.createElement('img');
-      img.src = src;
-      img.alt = 'watermark';
-      wm.appendChild(img);
-      document.getElementById('mapWrap').appendChild(wm);
-      watermarks.push(wm);
+    });
 
-      // Event handlers
-      let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
-      wm.addEventListener('contextmenu', (e)=>{
-        e.preventDefault();
-        openWatermarkPopup(e, wm);
+    // ---------- Watermark ----------
+    const wm = document.getElementById('watermark'),
+          wmImg = document.getElementById('watermarkImg');
+    let watermarkMeta = { opacity: 0.5, size: 180, left: 0, top: 0, visible: false, src: '' };
+    let wmPopup = null;
+
+    function openWatermarkPopup() {
+      if (!watermarkMeta.visible) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'size-popup';
+      wrap.innerHTML = `
+        <label>Opacity
+          <input id="wmOpacity" type="range" min="0.05" max="1" step="0.05" value="${watermarkMeta.opacity}">
+        </label>
+        <label>Size (px)
+          <input id="wmSize" type="range" min="60" max="800" step="10" value="${watermarkMeta.size}">
+        </label>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="wmDelete" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
+        </div>
+      `;
+
+      wrap.querySelector('#wmOpacity').addEventListener('input', () => {
+        watermarkMeta.opacity = parseFloat(wrap.querySelector('#wmOpacity').value);
+        wm.style.opacity = watermarkMeta.opacity;
       });
-      wm.addEventListener('mousedown', (e)=>{
-        dragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        const r = wm.getBoundingClientRect();
-        startLeft = r.left;
-        startTop = r.top;
-        map.dragging.disable();
+
+      wrap.querySelector('#wmSize').addEventListener('input', () => {
+        watermarkMeta.size = parseInt(wrap.querySelector('#wmSize').value, 10);
+        wm.style.width = watermarkMeta.size + 'px';
       });
-      wm.addEventListener('click', (e)=>{
-        e.stopPropagation();
+
+      wrap.querySelector('#wmDelete').addEventListener('click', () => {
+        watermarkMeta.visible = false;
+        watermarkMeta.src = '';
+        wm.style.display = 'none';
+        wmImg.src = '';
+        if (wmPopup) wmPopup.remove();
+        wmPopup = null;
       });
-      // Mouse drag
-      window.addEventListener('mousemove', (e) => {
-        if(!dragging || wm !== watermarks[watermarks.indexOf(wm)]) return;
-        const dx = e.clientX - startX, dy = e.clientY - startY;
-        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
-        wm.style.left = (startLeft + dx - wrap.left) + 'px';
-        wm.style.top = (startTop + dy - wrap.top) + 'px';
-        wm.style.right = 'auto';
-        wm.style.bottom = 'auto';
-      });
-      window.addEventListener('mouseup', () => {
-        if(dragging) {
-          dragging = false;
-          map.dragging.enable();
-        }
-      });
-      // Touch drag
-      let draggingT = false, tStart = null;
-      wm.addEventListener('touchstart', (e) => {
-        const t = e.touches[0];
-        draggingT = true;
-        tStart = { x: t.clientX, y: t.clientY };
-        const r = wm.getBoundingClientRect();
-        startLeft = r.left;
-        startTop = r.top;
-        map.dragging.disable();
-      }, { passive: false });
-      window.addEventListener('touchmove', (e) => {
-        if(!draggingT || wm !== watermarks[watermarks.indexOf(wm)]) return;
-        const t = e.touches[0];
-        const dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
-        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
-        wm.style.left = (startLeft + dx - wrap.left) + 'px';
-        wm.style.top = (startTop + dy - wrap.top) + 'px';
-        wm.style.right = 'auto';
-        wm.style.bottom = 'auto';
-        e.preventDefault();
-      }, { passive: false });
-      window.addEventListener('touchend', () => {
-        if(draggingT) {
-          draggingT = false;
-          map.dragging.enable();
-        }
-      });
+
+      const mapWrap = document.getElementById('mapWrap').getBoundingClientRect();
+      const wmRect = wm.getBoundingClientRect();
+      const centerX = wmRect.left - mapWrap.left + wmRect.width / 2;
+      const centerY = wmRect.top - mapWrap.top + wmRect.height / 2;
+      const latlng = map.containerPointToLatLng([centerX, centerY]);
+
+      wmPopup = L.popup({ autoPan: true })
+        .setLatLng(latlng)
+        .setContent(wrap)
+        .openOn(map);
     }
 
     document.getElementById('logoBtn').onclick = () => document.getElementById('logoFile').click();
     document.getElementById('logoFile').addEventListener('change', e => {
-      const f = e.target.files[0]; if(!f) return;
+      const f = e.target.files[0];
+      if (!f) return;
       const r = new FileReader();
       r.onload = ev => {
-        addWatermark(ev.target.result);
+        watermarkMeta.src = ev.target.result;
+        watermarkMeta.visible = true;
+        watermarkMeta.opacity = 0.5;
+        watermarkMeta.size = 180;
+        wmImg.src = watermarkMeta.src;
+        wm.style.display = 'block';
+        wm.style.width = watermarkMeta.size + 'px';
+        wm.style.opacity = watermarkMeta.opacity;
+        ensureWMLeftTop();
       };
       r.readAsDataURL(f);
     });
 
-    function openWatermarkPopup(e, wm) {
-      const wrap = document.createElement('div');
-      wrap.className = 'size-popup';
-      wrap.innerHTML = `
-        <label>Opacity <input type="range" min="0.05" max="1" step="0.05" value="${wm.style.opacity || 0.5}"></label>
-        <label>Size (px) <input type="range" min="60" max="800" step="10" value="${wm.offsetWidth || 180}"></label>
-        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
-          <button type="button" id="delBtn" style="background:#662b2b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">Delete</button>
-        </div>
-      `;
-      const opacityInput = wrap.querySelector('input[min="0.05"]');
-      opacityInput.addEventListener('input', () => {
-        wm.style.opacity = opacityInput.value;
-      });
-      const sizeInput = wrap.querySelector('input[min="60"]');
-      sizeInput.addEventListener('input', () => {
-        wm.style.width = sizeInput.value + 'px';
-      });
-      wrap.querySelector('#delBtn').addEventListener('click', () => {
-        const idx = watermarks.indexOf(wm);
-        if(idx > -1) {
-          watermarks.splice(idx, 1);
-          wm.remove();
-        }
-        popup.close();
-      });
+    wm.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      openWatermarkPopup();
+    });
 
-      const popup = L.popup()
-        .setContent(wrap)
-        .setLatLng(map.mouseEventToLatLng(e))
-        .openOn(map);
+    let wmLongPressTimer = null;
+    wm.addEventListener('touchstart', e => {
+      e.stopPropagation();
+      wmLongPressTimer = setTimeout(() => openWatermarkPopup(), 600);
+    }, { passive: false });
+    wm.addEventListener('touchend', () => {
+      if (wmLongPressTimer) clearTimeout(wmLongPressTimer);
+    });
+
+    function ensureWMLeftTop() {
+      if (!wm.style.left && !wm.style.top) {
+        const mapWrap = document.getElementById('mapWrap');
+        watermarkMeta.left = mapWrap.clientWidth - 200;
+        watermarkMeta.top = mapWrap.clientHeight - 150;
+        wm.style.left = watermarkMeta.left + 'px';
+        wm.style.top = watermarkMeta.top + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+        wm.style.position = 'absolute';
+      }
     }
+
+    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    wm.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      if (e.button === 2) return;
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const r = wm.getBoundingClientRect();
+      startLeft = r.left;
+      startTop = r.top;
+      map.dragging.disable();
+      if (wmPopup) wmPopup.remove();
+    });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+      watermarkMeta.left = startLeft + dx - wrap.left;
+      watermarkMeta.top = startTop + dy - wrap.top;
+      wm.style.left = watermarkMeta.left + 'px';
+      wm.style.top = watermarkMeta.top + 'px';
+      wm.style.right = 'auto';
+      wm.style.bottom = 'auto';
+      wm.style.position = 'absolute';
+    });
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+      map.dragging.enable();
+    });
+
+    let draggingT = false, tStart = null;
+    wm.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      draggingT = true;
+      tStart = { x: t.clientX, y: t.clientY };
+      const r = wm.getBoundingClientRect();
+      startLeft = r.left;
+      startTop = r.top;
+      map.dragging.disable();
+      if (wmPopup) wmPopup.remove();
+    }, { passive: false });
+    window.addEventListener('touchmove', e => {
+      if (!draggingT) return;
+      const t = e.touches[0];
+      const dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+      const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+      watermarkMeta.left = startLeft + dx - wrap.left;
+      watermarkMeta.top = startTop + dy - wrap.top;
+      wm.style.left = watermarkMeta.left + 'px';
+      wm.style.top = watermarkMeta.top + 'px';
+      wm.style.right = 'auto';
+      wm.style.bottom = 'auto';
+      wm.style.position = 'absolute';
+      e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchend', () => {
+      draggingT = false;
+      map.dragging.enable();
+    });
 
     // ---------- Export helpers ----------
-    function addWatermarkToCanvas(canvas){
+    function addWatermarkToCanvas(c) {
       return new Promise(resolve => {
-        const ctx = canvas.getContext('2d');
+        if (!watermarkMeta.src || !watermarkMeta.visible) return resolve(c);
+        const ctx = c.getContext('2d');
         const wrap = document.getElementById('mapWrap').getBoundingClientRect();
-        const scaleX = canvas.width / wrap.width, scaleY = canvas.height / wrap.height;
-        let loaded = 0;
-        const total = watermarks.filter(wm => wm.style.display !== 'none').length;
-        if(total === 0) return resolve(canvas);
+        const scaleX = c.width / wrap.width, scaleY = c.height / wrap.height;
+        const left = watermarkMeta.left * scaleX, top = watermarkMeta.top * scaleY;
+        const w = watermarkMeta.size * scaleX, h = watermarkMeta.size * scaleY;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          ctx.globalAlpha = watermarkMeta.opacity;
+          ctx.drawImage(img, left, top, w, h);
+          ctx.globalAlpha = 1;
+          resolve(c);
+        };
+        img.onerror = () => {
+          console.warn('Watermark image failed to load:', watermarkMeta.src);
+          resolve(c);
+        };
+        img.src = watermarkMeta.src;
+      });
+    }
 
-        watermarks.forEach(wm => {
-          if(wm.style.display === 'none') return;
-          const img = wm.querySelector('img');
-          const wmRect = wm.getBoundingClientRect();
-          const left = (wmRect.left - wrap.left) * scaleX;
-          const top = (wmRect.top - wrap.top) * scaleY;
-          const w = wmRect.width * scaleX;
-          const h = wmRect.height * scaleY;
-          const newImg = new Image();
-          newImg.crossOrigin = 'anonymous';
-          newImg.onload = () => {
-            ctx.globalAlpha = parseFloat(wm.style.opacity || 1);
-            ctx.drawImage(newImg, left, top, w, h);
-            ctx.globalAlpha = 1;
-            loaded++;
-            if(loaded === total) resolve(canvas);
-          };
-          newImg.onerror = () => {
-            loaded++;
-            if(loaded === total) resolve(canvas);
-          };
-          newImg.src = img.src;
+    function preloadImages(urls) {
+      const unique = Array.from(new Set(urls.filter(Boolean)));
+      return Promise.all(unique.map(src => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(true);
+        img.onerror = () => {
+          console.warn(`Image failed to load: ${src}`);
+          reject(new Error(`Image failed to load: ${src}`));
+        };
+        img.src = src.startsWith('data:') ? src : `${BASE_PATH}/${src}`;
+      })));
+    }
+
+    async function drawPolygonsToCanvas(ctx, canvas, map) {
+      const mapSize = map.getSize();
+      const mapBounds = map.getBounds();
+      const topLeft = map.latLngToContainerPoint(mapBounds.getNorthWest());
+      const bottomRight = map.latLngToContainerPoint(mapBounds.getSouthEast());
+      const pixelWidth = bottomRight.x - topLeft.x;
+      const pixelHeight = bottomRight.y - topLeft.y;
+
+      const scaleX = canvas.width / pixelWidth;
+      const scaleY = canvas.height / pixelHeight;
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (const poly of polygons) {
+        const latlngs = poly.getLatLngs()[0];
+        ctx.beginPath();
+        latlngs.forEach((ll, i) => {
+          const point = map.latLngToContainerPoint(ll);
+          const x = (point.x - topLeft.x) * scaleX;
+          const y = (point.y - topLeft.y) * scaleY;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         });
-      });
+        ctx.closePath();
+        ctx.strokeStyle = poly.options.color || '#ff0000';
+        ctx.lineWidth = (poly.options.weight || 2) * scaleX;
+        if (poly.options.dashArray) {
+          ctx.setLineDash(poly.options.dashArray.split(',').map(Number).map(n => n * scaleX));
+        }
+        ctx.stroke();
+        if (poly.options.fillOpacity > 0) {
+          ctx.fillStyle = poly.options.color || '#ff0000';
+          ctx.globalAlpha = poly.options.fillOpacity || 0.25;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.setLineDash([]);
+      }
     }
 
-    function captureMapCanvas() {
-      return new Promise((resolve, reject) => {
-        map.invalidateSize();
-        const center = map.getCenter();
-        const zoom = map.getZoom();
-        map.setView(center, zoom);
-        
-        let tileLoadCount = 0;
-        const expectedTiles = tileLayer._tiles ? Object.keys(tileLayer._tiles).length : 0;
-        if (expectedTiles === 0) {
-          proceedWithCapture();
+    async function drawMarkersToCanvas(ctx, canvas, map) {
+      const mapBounds = map.getBounds();
+      const topLeft = map.latLngToContainerPoint(mapBounds.getNorthWest());
+      const bottomRight = map.latLngToContainerPoint(mapBounds.getSouthEast());
+      const pixelWidth = bottomRight.x - topLeft.x;
+      const pixelHeight = bottomRight.y - topLeft.y;
+
+      const scaleX = canvas.width / pixelWidth;
+      const scaleY = canvas.height / pixelHeight;
+
+      for (const marker of markers) {
+        const meta = marker.myMeta;
+        const pos = map.latLngToContainerPoint(marker.getLatLng());
+        const x = (pos.x - topLeft.x) * scaleX;
+        const y = (pos.y - topLeft.y) * scaleY;
+        const size = (meta.size || 26) * scaleX;
+
+        if (meta.imgSrc) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          const adjustedSrc = meta.imgSrc.startsWith('data:') ? meta.imgSrc : `${BASE_PATH}/${meta.imgSrc}`;
+          await new Promise(resolve => {
+            img.onload = () => resolve(true);
+            img.onerror = () => {
+              console.warn(`Marker image failed to load: ${adjustedSrc}`);
+              ctx.fillStyle = '#ff0000';
+              ctx.fillRect(x - size / 2, y - size / 2, size, size);
+              resolve(false);
+            };
+            img.src = adjustedSrc;
+          });
+          if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+          }
         } else {
-          tileLayer.on('tileload', () => {
-            tileLoadCount++;
-            if (tileLoadCount >= expectedTiles) {
-              proceedWithCapture();
-            }
-          });
-          tileLayer.on('tileerror', () => {
-            tileLoadCount++;
-            if (tileLoadCount >= expectedTiles) {
-              proceedWithCapture();
-            }
-          });
-          map._onResize();
+          ctx.font = `${size}px system-ui, Segoe UI, Roboto, Arial`;
+          ctx.fillStyle = meta.color || '#000000';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(meta.icon, x, y);
         }
+      }
+    }
 
-        function proceedWithCapture() {
-          const polygonControls = document.getElementById('polygonControls');
-          const originalDisplay = polygonControls.style.display;
-          polygonControls.style.display = 'none';
-          
-          map.eachLayer(layer => {
-            if (layer instanceof L.Popup) {
-              layer._tempHidden = true;
-              map.removeLayer(layer);
-            }
-          });
-
-          const imagesToLoad = [];
-          markers.forEach(marker => {
-            if (marker.myMeta.imgSrc) {
-              imagesToLoad.push(marker.myMeta.imgSrc);
-            }
-          });
-          watermarks.forEach(wm => {
-            if (wm.style.display !== 'none') {
-              imagesToLoad.push(wm.querySelector('img').src);
-            }
-          });
-
-          const loadImage = src => {
-            return new Promise((res, rej) => {
-              const img = new Image();
-              img.crossOrigin = 'anonymous';
-              img.onload = () => res(img);
-              img.onerror = () => res(null);
-              img.src = src;
-            });
-          };
-
-          Promise.all(imagesToLoad.map(loadImage)).then(() => {
-            html2canvas(document.getElementById('mapWrap'), {
-              useCORS: true,
-              scale: window.devicePixelRatio * 2,
-              backgroundColor: '#000',
-              foreignObjectRendering: true,
-              logging: false,
-              width: document.getElementById('mapWrap').offsetWidth,
-              height: document.getElementById('mapWrap').offsetHeight
-            }).then(canvas => {
-              polygonControls.style.display = originalDisplay;
-              map.eachLayer(layer => {
-                if (layer._tempHidden) {
-                  layer.addTo(map);
-                  delete layer._tempHidden;
-                }
-              });
-              addWatermarkToCanvas(canvas).then(resolve).catch(reject);
-            }).catch(err => {
-              polygonControls.style.display = originalDisplay;
-              map.eachLayer(layer => {
-                if (layer._tempHidden) {
-                  layer.addTo(map);
-                  delete layer._tempHidden;
-                }
-              });
-              reject(err);
-            });
-          }).catch(err => {
-            console.error('Image preload failed:', err);
-            reject(err);
-          });
+    async function captureMapCanvas(scaleFactor = 3) {
+      await ensureTilesLoaded();
+      const polygonControls = document.getElementById('polygonControls');
+      const prevPolyDisplay = polygonControls.style.display;
+      polygonControls.style.display = 'none';
+      
+      // Close any open popups
+      map.closePopup();
+      
+      // Temporarily remove overlays to avoid duplication in html2canvas
+      const tempRemoved = [];
+      if (map.hasLayer(drawnItems)) {
+        map.removeLayer(drawnItems);
+        tempRemoved.push(drawnItems);
+      }
+      markers.forEach(marker => {
+        if (map.hasLayer(marker)) {
+          map.removeLayer(marker);
+          tempRemoved.push(marker);
         }
       });
-    }
 
-    function exportPNG(){
-      captureMapCanvas().then(canvas => {
-        const a = document.createElement('a'); 
-        a.download = 'event-map.png'; 
-        a.href = canvas.toDataURL('image/png'); 
-        a.click();
-      }).catch(err => {
-        console.error('PNG export failed:', err);
-        alert('Failed to export PNG. Check console for details.');
+      // Hide all leaflet controls during capture (zoom, draw, etc.), but keep compass
+      const controls = document.querySelectorAll('.leaflet-control');
+      const prevControlDisplays = [];
+      controls.forEach(control => {
+        if (control.classList.contains('compass-control')) return; // Skip compass to include in export
+        const display = control.style.display;
+        prevControlDisplays.push({ el: control, display });
+        control.style.display = 'none';
       });
+
+      const imgUrls = [];
+      markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
+      if (watermarkMeta.src && watermarkMeta.visible) imgUrls.push(watermarkMeta.src);
+      try {
+        await preloadImages(imgUrls);
+      } catch (err) {
+        // Add back overlays and restore controls before throwing
+        tempRemoved.forEach(layer => {
+          if (layer === drawnItems) {
+            drawnItems.addTo(map);
+          } else {
+            map.addLayer(layer);
+          }
+        });
+        prevControlDisplays.forEach(({ el, display }) => {
+          el.style.display = display;
+        });
+        throw new Error('Failed to load one or more images. Try enabling OpenStreetMap or ensuring all images are accessible.');
+      }
+
+      const mapWrap = document.getElementById('mapWrap');
+      const mapSize = map.getSize();
+      const canvas = document.createElement('canvas');
+      canvas.width = mapSize.x * scaleFactor;
+      canvas.height = mapSize.y * scaleFactor;
+      const ctx = canvas.getContext('2d');
+
+      const tileCanvas = await html2canvas(mapWrap, {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#000',
+        width: mapSize.x,
+        height: mapSize.y,
+        scale: scaleFactor,
+        foreignObjectRendering: false
+      });
+
+      ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
+
+      // Add back overlays immediately after capture (browser view restores)
+      tempRemoved.forEach(layer => {
+        if (layer === drawnItems) {
+          drawnItems.addTo(map);
+        } else {
+          map.addLayer(layer);
+        }
+      });
+
+      // Restore controls
+      prevControlDisplays.forEach(({ el, display }) => {
+        el.style.display = display;
+      });
+
+      // Now manually draw overlays on the clean canvas
+      await drawPolygonsToCanvas(ctx, canvas, map);
+      await drawMarkersToCanvas(ctx, canvas, map);
+      await addWatermarkToCanvas(canvas);
+
+      polygonControls.style.display = prevPolyDisplay;
+      return canvas;
     }
 
-    // ---------- PDF dialog ----------
-    const pdfBackdrop=document.getElementById('pdfBackdrop');
-    const pdfDialog=document.getElementById('pdfDialog');
-    function openPdfDialog(){ 
-      pdfBackdrop.style.display='block'; 
-      pdfDialog.style.display='block'; 
+    function exportPNG() {
+      captureMapCanvas(3)
+        .then(c => {
+          const a = document.createElement('a');
+          a.download = 'event-map.png';
+          a.href = c.toDataURL('image/png');
+          a.click();
+        })
+        .catch(err => {
+          console.error('PNG export failed:', err);
+          alert('PNG export failed: ' + err.message);
+        });
     }
-    function closePdfDialog(){ 
-      pdfBackdrop.style.display='none'; 
-      pdfDialog.style.display='none'; 
+
+    const pdfBackdrop = document.getElementById('pdfBackdrop');
+    const pdfDialog = document.getElementById('pdfDialog');
+    function openPdfDialog() {
+      pdfBackdrop.style.display = 'block';
+      pdfDialog.style.display = 'block';
+    }
+    function closePdfDialog() {
+      pdfBackdrop.style.display = 'none';
+      pdfDialog.style.display = 'none';
     }
     pdfBackdrop.addEventListener('click', closePdfDialog);
     document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
 
-    document.getElementById('exportPdf').onclick=()=>{
+    document.getElementById('exportPdf').onclick = () => {
       const { jsPDF } = window.jspdf;
-      const size=document.getElementById('pdfSize').value;
-      const orientation=document.getElementById('pdfOrientation').value;
-      const scaleMode=document.getElementById('pdfScaleMode').value;
+      const size = document.getElementById('pdfSize').value;
+      const orientation = document.getElementById('pdfOrientation').value;
+      const scaleMode = document.getElementById('pdfScaleMode').value;
+      const resolution = parseInt(document.getElementById('pdfResolution').value);
 
-      const pdf = new jsPDF({orientation, unit:'mm', format:size});
-      captureMapCanvas().then(canvas => {
-        const img = canvas.toDataURL('image/jpeg', 1.0);
+      const pdf = new jsPDF({ orientation, unit: 'mm', format: size });
+      captureMapCanvas(resolution).then(c => {
+        const img = c.toDataURL('image/png'); // Use PNG for lossless quality
         const pageW = pdf.internal.pageSize.getWidth();
         const pageH = pdf.internal.pageSize.getHeight();
         let imgW, imgH, x, y;
         if (scaleMode === 'fit') {
-          imgW = pageW; imgH = pageH; x = 0; y = 0;
+          imgW = pageW;
+          imgH = pageH;
+          x = 0;
+          y = 0;
         } else {
-          const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
-          imgW = canvas.width * ratio; imgH = canvas.height * ratio;
-          x = (pageW - imgW) / 2; y = (pageH - imgH) / 2;
+          const ratio = Math.min(pageW / c.width, pageH / c.height);
+          imgW = c.width * ratio;
+          imgH = c.height * ratio;
+          x = (pageW - imgW) / 2;
+          y = (pageH - imgH) / 2;
         }
-        pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
+        pdf.addImage(img, 'PNG', x, y, imgW, imgH);
         pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
         closePdfDialog();
       }).catch(err => {
         console.error('PDF export failed:', err);
-        alert('Failed to export PDF. Check console for details.');
+        alert('PDF export failed: ' + err.message);
         closePdfDialog();
       });
     };
 
     // ---------- JSON Export / Import ----------
-    const importJsonInput=document.getElementById('importJsonFile');
-    importJsonInput.addEventListener('change', e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader();
-      r.onload=ev=>{
-        try{ restoreProjectJSON(JSON.parse(ev.target.result)); }
-        catch(err){ alert('Invalid JSON'); }
+    const importJsonInput = document.getElementById('importJsonFile');
+    importJsonInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try {
+          restoreProjectJSON(JSON.parse(ev.target.result));
+        } catch (err) {
+          alert('Invalid JSON');
+        }
       };
       r.readAsText(f);
     });
-    function doExportJSON(){
+
+    function doExportJSON() {
       const data = buildProjectJSON();
-      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `event-map-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      a.download = `event-map-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
     }
 
-    function buildProjectJSON(){
-      const savedMarkers = markers.map(m=>{
+    function buildProjectJSON() {
+      const savedMarkers = markers.map(m => {
         const ll = m.getLatLng();
         return { lat: ll.lat, lng: ll.lng, meta: m.myMeta };
       });
-      const savedPolys = polygons.map(p=>{
+      const savedPolys = polygons.map(p => {
         const rings = p.getLatLngs();
-        const latlngs = rings[0].map(ll=>[ll.lat,ll.lng]);
-        const {color,weight,dashArray,fillOpacity}=p.options;
-        return { latlngs, style:{color,weight,dashArray,fillOpacity} };
+        const latlngs = rings[0].map(ll => [ll.lat, ll.lng]);
+        const { color, weight, dashArray, fillOpacity } = p.options;
+        return { latlngs, style: { color, weight, dashArray, fillOpacity } };
       });
-      const savedLegend = Array.from(legendSet.entries()).map(([label,val])=>({label, icon:val.emoji || null, imgSrc:val.img || null}));
-      // Watermarks
-      const wrapRect = document.getElementById('mapWrap').getBoundingClientRect();
-      const savedWatermarks = watermarks.map(wm => {
-        if(wm.style.display === 'none') return null;
-        const wmRect = wm.getBoundingClientRect();
-        return {
-          src: wm.querySelector('img').src,
-          visible: wm.style.display !== 'none',
-          left: (wmRect.left - wrapRect.left),
-          top: (wmRect.top - wrapRect.top),
-          width: wm.offsetWidth,
-          opacity: parseFloat(wm.style.opacity || 1)
-        };
-      }).filter(wm => wm);
+      const savedLegend = Array.from(legendSet.entries()).map(([label, val]) => ({
+        label,
+        icon: val.emoji || null,
+        imgSrc: val.img || null
+      }));
+      const wmData = watermarkMeta.src ? {
+        src: watermarkMeta.src,
+        visible: watermarkMeta.visible,
+        left: watermarkMeta.left,
+        top: watermarkMeta.top,
+        width: watermarkMeta.size,
+        opacity: watermarkMeta.opacity
+      } : null;
 
       return {
-        version: 5,
+        version: 6,
         createdAt: new Date().toISOString(),
         view: { center: map.getCenter(), zoom: map.getZoom() },
         markers: savedMarkers,
         polygons: savedPolys,
         legend: savedLegend,
-        watermarks: savedWatermarks
+        watermark: wmData,
+        useOSM: document.getElementById('useOSM').checked
       };
     }
 
-    function restoreProjectJSON(data){
-      // Clear existing
-      markers.forEach(m=>map.removeLayer(m)); markers.length=0;
-      polygons.forEach(p=>map.removeLayer(p)); polygons.length=0;
-      tempLines.forEach(l=>map.removeLayer(l)); tempLines.length=0;
-      watermarks.forEach(wm=>wm.remove()); watermarks.length=0;
-      legendSet.clear(); renderLegend();
+    function restoreProjectJSON(data) {
+      // Clear existing state
+      markers.forEach(m => map.removeLayer(m));
+      markers.length = 0;
+      drawnItems.clearLayers();
+      polygons.length = 0;
+      legendSet.clear();
+      renderLegend();
+      if (wmPopup) wmPopup.remove();
+      wmPopup = null;
 
-      // View
-      if(data.view && data.view.center && typeof data.view.zoom!=='undefined'){
+      // Clear existing custom tools, keeping default tools and addCustomBtn
+      const toolbar = document.getElementById('toolbar');
+      const defaultTools = Array.from(toolbar.querySelectorAll('.tool')).filter(t => !t.id || t.id !== 'addCustomIconBtn');
+      const addCustomBtn = document.getElementById('addCustomIconBtn');
+      toolbar.innerHTML = '';
+      defaultTools.forEach(t => toolbar.appendChild(t));
+      toolbar.appendChild(addCustomBtn);
+      attachToolHandlers();
+
+      // Restore map view
+      if (data.view && data.view.center && typeof data.view.zoom !== 'undefined') {
         map.setView([data.view.center.lat, data.view.center.lng], data.view.zoom);
-      }else{
+      } else {
         map.setView(SOFALA_CENTER, SOFALA_ZOOM);
       }
 
-      // Legend
-      if(Array.isArray(data.legend)){
-        data.legend.forEach(item=>{
-          if(!item || !item.label) return;
-          if(item.imgSrc) legendSet.set(item.label,{img:item.imgSrc});
-          else if(item.icon) legendSet.set(item.label,{emoji:item.icon});
+      // Restore legend
+      if (Array.isArray(data.legend)) {
+        data.legend.forEach(item => {
+          if (!item || !item.label || legendSet.has(item.label)) return;
+          if (item.imgSrc) legendSet.set(item.label, { img: item.imgSrc });
+          else if (item.icon) legendSet.set(item.label, { emoji: item.icon });
         });
         renderLegend();
       }
 
-      // Markers (includes image markers & text)
-      if(Array.isArray(data.markers)){
-        data.markers.forEach(m=>{
+      // Restore markers
+      if (Array.isArray(data.markers)) {
+        data.markers.forEach(m => {
           const latlng = L.latLng(m.lat, m.lng);
-          const meta = m.meta && (m.meta.icon || m.meta.imgSrc) ? m.meta : {icon:'📍',label:'Marker',size:26};
+          const meta = m.meta && (m.meta.icon || m.meta.imgSrc)
+            ? m.meta
+            : { icon: '📍', label: 'Marker', size: 26 };
+          if (!meta.baseSize && meta.size) meta.baseSize = meta.size;
           placeMarkerOrText(latlng, meta);
         });
       }
 
-      // Polygons
-      if(Array.isArray(data.polygons)){
-        data.polygons.forEach(p=>{
-          const poly=L.polygon(p.latlngs, p.style || {color:'#ff0000',weight:2,dashArray:'6,4',fillOpacity:0.25}).addTo(map);
-          poly.on('click',()=>selectPolygon(poly));
+      // Restore polygons
+      if (Array.isArray(data.polygons)) {
+        data.polygons.forEach(p => {
+          const poly = L.polygon(p.latlngs, p.style || {
+            color: '#ff0000',
+            weight: 2,
+            dashArray: '6,4',
+            fillOpacity: 0.25
+          }).addTo(drawnItems);
+          poly.on('click', () => selectPolygon(poly));
           polygons.push(poly);
         });
       }
 
-      // Watermarks
-      if(Array.isArray(data.watermarks)){
-        data.watermarks.forEach(wmData => {
-          if(wmData && wmData.src){
-            addWatermark(wmData.src, {
-              visible: wmData.visible,
-              left: wmData.left,
-              top: wmData.top,
-              width: wmData.width,
-              opacity: wmData.opacity
-            });
+      // Restore watermark
+      if (data.watermark && data.watermark.src) {
+        watermarkMeta = {
+          src: data.watermark.src,
+          visible: data.watermark.visible,
+          left: data.watermark.left || 0,
+          top: data.watermark.top || 0,
+          size: data.watermark.width || 180,
+          opacity: typeof data.watermark.opacity === 'number' ? data.watermark.opacity : 0.5
+        };
+        wmImg.src = watermarkMeta.src;
+        wm.style.display = watermarkMeta.visible ? 'block' : 'none';
+        wm.style.position = 'absolute';
+        wm.style.left = watermarkMeta.left + 'px';
+        wm.style.top = watermarkMeta.top + 'px';
+        wm.style.right = 'auto';
+        wm.style.bottom = 'auto';
+        wm.style.width = watermarkMeta.size + 'px';
+        wm.style.opacity = watermarkMeta.opacity;
+      }
+
+      // Restore custom tools from legend
+      if (Array.isArray(data.legend)) {
+        data.legend.forEach(item => {
+          if (item.imgSrc && !document.querySelector(`.tool[data-label="${item.label}"][data-imgsrc="${item.imgSrc}"]`)) {
+            addCustomTool(item.label, item.imgSrc);
           }
         });
       }
-    }
 
-    // ---------- PDF dialog open/close handlers ----------
-    function openPdfDialog(){ 
-      document.getElementById('pdfBackdrop').style.display='block'; 
-      document.getElementById('pdfDialog').style.display='block'; 
+      // Restore map layer
+      if (typeof data.useOSM === 'boolean') {
+        document.getElementById('useOSM').checked = data.useOSM;
+        setBaseLayer(data.useOSM);
+      }
     }
-    function closePdfDialog(){ 
-      document.getElementById('pdfBackdrop').style.display='none'; 
-      document.getElementById('pdfDialog').style.display='none'; 
-    }
-    document.getElementById('pdfBackdrop').addEventListener('click', closePdfDialog);
-    document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
   </script>
 </body>
 </html>
