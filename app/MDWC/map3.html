@@ -405,10 +405,16 @@
     // ---------- Tools (emoji/text/permanent image/custom image) ----------
     let activeTool = null;
     function attachToolHandlers() {
+      // Remove existing listeners to prevent duplicates
       document.querySelectorAll('.tool[data-type]').forEach(t => {
-        t.onclick = () => { activeTool = t; };
+        // Clone the node to remove existing event listeners
+        const newTool = t.cloneNode(true);
+        t.parentNode.replaceChild(newTool, t);
+        newTool.onclick = () => { activeTool = newTool; };
       });
     }
+
+    // Initialize default tools
     attachToolHandlers();
 
     const customInput = document.getElementById('customIconInput');
@@ -420,12 +426,17 @@
       const r = new FileReader();
       r.onload = ev => {
         const label = prompt("Label for this icon (for legend):", "Custom");
-        addCustomTool(label || "Custom", ev.target.result);
+        if (label) addCustomTool(label, ev.target.result);
         customInput.value = "";
       };
       r.readAsDataURL(f);
     });
+
     function addCustomTool(label, dataUrl) {
+      // Check if tool with the same label and imgsrc already exists
+      const existingTool = document.querySelector(`.tool[data-label="${label}"][data-imgsrc="${dataUrl}"]`);
+      if (existingTool) return; // Prevent duplicate tool
+
       const btn = document.createElement('button');
       btn.className = 'tool';
       btn.setAttribute('data-type', 'image');
@@ -486,7 +497,7 @@
       marker.on('touchstart', () => { lpTimer = setTimeout(() => openMarkerPopup(marker), 600); });
       marker.on('touchend', () => { if (lpTimer) clearTimeout(lpTimer); });
 
-      if (!meta.isText) {
+      if (!meta.isText && !legendSet.has(meta.label)) {
         legendSet.set(meta.label, meta.imgSrc ? { img: meta.imgSrc } : { emoji: meta.icon });
         renderLegend();
       }
@@ -1094,6 +1105,7 @@
     }
 
     function restoreProjectJSON(data) {
+      // Clear existing state
       markers.forEach(m => map.removeLayer(m));
       markers.length = 0;
       drawnItems.clearLayers();
@@ -1103,21 +1115,33 @@
       if (wmPopup) wmPopup.remove();
       wmPopup = null;
 
+      // Clear existing custom tools, keeping default tools and addCustomBtn
+      const toolbar = document.getElementById('toolbar');
+      const defaultTools = Array.from(toolbar.querySelectorAll('.tool')).filter(t => !t.id || t.id !== 'addCustomIconBtn');
+      const addCustomBtn = document.getElementById('addCustomIconBtn');
+      toolbar.innerHTML = '';
+      defaultTools.forEach(t => toolbar.appendChild(t));
+      toolbar.appendChild(addCustomBtn);
+      attachToolHandlers();
+
+      // Restore map view
       if (data.view && data.view.center && typeof data.view.zoom !== 'undefined') {
         map.setView([data.view.center.lat, data.view.center.lng], data.view.zoom);
       } else {
         map.setView(SOFALA_CENTER, SOFALA_ZOOM);
       }
 
+      // Restore legend
       if (Array.isArray(data.legend)) {
         data.legend.forEach(item => {
-          if (!item || !item.label) return;
+          if (!item || !item.label || legendSet.has(item.label)) return;
           if (item.imgSrc) legendSet.set(item.label, { img: item.imgSrc });
           else if (item.icon) legendSet.set(item.label, { emoji: item.icon });
         });
         renderLegend();
       }
 
+      // Restore markers
       if (Array.isArray(data.markers)) {
         data.markers.forEach(m => {
           const latlng = L.latLng(m.lat, m.lng);
@@ -1129,6 +1153,7 @@
         });
       }
 
+      // Restore polygons
       if (Array.isArray(data.polygons)) {
         data.polygons.forEach(p => {
           const poly = L.polygon(p.latlngs, p.style || {
@@ -1142,6 +1167,7 @@
         });
       }
 
+      // Restore watermark
       if (data.watermark && data.watermark.src) {
         watermarkMeta = {
           src: data.watermark.src,
@@ -1162,6 +1188,16 @@
         wm.style.opacity = watermarkMeta.opacity;
       }
 
+      // Restore custom tools from legend
+      if (Array.isArray(data.legend)) {
+        data.legend.forEach(item => {
+          if (item.imgSrc && !document.querySelector(`.tool[data-label="${item.label}"][data-imgsrc="${item.imgSrc}"]`)) {
+            addCustomTool(item.label, item.imgSrc);
+          }
+        });
+      }
+
+      // Restore map layer
       if (typeof data.useOSM === 'boolean') {
         document.getElementById('useOSM').checked = data.useOSM;
         setBaseLayer(data.useOSM);
