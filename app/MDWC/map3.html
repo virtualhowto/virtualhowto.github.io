@@ -239,6 +239,8 @@
     map.addLayer(drawnItems);
 
     // Custom draw control with color picker and fill toggle
+    let polygonHandler = null;
+
     const drawControl = new L.Control.Draw({
       position: 'topleft',
       draw: {
@@ -284,15 +286,18 @@
         </label>
       `;
 
+      // Initialize polygon handler
+      polygonHandler = new L.Draw.Polygon(map, this.options.draw.polygon);
+
       L.DomEvent.on(polygonBtn, 'click', e => {
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);
         const isActive = L.DomUtil.hasClass(polygonBtn, 'active');
         if (!isActive) {
-          this._startDrawing('polygon');
+          polygonHandler.enable();
           L.DomUtil.addClass(polygonBtn, 'active');
         } else {
-          this._finishDrawing();
+          polygonHandler.disable();
           L.DomUtil.removeClass(polygonBtn, 'active');
         }
       });
@@ -311,6 +316,16 @@
             }
           }
         });
+        if (polygonHandler) {
+          polygonHandler.setOptions({
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          });
+        }
       });
 
       fillCheckbox.addEventListener('change', () => {
@@ -324,20 +339,19 @@
             }
           }
         });
+        if (polygonHandler) {
+          polygonHandler.setOptions({
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          });
+        }
       });
 
       return container;
-    };
-
-    // Custom methods to handle drawing start/stop
-    drawControl._startDrawing = function(type) {
-      if (type === 'polygon') {
-        this._handlers.polygon.enable();
-      }
-    };
-
-    drawControl._finishDrawing = function() {
-      this._handlers.polygon.disable();
     };
 
     map.addControl(drawControl);
@@ -351,7 +365,10 @@
       polygons.push(layer);
       // Deactivate drawing and remove active class
       const polygonBtn = document.querySelector('.leaflet-draw-draw-polygon');
-      if (polygonBtn) L.DomUtil.removeClass(polygonBtn, 'active');
+      if (polygonBtn) {
+        L.DomUtil.removeClass(polygonBtn, 'active');
+        if (polygonHandler) polygonHandler.disable();
+      }
     });
 
     map.on(L.Draw.Event.EDITED, e => {});
