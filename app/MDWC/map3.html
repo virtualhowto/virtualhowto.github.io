@@ -143,6 +143,13 @@
         <option value="fit">Fit to Page</option>
       </select>
     </label>
+    <label>Resolution
+      <select id="pdfResolution">
+        <option value="2" selected>Medium (2x)</option>
+        <option value="3">High (3x)</option>
+        <option value="4">Ultra (4x)</option>
+      </select>
+    </label>
     <div class="actions">
       <button class="btn" id="cancelPdf">Cancel</button>
       <button class="btn primary" id="exportPdf">Export</button>
@@ -844,7 +851,6 @@
     }
 
     async function drawPolygonsToCanvas(ctx, canvas, map) {
-      const scale = window.devicePixelRatio > 1 ? 2 : 1;
       const mapSize = map.getSize();
       const mapBounds = map.getBounds();
       const topLeft = map.latLngToContainerPoint(mapBounds.getNorthWest());
@@ -929,7 +935,7 @@
       }
     }
 
-    async function captureMapCanvas() {
+    async function captureMapCanvas(scaleFactor = 3) {
       await ensureTilesLoaded();
       const polygonControls = document.getElementById('polygonControls');
       const prevPolyDisplay = polygonControls.style.display;
@@ -951,13 +957,22 @@
         }
       });
 
+      // Hide all leaflet controls during capture (zoom, draw, compass, etc.)
+      const controls = document.querySelectorAll('.leaflet-control');
+      const prevControlDisplays = [];
+      controls.forEach(control => {
+        const display = control.style.display;
+        prevControlDisplays.push({ el: control, display });
+        control.style.display = 'none';
+      });
+
       const imgUrls = [];
       markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
       if (watermarkMeta.src && watermarkMeta.visible) imgUrls.push(watermarkMeta.src);
       try {
         await preloadImages(imgUrls);
       } catch (err) {
-        // Add back overlays before throwing
+        // Add back overlays and restore controls before throwing
         tempRemoved.forEach(layer => {
           if (layer === drawnItems) {
             drawnItems.addTo(map);
@@ -965,15 +980,17 @@
             map.addLayer(layer);
           }
         });
+        prevControlDisplays.forEach(({ el, display }) => {
+          el.style.display = display;
+        });
         throw new Error('Failed to load one or more images. Try enabling OpenStreetMap or ensuring all images are accessible.');
       }
 
       const mapWrap = document.getElementById('mapWrap');
       const mapSize = map.getSize();
-      const scale = window.devicePixelRatio > 1 ? 2 : 1;
       const canvas = document.createElement('canvas');
-      canvas.width = mapSize.x * scale;
-      canvas.height = mapSize.y * scale;
+      canvas.width = mapSize.x * scaleFactor;
+      canvas.height = mapSize.y * scaleFactor;
       const ctx = canvas.getContext('2d');
 
       const tileCanvas = await html2canvas(mapWrap, {
@@ -982,7 +999,7 @@
         backgroundColor: '#000',
         width: mapSize.x,
         height: mapSize.y,
-        scale,
+        scale: scaleFactor,
         foreignObjectRendering: false
       });
 
@@ -997,6 +1014,11 @@
         }
       });
 
+      // Restore controls
+      prevControlDisplays.forEach(({ el, display }) => {
+        el.style.display = display;
+      });
+
       // Now manually draw overlays on the clean canvas
       await drawPolygonsToCanvas(ctx, canvas, map);
       await drawMarkersToCanvas(ctx, canvas, map);
@@ -1007,7 +1029,7 @@
     }
 
     function exportPNG() {
-      captureMapCanvas()
+      captureMapCanvas(3)
         .then(c => {
           const a = document.createElement('a');
           a.download = 'event-map.png';
@@ -1038,10 +1060,11 @@
       const size = document.getElementById('pdfSize').value;
       const orientation = document.getElementById('pdfOrientation').value;
       const scaleMode = document.getElementById('pdfScaleMode').value;
+      const resolution = parseInt(document.getElementById('pdfResolution').value);
 
       const pdf = new jsPDF({ orientation, unit: 'mm', format: size });
-      captureMapCanvas().then(c => {
-        const img = c.toDataURL('image/jpeg', 1.0);
+      captureMapCanvas(resolution).then(c => {
+        const img = c.toDataURL('image/png'); // Use PNG for lossless quality
         const pageW = pdf.internal.pageSize.getWidth();
         const pageH = pdf.internal.pageSize.getHeight();
         let imgW, imgH, x, y;
@@ -1057,7 +1080,7 @@
           x = (pageW - imgW) / 2;
           y = (pageH - imgH) / 2;
         }
-        pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
+        pdf.addImage(img, 'PNG', x, y, imgW, imgH);
         pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
         closePdfDialog();
       }).catch(err => {
