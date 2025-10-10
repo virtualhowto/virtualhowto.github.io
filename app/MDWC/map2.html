@@ -386,15 +386,6 @@
     let selectedMarker = null;
     const markers = [];
     const legendSet = new Map();
-    const markerSet = new Set(); // Track unique markers to prevent duplicates
-
-    // Generate unique ID for markers
-    function generateMarkerId(latlng, meta) {
-      const lat = latlng.lat.toFixed(6);
-      const lng = latlng.lng.toFixed(6);
-      const key = meta.imgSrc || meta.icon || meta.label;
-      return `${lat}_${lng}_${key}`;
-    }
 
     // ---------- Export dropdown ----------
     const exportBtn = document.getElementById('exportMenuBtn');
@@ -413,17 +404,13 @@
 
     // ---------- Tools (emoji/text/permanent image/custom image) ----------
     let activeTool = null;
-    let isProcessingClick = false; // Prevent multiple click processing
-
     function attachToolHandlers() {
       // Remove existing listeners to prevent duplicates
       document.querySelectorAll('.tool[data-type]').forEach(t => {
+        // Clone the node to remove existing event listeners
         const newTool = t.cloneNode(true);
         t.parentNode.replaceChild(newTool, t);
-        newTool.onclick = () => { 
-          activeTool = newTool; 
-          console.log(`Tool activated: ${newTool.dataset.label}`); 
-        };
+        newTool.onclick = () => { activeTool = newTool; };
       });
     }
 
@@ -446,6 +433,7 @@
     });
 
     function addCustomTool(label, dataUrl) {
+      // Check if tool with the same label and imgsrc already exists
       const existingTool = document.querySelector(`.tool[data-label="${label}"][data-imgsrc="${dataUrl}"]`);
       if (existingTool) return; // Prevent duplicate tool
 
@@ -459,31 +447,19 @@
       attachToolHandlers();
     }
 
-    // Map click handler with deduplication
-    map.off('click'); // Remove any existing click handlers
     map.on('click', e => {
-      if (isProcessingClick) {
-        console.log('Click ignored: Processing another click');
-        return;
+      if (activeTool && !map._handlers.some(h => h instanceof L.Draw.Polygon)) {
+        const type = activeTool.dataset.type;
+        const label = activeTool.dataset.label;
+        if (type === 'emoji' || type === 'text' || type === 'image') {
+          const meta = { label };
+          if (type === 'emoji') meta.icon = activeTool.dataset.icon;
+          if (type === 'text') meta.icon = '✏️', meta.isText = true;
+          if (type === 'image') meta.imgSrc = activeTool.dataset.imgsrc;
+          placeMarkerOrText(e.latlng, meta);
+          activeTool = null;
+        }
       }
-      if (!activeTool || map._handlers.some(h => h instanceof L.Draw.Polygon)) {
-        console.log('Click ignored: No active tool or polygon drawing active');
-        return;
-      }
-
-      isProcessingClick = true;
-      const type = activeTool.dataset.type;
-      const label = activeTool.dataset.label;
-      if (type === 'emoji' || type === 'text' || type === 'image') {
-        const meta = { label };
-        if (type === 'emoji') meta.icon = activeTool.dataset.icon;
-        if (type === 'text') meta.icon = '✏️', meta.isText = true;
-        if (type === 'image') meta.imgSrc = activeTool.dataset.imgsrc;
-        console.log(`Placing marker: ${label} at ${e.latlng.lat}, ${e.latlng.lng}`);
-        placeMarkerOrText(e.latlng, meta);
-        activeTool = null; // Reset active tool immediately
-      }
-      setTimeout(() => { isProcessingClick = false; }, 100); // Debounce clicks
     });
 
     // ---------- Place marker ----------
@@ -493,13 +469,6 @@
         if (!text) return;
         meta.icon = text;
         meta.color = "#ffffff";
-      }
-
-      // Check for duplicate marker at same position with same metadata
-      const markerId = generateMarkerId(latlng, meta);
-      if (markerSet.has(markerId)) {
-        console.log(`Duplicate marker prevented: ${markerId}`);
-        return;
       }
 
       const size = meta.size || 26;
@@ -519,9 +488,8 @@
         draggable: true
       }).addTo(map);
 
-      marker.myMeta = { ...meta, size, baseSize: meta.baseSize || size, id: markerId };
+      marker.myMeta = { ...meta, size, baseSize: meta.baseSize || size };
       markers.push(marker);
-      markerSet.add(markerId);
 
       marker.on('click', () => { selectedMarker = marker; });
       marker.on('contextmenu', () => openMarkerPopup(marker));
@@ -575,7 +543,6 @@
         map.removeLayer(marker);
         const idx = markers.indexOf(marker);
         if (idx > -1) markers.splice(idx, 1);
-        markerSet.delete(marker.myMeta.id);
         if (selectedMarker === marker) selectedMarker = null;
         updateLegendAfterDelete(marker);
         marker.closePopup();
@@ -585,7 +552,6 @@
         const ll = marker.getLatLng();
         const offset = 0.0002;
         const metaCopy = JSON.parse(JSON.stringify(marker.myMeta));
-        delete metaCopy.id; // Ensure new marker gets a unique ID
         placeMarkerOrText(L.latLng(ll.lat + offset, ll.lng + offset), metaCopy);
       });
 
@@ -645,7 +611,6 @@
         map.removeLayer(selectedMarker);
         const idx = markers.indexOf(selectedMarker);
         if (idx > -1) markers.splice(idx, 1);
-        markerSet.delete(selectedMarker.myMeta.id);
         updateLegendAfterDelete(selectedMarker);
         selectedMarker = null;
       }
@@ -866,14 +831,10 @@
 
     function preloadImages(urls) {
       const unique = Array.from(new Set(urls.filter(Boolean)));
-      console.log(`Preloading ${unique.length} images:`, unique);
       return Promise.all(unique.map(src => new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          console.log(`Loaded image: ${src}`);
-          resolve(true);
-        };
+        img.onload = () => resolve(true);
         img.onerror = () => {
           console.warn(`Image failed to load: ${src}`);
           reject(new Error(`Image failed to load: ${src}`));
@@ -897,7 +858,6 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      console.log(`Drawing ${polygons.length} polygons`);
       for (const poly of polygons) {
         const latlngs = poly.getLatLngs()[0];
         ctx.beginPath();
@@ -935,34 +895,19 @@
       const scaleX = canvas.width / pixelWidth;
       const scaleY = canvas.height / pixelHeight;
 
-      const drawnMarkers = new Set(); // Track drawn markers to prevent duplicates
-      console.log(`Drawing ${markers.length} markers`);
-
       for (const marker of markers) {
         const meta = marker.myMeta;
-        const markerId = meta.id;
-        if (drawnMarkers.has(markerId)) {
-          console.log(`Skipping duplicate marker in export: ${markerId}`);
-          continue;
-        }
-        drawnMarkers.add(markerId);
-
         const pos = map.latLngToContainerPoint(marker.getLatLng());
         const x = (pos.x - topLeft.x) * scaleX;
         const y = (pos.y - topLeft.y) * scaleY;
         const size = (meta.size || 26) * scaleX;
-
-        console.log(`Drawing marker: ${meta.label} at canvas coords (${x}, ${y})`);
 
         if (meta.imgSrc) {
           const img = new Image();
           img.crossOrigin = 'anonymous';
           const adjustedSrc = meta.imgSrc.startsWith('data:') ? meta.imgSrc : `${BASE_PATH}/${meta.imgSrc}`;
           await new Promise(resolve => {
-            img.onload = () => {
-              console.log(`Marker image loaded: ${adjustedSrc}`);
-              resolve(true);
-            };
+            img.onload = () => resolve(true);
             img.onerror = () => {
               console.warn(`Marker image failed to load: ${adjustedSrc}`);
               ctx.fillStyle = '#ff0000';
@@ -982,28 +927,37 @@
           ctx.fillText(meta.icon, x, y);
         }
       }
-      console.log(`Total markers drawn: ${drawnMarkers.size}`);
     }
 
     async function captureMapCanvas() {
-      console.log('Starting canvas capture for export');
       await ensureTilesLoaded();
       const polygonControls = document.getElementById('polygonControls');
       const prevPolyDisplay = polygonControls.style.display;
       polygonControls.style.display = 'none';
-      const hiddenPopups = [];
-      const hiddenMarkers = [];
-
-      // Hide popups and markers to prevent them from being captured by html2canvas
-      map.eachLayer(l => {
-        if (l instanceof L.Popup) {
-          hiddenPopups.push(l);
-          map.removeLayer(l);
-        } else if (l instanceof L.Marker && markers.includes(l)) {
-          hiddenMarkers.push(l);
-          map.removeLayer(l);
+      
+      // Close any open popups
+      map.closePopup();
+      
+      // Temporarily remove overlays to avoid duplication in html2canvas
+      const tempRemoved = [];
+      if (map.hasLayer(drawnItems)) {
+        map.removeLayer(drawnItems);
+        tempRemoved.push(drawnItems);
+      }
+      markers.forEach(marker => {
+        if (map.hasLayer(marker)) {
+          map.removeLayer(marker);
+          tempRemoved.push(marker);
         }
       });
+
+      // Hide UI controls (zoom and draw) during capture
+      const zoomControl = document.querySelector('.leaflet-control-zoom');
+      const drawControlEl = document.querySelector('.leaflet-draw');
+      const prevZoomDisplay = zoomControl ? zoomControl.style.display : null;
+      const prevDrawDisplay = drawControlEl ? drawControlEl.style.display : null;
+      if (zoomControl) zoomControl.style.display = 'none';
+      if (drawControlEl) drawControlEl.style.display = 'none';
 
       const imgUrls = [];
       markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
@@ -1011,7 +965,16 @@
       try {
         await preloadImages(imgUrls);
       } catch (err) {
-        console.error('Image preload failed:', err);
+        // Add back overlays and restore controls before throwing
+        tempRemoved.forEach(layer => {
+          if (layer === drawnItems) {
+            drawnItems.addTo(map);
+          } else {
+            map.addLayer(layer);
+          }
+        });
+        if (zoomControl && prevZoomDisplay !== null) zoomControl.style.display = prevZoomDisplay;
+        if (drawControlEl && prevDrawDisplay !== null) drawControlEl.style.display = prevDrawDisplay;
         throw new Error('Failed to load one or more images. Try enabling OpenStreetMap or ensuring all images are accessible.');
       }
 
@@ -1023,9 +986,6 @@
       canvas.height = mapSize.y * scale;
       const ctx = canvas.getContext('2d');
 
-      // Clear canvas to ensure no residual content
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       const tileCanvas = await html2canvas(mapWrap, {
         useCORS: true,
         allowTaint: false,
@@ -1033,34 +993,40 @@
         width: mapSize.x,
         height: mapSize.y,
         scale,
-        foreignObjectRendering: false,
-        logging: true
+        foreignObjectRendering: false
       });
 
       ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
 
+      // Add back overlays immediately after capture (browser view restores)
+      tempRemoved.forEach(layer => {
+        if (layer === drawnItems) {
+          drawnItems.addTo(map);
+        } else {
+          map.addLayer(layer);
+        }
+      });
+
+      // Restore UI controls
+      if (zoomControl && prevZoomDisplay !== null) zoomControl.style.display = prevZoomDisplay;
+      if (drawControlEl && prevDrawDisplay !== null) drawControlEl.style.display = prevDrawDisplay;
+
+      // Now manually draw overlays on the clean canvas
       await drawPolygonsToCanvas(ctx, canvas, map);
       await drawMarkersToCanvas(ctx, canvas, map);
       await addWatermarkToCanvas(canvas);
 
-      // Restore hidden elements
       polygonControls.style.display = prevPolyDisplay;
-      hiddenPopups.forEach(p => p.addTo(map));
-      hiddenMarkers.forEach(m => m.addTo(map));
-
-      console.log('Canvas capture completed');
       return canvas;
     }
 
     function exportPNG() {
-      console.log('Exporting PNG');
       captureMapCanvas()
         .then(c => {
           const a = document.createElement('a');
           a.download = 'event-map.png';
           a.href = c.toDataURL('image/png');
           a.click();
-          console.log('PNG export successful');
         })
         .catch(err => {
           console.error('PNG export failed:', err);
@@ -1082,7 +1048,6 @@
     document.getElementById('cancelPdf').addEventListener('click', closePdfDialog);
 
     document.getElementById('exportPdf').onclick = () => {
-      console.log('Exporting PDF');
       const { jsPDF } = window.jspdf;
       const size = document.getElementById('pdfSize').value;
       const orientation = document.getElementById('pdfOrientation').value;
@@ -1109,7 +1074,6 @@
         pdf.addImage(img, 'JPEG', x, y, imgW, imgH);
         pdf.save(`event-map-${size}-${orientation}-${scaleMode}.pdf`);
         closePdfDialog();
-        console.log('PDF export successful');
       }).catch(err => {
         console.error('PDF export failed:', err);
         alert('PDF export failed: ' + err.message);
@@ -1125,15 +1089,12 @@
       const r = new FileReader();
       r.onload = ev => {
         try {
-          console.log('Importing JSON');
           restoreProjectJSON(JSON.parse(ev.target.result));
         } catch (err) {
-          console.error('JSON import failed:', err);
           alert('Invalid JSON');
         }
       };
       r.readAsText(f);
-      importJsonInput.value = ''; // Clear input to allow re-importing same file
     });
 
     function doExportJSON() {
@@ -1184,12 +1145,8 @@
     }
 
     function restoreProjectJSON(data) {
-      console.log('Restoring project JSON');
       // Clear existing state
-      markers.forEach(m => {
-        map.removeLayer(m);
-        markerSet.delete(m.myMeta.id);
-      });
+      markers.forEach(m => map.removeLayer(m));
       markers.length = 0;
       drawnItems.clearLayers();
       polygons.length = 0;
@@ -1232,14 +1189,7 @@
             ? m.meta
             : { icon: '📍', label: 'Marker', size: 26 };
           if (!meta.baseSize && meta.size) meta.baseSize = meta.size;
-          // Generate ID to check for duplicates
-          const markerId = generateMarkerId(latlng, meta);
-          if (!markerSet.has(markerId)) {
-            placeMarkerOrText(latlng, meta);
-            console.log(`Restored marker: ${meta.label} at ${latlng.lat}, ${latlng.lng}`);
-          } else {
-            console.log(`Skipped duplicate marker: ${markerId}`);
-          }
+          placeMarkerOrText(latlng, meta);
         });
       }
 
