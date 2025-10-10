@@ -57,6 +57,8 @@
     .size-popup input[type="range"]{width:160px}
     .leaflet-draw-toolbar a { background-color: var(--panel); border-color: var(--border); color: var(--ink); }
     .leaflet-draw-toolbar a:hover { background-color: var(--accent); color: #0a1524; }
+    .leaflet-draw-toolbar .draw-controls { display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #1a1f29; border: 1px solid var(--border); border-radius: 8px; padding: 8px; z-index: 1000; flex-direction: column; gap: 6px; }
+    .leaflet-draw-toolbar .leaflet-draw-draw-polygon.active ~ .draw-controls { display: flex; }
   </style>
 </head>
 <body>
@@ -65,10 +67,6 @@
     <div id="topbar">
       <button class="btn" id="gpsBtn">📍 Use GPS</button>
       <input type="text" id="searchBox" placeholder="Search location..." />
-      <input type="color" id="colorPicker" value="#ff0000" class="btn" title="Polygon/line color" />
-      <label style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
-        <input type="checkbox" id="defaultFill" checked /> Fill new polygon
-      </label>
       <div class="dropdown">
         <button class="btn" id="exportMenuBtn">📤 Export ▼</button>
         <div class="dropdown-menu" id="exportMenu">
@@ -240,6 +238,7 @@
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
 
+    // Custom draw control with color picker and fill toggle
     const drawControl = new L.Control.Draw({
       position: 'topleft',
       draw: {
@@ -248,7 +247,7 @@
             color: '#ff0000',
             weight: 2,
             dashArray: '6,4',
-            fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
+            fillOpacity: 0.25
           },
           allowIntersection: false,
           showArea: true
@@ -265,33 +264,83 @@
         edit: true
       }
     });
+
+    // Override the default toolbar to add custom controls
+    drawControl.onAdd = function(map) {
+      const container = L.DomUtil.create('div', 'leaflet-draw leaflet-control');
+      const toolbar = L.DomUtil.create('div', 'leaflet-draw-toolbar leaflet-bar', container);
+      const polygonBtn = L.DomUtil.create('a', 'leaflet-draw-draw-polygon', toolbar);
+      polygonBtn.href = '#';
+      polygonBtn.title = 'Draw a polygon';
+      const drawControls = L.DomUtil.create('div', 'draw-controls', toolbar);
+      drawControls.innerHTML = `
+        <label style="display:flex;align-items:center;gap:4px;color:#fff;font-size:12px;">
+          <span>Color</span>
+          <input type="color" id="drawColorPicker" value="#ff0000" style="width:30px;height:20px;border:none;cursor:pointer" title="Polygon color" />
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;color:#fff;font-size:12px;">
+          <input type="checkbox" id="drawFill" checked />
+          <span>Fill polygon</span>
+        </label>
+      `;
+
+      L.DomEvent.on(polygonBtn, 'click', e => {
+        L.DomEvent.stopPropagation(e);
+        L.DomEvent.preventDefault(e);
+        const isActive = L.DomUtil.hasClass(polygonBtn, 'active');
+        if (!isActive) {
+          this._startDrawing('polygon');
+          L.DomUtil.addClass(polygonBtn, 'active');
+        } else {
+          this._finishDrawing();
+          L.DomUtil.removeClass(polygonBtn, 'active');
+        }
+      });
+
+      const colorPicker = drawControls.querySelector('#drawColorPicker');
+      const fillCheckbox = drawControls.querySelector('#drawFill');
+
+      colorPicker.addEventListener('input', () => {
+        this.setDrawingOptions({
+          polygon: {
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          }
+        });
+      });
+
+      fillCheckbox.addEventListener('change', () => {
+        this.setDrawingOptions({
+          polygon: {
+            shapeOptions: {
+              color: colorPicker.value,
+              weight: 2,
+              dashArray: '6,4',
+              fillOpacity: fillCheckbox.checked ? 0.25 : 0
+            }
+          }
+        });
+      });
+
+      return container;
+    };
+
+    // Custom methods to handle drawing start/stop
+    drawControl._startDrawing = function(type) {
+      if (type === 'polygon') {
+        this._handlers.polygon.enable();
+      }
+    };
+
+    drawControl._finishDrawing = function() {
+      this._handlers.polygon.disable();
+    };
+
     map.addControl(drawControl);
-
-    document.getElementById('colorPicker').addEventListener('input', () => {
-      drawControl.setDrawingOptions({
-        polygon: {
-          shapeOptions: {
-            color: document.getElementById('colorPicker').value,
-            weight: 2,
-            dashArray: '6,4',
-            fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
-          }
-        }
-      });
-    });
-
-    document.getElementById('defaultFill').addEventListener('change', () => {
-      drawControl.setDrawingOptions({
-        polygon: {
-          shapeOptions: {
-            color: document.getElementById('colorPicker').value,
-            weight: 2,
-            dashArray: '6,4',
-            fillOpacity: document.getElementById('defaultFill').checked ? 0.25 : 0
-          }
-        }
-      });
-    });
 
     let polygons = [];
     let selected = null;
@@ -300,6 +349,9 @@
       layer.on('click', () => selectPolygon(layer));
       drawnItems.addLayer(layer);
       polygons.push(layer);
+      // Deactivate drawing and remove active class
+      const polygonBtn = document.querySelector('.leaflet-draw-draw-polygon');
+      if (polygonBtn) L.DomUtil.removeClass(polygonBtn, 'active');
     });
 
     map.on(L.Draw.Event.EDITED, e => {});
@@ -772,7 +824,6 @@
       const pixelWidth = bottomRight.x - topLeft.x;
       const pixelHeight = bottomRight.y - topLeft.y;
 
-      // Calculate scaling factors to map pixel coordinates to canvas
       const scaleX = canvas.width / pixelWidth;
       const scaleY = canvas.height / pixelHeight;
 
@@ -784,7 +835,6 @@
         ctx.beginPath();
         latlngs.forEach((ll, i) => {
           const point = map.latLngToContainerPoint(ll);
-          // Adjust coordinates relative to the map's top-left corner
           const x = (point.x - topLeft.x) * scaleX;
           const y = (point.y - topLeft.y) * scaleY;
           if (i === 0) ctx.moveTo(x, y);
@@ -893,10 +943,8 @@
 
       ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
 
-      // Draw polygons and markers using the map's current coordinate system
       await drawPolygonsToCanvas(ctx, canvas, map);
       await drawMarkersToCanvas(ctx, canvas, map);
-
       await addWatermarkToCanvas(canvas);
 
       polygonControls.style.display = prevPolyDisplay;
