@@ -934,11 +934,20 @@
       const polygonControls = document.getElementById('polygonControls');
       const prevPolyDisplay = polygonControls.style.display;
       polygonControls.style.display = 'none';
-      const hiddenPopups = [];
-      map.eachLayer(l => {
-        if (l instanceof L.Popup) {
-          hiddenPopups.push(l);
-          map.removeLayer(l);
+      
+      // Close any open popups
+      map.closePopup();
+      
+      // Temporarily remove overlays to avoid duplication in html2canvas
+      const tempRemoved = [];
+      if (map.hasLayer(drawnItems)) {
+        map.removeLayer(drawnItems);
+        tempRemoved.push(drawnItems);
+      }
+      markers.forEach(marker => {
+        if (map.hasLayer(marker)) {
+          map.removeLayer(marker);
+          tempRemoved.push(marker);
         }
       });
 
@@ -948,6 +957,14 @@
       try {
         await preloadImages(imgUrls);
       } catch (err) {
+        // Add back overlays before throwing
+        tempRemoved.forEach(layer => {
+          if (layer === drawnItems) {
+            drawnItems.addTo(map);
+          } else {
+            map.addLayer(layer);
+          }
+        });
         throw new Error('Failed to load one or more images. Try enabling OpenStreetMap or ensuring all images are accessible.');
       }
 
@@ -971,12 +988,21 @@
 
       ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
 
+      // Add back overlays immediately after capture (browser view restores)
+      tempRemoved.forEach(layer => {
+        if (layer === drawnItems) {
+          drawnItems.addTo(map);
+        } else {
+          map.addLayer(layer);
+        }
+      });
+
+      // Now manually draw overlays on the clean canvas
       await drawPolygonsToCanvas(ctx, canvas, map);
       await drawMarkersToCanvas(ctx, canvas, map);
       await addWatermarkToCanvas(canvas);
 
       polygonControls.style.display = prevPolyDisplay;
-      hiddenPopups.forEach(p => p.addTo(map));
       return canvas;
     }
 
