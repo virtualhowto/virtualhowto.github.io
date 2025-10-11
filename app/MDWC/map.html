@@ -126,6 +126,7 @@
     <h3 id="pdfTitle">PDF Export Options</h3>
     <label>Paper Size
       <select id="pdfSize">
+        <option value="a5">A5</option>
         <option value="a4" selected>A4</option>
         <option value="a3">A3</option>
         <option value="a1">A1</option>
@@ -143,11 +144,12 @@
         <option value="fit">Fit to Page</option>
       </select>
     </label>
-    <label>Resolution
-      <select id="pdfResolution">
-        <option value="2" selected>Medium (2x)</option>
-        <option value="3">High (3x)</option>
-        <option value="4">Ultra (4x)</option>
+    <label>DPI
+      <select id="pdfDPI">
+        <option value="150">150 DPI (Screen)</option>
+        <option value="300" selected>300 DPI (Print)</option>
+        <option value="600">600 DPI (High)</option>
+        <option value="1200">1200 DPI (Poster)</option>
       </select>
     </label>
     <div class="actions">
@@ -812,14 +814,16 @@
     });
 
     // ---------- Export helpers ----------
-    function addWatermarkToCanvas(c) {
+    function addWatermarkToCanvas(c, originalW, originalH) {
       return new Promise(resolve => {
         if (!watermarkMeta.src || !watermarkMeta.visible) return resolve(c);
         const ctx = c.getContext('2d');
-        const wrap = document.getElementById('mapWrap').getBoundingClientRect();
-        const scaleX = c.width / wrap.width, scaleY = c.height / wrap.height;
-        const left = watermarkMeta.left * scaleX, top = watermarkMeta.top * scaleY;
-        const w = watermarkMeta.size * scaleX, h = watermarkMeta.size * scaleY;
+        const scaleX = c.width / originalW;
+        const scaleY = c.height / originalH;
+        const left = watermarkMeta.left * scaleX;
+        const top = watermarkMeta.top * scaleY;
+        const w = watermarkMeta.size * scaleX;
+        const h = watermarkMeta.size * scaleY;
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
@@ -851,7 +855,6 @@
     }
 
     async function drawPolygonsToCanvas(ctx, canvas, map) {
-      const mapSize = map.getSize();
       const mapBounds = map.getBounds();
       const topLeft = map.latLngToContainerPoint(mapBounds.getNorthWest());
       const bottomRight = map.latLngToContainerPoint(mapBounds.getSouthEast());
@@ -935,8 +938,30 @@
       }
     }
 
-    async function captureMapCanvas(scaleFactor = 3) {
-      await ensureTilesLoaded();
+    async function drawCompassToCanvas(ctx, canvas, map, originalW, originalH) {
+      const compassEl = document.querySelector('.compass-control');
+      if (!compassEl) return;
+      const scaleX = canvas.width / originalW;
+      const scaleY = canvas.height / originalH;
+      const compassRect = compassEl.getBoundingClientRect();
+      const mapWrapRect = document.getElementById('mapWrap').getBoundingClientRect();
+      const left = (compassRect.left - mapWrapRect.left) * scaleX;
+      const top = (compassRect.top - mapWrapRect.top) * scaleY;
+      const w = compassRect.width * scaleX;
+      const h = compassRect.height * scaleY;
+      const compassCanvas = await html2canvas(compassEl, {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: null,
+        width: compassRect.width,
+        height: compassRect.height,
+        scale: 1
+      });
+      ctx.drawImage(compassCanvas, left, top, w, h);
+    }
+
+    async function captureMapCanvas(targetW, targetH, dpi, scaleMode) {
+      const mapWrap = document.getElementById('mapWrap');
       const polygonControls = document.getElementById('polygonControls');
       const prevPolyDisplay = polygonControls.style.display;
       polygonControls.style.display = 'none';
@@ -944,36 +969,100 @@
       // Close any open popups
       map.closePopup();
       
-      // Temporarily remove overlays to avoid duplication in html2canvas
+      // Save original state
+      const originalStyle = mapWrap.style.cssText;
+      const originalW = map.getSize().x;
+      const originalH = map.getSize().y;
+      const isFit = scaleMode === 'fit';
+
+      let canvas, ctx, tileCanvas;
       const tempRemoved = [];
-      if (map.hasLayer(drawnItems)) {
-        map.removeLayer(drawnItems);
-        tempRemoved.push(drawnItems);
-      }
-      markers.forEach(marker => {
-        if (map.hasLayer(marker)) {
-          map.removeLayer(marker);
-          tempRemoved.push(marker);
-        }
-      });
+      let prevControlDisplays = [];
+      let prevLegendDisplay, prevWmDisplay;
 
-      // Hide all leaflet controls during capture (zoom, draw, etc.), but keep compass
-      const controls = document.querySelectorAll('.leaflet-control');
-      const prevControlDisplays = [];
-      controls.forEach(control => {
-        if (control.classList.contains('compass-control')) return; // Skip compass to include in export
-        const display = control.style.display;
-        prevControlDisplays.push({ el: control, display });
-        control.style.display = 'none';
-      });
-
-      const imgUrls = [];
-      markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
-      if (watermarkMeta.src && watermarkMeta.visible) imgUrls.push(watermarkMeta.src);
       try {
+        if (isFit) {
+          // Resize for fit to capture more tiles without stretching
+          mapWrap.style.width = targetW + 'px';
+          mapWrap.style.height = targetH + 'px';
+          mapWrap.style.flex = 'none';
+          map.invalidateSize({pan: false});
+          await ensureTilesLoaded();
+        }
+
+        // Temporarily remove overlays
+        if (map.hasLayer(drawnItems)) {
+          map.removeLayer(drawnItems);
+          tempRemoved.push(drawnItems);
+        }
+        markers.forEach(marker => {
+          if (map.hasLayer(marker)) {
+            map.removeLayer(marker);
+            tempRemoved.push(marker);
+          }
+        });
+
+        // Hide controls except compass, hide legend and watermark
+        const controls = document.querySelectorAll('.leaflet-control');
+        controls.forEach(control => {
+          if (control.classList.contains('compass-control')) return;
+          const display = control.style.display;
+          prevControlDisplays.push({ el: control, display });
+          control.style.display = 'none';
+        });
+        const legendEl = document.getElementById('legend');
+        prevLegendDisplay = legendEl.style.display;
+        legendEl.style.display = 'none';
+        prevWmDisplay = wm.style.display;
+        wm.style.display = 'none';
+
+        const imgUrls = [];
+        markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
+        if (watermarkMeta.src && watermarkMeta.visible) imgUrls.push(watermarkMeta.src);
         await preloadImages(imgUrls);
-      } catch (err) {
-        // Add back overlays and restore controls before throwing
+
+        if (isFit) {
+          canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+          ctx = canvas.getContext('2d');
+          tileCanvas = await html2canvas(mapWrap, {
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#000',
+            width: targetW,
+            height: targetH,
+            scale: 1,
+            foreignObjectRendering: false
+          });
+        } else {
+          // Maintain ratio
+          const scaleFactor = dpi / 96;
+          canvas = document.createElement('canvas');
+          canvas.width = originalW * scaleFactor;
+          canvas.height = originalH * scaleFactor;
+          ctx = canvas.getContext('2d');
+          const mapSize = map.getSize();
+          tileCanvas = await html2canvas(mapWrap, {
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#000',
+            width: mapSize.x,
+            height: mapSize.y,
+            scale: scaleFactor,
+            foreignObjectRendering: false
+          });
+        }
+
+        ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
+
+        // Draw overlays using current map state (aspect preserved via scaling)
+        await drawPolygonsToCanvas(ctx, canvas, map);
+        await drawMarkersToCanvas(ctx, canvas, map);
+        await addWatermarkToCanvas(canvas, originalW, originalH);
+        await drawCompassToCanvas(ctx, canvas, map, originalW, originalH);
+
+        // Restore map state
         tempRemoved.forEach(layer => {
           if (layer === drawnItems) {
             drawnItems.addTo(map);
@@ -984,63 +1073,52 @@
         prevControlDisplays.forEach(({ el, display }) => {
           el.style.display = display;
         });
-        throw new Error('Failed to load one or more images. Try enabling OpenStreetMap or ensuring all images are accessible.');
-      }
+        legendEl.style.display = prevLegendDisplay;
+        wm.style.display = prevWmDisplay;
 
-      const mapWrap = document.getElementById('mapWrap');
-      const mapSize = map.getSize();
-      const canvas = document.createElement('canvas');
-      canvas.width = mapSize.x * scaleFactor;
-      canvas.height = mapSize.y * scaleFactor;
-      const ctx = canvas.getContext('2d');
-
-      const tileCanvas = await html2canvas(mapWrap, {
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#000',
-        width: mapSize.x,
-        height: mapSize.y,
-        scale: scaleFactor,
-        foreignObjectRendering: false
-      });
-
-      ctx.drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
-
-      // Add back overlays immediately after capture (browser view restores)
-      tempRemoved.forEach(layer => {
-        if (layer === drawnItems) {
-          drawnItems.addTo(map);
-        } else {
-          map.addLayer(layer);
+        if (isFit) {
+          mapWrap.style.cssText = originalStyle;
+          mapWrap.style.flex = '1';
+          map.invalidateSize();
         }
-      });
 
-      // Restore controls
-      prevControlDisplays.forEach(({ el, display }) => {
-        el.style.display = display;
-      });
-
-      // Now manually draw overlays on the clean canvas
-      await drawPolygonsToCanvas(ctx, canvas, map);
-      await drawMarkersToCanvas(ctx, canvas, map);
-      await addWatermarkToCanvas(canvas);
-
-      polygonControls.style.display = prevPolyDisplay;
-      return canvas;
+        polygonControls.style.display = prevPolyDisplay;
+        return canvas;
+      } catch (err) {
+        // Restore in case of error
+        tempRemoved.forEach(layer => {
+          if (layer === drawnItems) {
+            drawnItems.addTo(map);
+          } else {
+            map.addLayer(layer);
+          }
+        });
+        prevControlDisplays.forEach(({ el, display }) => {
+          el.style.display = display;
+        });
+        if (legendEl) legendEl.style.display = prevLegendDisplay;
+        wm.style.display = prevWmDisplay;
+        if (isFit) {
+          mapWrap.style.cssText = originalStyle;
+          mapWrap.style.flex = '1';
+          map.invalidateSize();
+        }
+        polygonControls.style.display = prevPolyDisplay;
+        throw err;
+      }
     }
 
     function exportPNG() {
-      captureMapCanvas(3)
-        .then(c => {
-          const a = document.createElement('a');
-          a.download = 'event-map.png';
-          a.href = c.toDataURL('image/png');
-          a.click();
-        })
-        .catch(err => {
-          console.error('PNG export failed:', err);
-          alert('PNG export failed: ' + err.message);
-        });
+      // For PNG, use default 3x scale on current view
+      captureMapCanvas(null, null, null, 'ratio').then(canvas => {  // Fallback to ratio mode with default
+        const a = document.createElement('a');
+        a.download = 'event-map.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      }).catch(err => {
+        console.error('PNG export failed:', err);
+        alert('PNG export failed: ' + err.message);
+      });
     }
 
     const pdfBackdrop = document.getElementById('pdfBackdrop');
@@ -1061,23 +1139,42 @@
       const size = document.getElementById('pdfSize').value;
       const orientation = document.getElementById('pdfOrientation').value;
       const scaleMode = document.getElementById('pdfScaleMode').value;
-      const resolution = parseInt(document.getElementById('pdfResolution').value);
+      const dpi = parseInt(document.getElementById('pdfDPI').value);
+
+      const paperSizes = {
+        a5: [148, 210],
+        a4: [210, 297],
+        a3: [297, 420],
+        a1: [594, 841]
+      };
+      let [w_mm, h_mm] = paperSizes[size];
+      if (orientation === 'landscape') [w_mm, h_mm] = [h_mm, w_mm];
+
+      const inchesW = w_mm / 25.4;
+      const inchesH = h_mm / 25.4;
+      const targetW = Math.round(inchesW * dpi);
+      const targetH = Math.round(inchesH * dpi);
 
       const pdf = new jsPDF({ orientation, unit: 'mm', format: size });
-      captureMapCanvas(resolution).then(c => {
-        const img = c.toDataURL('image/png'); // Use PNG for lossless quality
+      captureMapCanvas(targetW, targetH, dpi, scaleMode).then(c => {
+        const img = c.toDataURL('image/png');
         const pageW = pdf.internal.pageSize.getWidth();
         const pageH = pdf.internal.pageSize.getHeight();
         let imgW, imgH, x, y;
         if (scaleMode === 'fit') {
+          // Full page, no scaling needed (aspect preserved in capture)
           imgW = pageW;
           imgH = pageH;
           x = 0;
           y = 0;
         } else {
-          const ratio = Math.min(pageW / c.width, pageH / c.height);
-          imgW = c.width * ratio;
-          imgH = c.height * ratio;
+          // Maintain ratio: compute scale to fit
+          const pxToMm = 25.4 / dpi;
+          const imgW_mm = c.width * pxToMm;
+          const imgH_mm = c.height * pxToMm;
+          const ratio = Math.min(pageW / imgW_mm, pageH / imgH_mm);
+          imgW = imgW_mm * ratio;
+          imgH = imgH_mm * ratio;
           x = (pageW - imgW) / 2;
           y = (pageH - imgH) / 2;
         }
