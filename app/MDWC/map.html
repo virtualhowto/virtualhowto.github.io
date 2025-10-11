@@ -938,28 +938,6 @@
       }
     }
 
-    async function drawCompassToCanvas(ctx, canvas, map, originalW, originalH) {
-      const compassEl = document.querySelector('.compass-control');
-      if (!compassEl) return;
-      const scaleX = canvas.width / originalW;
-      const scaleY = canvas.height / originalH;
-      const compassRect = compassEl.getBoundingClientRect();
-      const mapWrapRect = document.getElementById('mapWrap').getBoundingClientRect();
-      const left = (compassRect.left - mapWrapRect.left) * scaleX;
-      const top = (compassRect.top - mapWrapRect.top) * scaleY;
-      const w = compassRect.width * scaleX;
-      const h = compassRect.height * scaleY;
-      const compassCanvas = await html2canvas(compassEl, {
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: null,
-        width: compassRect.width,
-        height: compassRect.height,
-        scale: 1
-      });
-      ctx.drawImage(compassCanvas, left, top, w, h);
-    }
-
     async function captureMapCanvas(targetW, targetH, dpi, scaleMode) {
       const mapWrap = document.getElementById('mapWrap');
       const polygonControls = document.getElementById('polygonControls');
@@ -978,7 +956,7 @@
       let canvas, ctx, tileCanvas;
       const tempRemoved = [];
       let prevControlDisplays = [];
-      let prevLegendDisplay, prevWmDisplay;
+      let prevWmDisplay;
 
       try {
         if (isFit) {
@@ -1002,7 +980,7 @@
           }
         });
 
-        // Hide controls except compass, hide legend and watermark
+        // Hide controls except compass
         const controls = document.querySelectorAll('.leaflet-control');
         controls.forEach(control => {
           if (control.classList.contains('compass-control')) return;
@@ -1010,9 +988,6 @@
           prevControlDisplays.push({ el: control, display });
           control.style.display = 'none';
         });
-        const legendEl = document.getElementById('legend');
-        prevLegendDisplay = legendEl.style.display;
-        legendEl.style.display = 'none';
         prevWmDisplay = wm.style.display;
         wm.style.display = 'none';
 
@@ -1060,7 +1035,6 @@
         await drawPolygonsToCanvas(ctx, canvas, map);
         await drawMarkersToCanvas(ctx, canvas, map);
         await addWatermarkToCanvas(canvas, originalW, originalH);
-        await drawCompassToCanvas(ctx, canvas, map, originalW, originalH);
 
         // Restore map state
         tempRemoved.forEach(layer => {
@@ -1073,7 +1047,6 @@
         prevControlDisplays.forEach(({ el, display }) => {
           el.style.display = display;
         });
-        legendEl.style.display = prevLegendDisplay;
         wm.style.display = prevWmDisplay;
 
         if (isFit) {
@@ -1096,7 +1069,6 @@
         prevControlDisplays.forEach(({ el, display }) => {
           el.style.display = display;
         });
-        if (legendEl) legendEl.style.display = prevLegendDisplay;
         wm.style.display = prevWmDisplay;
         if (isFit) {
           mapWrap.style.cssText = originalStyle;
@@ -1110,7 +1082,7 @@
 
     function exportPNG() {
       // For PNG, use default 3x scale on current view
-      captureMapCanvas(null, null, null, 'ratio').then(canvas => {  // Fallback to ratio mode with default
+      captureMapCanvas(null, null, 300, 'ratio').then(canvas => {
         const a = document.createElement('a');
         a.download = 'event-map.png';
         a.href = canvas.toDataURL('image/png');
