@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Racing Ducks Countdown</title>
+  <style>
+    :root{
+      --bg:#0b1220;/* deep navy */
+      --panel:#111a2e;
+      --ink:#e8eefc;
+      --muted:#9fb3d1;
+      --accent:#5dd3ff;
+      --accent2:#a8ff7a;
+      --danger:#ff6b6b;
+      --lane:#17233d;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color:var(--ink); background:linear-gradient(180deg, #0b1220 0%, #0b1220 35%, #0b1628 100%);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding:24px;}
+    h1{margin:0 0 8px 0; font-size:clamp(22px,3vw,34px); letter-spacing:.3px}
+    .sub{color:var(--muted); margin:0 0 18px}
+
+    .grid{display:grid; grid-template-columns: 1fr; gap:16px}
+    @media(min-width:920px){
+      .grid{grid-template-columns: 360px 1fr}
+    }
+
+    .card{background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .row{display:flex; align-items:center; gap:10px}
+    label{font-size:14px; color:var(--muted)}
+    input[type="text"], textarea{width:100%; box-sizing:border-box; background:#0d1527; color:var(--ink); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px 12px; font-size:15px; outline:none}
+    input[type="text"]:focus, textarea:focus{border-color:var(--accent)}
+    textarea{min-height:120px; resize:vertical}
+
+    .controls{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+    button{border:0; background:#1a90ff; color:#001326; font-weight:700; padding:10px 14px; border-radius:12px; cursor:pointer}
+    button.secondary{background:#263756; color:var(--ink); font-weight:600}
+    button.danger{background:var(--danger); color:white}
+    button:disabled{opacity:.6; cursor:not-allowed}
+
+    .timer{font-feature-settings:"tnum" on, "lnum" on; font-variant-numeric: tabular-nums lining-nums; font-size:42px; margin:6px 0 0; letter-spacing:1px}
+
+    .track{position:relative; height:64px; background:linear-gradient(90deg, rgba(255,255,255,.02) 0 100%), var(--lane); border:1px solid rgba(255,255,255,.06); border-radius:14px; overflow:hidden}
+    .laneHeader{display:flex; align-items:center; gap:10px; margin-bottom:6px}
+    .badge{background:#10203a; border:1px solid rgba(255,255,255,.08); color:var(--muted); padding:2px 8px; border-radius:999px; font-size:12px}
+
+    .finish{position:absolute; top:0; right:0; width:22px; height:100%; background: repeating-linear-gradient(45deg, rgba(255,255,255,.9) 0 10px, rgba(0,0,0,.9) 10px 20px)}
+
+    .duck{position:absolute; top:50%; transform:translate(-50%, -50%); display:flex; align-items:center; gap:8px; transition: transform .08s linear}
+    .duckEmoji{font-size:34px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));}
+    .nameTag{background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.08); padding:2px 8px; border-radius:8px; font-size:13px}
+
+    .lanes{display:flex; flex-direction:column; gap:16px}
+
+    .podium{display:none; margin-top:16px}
+    .podium .title{font-weight:800; letter-spacing:.3px; margin-bottom:6px}
+    .podium ul{list-style:none; padding:0; margin:0}
+    .podium li{padding:6px 10px; background:#0f1d35; border:1px solid rgba(255,255,255,.06); border-radius:10px; margin-bottom:6px}
+
+    .ticker{height:24px; overflow:hidden; position:relative; color:var(--muted); font-size:13px}
+    .ticker span{position:absolute; white-space:nowrap; will-change:transform;}
+    .sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Racing Ducks Countdown</h1>
+    <p class="sub">Set a countdown, enter duck names (one per line), and run a race where a random duck surges to win when the timer hits zero. Perfect for choosing a winner fairly 🎲🦆</p>
+
+    <div class="grid">
+      <!-- Left: Setup -->
+      <section class="card">
+        <div class="row" style="justify-content:space-between; align-items:flex-end">
+          <div style="flex:1; margin-right:10px">
+            <label for="timeInput">Countdown (mm:ss)</label>
+            <input id="timeInput" type="text" placeholder="02:00" value="01:00" aria-describedby="timeHelp" />
+            <div id="timeHelp" class="sub" style="margin-top:4px">Tip: you can type 90 for 1:30 – we'll convert it.</div>
+          </div>
+          <div>
+            <div style="text-align:right; color:var(--muted); font-size:12px">Timer</div>
+            <div id="timerDisplay" class="timer" aria-live="polite">01:00</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="names">Duck names (one per line)</label>
+          <textarea id="names" placeholder="e.g.\nQuackers\nPebbles\nSplash\nNibbles">Quackers\nPebbles\nSplash\nNibbles</textarea>
+          <div class="row" style="justify-content:space-between; margin-top:6px">
+            <div style="font-size:13px; color:var(--muted)"><span id="count">4</span> ducks</div>
+            <div class="controls">
+              <button id="btnSample" class="secondary" type="button">Randomise Names</button>
+              <button id="btnShuffle" class="secondary" type="button">Shuffle Order</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="btnStart" type="button">Start Race</button>
+          <button id="btnPause" class="secondary" type="button" disabled>Pause</button>
+          <button id="btnReset" class="danger" type="button" disabled>Reset</button>
+        </div>
+
+        <div class="ticker" aria-hidden="true"><span id="tickerSpan"></span></div>
+        <p class="sub" style="margin-top:8px">Pro tip: you can re-run with the same lineup; a new random winner is chosen each time the timer ends.</p>
+      </section>
+
+      <!-- Right: Race Area -->
+      <section class="card">
+        <div class="lanes" id="lanes"></div>
+        <div class="podium" id="podium">
+          <div class="title">Results</div>
+          <ul id="resultsList"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <span class="sr" id="srAnnounce" aria-live="assertive"></span>
+
+  <script>
+    // Utilities
+    const $ = (sel)=>document.querySelector(sel);
+    const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
+
+    function parseNames(text){
+      return text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).slice(0, 24); // sane limit
+    }
+    function pad(n){return String(n).padStart(2,'0')}
+    function msToClock(ms){const t=Math.max(0, Math.round(ms/1000)); const m=Math.floor(t/60), s=t%60; return `${pad(m)}:${pad(s)}`}
+
+    function parseTime(str){
+      str = (str||'').trim();
+      if(!str) return 60000; // default 1:00
+      if(/^\d+$/.test(str)){
+        // treat as seconds if <= 300 (5 min), else assume mmss like 130 -> 1:30
+        const num = parseInt(str,10);
+        if(num <= 300) return num*1000;
+        const m = Math.floor(num/100), s = num%100; return (m*60 + s)*1000;
+      }
+      const m = str.match(/^(\d{1,2}):(\d{1,2})$/);
+      if(m){ const mm=parseInt(m[1],10), ss=parseInt(m[2],10); return (mm*60+ss)*1000; }
+      return 60000;
+    }
+
+    const samplePools = [
+      ["Quackers","Pebbles","Splash","Nibbles","Bubbles","Paddle","Scoot","Waddle"],
+      ["Daisy","Marmalade","Pickles","Jet","Sprout","Mocha","Nova","Pixel"],
+      ["Captain","Skipper","Turbo","Dash","Zoom","Flash","Rocket","Nitro"],
+    ];
+    function randomSample(){
+      const pool = samplePools[Math.floor(Math.random()*samplePools.length)];
+      const n = 3 + Math.floor(Math.random()*5); // 3..7
+      return Array.from({length:n}, (_,i)=> pool[(Math.random()*pool.length)|0]).join("\n");
+    }
+
+    // State
+    let state = {
+      ducks: [], // {name, el, laneEl, x (0..1), speed}
+      durationMs: 60000,
+      endsAt: 0,
+      raf: 0,
+      running: false,
+      winner: null,
+      finished: false,
+      order: [],
+    };
+
+    const timeInput = $('#timeInput');
+    const namesEl = $('#names');
+    const countEl = $('#count');
+    const lanesEl = $('#lanes');
+    const timerDisplay = $('#timerDisplay');
+    const podium = $('#podium');
+    const resultsList = $('#resultsList');
+    const srAnnounce = $('#srAnnounce');
+
+    const btnStart = $('#btnStart');
+    const btnPause = $('#btnPause');
+    const btnReset = $('#btnReset');
+    const btnSample = $('#btnSample');
+    const btnShuffle = $('#btnShuffle');
+
+    namesEl.addEventListener('input',()=>{
+      const n = parseNames(namesEl.value).length; countEl.textContent = n;
+      buildLanes();
+    });
+
+    timeInput.addEventListener('input',()=>{
+      const ms = parseTime(timeInput.value);
+      state.durationMs = ms; timerDisplay.textContent = msToClock(ms);
+    });
+
+    btnSample.addEventListener('click',()=>{
+      namesEl.value = randomSample();
+      namesEl.dispatchEvent(new Event('input'));
+    });
+
+    btnShuffle.addEventListener('click',()=>{
+      const arr = parseNames(namesEl.value);
+      for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; }
+      namesEl.value = arr.join('\n');
+      namesEl.dispatchEvent(new Event('input'));
+    });
+
+    btnStart.addEventListener('click', startRace);
+    btnPause.addEventListener('click', togglePause);
+    btnReset.addEventListener('click', resetRace);
+
+    function buildLanes(){
+      const names = parseNames(namesEl.value);
+      lanesEl.innerHTML = '';
+      podium.style.display = 'none';
+      state.ducks = names.map((name, idx)=>{
+        const wrap = document.createElement('div');
+        const header = document.createElement('div'); header.className='laneHeader';
+        const tag = document.createElement('span'); tag.className='badge'; tag.textContent = `Lane ${idx+1}`;
+        const nm = document.createElement('div'); nm.textContent = name; nm.style.fontWeight = '700';
+        header.append(tag, nm);
+
+        const lane = document.createElement('div'); lane.className = 'track';
+        const finish = document.createElement('div'); finish.className = 'finish';
+        const duck = document.createElement('div'); duck.className = 'duck'; duck.style.left='0%';
+        duck.innerHTML = `<span class="duckEmoji" aria-hidden="true">🦆</span><span class="nameTag">${name}</span>`;
+        lane.append(duck, finish);
+
+        wrap.append(header, lane);
+        lanesEl.append(wrap);
+
+        return { name, el: duck, laneEl: lane, x: 0, speed: 0 };
+      });
+    }
+
+    function startRace(){
+      const names = parseNames(namesEl.value);
+      if(names.length < 2){ alert('Enter at least two duck names.'); return; }
+      state.durationMs = parseTime(timeInput.value);
+      state.endsAt = performance.now() + state.durationMs;
+      state.running = true; state.finished = false; state.winner = null; state.order = [];
+      btnStart.disabled = true; btnPause.disabled = false; btnReset.disabled = false; timeInput.disabled = true; namesEl.disabled = true; btnSample.disabled = true; btnShuffle.disabled = true;
+
+      // Initialize speeds with slight variation
+      state.ducks.forEach(d=>{ d.x = 0; d.speed = 0.12 + Math.random()*0.08; d.el.style.left='0%'; });
+
+      tick();
+      announce(`Race started with ${names.length} ducks. Countdown ${msToClock(state.durationMs)}.`);
+      ticker(`🕒 Race on! Winner will be revealed when the timer hits 00:00.`);
+    }
+
+    function togglePause(){
+      if(!state.running) return;
+      if(state.raf){
+        cancelAnimationFrame(state.raf); state.raf = 0; btnPause.textContent = 'Resume';
+        const remaining = Math.max(0, state.endsAt - performance.now());
+        state.endsAt = performance.now() + remaining; // freeze
+      } else {
+        btnPause.textContent = 'Pause';
+        state.endsAt = performance.now() + Math.max(0, state.endsAt - performance.now());
+        tick();
+      }
+    }
+
+    function resetRace(){
+      if(state.raf){ cancelAnimationFrame(state.raf); state.raf = 0; }
+      state.running = false; state.finished = false; state.winner = null; state.order = [];
+      timerDisplay.textContent = msToClock(parseTime(timeInput.value));
+      state.ducks.forEach(d=>{ d.x = 0; d.el.style.left='0%'; });
+      btnStart.disabled = false; btnPause.disabled = true; btnPause.textContent='Pause'; btnReset.disabled = true;
+      timeInput.disabled = false; namesEl.disabled = false; btnSample.disabled = false; btnShuffle.disabled = false;
+      podium.style.display = 'none';
+      ticker('');
+      announce('Race reset.');
+    }
+
+    function chooseRandomWinner(){
+      const candidates = state.ducks.map(d=>d.name);
+      const pick = candidates[(Math.random()*candidates.length)|0];
+      return pick;
+    }
+
+    function tick(){
+      const now = performance.now();
+      const remaining = Math.max(0, state.endsAt - now);
+      timerDisplay.textContent = msToClock(remaining);
+
+      const t = state.durationMs - remaining; // elapsed
+      const progress = Math.max(0, Math.min(1, t / state.durationMs));
+
+      // Decide the winner 2 seconds from the end (if duration is long enough). Otherwise, at halfway.
+      const decideAt = state.durationMs > 4000 ? state.durationMs - 2000 : state.durationMs * 0.5;
+      if(!state.winner && t >= decideAt){ state.winner = chooseRandomWinner(); }
+
+      state.ducks.forEach(d=>{
+        // baseline drift
+        const jitter = (Math.sin((now/120) + d.name.length)*0.002) + (Math.random()*0.004 - 0.002);
+        let base = d.speed * 0.004; // tune movement per frame
+        // Slight rubberbanding so mid-pack stays interesting
+        const avgX = state.ducks.reduce((a,b)=>a+b.x,0)/state.ducks.length;
+        const rubber = (avgX - d.x) * 0.0015;
+
+        // In the final seconds, give winner a big boost, others decelerate
+        if(state.winner){
+          if(d.name === state.winner){ base += 0.02; } else { base *= 0.4; }
+        }
+
+        d.x = Math.max(0, Math.min(0.98, d.x + base + jitter + rubber));
+        const laneWidth = d.laneEl.clientWidth; // px
+        const leftPct = d.x * 100; // 0..100
+        const bob = Math.sin(now/180 + d.name.length)*2; // subtle bobbing
+        d.el.style.transform = `translate(calc(${leftPct}% - 0px), calc(-50% + ${bob}px))`;
+      });
+
+      if(remaining <= 0){
+        // Force winner to finish line, order everyone else
+        finishRace();
+        return; // stop ticking
+      }
+
+      state.raf = requestAnimationFrame(tick);
+    }
+
+    function finishRace(){
+      cancelAnimationFrame(state.raf); state.raf = 0; state.running=false; state.finished=true;
+
+      // If no winner decided (very short timer), pick now
+      if(!state.winner) state.winner = chooseRandomWinner();
+
+      // Compute order by distance, but ensure winner is first
+      const sorted = [...state.ducks].sort((a,b)=> b.x - a.x);
+      const withoutWinner = sorted.filter(d=> d.name !== state.winner);
+      const order = [ state.ducks.find(d=>d.name===state.winner), ...withoutWinner ];
+      state.order = order.map(d=>d.name);
+
+      // Animate winner to 100%
+      order.forEach((d,idx)=>{
+        const target = idx===0 ? 0.985 : Math.min(0.96, d.x);
+        d.x = target;
+        const leftPct = d.x * 100;
+        d.el.style.transform = `translate(${leftPct}%, -50%)`;
+      });
+
+      // Render results
+      resultsList.innerHTML = '';
+      state.order.forEach((name,i)=>{
+        const li = document.createElement('li');
+        li.textContent = `${i+1}. ${name}`; resultsList.append(li);
+      });
+      podium.style.display = 'block';
+
+      btnStart.disabled = false; btnPause.disabled = true; btnReset.disabled = false; btnPause.textContent='Pause';
+      timeInput.disabled = false; namesEl.disabled = false; btnSample.disabled = false; btnShuffle.disabled = false;
+
+      announce(`${state.order[0]} wins!`);
+      ticker(`🏁 ${state.order[0]} takes the win! Re-run to pick a new random winner.`);
+      confettiBurst();
+    }
+
+    // Fun: very lightweight confetti
+    function confettiBurst(){
+      const N = 36; const frag = document.createDocumentFragment();
+      for(let i=0;i<N;i++){
+        const s = document.createElement('div');
+        const size = 6 + Math.random()*6;
+        s.style.position='fixed'; s.style.left='50%'; s.style.top='16%'; s.style.width=size+'px'; s.style.height=size+'px';
+        s.style.background = Math.random()>.5? 'var(--accent)':'var(--accent2)';
+        s.style.boxShadow='0 0 8px rgba(0,0,0,.25)';
+        s.style.borderRadius = Math.random()>.5 ? '2px':'999px';
+        s.style.pointerEvents='none';
+        s.style.transform=`translate(-50%,-50%) rotate(${Math.random()*360}deg)`;
+        s.style.transition=`transform ${900+Math.random()*600}ms cubic-bezier(.17,.67,.21,1.01), opacity 220ms linear`;
+        frag.appendChild(s);
+        requestAnimationFrame(()=>{
+          const dx = (Math.random()*2-1) * 280; const dy = 420 + Math.random()*200; const rot = Math.random()*720;
+          s.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`;
+          setTimeout(()=> s.style.opacity='0', 850);
+          setTimeout(()=> s.remove(), 1600);
+        });
+      }
+      document.body.appendChild(frag);
+    }
+
+    function ticker(text){ $('#tickerSpan').textContent = text; }
+    function announce(t){ srAnnounce.textContent = t; }
+
+    // Initial build
+    buildLanes();
+    // Keep timer display synced with input at load
+    timerDisplay.textContent = msToClock(parseTime(timeInput.value));
+  </script>
+</body>
+</html>
