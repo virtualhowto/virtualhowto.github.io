@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ubuntu Autoinstall Wizard</title>
+  <style>
+    :root { --bg:#0b1020; --card:#121831; --ink:#e8eeff; --muted:#a7b2d9; --accent:#7aa2ff; --ok:#7fe3b2; --warn:#ffd37a; --err:#ff7a7a; }
+    html,body { height:100%; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; background:linear-gradient(180deg, #0b1020, #0a0f1e); color:var(--ink); }
+    .wrap { max-width: 1200px; margin: 24px auto 80px; padding: 0 16px; }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+    .subtle { color: var(--muted); }
+    .card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
+    .row { display:flex; gap:12px; align-items:center; }
+    label { display:block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea { width:100%; box-sizing:border-box; background:#0e1530; border:1px solid rgba(255,255,255,0.08); color: var(--ink); border-radius:10px; padding:10px 12px; outline:none; }
+    textarea { min-height: 110px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(122,162,255,0.25); }
+    .btn { display:inline-flex; align-items:center; gap:8px; background:#162147; color:#fff; border:1px solid rgba(255,255,255,0.08); padding:10px 14px; border-radius: 10px; cursor:pointer; text-decoration:none; }
+    .btn.primary { background: linear-gradient(90deg, #5169ff, #7aa2ff); }
+    .btn.good { background: linear-gradient(90deg, #1f9d6b, #43c08c); }
+    .btn.warn { background: linear-gradient(90deg, #c48a1d, #ffd37a); color:#111; }
+    .btn.ghost { background: transparent; border-color: rgba(255,255,255,0.18); }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .steps { display:flex; gap:8px; flex-wrap:wrap; margin: 12px 0 18px; }
+    .step { padding:8px 10px; border-radius: 10px; border:1px solid rgba(255,255,255,0.08); color:var(--muted); font-size:13px; }
+    .step.active { background: #1a244a; color:#fff; border-color: #2d3a6a; }
+    .step.done { background: #14233f; color:#9fe2bd; border-color:#214a3b; }
+    .nav { display:flex; justify-content:space-between; gap:12px; margin-top:16px; }
+    .hidden { display:none !important; }
+    pre { background:#0b1229; border:1px solid rgba(255,255,255,0.08); padding:14px; border-radius:12px; overflow:auto; max-height: 420px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12.5px; }
+    .pill { display:inline-block; padding:4px 8px; background:#0f1a3a; border:1px solid rgba(255,255,255,0.08); border-radius:999px; color:#9db5ff; font-size:12px; }
+    .inline-help { font-size: 12px; color: var(--muted); }
+    .section-title { font-weight:600; margin: 14px 0 6px; }
+    .hr { height:1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); margin: 12px 0; }
+    .table { width:100%; border-collapse: collapse; }
+    .table th, .table td { border-bottom:1px solid rgba(255,255,255,0.08); padding:8px; text-align:left; font-size:13px; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas; background:#0f1733; border:1px solid rgba(255,255,255,0.08); padding:2px 6px; border-radius:6px; }
+    details summary { cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="row" style="justify-content: space-between; gap:12px; align-items: flex-end;">
+      <div>
+        <h1>Ubuntu Autoinstall Wizard</h1>
+        <div class="subtle">Build a <span class="pill">user-data</span> (cloud-init autoinstall) + ISO remaster script. Now with <b>bonding</b>, <b>VLANs</b>, and <b>RAID presets</b>. Optional iLO/Redfish-assisted NIC discovery.</div>
+      </div>
+      <div class="row">
+        <button id="saveBtn" class="btn">Save Config</button>
+        <button id="loadBtn" class="btn">Load Config</button>
+        <button id="resetBtn" class="btn ghost">Reset</button>
+      </div>
+    </div>
+
+    <div class="steps" id="steps"></div>
+
+    <div id="stepContainer" class="card"></div>
+
+    <div class="nav">
+      <button id="prevBtn" class="btn">◀ Back</button>
+      <div class="row">
+        <button id="nextBtn" class="btn primary">Next ▶</button>
+        <button id="genBtn" class="btn good hidden">Generate YAML & Files</button>
+      </div>
+    </div>
+
+    <div id="output" class="card hidden" style="margin-top:16px;">
+      <div class="section-title">Generated <code>user-data</code> (autoinstall)</div>
+      <pre class="mono" id="yamlOut"></pre>
+      <div class="hr"></div>
+      <div class="grid">
+        <div>
+          <div class="section-title">Generated <code>meta-data</code></div>
+          <pre class="mono" id="metaOut"></pre>
+        </div>
+        <div>
+          <div class="section-title">ISO Remaster Script (<code>make-autoinstall-iso.sh</code>)</div>
+          <pre class="mono" id="scriptOut"></pre>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px; flex-wrap:wrap;">
+        <button id="dlUserData" class="btn">Download user-data</button>
+        <button id="dlMetaData" class="btn">Download meta-data</button>
+        <button id="dlScript" class="btn">Download remaster script</button>
+      </div>
+      <p class="inline-help" style="margin-top:10px;">The script injects <code>nocloud/</code> and appends <code>autoinstall ds=nocloud;s=/cdrom/nocloud/</code> to the kernel cmdline in GRUB/ISOLINUX.</p>
+      <details>
+        <summary>Optional: iLO Redfish proxy helper (Node.js)</summary>
+        <p class="inline-help">For many iLOs, browsers are blocked by CORS. Run this tiny proxy locally then use the wizard's discovery button.</p>
+        <pre class="mono">// save as redfish-proxy.js
+import http from 'node:http';
+import https from 'node:https';
+import { URL } from 'node:url';
+const PORT = 8787;
+http.createServer((req,res)=>{
+  const u = new URL(req.url, `http://localhost:${PORT}`);
+  const target = u.searchParams.get('url');
+  const user = u.searchParams.get('user')||'';
+  const pass = u.searchParams.get('pass')||'';
+  if(!target){ res.statusCode=400; return res.end('Missing url'); }
+  const t = new URL(target);
+  const opts = { hostname:t.hostname, port:t.port||443, path:t.pathname+t.search, method:'GET', rejectUnauthorized:false, headers:{ 'Authorization':'Basic '+Buffer.from(`${user}:${pass}`).toString('base64') } };
+  https.request(opts, r=>{ res.setHeader('Access-Control-Allow-Origin','*'); r.pipe(res); }).on('error', e=>{ res.statusCode=502; res.end(String(e)); }).end();
+}).listen(PORT, ()=> console.log('proxy on :'+PORT));</pre>
+      </details>
+    </div>
+
+  </div>
+
+<script>
+// ──────────────────────────────────────────────────────────────────────────────
+// Wizard Model (now with NICs, Bonds, VLANs, RAID)
+// ──────────────────────────────────────────────────────────────────────────────
+const model = {
+  // General
+  ubuntuVersion: "24.04",
+  locale: "en_AU.UTF-8",
+  timezone: "Australia/Sydney",
+  keyboardLayout: "us",
+
+  // Identity
+  hostname: "ubuntu-host",
+  username: "admin",
+  fullName: "Ubuntu Admin",
+  passwordPlain: "",
+  sshKey: "",
+  sudoWithoutPassword: true,
+
+  // Hardware/NICs (discovery + manual)
+  nics: [ /* {name:"eno1", mac:"", discovered:true} */ ],
+
+  // Network
+  netMode: "dhcp", // for simple case; advanced overrides this
+  nicName: "",
+  static: { address: "", gateway: "", nameservers: "1.1.1.1,8.8.8.8" },
+
+  // Advanced Netplan (bonds/vlans)
+  advNetEnabled: true,
+  bonds: [ /* {name:"bond0", mode:"802.3ad", miimon:100, lacp_rate:"fast", primary:"", members:["eno1","eno2"], ip:{type:'dhcp'|'static', address:'', gateway:'', dns:'1.1.1.1,8.8.8.8'} } */ ],
+  vlans: [ /* {name:"vlan10", id:10, link:"bond0", ip:{type:'dhcp'|'static', address:'', gateway:'', dns:''}} */ ],
+
+  // Storage
+  diskTarget: "/dev/sda",
+  diskLayout: "lvm", // lvm | direct | zfs | mdadm
+  swapSizeGB: 4,
+  zfsPoolName: "rpool",
+  raid: { level:"1", devices:"/dev/sda,/dev/sdb", name:"md0" }, // for mdadm preset
+
+  // Packages
+  mirror: "",
+  components: "main,universe,restricted,multiverse",
+  extraPkgs: "vim,htop,curl",
+  snaps: "",
+
+  // Late Commands
+  lateCommands: `# examples\n- [ sh, -c, 'echo "Hello from autoinstall" >/root/hello.txt' ]`,
+
+  reboot: true,
+  instanceId: "iid-ubuntu-autoinstall",
+  hostnameInMeta: true,
+
+  // iLO / Redfish discovery cache
+  ilo: { host:"", user:"", pass:"", lastRaw:"" },
+};
+
+const stepsDef = [
+  { id:"general", name:"General" },
+  { id:"identity", name:"Identity" },
+  { id:"discovery", name:"NIC Discovery (iLO/Redfish)" },
+  { id:"network", name:"Network" },
+  { id:"advancedNet", name:"Bonds & VLANs" },
+  { id:"storage", name:"Storage" },
+  { id:"packages", name:"Packages" },
+  { id:"late", name:"Late Commands" },
+  { id:"review", name:"Review & Generate" },
+];
+let currentStepIndex = 0;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Utilities
+// ──────────────────────────────────────────────────────────────────────────────
+function el(html){ const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+function val(id){ return document.getElementById(id).value; }
+function setv(id, v){ const e = document.getElementById(id); if(e) e.value = v ?? ""; }
+function yn(b){ return b ? "yes" : "no"; }
+function csvToArray(csv){ return (csv||"").split(',').map(s=>s.trim()).filter(Boolean); }
+function escapeYamlStr(s){ if (s === undefined || s === null) return ""; if (/[:#\-?\[\]{}&,*>!|'%@`\n\r]/.test(s)) { return JSON.stringify(s); } return s; }
+function blockQuote(str, indent=2){ const pad = ' '.repeat(indent); return str.split('\n').map(l=> pad + l).join('\n'); }
+function download(name, content){ const blob = new Blob([content], {type:'text/plain'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0); }
+function saveConfig(){ localStorage.setItem('ubuntu-autoinstall-wizard', JSON.stringify(model)); }
+function loadConfig(){ const raw = localStorage.getItem('ubuntu-autoinstall-wizard'); if(!raw) return false; try{ const obj = JSON.parse(raw); Object.assign(model, obj); return true; } catch{ return false; } }
+function escapeHtml(s){ return (s||"").replace(/[&<>\"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])); }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Render: Steps + Pages
+// ──────────────────────────────────────────────────────────────────────────────
+function renderSteps(){
+  const steps = document.getElementById('steps');
+  steps.innerHTML = '';
+  stepsDef.forEach((s, idx)=>{
+    const node = el(`<div class="step ${idx===currentStepIndex?'active': idx<currentStepIndex?'done':''}">${idx+1}. ${s.name}</div>`);
+    node.addEventListener('click', ()=>{ currentStepIndex = idx; render(); });
+    steps.appendChild(node);
+  });
+}
+
+function render(){
+  renderSteps();
+  const c = document.getElementById('stepContainer');
+  c.innerHTML = '';
+  const def = stepsDef[currentStepIndex];
+  if(!def) return;
+  c.appendChild(pages[def.id]());
+  document.getElementById('prevBtn').disabled = currentStepIndex===0;
+  document.getElementById('nextBtn').classList.toggle('hidden', currentStepIndex===stepsDef.length-1);
+  document.getElementById('genBtn').classList.toggle('hidden', currentStepIndex!==stepsDef.length-1);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Pages
+// ──────────────────────────────────────────────────────────────────────────────
+const pages = {
+  general(){
+    const root = el(`<div class="grid">
+      <div>
+        <label>Ubuntu version</label>
+        <select id="ubuntuVersion">
+          <option>22.04</option>
+          <option selected>24.04</option>
+          <option>24.10</option>
+        </select>
+      </div>
+      <div>
+        <label>Timezone</label>
+        <input id="timezone" placeholder="Region/City" />
+      </div>
+      <div>
+        <label>Locale</label>
+        <input id="locale" placeholder="en_AU.UTF-8" />
+      </div>
+      <div>
+        <label>Keyboard layout</label>
+        <input id="keyboardLayout" placeholder="us" />
+      </div>
+    </div>`);
+    setTimeout(()=>{
+      setv('ubuntuVersion', model.ubuntuVersion);
+      setv('timezone', model.timezone);
+      setv('locale', model.locale);
+      setv('keyboardLayout', model.keyboardLayout);
+      root.querySelectorAll('input,select').forEach(e=> e.addEventListener('input', ()=>{
+        model.ubuntuVersion = val('ubuntuVersion');
+        model.timezone = val('timezone');
+        model.locale = val('locale');
+        model.keyboardLayout = val('keyboardLayout');
+      }));
+    });
+    return root;
+  },
+  identity(){
+    const root = el(`<div class="grid">
+      <div>
+        <label>Hostname</label>
+        <input id="hostname" placeholder="ubuntu-host" />
+      </div>
+      <div>
+        <label>Full name</label>
+        <input id="fullName" placeholder="Ubuntu Admin" />
+      </div>
+      <div>
+        <label>Username</label>
+        <input id="username" placeholder="admin" />
+      </div>
+      <div>
+        <label>Password (optional)</label>
+        <input id="passwordPlain" type="password" placeholder="••••••" />
+      </div>
+      <div class="grid" style="grid-template-columns: 1fr 160px; gap:14px;">
+        <div>
+          <label>SSH public key (authorized_keys)</label>
+          <textarea id="sshKey" placeholder="ssh-ed25519 AAAAC3... user@host"></textarea>
+        </div>
+        <div>
+          <label>Sudo</label>
+          <select id="sudoWithoutPassword">
+            <option value="true">Passwordless sudo</option>
+            <option value="false">Require password</option>
+          </select>
+        </div>
+      </div>
+    </div>`);
+    setTimeout(()=>{
+      setv('hostname', model.hostname);
+      setv('fullName', model.fullName);
+      setv('username', model.username);
+      setv('passwordPlain', model.passwordPlain);
+      setv('sshKey', model.sshKey);
+      setv('sudoWithoutPassword', String(model.sudoWithoutPassword));
+      root.querySelectorAll('input,textarea,select').forEach(e=> e.addEventListener('input', ()=>{
+        model.hostname = val('hostname');
+        model.fullName = val('fullName');
+        model.username = val('username');
+        model.passwordPlain = val('passwordPlain');
+        model.sshKey = val('sshKey');
+        model.sudoWithoutPassword = (val('sudoWithoutPassword') === 'true');
+      }));
+    });
+    return root;
+  },
+  discovery(){
+    const root = el(`<div>
+      <div class="grid">
+        <div>
+          <label>iLO / Redfish host</label>
+          <input id="iloHost" placeholder="https://ilo.example.local"/>
+        </div>
+        <div>
+          <label>Username</label>
+          <input id="iloUser" placeholder="Administrator"/>
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="iloPass" type="password" placeholder="••••••"/>
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px; flex-wrap:wrap;">
+        <button id="btnDiscover" class="btn">Discover NICs via Redfish</button>
+        <button id="btnPasteJson" class="btn ghost">Paste Redfish JSON</button>
+        <button id="btnAddNic" class="btn ghost">Add NIC manually</button>
+      </div>
+      <p class="inline-help">Direct browser calls to iLO often fail due to CORS. Use the proxy helper below the output area, or paste JSON from <span class="kbd">/redfish/v1/Systems/1/EthernetInterfaces</span>.</p>
+      <table class="table" style="margin-top:10px;">
+        <thead><tr><th>Name</th><th>MAC</th><th>Discovered</th><th></th></tr></thead>
+        <tbody id="nicTable"></tbody>
+      </table>
+    </div>`);
+
+    function renderNICs(){
+      const tb = root.querySelector('#nicTable');
+      tb.innerHTML = '';
+      model.nics.forEach((n,i)=>{
+        const tr = el(`<tr>
+          <td><input id="nic-name-${i}" value="${escapeHtml(n.name||'')}"/></td>
+          <td><input id="nic-mac-${i}" value="${escapeHtml(n.mac||'')}"/></td>
+          <td>${n.discovered? '✔':'—'}</td>
+          <td><button class="btn ghost" data-i="${i}">Delete</button></td>
+        </tr>`);
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('input').forEach(inp=> inp.addEventListener('input', (e)=>{
+        const [_, field, idx] = e.target.id.match(/^nic-(name|mac)-(\d+)$/);
+        model.nics[Number(idx)][field] = e.target.value.trim();
+      }));
+      tb.querySelectorAll('button[data-i]').forEach(btn=> btn.addEventListener('click', ()=>{
+        const i = Number(btn.getAttribute('data-i'));
+        model.nics.splice(i,1); renderNICs();
+      }));
+    }
+
+    setTimeout(()=>{
+      setv('iloHost', model.ilo.host);
+      setv('iloUser', model.ilo.user);
+      setv('iloPass', model.ilo.pass);
+      renderNICs();
+
+      root.querySelector('#btnAddNic').addEventListener('click', ()=>{ model.nics.push({name:'', mac:'', discovered:false}); renderNICs(); });
+
+      root.querySelector('#btnPasteJson').addEventListener('click', ()=>{
+        const raw = prompt('Paste JSON from /redfish/v1/Systems/1/EthernetInterfaces');
+        if(!raw) return; model.ilo.lastRaw = raw; try{
+          const j = JSON.parse(raw);
+          // Accept either a collection or a list of members with MACs
+          const list = (j.Members||j.Items||[]).map(m=> m.MACAddress ? m : (m['@odata.id']? m : null)).filter(Boolean);
+          if(list.length===0 && Array.isArray(j)){
+            j.forEach(x=> list.push(x));
+          }
+          const nicSet = [];
+          (list.length? list: [j]).forEach(m=>{
+            const name = m.Id || m.Name || m.Interface || m['@odata.id']?.split('/').pop();
+            const mac = m.MACAddress || m.MacAddress || m.PermanentMACAddress || '';
+            nicSet.push({name, mac, discovered:true});
+          });
+          // merge new NICs by name
+          nicSet.forEach(n=>{ if(!model.nics.find(x=>x.name===n.name)){ model.nics.push(n); } });
+          renderNICs();
+          alert(`Imported ${nicSet.length} NIC(s).`);
+        }catch(e){ alert('Invalid JSON'); }
+      });
+
+      root.querySelector('#btnDiscover').addEventListener('click', async ()=>{
+        model.ilo.host = val('iloHost'); model.ilo.user = val('iloUser'); model.ilo.pass = val('iloPass');
+        if(!model.ilo.host){ alert('Enter iLO host'); return; }
+        const url = `http://localhost:8787/?url=${encodeURIComponent(model.ilo.host.replace(/\/$/,'')+"/redfish/v1/Systems/1/EthernetInterfaces")}\u0026user=${encodeURIComponent(model.ilo.user)}\u0026pass=${encodeURIComponent(model.ilo.pass)}`;
+        try{
+          const r = await fetch(url);
+          const j = await r.json();
+          model.ilo.lastRaw = JSON.stringify(j);
+          const list = (j.Members||j.Items||[]);
+          const details = [];
+          for(const m of list){
+            if(m['@odata.id']){
+              const r2 = await fetch(`http://localhost:8787/?url=${encodeURIComponent(model.ilo.host.replace(/\/$/,'')+m['@odata.id'])}\u0026user=${encodeURIComponent(model.ilo.user)}\u0026pass=${encodeURIComponent(model.ilo.pass)}`);
+              details.push(await r2.json());
+            }
+          }
+          const nicSet = details.map(d=> ({ name: d.Id || d.Name, mac: d.MACAddress || d.PermanentMACAddress || '', discovered:true }));
+          nicSet.forEach(n=>{ if(!model.nics.find(x=>x.name===n.name)){ model.nics.push(n); } });
+          renderNICs();
+          alert(`Discovered ${nicSet.length} NIC(s).`);
+        }catch(e){ alert('Discovery failed. Use the proxy helper and ensure credentials are valid.'); }
+      });
+
+      root.querySelectorAll('#iloHost,#iloUser,#iloPass').forEach(i=> i.addEventListener('input', ()=>{
+        model.ilo.host = val('iloHost'); model.ilo.user = val('iloUser'); model.ilo.pass = val('iloPass');
+      }));
+    });
+    return root;
+  },
+  network(){
+    const root = el(`<div>
+      <p class="inline-help">Simple mode (single iface). Enable advanced for bonds/VLANs in the next step.</p>
+      <div class="grid">
+        <div>
+          <label>Mode</label>
+          <select id="netMode">
+            <option value="dhcp">DHCP</option>
+            <option value="static">Static</option>
+          </select>
+        </div>
+        <div>
+          <label>Interface name (optional)</label>
+          <input id="nicName" placeholder="auto-detect" />
+        </div>
+      </div>
+      <div id="staticFields" class="grid" style="margin-top:10px;">
+        <div>
+          <label>Address (CIDR)</label>
+          <input id="ipAddr" placeholder="192.168.1.10/24" />
+        </div>
+        <div>
+          <label>Gateway</label>
+          <input id="gateway" placeholder="192.168.1.1" />
+        </div>
+        <div>
+          <label>DNS (comma‑sep)</label>
+          <input id="dns" placeholder="1.1.1.1,8.8.8.8" />
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div class="row"><label>Advanced Netplan</label><select id="advNetEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></div>
+    </div>`);
+    function toggle(){ document.getElementById('staticFields').classList.toggle('hidden', val('netMode')!=="static"); }
+    setTimeout(()=>{
+      setv('netMode', model.netMode);
+      setv('nicName', model.nicName);
+      setv('ipAddr', model.static.address);
+      setv('gateway', model.static.gateway);
+      setv('dns', model.static.nameservers);
+      setv('advNetEnabled', String(model.advNetEnabled));
+      toggle();
+      root.querySelectorAll('input,select').forEach(e=> e.addEventListener('input', ()=>{
+        model.netMode = val('netMode');
+        model.nicName = val('nicName');
+        model.static.address = val('ipAddr');
+        model.static.gateway = val('gateway');
+        model.static.nameservers = val('dns');
+        model.advNetEnabled = (val('advNetEnabled')==='true');
+        toggle();
+      }));
+    });
+    return root;
+  },
+  advancedNet(){
+    const root = el(`<div>
+      <div class="row" style="justify-content:space-between; align-items:flex-end;">
+        <div>
+          <div class="section-title">Bonds</div>
+          <p class="inline-help">Create link aggregates (modes: <span class="kbd">active-backup</span>, <span class="kbd">balance-rr</span>, <span class="kbd">802.3ad</span> etc.).</p>
+        </div>
+        <button id="addBond" class="btn">Add bond</button>
+      </div>
+      <div id="bondList"></div>
+      <div class="hr"></div>
+      <div class="row" style="justify-content:space-between; align-items:flex-end;">
+        <div>
+          <div class="section-title">VLANs</div>
+        </div>
+        <button id="addVlan" class="btn">Add VLAN</button>
+      </div>
+      <div id="vlanList"></div>
+    </div>`);
+
+    function renderBonds(){
+      const container = root.querySelector('#bondList');
+      container.innerHTML = '';
+      model.bonds.forEach((b, i)=>{
+        const members = model.nics.map(n=> `<option ${b.members?.includes(n.name)?'selected':''}>${escapeHtml(n.name)}</option>`).join('');
+        const row = el(`<div class="card" style="margin:8px 0;">
+          <div class="grid">
+            <div>
+              <label>Name</label><input id="bond-name-${i}" value="${escapeHtml(b.name||'bond0')}"/>
+            </div>
+            <div>
+              <label>Mode</label>
+              <select id="bond-mode-${i}">
+                ${['active-backup','balance-rr','balance-xor','broadcast','802.3ad','balance-tlb','balance-alb'].map(m=>`<option ${b.mode===m?'selected':''}>${m}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>miimon (ms)</label><input id="bond-miimon-${i}" type="number" min="0" value="${b.miimon??100}"/>
+            </div>
+            <div>
+              <label>LACP rate</label>
+              <select id="bond-lacp-${i}">
+                ${['fast','slow','off'].map(x=>`<option ${b.lacp_rate===x?'selected':''}>${x}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Primary (for active-backup)</label><input id="bond-primary-${i}" value="${escapeHtml(b.primary||'')}"/>
+            </div>
+          </div>
+          <div class="grid" style="margin-top:8px;">
+            <div>
+              <label>Members (Ctrl/Cmd‑click to multi‑select)</label>
+              <select id="bond-members-${i}" multiple size="${Math.min(6, Math.max(2, model.nics.length))}">${members}</select>
+            </div>
+            <div>
+              <label>Addressing</label>
+              <select id="bond-iptype-${i}">
+                <option value="dhcp" ${b.ip?.type==='dhcp'?'selected':''}>DHCP</option>
+                <option value="static" ${b.ip?.type==='static'?'selected':''}>Static</option>
+              </select>
+              <div id="bond-static-${i}" class="grid" style="margin-top:8px;">
+                <div><label>Address (CIDR)</label><input id="bond-addr-${i}" value="${escapeHtml(b.ip?.address||'')}"/></div>
+                <div><label>Gateway</label><input id="bond-gw-${i}" value="${escapeHtml(b.ip?.gateway||'')}"/></div>
+                <div><label>DNS</label><input id="bond-dns-${i}" value="${escapeHtml(b.ip?.dns||'1.1.1.1,8.8.8.8')}"/></div>
+              </div>
+            </div>
+            <div class="row" style="align-items:flex-end; gap:8px;">
+              <button class="btn warn" data-del="${i}">Delete bond</button>
+            </div>
+          </div>
+        </div>`);
+        container.appendChild(row);
+      });
+
+      // wire events
+      model.bonds.forEach((b,i)=>{
+        const ms = root.querySelector(`#bond-members-${i}`);
+        function syncStaticVis(){ root.querySelector(`#bond-static-${i}`).classList.toggle('hidden', val(`bond-iptype-${i}`)!=='static'); }
+        syncStaticVis();
+        ms && ms.addEventListener('change', ()=>{
+          b.members = Array.from(ms.selectedOptions).map(o=> o.value);
+        });
+        ['name','mode','miimon','lacp','primary','iptype','addr','gw','dns'].forEach(key=>{
+          const map = {name:'name', mode:'mode', miimon:'miimon', lacp:'lacp_rate', primary:'primary', iptype:'ip.type', addr:'ip.address', gw:'ip.gateway', dns:'ip.dns'};
+          const id = `bond-${key}-${i}`;
+          const e = root.querySelector('#'+id);
+          if(e){
+            e.addEventListener('input', ()=>{
+              if(map[key].includes('.')){
+                const [a,bk] = map[key].split('.'); b[a] ||= {}; b[a][bk] = e.value;
+              } else {
+                b[map[key]] = (key==='miimon'? Number(e.value||0): e.value);
+              }
+              if(key==='iptype') syncStaticVis();
+            });
+          }
+        });
+        root.querySelector(`[data-del="${i}"]`).addEventListener('click', ()=>{ model.bonds.splice(i,1); renderBonds(); });
+      });
+    }
+
+    function renderVlans(){
+      const container = root.querySelector('#vlanList');
+      container.innerHTML = '';
+      model.vlans.forEach((v, i)=>{
+        const links = [ ...model.bonds.map(b=>b.name), ...model.nics.map(n=>n.name) ].filter(Boolean);
+        const row = el(`<div class="card" style="margin:8px 0;">
+          <div class="grid">
+            <div><label>Name</label><input id="vlan-name-${i}" value="${escapeHtml(v.name||'vlan10')}"/></div>
+            <div><label>ID (tag)</label><input id="vlan-id-${i}" type="number" min="1" max="4094" value="${v.id??10}"/></div>
+            <div><label>Parent link</label>
+              <select id="vlan-link-${i}">${links.map(n=>`<option ${v.link===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}</select>
+            </div>
+          </div>
+          <div class="grid" style="margin-top:8px;">
+            <div>
+              <label>Addressing</label>
+              <select id="vlan-iptype-${i}">
+                <option value="dhcp" ${v.ip?.type==='dhcp'?'selected':''}>DHCP</option>
+                <option value="static" ${v.ip?.type==='static'?'selected':''}>Static</option>
+              </select>
+              <div id="vlan-static-${i}" class="grid" style="margin-top:8px;">
+                <div><label>Address (CIDR)</label><input id="vlan-addr-${i}" value="${escapeHtml(v.ip?.address||'')}"/></div>
+                <div><label>Gateway</label><input id="vlan-gw-${i}" value="${escapeHtml(v.ip?.gateway||'')}"/></div>
+                <div><label>DNS</label><input id="vlan-dns-${i}" value="${escapeHtml(v.ip?.dns||'')}"/></div>
+              </div>
+            </div>
+            <div class="row" style="align-items:flex-end; gap:8px;">
+              <button class="btn warn" data-dv="${i}">Delete VLAN</button>
+            </div>
+          </div>
+        </div>`);
+        container.appendChild(row);
+      });
+      model.vlans.forEach((v,i)=>{
+        function sync(){ root.querySelector(`#vlan-static-${i}`).classList.toggle('hidden', val(`vlan-iptype-${i}`)!=='static'); }
+        sync();
+        ['name','id','link','iptype','addr','gw','dns'].forEach(key=>{
+          const map = {name:'name', id:'id', link:'link', iptype:'ip.type', addr:'ip.address', gw:'ip.gateway', dns:'ip.dns'};
+          const e = root.querySelector('#' + `vlan-${key}-${i}`);
+          if(e){ e.addEventListener('input', ()=>{
+            if(map[key].includes('.')){ const [a,bk] = map[key].split('.'); v[a] ||= {}; v[a][bk] = (key==='id'? Number(e.value): e.value); }
+            else { v[map[key]] = (key==='id'? Number(e.value): e.value); }
+            sync();
+          }); }
+        });
+        root.querySelector(`[data-dv="${i}"]`).addEventListener('click', ()=>{ model.vlans.splice(i,1); renderVlans(); });
+      });
+    }
+
+    setTimeout(()=>{
+      root.querySelector('#addBond').addEventListener('click', ()=>{ model.bonds.push({name:`bond${model.bonds.length}`, mode:'802.3ad', miimon:100, lacp_rate:'fast', members:[], ip:{type:'dhcp', dns:'1.1.1.1,8.8.8.8'}}); renderBonds(); });
+      root.querySelector('#addVlan').addEventListener('click', ()=>{ model.vlans.push({name:`vlan${10+model.vlans.length}`, id:10, link:model.bonds[0]?.name||model.nics[0]?.name||'', ip:{type:'dhcp'}}); renderVlans(); });
+      renderBonds(); renderVlans();
+    });
+    return root;
+  },
+  storage(){
+    const root = el(`<div>
+      <div class="grid">
+        <div>
+          <label>Layout</label>
+          <select id="diskLayout">
+            <option value="direct">Direct (single ext4)</option>
+            <option value="lvm" selected>LVM (ext4 on LVM)</option>
+            <option value="zfs">ZFS (root on ZFS)</option>
+            <option value="mdadm">RAID (mdadm) + ext4 or LVM</option>
+          </select>
+        </div>
+        <div>
+          <label>Primary target disk (for direct/LVM/ZFS)</label>
+          <input id="diskTarget" placeholder="/dev/sda" />
+        </div>
+        <div>
+          <label>Swap size (GiB)</label>
+          <input id="swapSizeGB" type="number" min="0" step="1" />
+        </div>
+      </div>
+      <div id="raidGroup" class="grid" style="margin-top:10px;">
+        <div>
+          <label>RAID level</label>
+          <select id="raidLevel"><option>0</option><option selected>1</option><option>10</option></select>
+        </div>
+        <div>
+          <label>Devices (comma‑sep)</label>
+          <input id="raidDevices" placeholder="/dev/sda,/dev/sdb" />
+        </div>
+        <div>
+          <label>Array name</label>
+          <input id="raidName" placeholder="md0" />
+        </div>
+      </div>
+      <div id="zfsExtra" class="grid" style="margin-top:10px;">
+        <div>
+          <label>ZFS pool name</label>
+          <input id="zfsPoolName" placeholder="rpool" />
+        </div>
+      </div>
+      <p class="inline-help">Warning: Chosen disks will be <b>wiped</b>.</p>
+    </div>`);
+    function t(){ document.getElementById('zfsExtra').classList.toggle('hidden', val('diskLayout')!=="zfs"); document.getElementById('raidGroup').classList.toggle('hidden', val('diskLayout')!=="mdadm"); }
+    setTimeout(()=>{
+      setv('diskTarget', model.diskTarget);
+      setv('diskLayout', model.diskLayout);
+      setv('swapSizeGB', model.swapSizeGB);
+      setv('zfsPoolName', model.zfsPoolName);
+      setv('raidLevel', model.raid.level);
+      setv('raidDevices', model.raid.devices);
+      setv('raidName', model.raid.name);
+      t();
+      root.querySelectorAll('input,select').forEach(e=> e.addEventListener('input', ()=>{
+        model.diskTarget = val('diskTarget');
+        model.diskLayout = val('diskLayout');
+        model.swapSizeGB = Number(val('swapSizeGB')) || 0;
+        model.zfsPoolName = val('zfsPoolName');
+        model.raid.level = val('raidLevel');
+        model.raid.devices = val('raidDevices');
+        model.raid.name = val('raidName');
+        t();
+      }));
+    });
+    return root;
+  },
+  packages(){
+    const root = el(`<div class="grid">
+      <div>
+        <label>APT mirror (optional)</label>
+        <input id="mirror" placeholder="http://archive.ubuntu.com/ubuntu" />
+        <div class="inline-help">Leave blank to use default mirror.</div>
+      </div>
+      <div>
+        <label>Components</label>
+        <input id="components" placeholder="main,universe,restricted,multiverse" />
+      </div>
+      <div>
+        <label>Extra packages (comma‑sep)</label>
+        <input id="extraPkgs" placeholder="vim,htop,curl" />
+      </div>
+      <div>
+        <label>Snaps (comma‑sep)</label>
+        <input id="snaps" placeholder="lxd --channel=latest/stable" />
+      </div>
+    </div>`);
+    setTimeout(()=>{
+      setv('mirror', model.mirror);
+      setv('components', model.components);
+      setv('extraPkgs', model.extraPkgs);
+      setv('snaps', model.snaps);
+      root.querySelectorAll('input').forEach(e=> e.addEventListener('input', ()=>{
+        model.mirror = val('mirror');
+        model.components = val('components');
+        model.extraPkgs = val('extraPkgs');
+        model.snaps = val('snaps');
+      }));
+    });
+    return root;
+  },
+  late(){
+    const root = el(`<div>
+      <label>Late commands (YAML list). Each item runs in target system after install.</label>
+      <textarea id="lateCommands" class="mono"></textarea>
+    </div>`);
+    setTimeout(()=>{
+      setv('lateCommands', model.lateCommands);
+      document.getElementById('lateCommands').addEventListener('input', ()=>{ model.lateCommands = val('lateCommands'); });
+    });
+    return root;
+  },
+  review(){
+    const root = el(`<div>
+      <div class="grid">
+        <div>
+          <div class="section-title">Summary</div>
+          <ul class="subtle">
+            <li>Version: <b>${model.ubuntuVersion}</b></li>
+            <li>Hostname: <b>${escapeHtml(model.hostname)}</b></li>
+            <li>User: <b>${escapeHtml(model.username)}</b> (${escapeHtml(model.fullName)})</li>
+            <li>SSH key: <b>${model.sshKey? 'yes':'no'}</b> · Password set: <b>${model.passwordPlain?'yes':'no'}</b></li>
+            <li>Advanced Netplan: <b>${model.advNetEnabled?'enabled':'disabled'}</b> · Bonds: <b>${model.bonds.length}</b> · VLANs: <b>${model.vlans.length}</b></li>
+            <li>Storage layout: <b>${escapeHtml(model.diskLayout)}</b></li>
+          </ul>
+        </div>
+        <div>
+          <div class="section-title">Seed</div>
+          <div class="subtle">instance-id: <b>${escapeHtml(model.instanceId)}</b>${model.hostnameInMeta? ` · local-hostname: <b>${escapeHtml(model.hostname)}</b>`:''}</div>
+          <div class="section-title" style="margin-top:10px;">Next</div>
+          <ol class="subtle">
+            <li>Click <b>Generate YAML & Files</b>.</li>
+            <li>Download <code>user-data</code>, <code>meta-data</code>, and <code>make-autoinstall-iso.sh</code>.</li>
+            <li>Run the script on a Linux workstation with <code>xorriso</code> installed.</li>
+          </ol>
+        </div>
+      </div>
+    </div>`);
+    return root;
+  }
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// YAML Generation (now with bonds/VLANs/RAID)
+// ──────────────────────────────────────────────────────────────────────────────
+function genNetYaml(){
+  // If advanced is disabled, fall back to simple network
+  if(!model.advNetEnabled || (model.bonds.length===0 && model.vlans.length===0)){
+    if(model.netMode === 'static'){
+      const iface = model.nicName || 'auto';
+      const dns = csvToArray(model.static.nameservers).join(', ');
+      return `version: 2\nethernets:\n  ${iface}:\n    addresses: [${escapeYamlStr(model.static.address)}]\n    gateway4: ${escapeYamlStr(model.static.gateway)}\n    nameservers:\n      addresses: [${dns}]\n`;
+    } else {
+      const iface = model.nicName || 'all';
+      return `version: 2\nethernets:\n  ${iface}: { dhcp4: true }\n`;
+    }
+  }
+
+  // Advanced: build ethernets + bonds + vlans
+  const ethernets = {}; // set all discovered or manual NICs as unmanaged (slaves)
+  model.nics.forEach(n=>{ ethernets[n.name] = { dhcp4:false }; });
+
+  const bonds = {}; // netplan style
+  model.bonds.forEach(b=>{
+    const params = {
+      interfaces: b.members || [],
+      parameters: { mode: b.mode||'802.3ad', miimon: b.miimon||100 },
+    };
+    if(b.lacp_rate && b.mode==='802.3ad'){ params.parameters['lacp-rate'] = b.lacp_rate; }
+    if(b.primary && b.mode==='active-backup'){ params.parameters['primary'] = b.primary; }
+
+    if(b.ip?.type==='static' && b.ip.address){
+      params.addresses = [ b.ip.address ];
+      if(b.ip.gateway) params.gateway4 = b.ip.gateway;
+      if(b.ip.dns){ params.nameservers = { addresses: csvToArray(b.ip.dns) }; }
+    } else { params.dhcp4 = true; }
+
+    bonds[b.name] = params;
+  });
+
+  const vlans = {};
+  model.vlans.forEach(v=>{
+    const params = { id: v.id, link: v.link };
+    if(v.ip?.type==='static' && v.ip.address){
+      params.addresses = [ v.ip.address ];
+      if(v.ip.gateway) params.gateway4 = v.ip.gateway;
+      if(v.ip.dns){ params.nameservers = { addresses: csvToArray(v.ip.dns) }; }
+    } else { params.dhcp4 = true; }
+    vlans[v.name] = params;
+  });
+
+  // Convert to YAML (manual builder to avoid adding a full YAML lib)
+  function toY(obj, indent=0){
+    const sp = ' '.repeat(indent);
+    if(Array.isArray(obj)) return obj.map(x=> sp+`- ${typeof x==='string'? x: ''}` + (typeof x==='string'? '' : '\n'+toY(x, indent+2))).join('\n');
+    return Object.entries(obj).map(([k,v])=>{
+      if(v===null||v===undefined) return ''; const key = sp + k + ':';
+      if(typeof v==='string' || typeof v==='number' || typeof v==='boolean') return key + ' ' + v;
+      if(Array.isArray(v)) return key + '\n' + v.map(x=> sp+'  - '+x).join('\n');
+      return key + '\n' + toY(v, indent+2);
+    }).join('\n');
+  }
+
+  const doc = {
+    version: 2,
+    ethernets,
+    ...(Object.keys(bonds).length? { bonds }: {}),
+    ...(Object.keys(vlans).length? { vlans }: {}),
+  };
+  return toY(doc) + '\n';
+}
+
+function genStorageYaml(){
+  if(model.diskLayout === 'zfs'){
+    return `config:\n  - id: disk0\n    type: disk\n    path: ${escapeYamlStr(model.diskTarget)}\n    ptable: gpt\n    wipe: superblock-recursive\n  - type: partition\n    id: boot-part\n    device: disk0\n    size: 1G\n    flag: boot\n  - type: partition\n    id: swap-part\n    device: disk0\n    size: ${Math.max(1, model.swapSizeGB)}G\n  - type: partition\n    id: zfs-part\n    device: disk0\n    size: -1\n  - type: format\n    id: boot-fs\n    fstype: fat32\n    volume: boot-part\n    label: EFI\n  - type: format\n    id: swap-fs\n    fstype: swap\n    volume: swap-part\n  - type: zpool\n    id: ${escapeYamlStr(model
