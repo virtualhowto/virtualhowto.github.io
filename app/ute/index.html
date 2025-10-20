@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ute Fit‑out Planner (HTML5)</title>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 500: '#3e8a54', 600:'#2f6a40' } }
+        }
+      }
+    }
+  </script>
+  <!-- jsPDF + html2canvas for export -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    /* Canvas grid */
+    .grid-bg { background-size: 20px 20px; background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px); }
+    .item-handle { cursor: move; }
+  </style>
+</head>
+<body class="bg-neutral-50 text-neutral-900">
+  <header class="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-200">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="font-semibold tracking-wide text-brand-600">Ute Fit‑out Planner</div>
+      <nav class="flex gap-4 text-sm">
+        <a href="#ute" class="hover:text-brand-600">Ute & Canopy</a>
+        <a href="#products" class="hover:text-brand-600">Products</a>
+        <a href="#summary" class="hover:text-brand-600">Summary</a>
+        <a href="#export" class="hover:text-brand-600">Export</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <!-- Left: Ute selector -->
+    <section id="ute" class="lg:col-span-3 bg-white rounded-xl shadow p-4">
+      <h2 class="text-lg font-semibold mb-3">Ute & Canopy</h2>
+      <div class="space-y-3">
+        <label class="block text-sm">Select model</label>
+        <select id="uteSelect" class="w-full rounded border-neutral-300 p-2"></select>
+
+        <div class="flex items-center justify-between mt-2">
+          <label class="text-sm font-medium">Canopy</label>
+          <label class="inline-flex items-center gap-2 cursor-pointer">
+            <span class="text-xs">No</span>
+            <input id="canopyToggle" type="checkbox" class="toggle" />
+            <span class="text-xs">Yes</span>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mt-2">
+          <div>
+            <label class="text-xs">L (mm)</label>
+            <input id="dimL" type="number" class="w-full rounded border p-2 border-neutral-300" />
+          </div>
+          <div>
+            <label class="text-xs">W (mm)</label>
+            <input id="dimW" type="number" class="w-full rounded border p-2 border-neutral-300" />
+          </div>
+          <div>
+            <label class="text-xs">H (mm)</label>
+            <input id="dimH" type="number" class="w-full rounded border p-2 border-neutral-300" />
+          </div>
+        </div>
+        <button id="resetDims" class="mt-2 w-full bg-neutral-100 hover:bg-neutral-200 rounded p-2 text-sm">Reset to default</button>
+
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs">Payload (kg)</label>
+            <input id="payload" type="number" class="w-full rounded border p-2 border-neutral-300" placeholder="e.g. 900"/>
+          </div>
+          <div>
+            <label class="text-xs">GVM (kg)</label>
+            <input id="gvm" type="number" class="w-full rounded border p-2 border-neutral-300" placeholder="optional"/>
+          </div>
+          <div>
+            <label class="text-xs">Kerb (kg)</label>
+            <input id="kerb" type="number" class="w-full rounded border p-2 border-neutral-300" placeholder="optional"/>
+          </div>
+          <button id="calcPayload" class="col-span-2 bg-brand-500 hover:bg-brand-600 text-white rounded p-2 text-sm">Calc payload = GVM - Kerb</button>
+        </div>
+
+        <div class="mt-4 text-xs text-neutral-600">Tip: keyboard arrows nudge selected item by 10mm. Hold Shift for 50mm.</div>
+      </div>
+    </section>
+
+    <!-- Center: Canvas -->
+    <section class="lg:col-span-6 bg-white rounded-xl shadow p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-lg font-semibold">Layout Canvas</h2>
+        <div class="text-xs text-neutral-600">Scale: <span id="scaleLabel">1 mm = 1 px</span></div>
+      </div>
+      <div class="relative border border-neutral-200 rounded-xl overflow-hidden">
+        <div id="rulerTop" class="h-6 text-[10px] flex items-end pl-6 select-none"></div>
+        <div class="flex">
+          <div id="rulerLeft" class="w-6 text-[10px] flex flex-col items-end pr-1 select-none"></div>
+          <div id="canvas" class="relative flex-1 bg-white grid-bg" style="height:520px;">
+            <!-- items go here -->
+          </div>
+        </div>
+      </div>
+      <div class="mt-2 flex items-center gap-2">
+        <label class="text-sm">Zoom</label>
+        <input id="zoom" type="range" min="0.2" max="2" step="0.1" value="1" />
+        <button id="clearAll" class="ml-auto text-sm px-3 py-1.5 rounded bg-neutral-100 hover:bg-neutral-200">Clear</button>
+      </div>
+      <p id="warnings" class="mt-2 text-sm text-red-600"></p>
+    </section>
+
+    <!-- Right: Summary -->
+    <section id="summary" class="lg:col-span-3 bg-white rounded-xl shadow p-4">
+      <h2 class="text-lg font-semibold mb-3">Summary</h2>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span>Total items</span><span id="sumCount">0</span></div>
+        <div class="flex justify-between"><span>Total weight</span><span id="sumWeight">0 kg</span></div>
+        <div class="flex justify-between"><span>Total price</span><span id="sumPrice">$0.00</span></div>
+        <div class="flex justify-between"><span>Volume used</span><span id="sumVolume">0 L</span></div>
+        <div>
+          <div class="flex justify-between text-xs mb-1"><span>Payload used</span><span id="payloadPct">0%</span></div>
+          <div class="w-full h-2 bg-neutral-200 rounded">
+            <div id="payloadBar" class="h-2 bg-brand-500 rounded" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="mt-2 flex gap-2">
+          <button id="saveBuild" class="flex-1 bg-neutral-100 hover:bg-neutral-200 rounded p-2">Save</button>
+          <button id="shareBuild" class="flex-1 bg-neutral-100 hover:bg-neutral-200 rounded p-2">Share Link</button>
+        </div>
+        <input id="shareUrl" class="w-full text-xs mt-1 p-2 border rounded" readonly />
+      </div>
+      <div class="mt-4">
+        <h3 class="font-medium">Items</h3>
+        <ul id="itemList" class="mt-2 space-y-2 text-sm"></ul>
+      </div>
+      <div id="export" class="mt-4 space-y-2">
+        <h3 class="font-medium">Export</h3>
+        <button id="exportPDF" class="w-full bg-brand-500 hover:bg-brand-600 text-white rounded p-2">Export PDF</button>
+        <button id="exportCSV" class="w-full bg-neutral-100 hover:bg-neutral-200 rounded p-2">Export CSV</button>
+      </div>
+    </section>
+
+    <!-- Products -->
+    <section id="products" class="lg:col-span-12 bg-white rounded-xl shadow p-4">
+      <div class="flex items-center gap-3 mb-3">
+        <h2 class="text-lg font-semibold flex-1">Products</h2>
+        <input id="search" placeholder="Search products…" class="border rounded p-2 text-sm w-64" />
+        <select id="filterCat" class="border rounded p-2 text-sm">
+          <option value="">All categories</option>
+          <option>drawer</option>
+          <option>fridge</option>
+          <option>slide</option>
+          <option>tub</option>
+          <option>battery</option>
+          <option>panel</option>
+          <option>roof</option>
+          <option>table</option>
+          <option>accessory</option>
+        </select>
+      </div>
+      <div id="catalog" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+    </section>
+  </main>
+
+  <!-- Seed data embedded to avoid CORS for GitHub Pages -->
+  <script id="seed-utes" type="application/json">[
+    {"id":"hilux-n80-dual","brand":"Toyota","model":"Hilux","gen":"N80 (2015–2024)","body":"dual","tray":{"internalL_mm":1569,"internalW_mm":1645,"sideHeight_mm":480},"canopyDefaults":{"internalL_mm":1500,"internalW_mm":1500,"internalH_mm":900},"notes":["Dimensions vary by tray/canopy brand; allow edits."]},
+    {"id":"ranger-p703-dual","brand":"Ford","model":"Ranger","gen":"P703 (2022–)","body":"dual","tray":{"internalL_mm":1544,"internalW_mm":1584,"sideHeight_mm":525},"canopyDefaults":{"internalL_mm":1480,"internalW_mm":1450,"internalH_mm":920}},
+    {"id":"dmax-rg1-dual","brand":"Isuzu","model":"D-Max","gen":"RG (2020–)","body":"dual","tray":{"internalL_mm":1570,"internalW_mm":1530,"sideHeight_mm":490},"canopyDefaults":{"internalL_mm":1500,"internalW_mm":1450,"internalH_mm":900}},
+    {"id":"bt50-tf-dual","brand":"Mazda","model":"BT-50","gen":"TF (2020–)","body":"dual","tray":{"internalL_mm":1560,"internalW_mm":1530,"sideHeight_mm":490},"canopyDefaults":{"internalL_mm":1490,"internalW_mm":1450,"internalH_mm":900}},
+    {"id":"navara-d23-dual","brand":"Nissan","model":"Navara","gen":"D23 (2015–)","body":"dual","tray":{"internalL_mm":1503,"internalW_mm":1560,"sideHeight_mm":474},"canopyDefaults":{"internalL_mm":1450,"internalW_mm":1450,"internalH_mm":880}},
+    {"id":"triton-mr-dual","brand":"Mitsubishi","model":"Triton","gen":"MR (2018–)","body":"dual","tray":{"internalL_mm":1520,"internalW_mm":1470,"sideHeight_mm":475},"canopyDefaults":{"internalL_mm":1450,"internalW_mm":1400,"internalH_mm":880}},
+    {"id":"amarok-2nd-dual","brand":"Volkswagen","model":"Amarok","gen":"2nd gen (2023–)","body":"dual","tray":{"internalL_mm":1544,"internalW_mm":1584,"sideHeight_mm":525},"canopyDefaults":{"internalL_mm":1480,"internalW_mm":1450,"internalH_mm":920}},
+    {"id":"lc79-dual","brand":"Toyota","model":"LandCruiser 79","gen":"VDJ79","body":"dual","tray":{"internalL_mm":1800,"internalW_mm":1777,"sideHeight_mm":250},"canopyDefaults":{"internalL_mm":1700,"internalW_mm":1700,"internalH_mm":900}}
+  ]</script>
+
+  <script id="seed-products" type="application/json">[
+    {"id":"kings-drawer-1300","brand":"Kings","name":"Single Drawer 1300mm","category":"drawer","dims_mm":{"L":1300,"W":500,"H":280},"weight_kg":36,"price_aud":349,"mount":"floor","orientation":"LxW","tags":["drawer","storage"]},
+    {"id":"kings-drawer-1300-double","brand":"Kings","name":"Double Drawer 1300mm","category":"drawer","dims_mm":{"L":1300,"W":1000,"H":285},"weight_kg":71,"price_aud":699,"mount":"floor","orientation":"LxW","tags":["drawer","double"]},
+    {"id":"kings-drawer-900","brand":"Kings","name":"Single Drawer 900mm","category":"drawer","dims_mm":{"L":900,"W":500,"H":280},"weight_kg":30,"price_aud":299,"mount":"floor","orientation":"LxW"},
+    {"id":"kings-fridge-75l","brand":"Kings","name":"75L Fridge/Freezer","category":"fridge","dims_mm":{"L":845,"W":540,"H":500},"weight_kg":28,"price_aud":749,"mount":"floor","orientation":"LxW","minClearanceAbove_mm":80,"tags":["fridge"]},
+    {"id":"kings-fridge-50l","brand":"Kings","name":"50L Fridge/Freezer","category":"fridge","dims_mm":{"L":700,"W":500,"H":470},"weight_kg":24,"price_aud":599,"mount":"floor","orientation":"LxW","minClearanceAbove_mm":70},
+    {"id":"kings-fridge-slide-xl","brand":"Kings","name":"Fridge Slide XL","category":"slide","dims_mm":{"L":1000,"W":600,"H":90},"weight_kg":16,"price_aud":229,"mount":"floor","orientation":"LxW","compatibleWith":["kings-fridge-75l","kings-fridge-50l"]},
+    {"id":"kings-battery-box","brand":"Kings","name":"Battery Box + DC-DC","category":"battery","dims_mm":{"L":410,"W":260,"H":280},"weight_kg":12,"price_aud":399,"mount":"floor","orientation":"LxW","tags":["12v"]},
+    {"id":"kings-table-fold","brand":"Kings","name":"Folding Camp Table","category":"table","dims_mm":{"L":900,"W":600,"H":60},"weight_kg":6,"price_aud":79,"mount":"free","orientation":"LxW"},
+    {"id":"kings-panel-175w","brand":"Kings","name":"175W Solar Panel","category":"panel","dims_mm":{"L":1490,"W":700,"H":40},"weight_kg":11,"price_aud":229,"mount":"roof","orientation":"LxW"},
+    {"id":"kings-roof-tray","brand":"Kings","name":"Roof Tray (canopy)","category":"roof","dims_mm":{"L":1500,"W":1200,"H":120},"weight_kg":24,"price_aud":399,"mount":"roof","orientation":"LxW"},
+    {"id":"kings-tub","brand":"Kings","name":"Storage Tub","category":"tub","dims_mm":{"L":600,"W":400,"H":300},"weight_kg":4,"price_aud":29,"mount":"floor","orientation":"LxW"},
+    {"id":"kings-acc-tie","brand":"Kings","name":"Tie‑down Kit","category":"accessory","dims_mm":{"L":100,"W":100,"H":50},"weight_kg":1,"price_aud":19,"mount":"free","orientation":"LxW"}
+  ]</script>
+
+  <script type="module">
+    // --- Utilities ---
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const mm = v => `${Math.round(v)} mm`;
+    const aud = v => new Intl.NumberFormat('en-AU', {style:'currency', currency:'AUD'}).format(v);
+
+    function encodeState(obj){ return encodeURIComponent(btoa(JSON.stringify(obj))); }
+    function decodeState(s){ try{ return JSON.parse(atob(decodeURIComponent(s))); }catch{ return null; } }
+
+    // --- Data ---
+    const UTES = JSON.parse(document.getElementById('seed-utes').textContent);
+    const PRODUCTS = JSON.parse(document.getElementById('seed-products').textContent);
+    const PRODUCT_MAP = Object.fromEntries(PRODUCTS.map(p=>[p.id,p]));
+
+    // --- State ---
+    const state = {
+      uteId: UTES[0].id,
+      canopy: false,
+      dims: { L: UTES[0].tray.internalL_mm, W: UTES[0].tray.internalW_mm, H: UTES[0].tray.sideHeight_mm },
+      placed: /** @type {{productId:string,x:number,y:number,orientation:'LxW'|'WxL'}[]} */([]),
+      payloadKg: 0,
+      gvm: 0,
+      kerb: 0,
+      scale: 1,
+      selectedIdx: -1,
+    };
+
+    // Restore from URL if present
+    const url = new URL(location.href);
+    const sEnc = url.searchParams.get('s');
+    const restored = decodeState(sEnc);
+    if (restored) Object.assign(state, restored);
+
+    // --- DOM refs ---
+    const uteSelect = $('#uteSelect');
+    const canopyToggle = $('#canopyToggle');
+    const dimL = $('#dimL'), dimW = $('#dimW'), dimH = $('#dimH');
+    const resetDimsBtn = $('#resetDims');
+    const payload = $('#payload');
+    const gvm = $('#gvm');
+    const kerb = $('#kerb');
+    const calcPayload = $('#calcPayload');
+    const canvas = $('#canvas');
+    const rulerTop = $('#rulerTop');
+    const rulerLeft = $('#rulerLeft');
+    const zoom = $('#zoom');
+    const warnings = $('#warnings');
+    const sumCount = $('#sumCount');
+    const sumWeight = $('#sumWeight');
+    const sumPrice = $('#sumPrice');
+    const sumVolume = $('#sumVolume');
+    const payloadBar = $('#payloadBar');
+    const payloadPct = $('#payloadPct');
+    const itemList = $('#itemList');
+    const saveBuild = $('#saveBuild');
+    const shareBuild = $('#shareBuild');
+    const shareUrl = $('#shareUrl');
+    const search = $('#search');
+    const filterCat = $('#filterCat');
+    const catalog = $('#catalog');
+    const clearAll = $('#clearAll');
+    const scaleLabel = $('#scaleLabel');
+
+    // --- Init selectors ---
+    for (const u of UTES) {
+      const o = document.createElement('option');
+      o.value = u.id; o.textContent = `${u.brand} ${u.model} — ${u.gen}`; uteSelect.appendChild(o);
+    }
+    uteSelect.value = state.uteId;
+    canopyToggle.checked = state.canopy;
+
+    function getUte() { return UTES.find(u=>u.id===state.uteId); }
+
+    function setDimsFromCurrent(){
+      const u = getUte();
+      if (!u) return;
+      if (state.canopy && u.canopyDefaults) {
+        state.dims = { L: u.canopyDefaults.internalL_mm, W: u.canopyDefaults.internalW_mm, H: u.canopyDefaults.internalH_mm };
+      } else {
+        state.dims = { L: u.tray.internalL_mm, W: u.tray.internalW_mm, H: u.tray.sideHeight_mm };
+      }
+      updateDimInputs();
+      renderRulers();
+      renderCanvas();
+    }
+
+    function updateDimInputs(){
+      dimL.value = String(state.dims.L);
+      dimW.value = String(state.dims.W);
+      dimH.value = String(state.dims.H);
+    }
+
+    setDimsFromCurrent();
+
+    // --- Catalog ---
+    function renderCatalog(){
+      catalog.innerHTML='';
+      const q = (search.value||'').toLowerCase();
+      const cat = filterCat.value;
+      const list = PRODUCTS.filter(p=>
+        (!cat || p.category===cat) &&
+        (!q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))
+      );
+      for (const p of list){
+        const card = document.createElement('div');
+        card.className = 'border rounded-xl p-3 hover:shadow transition bg-white';
+        card.innerHTML = `
+          <div class="text-sm font-medium">${p.name}</div>
+          <div class="text-xs text-neutral-600">${p.category}</div>
+          <div class="text-xs mt-1">${mm(p.dims_mm.L)} × ${mm(p.dims_mm.W)} × ${mm(p.dims_mm.H)}</div>
+          <div class="flex justify-between items-center mt-2">
+            <div class="text-sm font-semibold">${aud(p.price_aud)}</div>
+            <button class="add bg-brand-500 hover:bg-brand-600 text-white text-xs px-3 py-1 rounded">Add</button>
+          </div>`;
+        card.querySelector('.add').addEventListener('click', ()=> addProduct(p.id));
+        catalog.appendChild(card);
+      }
+    }
+    renderCatalog();
+    search.addEventListener('input', renderCatalog);
+    filterCat.addEventListener('change', renderCatalog);
+
+    // --- Placement helpers ---
+    function footprint(product, orientation){
+      return orientation==='LxW'
+        ? { L: product.dims_mm.L, W: product.dims_mm.W, H: product.dims_mm.H }
+        : { L: product.dims_mm.W, W: product.dims_mm.L, H: product.dims_mm.H };
+    }
+    const snap = v => Math.round(v/10)*10; // 10mm grid
+
+    function rectsOverlap(a,b){
+      return !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
+    }
+
+    function validate(candidate){
+      const issues = [];
+      const prod = PRODUCT_MAP[candidate.productId];
+      const fp = footprint(prod, candidate.orientation);
+      // Bounds
+      if (candidate.x<0 || candidate.y<0 || candidate.x+fp.L>state.dims.L || candidate.y+fp.W>state.dims.W){
+        issues.push({level:'error', message:'Item is out of bounds of tray/canopy.'});
+      }
+      // Overlap
+      const candRect = {x:candidate.x,y:candidate.y,w:fp.L,h:fp.W};
+      for (let i=0;i<state.placed.length;i++){
+        const it = state.placed[i];
+        if (it===candidate) continue;
+        const p = PRODUCT_MAP[it.productId];
+        const f = footprint(p, it.orientation);
+        const r = {x:it.x,y:it.y,w:f.L,h:f.W};
+        if (rectsOverlap(candRect,r)){
+          issues.push({level:'error', message:'Overlaps another item.'});
+          break;
+        }
+      }
+      // Clearance: fridges vs height
+      if (prod.minClearanceAbove_mm){
+        const need = prod.dims_mm.H + prod.minClearanceAbove_mm;
+        if (state.dims.H < need) {
+          issues.push({level:'error', message:`Not enough height: need ${need}mm (item+clearance).`});
+        }
+      }
+      return issues;
+    }
+
+    function addProduct(productId){
+      const prod = PRODUCT_MAP[productId];
+      const orientation = 'LxW';
+      const fp = footprint(prod, orientation);
+      const candidate = { productId, x: snap((state.dims.L - fp.L)/2), y: snap((state.dims.W - fp.W)/2), orientation };
+      const issues = validate(candidate);
+      if (issues.some(i=>i.level==='error')){
+        warnings.textContent = issues.map(i=>i.message).join(' ');
+        return;
+      }
+      state.placed.push(candidate);
+      renderCanvas();
+      renderSummary();
+      warnings.textContent='';
+    }
+
+    // --- Canvas rendering ---
+    function renderRulers(){
+      // Top ruler
+      const L = state.dims.L, W = state.dims.W;
+      rulerTop.innerHTML='';
+      const top = document.createElement('div');
+      top.className='relative flex-1 h-6';
+      top.style.width = `${L*state.scale}px`;
+      // ticks every 100mm
+      for (let x=0; x<=L; x+=100){
+        const s = document.createElement('div');
+        s.className='absolute bottom-0 text-[10px] text-neutral-500';
+        s.style.left = `${x*state.scale}px`;
+        s.textContent = x;
+        top.appendChild(s);
+      }
+      rulerTop.appendChild(top);
+      // Left ruler
+      rulerLeft.innerHTML='';
+      const left = document.createElement('div');
+      left.className='relative';
+      left.style.height = `${W*state.scale}px`;
+      for (let y=0; y<=W; y+=100){
+        const s = document.createElement('div');
+        s.className='absolute right-0 text-[10px] text-neutral-500';
+        s.style.top = `${y*state.scale-6}px`;
+        s.textContent = y;
+        left.appendChild(s);
+      }
+      rulerLeft.appendChild(left);
+    }
+
+    function renderCanvas(){
+      canvas.innerHTML='';
+      canvas.style.width = `${state.dims.L*state.scale}px`;
+      canvas.style.height = `${state.dims.W*state.scale}px`;
+      for (let i=0;i<state.placed.length;i++){
+        const it = state.placed[i];
+        const p = PRODUCT_MAP[it.productId];
+        const fp = footprint(p, it.orientation);
+        const el = document.createElement('div');
+        el.className = 'absolute rounded-lg border-2 '+(i===state.selectedIdx?'border-brand-500':'border-neutral-300')+' bg-white shadow item-handle';
+        el.style.left = `${it.x*state.scale}px`;
+        el.style.top = `${it.y*state.scale}px`;
+        el.style.width = `${fp.L*state.scale}px`;
+        el.style.height = `${fp.W*state.scale}px`;
+        el.tabIndex = 0;
+        el.dataset.index = String(i);
+        el.innerHTML = `<div class='pointer-events-none select-none p-1 text-[10px] leading-tight'>${p.name}<br>${fp.L}×${fp.W}×${p.dims_mm.H}mm</div>`;
+        canvas.appendChild(el);
+
+        // drag move
+        let dragging=false, startX=0, startY=0, baseX=0, baseY=0;
+        el.addEventListener('pointerdown', (e)=>{
+          dragging=true; el.setPointerCapture(e.pointerId);
+          startX=e.clientX; startY=e.clientY; baseX=it.x; baseY=it.y; state.selectedIdx=i;
+        });
+        el.addEventListener('pointermove', (e)=>{
+          if(!dragging) return;
+          const dx = (e.clientX-startX)/state.scale; const dy=(e.clientY-startY)/state.scale;
+          const nx = snap(baseX+dx); const ny=snap(baseY+dy);
+          const cand = {...it, x:nx, y:ny};
+          const errs = validate(cand);
+          el.style.outline = errs.some(x=>x.level==='error')?'2px solid #ef4444':'none';
+          it.x = nx; it.y = ny;
+          renderCanvas(); // simple re-render for snap
+        });
+        el.addEventListener('pointerup', ()=>{ dragging=false; renderSummary(); warnings.textContent=''; });
+        el.addEventListener('click', ()=>{ state.selectedIdx=i; renderCanvas(); });
+        el.addEventListener('dblclick', ()=>{ // rotate if allowed
+          if (p.orientation){ it.orientation = it.orientation==='LxW'?'WxL':'LxW';
+            const errs = validate(it); if (errs.some(e=>e.level==='error')){ it.orientation = it.orientation==='LxW'?'WxL':'LxW'; }
+            renderCanvas(); renderSummary();
+          }
+        });
+      }
+    }
+
+    // Keyboard nudge
+    window.addEventListener('keydown', (e)=>{
+      const idx = state.selectedIdx; if (idx<0) return;
+      const it = state.placed[idx]; const step = e.shiftKey?50:10; let moved=false;
+      if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) e.preventDefault();
+      if (e.key==='ArrowLeft'){ it.x = snap(it.x-step); moved=true; }
+      if (e.key==='ArrowRight'){ it.x = snap(it.x+step); moved=true; }
+      if (e.key==='ArrowUp'){ it.y = snap(it.y-step); moved=true; }
+      if (e.key==='ArrowDown'){ it.y = snap(it.y+step); moved=true; }
+      if (e.key==='r'){ // rotate
+        const p = PRODUCT_MAP[it.productId]; if (p.orientation){ it.orientation = it.orientation==='LxW'?'WxL':'LxW'; moved=true; }
+      }
+      if (e.key==='Delete'){ state.placed.splice(idx,1); state.selectedIdx=-1; moved=true; }
+      if (moved){ renderCanvas(); renderSummary(); }
+    });
+
+    // Summary
+    function renderSummary(){
+      const totals = state.placed.reduce((acc,it)=>{
+        const p = PRODUCT_MAP[it.productId];
+        acc.count++;
+        acc.weight += p.weight_kg;
+        acc.price += p.price_aud;
+        acc.volume += (p.dims_mm.L*p.dims_mm.W*p.dims_mm.H)/1_000_000; // litres
+        return acc;
+      }, {count:0, weight:0, price:0, volume:0});
+
+      sumCount.textContent = String(totals.count);
+      sumWeight.textContent = `${totals.weight.toFixed(1)} kg`;
+      sumPrice.textContent = aud(totals.price);
+      sumVolume.textContent = `${totals.volume.toFixed(1)} L`;
+
+      const payloadCap = state.payloadKg || (state.gvm&&state.kerb? Math.max(0, state.gvm - state.kerb) : 0);
+      const pct = payloadCap>0 ? Math.min(100, Math.round(totals.weight/payloadCap*100)) : 0;
+      payloadBar.style.width = pct+"%";
+      payloadBar.style.background = pct>100? '#ef4444' : pct>80? '#f59e0b' : '#3e8a54';
+      payloadPct.textContent = `${pct}%`;
+      warnings.textContent = pct>100? 'Payload exceeded. Remove items or increase capacity.' : '';
+
+      // Items list
+      itemList.innerHTML='';
+      state.placed.forEach((it,i)=>{
+        const p = PRODUCT_MAP[it.productId];
+        const li = document.createElement('li');
+        li.className='border rounded p-2 flex items-center gap-2';
+        li.innerHTML = `<div class='flex-1'><div class='font-medium text-sm'>${p.name}</div>
+          <div class='text-xs text-neutral-600'>${it.orientation} · ${p.dims_mm.L}×${p.dims_mm.W}×${p.dims_mm.H}mm · ${p.weight_kg}kg</div></div>`;
+        const btnRot = document.createElement('button');
+        btnRot.textContent='Rotate'; btnRot.className='text-xs px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200';
+        btnRot.onclick=()=>{ if (p.orientation){ it.orientation = it.orientation==='LxW'?'WxL':'LxW'; renderCanvas(); renderSummary(); } };
+        const btnDel = document.createElement('button');
+        btnDel.textContent='Remove'; btnDel.className='text-xs px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200';
+        btnDel.onclick=()=>{ state.placed.splice(i,1); if(state.selectedIdx===i) state.selectedIdx=-1; renderCanvas(); renderSummary(); };
+        li.appendChild(btnRot); li.appendChild(btnDel);
+        itemList.appendChild(li);
+      });
+    }
+
+    // Export CSV
+    function exportCSV(){
+      const rows = [['qty','productId','name','L','W','H','weight_kg','price_aud','extended_price']];
+      const counts = {};
+      for (const it of state.placed){ counts[it.productId]=(counts[it.productId]||0)+1; }
+      const seen = new Set();
+      for (const it of state.placed){
+        if (seen.has(it.productId)) continue; seen.add(it.productId);
+        const p = PRODUCT_MAP[it.productId];
+        const qty = counts[it.productId];
+        rows.push([qty,p.id,p.name,p.dims_mm.L,p.dims_mm.W,p.dims_mm.H,p.weight_kg,p.price_aud,(qty*p.price_aud).toFixed(2)]);
+      }
+      const csv = rows.map(r=>r.join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='bom.csv'; a.click();
+    }
+
+    async function exportPDF(){
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit:'pt', format:'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const margin = 40;
+      doc.setFontSize(14);
+      doc.text('Ute Fit‑out Summary', margin, 50);
+
+      const u = getUte();
+      const lines = [
+        `Vehicle: ${u.brand} ${u.model} — ${u.gen}`,
+        `Mode: ${state.canopy?'Canopy':'Tray'}`,
+        `Internal: ${state.dims.L} x ${state.dims.W} x ${state.dims.H} mm`,
+      ];
+      doc.setFontSize(10);
+      lines.forEach((l,i)=> doc.text(l, margin, 70+14*i));
+
+      // Totals block
+      const totalsEl = document.getElementById('summary');
+      doc.text(`Totals: ${document.getElementById('sumCount').textContent} items, ${document.getElementById('sumWeight').textContent}, ${document.getElementById('sumPrice').textContent}`, margin, 130);
+
+      // Items table
+      let y = 150;
+      doc.setFont('helvetica','bold');
+      doc.text('BOM', margin, y); y+=12; doc.setFont('helvetica','');
+      const header = ['Qty','Item','Dims (mm)','Weight (kg)','Price'];
+      const widths = [30, 240, 120, 80, 80];
+      function row(cols){ let x=margin; cols.forEach((c,i)=>{ doc.text(String(c), x, y); x+=widths[i]; }); y+=14; }
+      row(header);
+      const counts={}; for(const it of state.placed){ counts[it.productId]=(counts[it.productId]||0)+1; }
+      const seen=new Set();
+      for(const it of state.placed){ if(seen.has(it.productId)) continue; seen.add(it.productId); const p=PRODUCT_MAP[it.productId]; row([counts[p.id], p.name, `${p.dims_mm.L}×${p.dims_mm.W}×${p.dims_mm.H}`, p.weight_kg, aud(p.price_aud)]) }
+
+      // New page for layout snapshot
+      doc.addPage();
+      doc.text('Layout', margin, 40);
+      const cloneArea = canvas.cloneNode(true);
+      cloneArea.style.transform = 'scale(1)';
+      cloneArea.style.width = canvas.style.width; cloneArea.style.height = canvas.style.height;
+      const temp = document.createElement('div'); temp.style.position='fixed'; temp.style.left='-10000px'; document.body.appendChild(temp); temp.appendChild(cloneArea);
+      const canvasBitmap = await html2canvas(cloneArea, {backgroundColor:'#ffffff'});
+      const imgData = canvasBitmap.toDataURL('image/png');
+      const maxW = pageW - margin*2; const scale = Math.min(1, maxW / canvasBitmap.width);
+      doc.addImage(imgData, 'PNG', margin, 60, canvasBitmap.width*scale, canvasBitmap.height*scale);
+      document.body.removeChild(temp);
+
+      doc.save('fitout.pdf');
+    }
+
+    // Share
+    function updateShare(){
+      const minimal = { uteId: state.uteId, canopy: state.canopy, dims: state.dims, placed: state.placed, payloadKg: state.payloadKg, gvm: state.gvm, kerb: state.kerb };
+      const enc = encodeState(minimal);
+      const url = `${location.origin}${location.pathname}?s=${enc}`;
+      shareUrl.value = url;
+      history.replaceState(null,'', `?s=${enc}`);
+    }
+
+    // Events
+    uteSelect.addEventListener('change', ()=>{ state.uteId = uteSelect.value; setDimsFromCurrent(); updateShare(); renderSummary(); });
+    canopyToggle.addEventListener('change', ()=>{ state.canopy = canopyToggle.checked; setDimsFromCurrent(); updateShare(); });
+    [dimL, dimW, dimH].forEach(inp=> inp.addEventListener('input', ()=>{ state.dims = { L:+dimL.value||0, W:+dimW.value||0, H:+dimH.value||0 }; renderRulers(); renderCanvas(); updateShare(); }));
+    resetDimsBtn.addEventListener('click', setDimsFromCurrent);
+
+    calcPayload.addEventListener('click', ()=>{ const g=+gvm.value||0, k=+kerb.value||0; state.payloadKg = Math.max(0, g-k); payload.value = String(state.payloadKg||0); renderSummary(); updateShare(); });
+    payload.addEventListener('input', ()=>{ state.payloadKg = +payload.value||0; renderSummary(); updateShare(); });
+    gvm.addEventListener('input', ()=>{ state.gvm=+gvm.value||0; });
+    kerb.addEventListener('input', ()=>{ state.kerb=+kerb.value||0; });
+
+    zoom.addEventListener('input', ()=>{ state.scale = +zoom.value; scaleLabel.textContent = `1 mm = ${state.scale.toFixed(1)} px`; renderRulers(); renderCanvas(); });
+    clearAll.addEventListener('click', ()=>{ state.placed=[]; state.selectedIdx=-1; renderCanvas(); renderSummary(); updateShare(); });
+
+    saveBuild.addEventListener('click', ()=>{ localStorage.setItem('fitout-build', JSON.stringify(state)); alert('Build saved to localStorage.'); });
+    shareBuild.addEventListener('click', ()=>{ updateShare(); shareUrl.select(); document.execCommand('copy'); });
+
+    document.getElementById('exportCSV').addEventListener('click', exportCSV);
+    document.getElementById('exportPDF').addEventListener('click', exportPDF);
+
+    // Initial draw
+    updateDimInputs();
+    renderRulers();
+    renderCanvas();
+    renderSummary();
+    if (state.payloadKg) payload.value = String(state.payloadKg);
+    if (state.gvm) gvm.value = String(state.gvm);
+    if (state.kerb) kerb.value = String(state.kerb);
+    updateShare();
+  </script>
+</body>
+</html>
