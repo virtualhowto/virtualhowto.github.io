@@ -2,92 +2,147 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>CakeBuds · NFT Maker (Personalities)</title>
+<title>CakeBuds · Adorable NFT Maker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="Generate an NFT collection of artisan cakes with cinematic visuals and cute personalities — images + ERC-721 metadata, all in the browser." />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
-  :root{ --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --brand:#10b981; }
+  :root{
+    --bg: #0b1020;
+    --card: rgba(255,255,255,0.08);
+    --stroke: rgba(255,255,255,0.14);
+    --ink: #e6ebff;
+    --muted: #b6c0de;
+    --brand: #8b5cf6; /* grape */
+    --brand-2: #22d3ee; /* aqua */
+    --ok: #10b981;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:#fff}
-  .wrap{max-width:1180px;margin:0 auto;padding:20px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:10px}
-  .badge{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;font-size:22px;box-shadow:0 8px 24px rgba(16,185,129,.25)}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--ink); background:
+      radial-gradient(1200px 900px at 20% -10%, #1b2351 0%, transparent 60%),
+      radial-gradient(1200px 900px at 120% 10%, #2b1464 0%, transparent 65%),
+      linear-gradient(180deg, #0b1020, #0b0f1a);
+    font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:24px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+        background: conic-gradient(from 210deg, #22d3ee, #8b5cf6, #22d3ee);
+        color:#0b0f1a; font-size:24px; font-weight:800; box-shadow:0 12px 40px rgba(139,92,246,.35)}
+  .title{font-weight:800;letter-spacing:.2px}
   .sub{color:var(--muted);font-size:13px}
   .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-top:16px}
   @media (max-width:980px){.grid{grid-template-columns:1fr}}
-  .panel{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px}
-  h2{margin:0 0 10px;font-size:16px}
-  label{font-size:14px;margin-bottom:6px;display:block}
-  input[type="text"], input[type="number"], select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  .panel{
+    border:1px solid var(--stroke); border-radius:16px; padding:16px; backdrop-filter: blur(14px);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+    box-shadow:0 12px 40px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  h2{margin:0 0 12px;font-size:16px}
+  label{font-size:13px;margin-bottom:6px;display:block;color:var(--muted)}
+  input[type="text"], input[type="number"], select{
+    width:100%;padding:10px 12px;border:1px solid var(--stroke);border-radius:12px;background:rgba(8,12,28,.6);
+    color:var(--ink); font:inherit; outline:none;
+  }
   input[type="range"]{width:100%}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
   @media (max-width:720px){.row,.row3{grid-template-columns:1fr}}
-  .group{border:1px dashed #e6e9ef;border-radius:12px;padding:12px;margin-bottom:10px}
-  .group h3{margin:0 0 8px;font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  .group{border:1px dashed rgba(255,255,255,.14);border-radius:14px;padding:12px;margin-bottom:12px}
+  .group h3{margin:0 0 8px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-  button{appearance:none;border:1px solid var(--line);background:#fff;padding:10px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-  .primary{background:var(--brand);border-color:#0ea37f;color:#fff}
-  .preview{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  button{
+    appearance:none;border:1px solid var(--stroke);background:rgba(8,12,28,.6);
+    padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;color:var(--ink)
+  }
+  .primary{
+    background: linear-gradient(90deg, var(--brand), var(--brand-2));
+    border-color: transparent; color:#0b0f1a; box-shadow:0 10px 30px rgba(34,211,238,.22);
+  }
+  .ghost{background:rgba(255,255,255,.05)}
+  .toggle{display:flex;align-items:center;gap:8px}
+  .preview{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
   @media (max-width:900px){.preview{grid-template-columns:repeat(2,1fr)}}
-  .card{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .card{
+    border:1px solid var(--stroke); border-radius:14px; overflow:hidden; position:relative;
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover{transform:translateY(-2px); box-shadow:0 16px 40px rgba(0,0,0,.35)}
   .card img{display:block;width:100%;height:auto}
+  .tag{position:absolute;left:8px;top:8px;font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.85);color:#0b0f1a;font-weight:800}
+  .tag.rare{background:linear-gradient(90deg,#f59e0b,#ef4444);color:white}
+  .tag.ultra{background:linear-gradient(90deg,#a855f7,#22d3ee);color:#0b0f1a;box-shadow:0 0 24px rgba(139,92,246,.5)}
   .muted{color:var(--muted);font-size:12px}
-  .badge-mini{display:inline-block;padding:2px 8px;border-radius:999px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;font-weight:600;font-size:11px}
-  .meter{height:8px;background:#f1f5f9;border-radius:999px;overflow:hidden}
-  .meter > div{height:100%;background:#10b981;width:0%}
+  .badge-mini{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);color:#a5f3fc;font-weight:700;font-size:11px}
+  .meter{height:8px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+  .meter > div{height:100%;background:linear-gradient(90deg,#22d3ee,#8b5cf6);width:0%}
+
+  .pill{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill > span{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid var(--stroke);color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand">
-      <div class="badge">🎂</div>
+      <div class="logo">🎂</div>
       <div>
-        <div style="font-weight:800">CakeBuds</div>
-        <div class="sub">NFT Maker · Personalities</div>
+        <div class="title">CakeBuds</div>
+        <div class="sub">Adorable NFT Collection Maker</div>
       </div>
     </div>
-    <div class="sub">Cinematic cakes · Cute faces · ZIP export</div>
+    <div class="pill">
+      <span>kawaii visuals</span><span>seeded randomness</span><span>rarity tiers</span><span>zip export</span>
+    </div>
   </header>
 
   <div class="grid">
     <div class="panel">
-      <h2>Collection Settings</h2>
-
+      <h2>Collection</h2>
       <div class="group">
         <div class="row">
           <div>
-            <label for="colName">Collection name</label>
-            <input id="colName" type="text" value="CakeBuds — Character Series">
+            <label>Collection name</label>
+            <input id="colName" type="text" value="CakeBuds — Adorable Series">
           </div>
           <div>
-            <label for="supply">Supply (1–300)</label>
-            <input id="supply" type="number" min="1" max="300" value="12">
+            <label>Supply (1–300)</label>
+            <input id="supply" type="number" min="1" max="300" value="18">
           </div>
         </div>
         <div class="row">
           <div>
-            <label for="startId">Starting token ID</label>
+            <label>Starting token ID</label>
             <input id="startId" type="number" min="0" value="1">
           </div>
           <div>
-            <label for="imgSize">Image size (px)</label>
+            <label>Image size (px)</label>
             <input id="imgSize" type="number" min="640" step="64" value="1024">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Collection Seed (reproducible)</label>
+            <input id="seed" type="text" value="cakebuds-seed-001">
+          </div>
+          <div class="toggle">
+            <label style="margin:0">Adorable Mode</label>
+            <input id="adorable" type="range" min="0" max="100" value="70" />
           </div>
         </div>
       </div>
 
+      <h2>Style</h2>
       <div class="group">
-        <h3>Style & Background</h3>
+        <h3>Background & Finish</h3>
         <div class="row">
           <div>
-            <label for="bgTheme">Background theme</label>
+            <label>Background theme</label>
             <select id="bgTheme">
-              <option value="studio" selected>Studio</option>
+              <option value="studio" selected>Studio Glow</option>
               <option value="pastel">Pastel Gradient</option>
               <option value="confetti">Party Confetti</option>
               <option value="bokeh">Bokeh Lights</option>
@@ -95,7 +150,7 @@
             </select>
           </div>
           <div>
-            <label for="finish">Finish</label>
+            <label>Finish</label>
             <select id="finish">
               <option value="velvet" selected>Velvet (matte)</option>
               <option value="glossy">Glossy</option>
@@ -105,111 +160,54 @@
         </div>
       </div>
 
+      <h2>Randomness & Rarity</h2>
       <div class="group">
-        <h3>Rarity Weights (higher = more common)</h3>
         <div class="row3">
           <div>
-            <label>Tier Count</label>
-            <div class="row">
-              <div><label class="muted">1 Tier</label><input id="wTier1" type="number" min="0" value="2"></div>
-              <div><label class="muted">2 Tiers</label><input id="wTier2" type="number" min="0" value="5"></div>
-            </div>
-            <div style="margin-top:8px"><label class="muted">3 Tiers</label><input id="wTier3" type="number" min="0" value="3"></div>
-          </div>
-          <div>
-            <label>Topper</label>
-            <div class="row">
-              <div><label class="muted">None</label><input id="wTopNone" type="number" min="0" value="2"></div>
-              <div><label class="muted">Heart</label><input id="wTopHeart" type="number" min="0" value="5"></div>
-            </div>
-            <div class="row" style="margin-top:8px">
-              <div><label class="muted">Star</label><input id="wTopStar" type="number" min="0" value="3"></div>
-              <div><label class="muted">Rings</label><input id="wTopRing" type="number" min="0" value="2"></div>
-            </div>
-          </div>
-          <div>
-            <label>Decor / Effects</label>
-            <div class="row">
-              <div><label class="muted">Drip on</label><input id="wDripOn" type="number" min="0" value="6"></div>
-              <div><label class="muted">Sprinkles on</label><input id="wSprOn" type="number" min="0" value="5"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:8px">
-          <div>
-            <label>Palette</label>
-            <div class="row">
-              <div><label class="muted">Pastel</label><input id="wPastel" type="number" min="0" value="6"></div>
-              <div><label class="muted">Gelato</label><input id="wGelato" type="number" min="0" value="4"></div>
-            </div>
-            <div class="row" style="margin-top:8px">
-              <div><label class="muted">Patisserie</label><input id="wPatisserie" type="number" min="0" value="3"></div>
-              <div><label class="muted">Luxe</label><input id="wLuxe" type="number" min="0" value="2"></div>
-            </div>
-          </div>
-          <div>
-            <label>Tier Textures</label>
-            <div class="row">
-              <div><label class="muted">Marble</label><input id="wMarble" type="number" min="0" value="4"></div>
-              <div><label class="muted">Ombre</label><input id="wOmbre" type="number" min="0" value="5"></div>
-            </div>
-            <div class="row" style="margin-top:8px">
-              <div><label class="muted">Speckle</label><input id="wSpeckle" type="number" min="0" value="3"></div>
-              <div><label class="muted">Stripe</label><input id="wStripe" type="number" min="0" value="2"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="group">
-        <h3>Faces & Personalities</h3>
-        <div class="row">
-          <div>
-            <label class="muted">Faces on (weight)</label>
+            <label>Faces on (weight)</label>
             <input id="wFacesOn" type="number" min="0" value="6">
           </div>
           <div>
-            <label class="muted">Accessory odds (% sunglasses)</label>
-            <input id="faceAccessoryOdds" type="number" min="0" max="100" value="22">
+            <label>Accessory odds %</label>
+            <input id="faceAccessoryOdds" type="number" min="0" max="100" value="20">
+          </div>
+          <div>
+            <label>Ultra-rare % cap</label>
+            <input id="ultraCap" type="number" min="0" max="20" value="5">
           </div>
         </div>
         <div class="row3" style="margin-top:8px">
-          <div><label class="muted">Sweetheart</label><input id="wP_Sweetheart" type="number" min="0" value="5"></div>
-          <div><label class="muted">Party Animal</label><input id="wP_Party" type="number" min="0" value="4"></div>
-          <div><label class="muted">Stoic</label><input id="wP_Stoic" type="number" min="0" value="3"></div>
-        </div>
-        <div class="row3" style="margin-top:8px">
-          <div><label class="muted">Sassy</label><input id="wP_Sassy" type="number" min="0" value="3"></div>
-          <div><label class="muted">Dreamer</label><input id="wP_Dreamer" type="number" min="0" value="3"></div>
-          <div><label class="muted">Royal</label><input id="wP_Royal" type="number" min="0" value="2"></div>
+          <div><label>1 Tier weight</label><input id="wTier1" type="number" min="0" value="2"></div>
+          <div><label>2 Tier weight</label><input id="wTier2" type="number" min="0" value="5"></div>
+          <div><label>3 Tier weight</label><input id="wTier3" type="number" min="0" value="3"></div>
         </div>
       </div>
 
+      <h2>Decor</h2>
       <div class="group">
-        <h3>Decor Items (0–4 per cake)</h3>
         <div class="row3">
-          <div><label class="muted">🍒 Cherry</label><input id="wCherry" type="number" min="0" value="5"></div>
-          <div><label class="muted">🫐 Blueberry</label><input id="wBerry" type="number" min="0" value="4"></div>
-          <div><label class="muted">🍊 Citrus Slice</label><input id="wCitrus" type="number" min="0" value="3"></div>
+          <div><label>🍒 Cherry</label><input id="wCherry" type="number" min="0" value="6"></div>
+          <div><label>🫐 Blueberry</label><input id="wBerry" type="number" min="0" value="4"></div>
+          <div><label>🍊 Citrus</label><input id="wCitrus" type="number" min="0" value="3"></div>
         </div>
         <div class="row3" style="margin-top:8px">
-          <div><label class="muted">🍫 Choc Shard</label><input id="wShard" type="number" min="0" value="4"></div>
-          <div><label class="muted">🥖 Wafer Roll</label><input id="wWafer" type="number" min="0" value="3"></div>
-          <div><label class="muted">🍬 Macaron</label><input id="wMac" type="number" min="0" value="4"></div>
+          <div><label>🍫 Shard</label><input id="wShard" type="number" min="0" value="4"></div>
+          <div><label>🥖 Wafer</label><input id="wWafer" type="number" min="0" value="3"></div>
+          <div><label>🍬 Macaron</label><input id="wMac" type="number" min="0" value="4"></div>
         </div>
-        <div style="margin-top:8px"><label class="muted">🌹 Rosette (piped)</label><input id="wRose" type="number" min="0" value="3"></div>
+        <div style="margin-top:8px"><label>🌹 Rosette</label><input id="wRose" type="number" min="0" value="3"></div>
       </div>
 
       <div class="actions">
         <button class="primary" id="gen">Generate Preview</button>
+        <button class="ghost" id="shuffle">Shuffle Seed</button>
         <button id="zip" disabled>Download ZIP (images + metadata)</button>
       </div>
-      <div class="muted" style="margin-top:8px">Metadata includes background, textures, finish, decor, and now face traits.</div>
+      <div class="muted" style="margin-top:8px">Rarity tags appear on previews; metadata includes a tier and trait list.</div>
 
       <div style="margin-top:12px">
         <div class="muted">Progress</div>
-        <div class="meter" aria-hidden="true"><div id="bar"></div></div>
+        <div class="meter"><div id="bar"></div></div>
       </div>
     </div>
 
@@ -221,409 +219,290 @@
 </div>
 
 <script>
-/* -------------------- Helpers & Palettes -------------------- */
-const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const chooseWeighted = (entries)=>{ const total = entries.reduce((s,e)=>s+Math.max(0,e.w),0) || 1; let r = Math.random()*total; for(const e of entries){ r-=Math.max(0,e.w); if(r<=0) return e.key; } return entries[entries.length-1].key; };
-const rnd=(n)=>Math.random()*n;
-const randFrom=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+/* ------------------------ Seeded RNG (reproducible) ------------------------ */
+function mulberry32(a){ return function(){ let t = a += 0x6D2B79F5; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; } }
+function hashString(str){ let h=2166136261>>>0; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
+let rng = mulberry32(hashString('cakebuds-default'));
+function setSeed(s){ rng = mulberry32(hashString(s)); }
+function rnd(){ return rng(); }
+function pick(arr){ return arr[Math.floor(rnd()*arr.length)] }
+function weighted(weights){ const tot = weights.reduce((s,w)=>s+Math.max(0,w.w),0)||1; let r = rnd()*tot; for(const w of weights){ r -= Math.max(0,w.w); if(r<=0) return w.key; } return weights[weights.length-1].key; }
 
+/* ------------------------ Palettes ------------------------ */
 const palettes = {
-  pastel: ['#f1e4f9','#ffe4e6','#e0f2fe','#faf3e0','#e7fee7','#e9e7ff','#fde2f3','#e2f7f5'],
-  gelato: ['#f8b4b4','#ffd1a8','#ffef99','#b7f0ad','#a9d3ff','#d1b3ff'],
-  patisserie: ['#f5e6d3','#d7bfae','#b08968','#7f5539','#ede0d4','#e6ccb2'],
-  luxe: ['#2b2f3a','#5c677d','#a4b0be','#c0a062','#e1c16e','#b17b2b']
+  cotton: ['#fff1f2','#fde2ff','#e1f0ff','#e9fdf3','#fff7e6','#f2f0ff','#fbe4ea','#e3f7f6'],
+  sakura: ['#ffe4ec','#ffd6e7','#ffeef6','#e5f0ff','#f7f8ff','#fef3f8','#ffe8f2','#e8f6ff'],
+  gelato: ['#ffb3ba','#ffdfba','#ffffba','#baffc9','#bae1ff','#e3c6ff'],
+  patisserie: ['#f5e6d3','#e8d2be','#c6a389','#9c7355','#eadacc','#e6ccb2'],
+  luxeNoir: ['#1f2230','#343a4f','#667084','#b89b5e','#d8c07a','#a67c2e']
 };
+const paletteKeys = Object.keys(palettes);
 
-/* -------------------- Backgrounds -------------------- */
+/* ------------------------ Geometry ------------------------ */
+const tierH = {L:220, M:190, S:160};
+const sizeToPx = (s)=> s==='L'?240: s==='M'?190:140;
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+
+/* ------------------------ Backgrounds ------------------------ */
 function drawBackground(ctx,W,H,theme){
   if(theme==='studio'){
-    const g = ctx.createRadialGradient(W*0.5,H*0.3,10, W*0.5,H*0.6, Math.max(W,H));
-    g.addColorStop(0,'#ffffff'); g.addColorStop(0.5,'#f7f8fb'); g.addColorStop(1,'#e9edf4');
+    const g = ctx.createRadialGradient(W*0.5,H*0.25,10, W*0.5,H*0.65, Math.max(W,H));
+    g.addColorStop(0,'#ffffff'); g.addColorStop(0.5,'#f6f7fb'); g.addColorStop(1,'#e6ebf7');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    vignette(ctx,W,H,0.25);
-    return;
+    vignette(ctx,W,H,0.25); return;
   }
   if(theme==='pastel'){
-    const colors = randFrom([['#fff6f9','#f2f7ff'],['#fdf6e9','#eefbf4'],['#f7f0ff','#fff8ee']]);
+    const pair = pick([['#fff6fb','#eef7ff'],['#fff6e9','#eafbf5'],['#f7f0ff','#fff8ee']]);
     const g = ctx.createLinearGradient(0,0,W,H);
-    g.addColorStop(0,colors[0]); g.addColorStop(1,colors[1]);
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    vignette(ctx,W,H,0.15);
-    return;
+    g.addColorStop(0,pair[0]); g.addColorStop(1,pair[1]);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H); vignette(ctx,W,H,0.15); return;
   }
   if(theme==='confetti'){
     const g = ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#fff'); g.addColorStop(1,'#f3f6fb');
+    g.addColorStop(0,'#fff'); g.addColorStop(1,'#f4f6fd');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    for(let i=0;i<120;i++){
-      ctx.save();
-      ctx.globalAlpha = 0.18 + Math.random()*0.2;
-      ctx.fillStyle = randFrom(['#ef4444','#10b981','#3b82f6','#f59e0b','#8b5cf6']);
-      const x=rnd(W), y=rnd(H*0.9);
-      const w=6+rnd(12), h=2+rnd(8), a=rnd(Math.PI);
-      ctx.translate(x,y); ctx.rotate(a);
-      ctx.fillRect(-w/2,-h/2,w,h);
-      ctx.restore();
-    }
-    vignette(ctx,W,H,0.2);
-    return;
+    const cols = ['#ef4444','#10b981','#3b82f6','#f59e0b','#8b5cf6','#22d3ee'];
+    for(let i=0;i<140;i++){
+      ctx.save(); ctx.globalAlpha = 0.16 + rnd()*0.22;
+      ctx.fillStyle = pick(cols);
+      const x=rnd()*W, y=rnd()*H*0.9, w=6+rnd()*12, h=2+rnd()*8, a=rnd()*Math.PI;
+      ctx.translate(x,y); ctx.rotate(a); ctx.fillRect(-w/2,-h/2,w,h); ctx.restore();
+    } vignette(ctx,W,H,0.2); return;
   }
   if(theme==='bokeh'){
     const g = ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0,'#0f172a'); g.addColorStop(1,'#1f2a44');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    for(let i=0;i<40;i++){
-      const x=rnd(W), y=rnd(H*0.8);
-      const r=20+rnd(80);
-      ctx.save(); ctx.globalAlpha = 0.08 + Math.random()*0.12;
-      ctx.fillStyle = randFrom(['#fef3c7','#e0e7ff','#c7d2fe','#bbf7d0','#fbcfe8']);
+    const dots = ['#fef3c7','#e0e7ff','#c7d2fe','#bbf7d0','#fbcfe8'];
+    for(let i=0;i<46;i++){
+      const x=rnd()*W, y=rnd()*H*0.8, r=20+rnd()*80;
+      ctx.save(); ctx.globalAlpha = 0.07 + rnd()*0.12;
+      ctx.fillStyle = pick(dots);
       ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.restore();
-    }
-    vignette(ctx,W,H,0.4, true);
-    return;
+    } vignette(ctx,W,H,0.38,true); return;
   }
   if(theme==='abstract'){
     const g = ctx.createLinearGradient(0,0,W,0);
     g.addColorStop(0,'#ffffff'); g.addColorStop(1,'#eef2f7');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     ctx.save(); ctx.globalAlpha=0.06;
-    for(let i=0;i<14;i++){
-      const y = (H/14)*i + rnd(18);
-      const h = 12 + rnd(10);
+    const bands = 12 + Math.floor(rnd()*6);
+    for(let i=0;i<bands;i++){
+      const y = (H/bands)*i + rnd()*18, h = 10 + rnd()*14;
       const grad = ctx.createLinearGradient(0,y,W,y+h);
-      grad.addColorStop(0, randFrom(['#a78bfa','#60a5fa','#34d399','#f59e0b']));
-      grad.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0,y,W,h);
-    }
-    ctx.restore();
-    vignette(ctx,W,H,0.18);
-    return;
+      grad.addColorStop(0, pick(['#a78bfa','#60a5fa','#34d399','#f59e0b','#22d3ee']));
+      grad.addColorStop(1,'transparent');
+      ctx.fillStyle=grad; ctx.fillRect(0,y,W,h);
+    } ctx.restore(); vignette(ctx,W,H,0.18); return;
   }
 }
-
 function vignette(ctx,W,H,strength=0.2, invert=false){
-  const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.2, W/2, H/2, Math.max(W,H)*0.7);
-  if(!invert){
-    grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,`rgba(0,0,0,${strength})`);
-  }else{
-    grad.addColorStop(0,`rgba(255,255,255,${strength*0.5})`); grad.addColorStop(1,'rgba(255,255,255,0)');
-  }
-  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  const g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.25, W/2, H/2, Math.max(W,H)*0.8);
+  if(!invert){ g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,`rgba(0,0,0,${strength})`); }
+  else{ g.addColorStop(0,`rgba(255,255,255,${strength*0.5})`); g.addColorStop(1,'rgba(255,255,255,0)'); }
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 }
-
-function addGrain(ctx,W,H,amount=0.06){
-  const img = ctx.getImageData(0,0,W,H);
-  const d = img.data;
+function addGrain(ctx,W,H,amount=0.05){
+  const img = ctx.getImageData(0,0,W,H), d = img.data;
   for(let i=0;i<d.length;i+=4){
-    const n = (Math.random()-0.5)*amount*255;
-    d[i] = clamp(d[i] + n, 0,255);
-    d[i+1] = clamp(d[i+1] + n, 0,255);
-    d[i+2] = clamp(d[i+2] + n, 0,255);
-  }
-  ctx.putImageData(img,0,0);
+    const n = (rnd()-0.5)*amount*255;
+    d[i]=clamp(d[i]+n,0,255); d[i+1]=clamp(d[i+1]+n,0,255); d[i+2]=clamp(d[i+2]+n,0,255);
+  } ctx.putImageData(img,0,0);
 }
 
-/* -------------------- Cake Geometry & Textures -------------------- */
-const tierH = {L:220, M:190, S:160};
-const sizeToPx = (s)=> s==='L'?240: s==='M'?190:140;
-
-function rr(ctx,x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
+/* ------------------------ Materials ------------------------ */
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function shade(hex, amt){ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16);
+  const s=v=>clamp(Math.round(v + amt*255),0,255); return '#'+[s(r),s(g),s(b)].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
-
-function drawPlate(ctx,W,H,type,finish){
-  const cx=W/2;
-  // soft ground shadow
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.08)';
-  ctx.beginPath(); ctx.ellipse(cx, H-70, 420, 28, 0,0,Math.PI*2); ctx.fill(); ctx.restore();
-
-  ctx.save();
-  if(type==='round'){
-    ctx.translate(cx, H-140);
-    ctx.fillStyle = '#f6f7fb'; ctx.strokeStyle='#d8dde8'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.ellipse(0,0,320,36,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    if(finish==='glossy'){
-      const g=ctx.createLinearGradient(-320,0,320,0);
-      g.addColorStop(0,'rgba(255,255,255,0.2)');
-      g.addColorStop(0.5,'rgba(255,255,255,0)');
-      g.addColorStop(1,'rgba(255,255,255,0.2)');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,300,28,0,0,Math.PI*2); ctx.fill();
-    }
-  }else{
-    ctx.translate(cx, H-170);
-    ctx.fillStyle = '#f6f7fb'; ctx.strokeStyle='#d8dde8'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.ellipse(0,0,320,30,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-40,10); ctx.bezierCurveTo(-30,80,-30,120,-10,160);
-    ctx.lineTo(10,160); ctx.bezierCurveTo(30,120,30,80,40,10);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0,170,110,16,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-  }
-  ctx.restore();
-}
-
 function fillTexture(ctx,x,y,w,h,style,baseColor,accent){
   if(style==='velvet'){ ctx.fillStyle=baseColor; ctx.fill(); return; }
-  if(style==='ombre'){
-    const g=ctx.createLinearGradient(x,y,x,y+h);
-    g.addColorStop(0, baseColor); g.addColorStop(1, shade(baseColor, -0.15));
-    ctx.fillStyle=g; ctx.fill(); return;
-  }
+  if(style==='ombre'){ const g=ctx.createLinearGradient(x,y,x,y+h); g.addColorStop(0,baseColor); g.addColorStop(1,shade(baseColor,-0.15)); ctx.fillStyle=g; ctx.fill(); return; }
   if(style==='speckle'){
-    ctx.fillStyle=baseColor; ctx.fill();
-    ctx.save(); ctx.clip();
-    for(let i=0;i<Math.max(80, Math.floor(w*h/600)); i++){
-      ctx.globalAlpha = 0.12 + Math.random()*0.18;
-      ctx.fillStyle = randFrom([shade(baseColor,-0.2), shade(baseColor,0.15), accent]);
-      const sx = x + Math.random()*w, sy = y + Math.random()*h;
-      const r = 0.6 + Math.random()*1.8;
+    ctx.fillStyle=baseColor; ctx.fill(); ctx.save(); ctx.clip();
+    for(let i=0;i<Math.max(90,Math.floor(w*h/560)); i++){
+      ctx.globalAlpha = 0.12 + rnd()*0.18;
+      ctx.fillStyle = pick([shade(baseColor,-0.2), shade(baseColor,0.14), accent]);
+      const sx = x + rnd()*w, sy = y + rnd()*h, r = 0.6 + rnd()*1.8;
       ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
-    }
-    ctx.restore(); return;
+    } ctx.restore(); return;
   }
   if(style==='stripe'){
-    const g = ctx.createLinearGradient(x,y,x+w,y+h);
-    g.addColorStop(0, baseColor); g.addColorStop(1, shade(baseColor, -0.1));
-    ctx.fillStyle=g; ctx.fill();
-    ctx.save(); ctx.clip(); ctx.globalAlpha=0.22;
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    const step = 16;
-    for(let i=-w;i<w+h;i+=step){
-      ctx.save(); ctx.translate(x,y); ctx.rotate(-Math.PI/6);
-      ctx.fillRect(i,-h,8,h*3); ctx.restore();
-    }
+    const g = ctx.createLinearGradient(x,y,x+w,y+h); g.addColorStop(0,baseColor); g.addColorStop(1,shade(baseColor,-0.1));
+    ctx.fillStyle=g; ctx.fill(); ctx.save(); ctx.clip(); ctx.globalAlpha=0.22;
+    ctx.fillStyle='rgba(255,255,255,0.9)'; const step = 16;
+    for(let i=-w;i<w+h;i+=step){ ctx.save(); ctx.translate(x,y); ctx.rotate(-Math.PI/6); ctx.fillRect(i,-h,8,h*3); ctx.restore(); }
     ctx.restore(); return;
   }
   if(style==='marble'){
-    ctx.fillStyle = baseColor; ctx.fill();
-    ctx.save(); ctx.clip();
+    ctx.fillStyle=baseColor; ctx.fill(); ctx.save(); ctx.clip();
     for(let k=0;k<6;k++){
       ctx.strokeStyle = k%2? shade(baseColor,-0.25) : shade(baseColor,0.25);
-      ctx.globalAlpha = 0.14; ctx.lineWidth = 6 + Math.random()*6;
-      ctx.beginPath();
-      const waveAmp = 10 + Math.random()*20;
-      const waveFreq = 0.012 + Math.random()*0.02;
+      ctx.globalAlpha = 0.14; ctx.lineWidth = 6 + rnd()*6; ctx.beginPath();
+      const waveAmp = 10 + rnd()*20, wf = 0.012 + rnd()*0.02;
       for(let xx=x-20; xx<x+w+20; xx+=8){
-        const yy = y + h*0.2 + Math.sin(xx*waveFreq + k)*waveAmp + k*8;
-        if(xx===x-20) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
-      }
-      ctx.stroke();
-    }
-    ctx.restore(); return;
+        const yy = y + h*0.2 + Math.sin(xx*wf + k)*waveAmp + k*8;
+        if(xx===x-20) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
+      } ctx.stroke();
+    } ctx.restore(); return;
   }
 }
 
-function shade(hex, amt){
-  const c = hex.replace('#','');
-  const r = parseInt(c.substring(0,2),16);
-  const g = parseInt(c.substring(2,4),16);
-  const b = parseInt(c.substring(4,6),16);
-  const s = (v)=>clamp(Math.round(v + (amt*255)), 0,255);
-  return '#'+[s(r),s(g),s(b)].map(v=>v.toString(16).padStart(2,'0')).join('');
+/* ------------------------ Plate ------------------------ */
+function drawPlate(ctx,W,H,type,finish){
+  const cx=W/2;
+  ctx.save(); ctx.fillStyle='rgba(0,0,0,0.1)';
+  ctx.beginPath(); ctx.ellipse(cx, H-70, 420, 28, 0,0,Math.PI*2); ctx.fill(); ctx.restore();
+  ctx.save();
+  if(type==='round'){
+    ctx.translate(cx, H-140); ctx.fillStyle='#f6f7fb'; ctx.strokeStyle='rgba(0,0,0,.08)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.ellipse(0,0,320,36,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    if(finish==='glossy'){
+      const g=ctx.createLinearGradient(-320,0,320,0); g.addColorStop(0,'rgba(255,255,255,0.2)'); g.addColorStop(0.5,'rgba(255,255,255,0)'); g.addColorStop(1,'rgba(255,255,255,0.2)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,300,28,0,0,Math.PI*2); ctx.fill();
+    }
+  }else{
+    ctx.translate(cx, H-170); ctx.fillStyle='#f6f7fb'; ctx.strokeStyle='rgba(0,0,0,.08)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.ellipse(0,0,320,30,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-40,10); ctx.bezierCurveTo(-30,80,-30,120,-10,160); ctx.lineTo(10,160); ctx.bezierCurveTo(30,120,30,80,40,10);
+    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(0,170,110,16,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  } ctx.restore();
 }
 
-/* -------------------- Decorations -------------------- */
-function deco_cherry(ctx){ ctx.save(); ctx.fillStyle='#d90429'; ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(-4,-3,4,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#4d7c0f'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,-10); ctx.bezierCurveTo(6,-22,12,-26,14,-30); ctx.stroke(); ctx.restore(); }
-function deco_blueberry(ctx){ ctx.save(); ctx.fillStyle='#3b5ba9'; ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(-3,-3,3,0,Math.PI*2); ctx.fill(); ctx.restore(); }
-function deco_citrus(ctx){ ctx.save(); ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; for(let i=0;i<6;i++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(i*Math.PI/3)*10, Math.sin(i*Math.PI/3)*10); ctx.stroke(); } ctx.restore(); }
-function deco_shard(ctx){ ctx.save(); const g = ctx.createLinearGradient(-12,-18,12,18); g.addColorStop(0,'#5b4636'); g.addColorStop(1,'#3b2a1e'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(10,10); ctx.lineTo(-6,12); ctx.closePath(); ctx.fill(); ctx.restore(); }
-function deco_wafer(ctx){ ctx.save(); ctx.rotate(-0.2); ctx.fillStyle='#e7c8a2'; rr(ctx,-3,-20,6,40,3); ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.1)'; for(let y=-18;y<18;y+=6){ ctx.beginPath(); ctx.moveTo(-3,y); ctx.lineTo(3,y+3); ctx.stroke(); } ctx.restore(); }
-function deco_macaron(ctx){ ctx.save(); ctx.fillStyle=randFrom(['#60a5fa','#f472b6','#34d399','#f59e0b']); ctx.beginPath(); ctx.ellipse(0,0,14,9,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#e5e7eb'; ctx.beginPath(); ctx.ellipse(0,2,12,4,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
-function deco_rosette(ctx,color='#fde68a'){ ctx.save(); ctx.fillStyle=color; for(let p=0;p<6;p++){ ctx.rotate(Math.PI/3); ctx.beginPath(); ctx.ellipse(0,-10,6,10,0,0,Math.PI*2); ctx.fill(); } ctx.restore(); }
-
-/* -------------------- Face System -------------------- */
-const PERSONAS = {
-  Sweetheart: { eyes:'round', mouth:'smile', blush:true, accessory:null },
-  'Party Animal': { eyes:'star',  mouth:'open',  blush:true, accessory:'sunglasses' },
-  Stoic:      { eyes:'flat',  mouth:'line',  blush:false, accessory:null },
-  Sassy:      { eyes:'lash',  mouth:'smirk', blush:true, accessory:null },
-  Dreamer:    { eyes:'sleepy',mouth:'o',     blush:true, accessory:null },
-  Royal:      { eyes:'round', mouth:'smile', blush:false, accessory:'crown' }
-};
-
-function drawEyes(ctx, cx, cy, w, style, color='#1f2937'){
-  const spacing = Math.min(w*0.55, 140);
-  const rx = cx - spacing/2, lx = cx + spacing/2; // right eye (canvas left), left eye
-  const r = 18;
-
-  ctx.save(); ctx.fillStyle=color; ctx.strokeStyle=color; ctx.lineWidth=3;
-
+/* ------------------------ Kawaii Face System ------------------------ */
+function drawEyes(ctx, cx, cy, w, style, color='#1f2937', adorable=0.7){
+  const spacing = Math.min(w*(0.42 + adorable*0.18), 150);
+  const rx = cx - spacing/2, lx = cx + spacing/2;
+  const r = 14 + adorable*10;
+  ctx.save(); ctx.fillStyle=color; ctx.strokeStyle=color; ctx.lineWidth=3; ctx.lineCap='round';
   const eye = (x,y)=>{
-    if(style==='round'){
+    if(style==='round' || style==='sparkle'){
       ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(x-6,y-6,6,0,Math.PI*2); ctx.fill();
+      // highlight
+      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(x-5,y-5,5+adorable*2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.arc(x+4,y+2,3+adorable*1.2,0,Math.PI*2); ctx.fill();
       ctx.fillStyle=color;
-    }else if(style==='sleepy'){
-      ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x-r,y); ctx.quadraticCurveTo(x,y+6,x+r,y); ctx.stroke();
-    }else if(style==='flat'){
-      ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x-r+4,y); ctx.lineTo(x+r-4,y); ctx.stroke();
-    }else if(style==='star'){
-      ctx.beginPath();
-      for(let i=0;i<10;i++){
-        const a=-Math.PI/2 + i*Math.PI/5, rad=i%2? r*0.6 : r;
-        const ex=x + Math.cos(a)*rad, ey=y + Math.sin(a)*rad;
-        i?ctx.lineTo(ex,ey):ctx.moveTo(ex,ey);
-      }
-      ctx.closePath(); ctx.fill();
-    }else if(style==='wink'){
-      ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(x-r+2,y); ctx.quadraticCurveTo(x,y+4,x+r-2,y); ctx.stroke();
-    }else if(style==='lash'){
-      // round eye + 3 little lashes
-      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-      for(let k=0;k<3;k++){
-        const a=(-Math.PI/2) + k*0.2 - 0.2;
+      if(style==='sparkle'){
+        ctx.save(); ctx.fillStyle='rgba(255,255,255,0.85)';
         ctx.beginPath();
-        ctx.moveTo(x + Math.cos(a)*r, y + Math.sin(a)*r);
-        ctx.lineTo(x + Math.cos(a)*(r+10), y + Math.sin(a)*(r+10));
-        ctx.stroke();
+        for(let i=0;i<4;i++){ const a=i*Math.PI/2; const ex=x+Math.cos(a)*0, ey=y+Math.sin(a)*0;
+          ctx.moveTo(ex,ey-8); ctx.lineTo(ex+2,ey-2); ctx.lineTo(ex+8,ey); ctx.lineTo(ex+2,ey+2); ctx.lineTo(ex,ey+8); ctx.lineTo(ex-2,ey+2); ctx.lineTo(ex-8,ey); ctx.lineTo(ex-2,ey-2);
+        } ctx.fill(); ctx.restore();
       }
+    }else if(style==='sleepy'){ ctx.beginPath(); ctx.moveTo(x-r,y); ctx.quadraticCurveTo(x,y+6,x+r,y); ctx.stroke(); }
+    else if(style==='flat'){ ctx.beginPath(); ctx.moveTo(x-r+4,y); ctx.lineTo(x+r-4,y); ctx.stroke(); }
+    else if(style==='wink'){ ctx.beginPath(); ctx.moveTo(x-r+2,y); ctx.quadraticCurveTo(x,y+4,x+r-2,y); ctx.stroke(); }
+    else if(style==='lash'){
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      for(let k=0;k<3;k++){ const a=(-Math.PI/2)+k*0.22 - 0.2; ctx.beginPath(); ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r); ctx.lineTo(x+Math.cos(a)*(r+10),y+Math.sin(a)*(r+10)); ctx.stroke(); }
     }
   };
-
-  eye(rx,cy);
-  // second eye style: special case for wink → other eye round
-  eye(style==='wink'? lx : lx, cy);
-  ctx.restore();
+  eye(rx,cy); eye(style==='wink'? lx : lx, cy); ctx.restore();
 }
-
-function drawMouth(ctx, cx, cy, w, style, color='#1f2937'){
-  const width = Math.min(120, w*0.5);
+function drawMouth(ctx, cx, cy, w, style, color='#1f2937', adorable=0.7){
+  const width = Math.min(120, w*(0.42+0.1*adorable));
   ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=5; ctx.lineCap='round';
-  if(style==='smile'){
-    ctx.beginPath(); ctx.arc(cx, cy, width/2, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
-  }else if(style==='line'){
-    ctx.beginPath(); ctx.moveTo(cx-width/2, cy); ctx.lineTo(cx+width/2, cy); ctx.stroke();
-  }else if(style==='o'){
-    ctx.beginPath(); ctx.ellipse(cx, cy, 16, 12, 0, 0, Math.PI*2); ctx.stroke();
-  }else if(style==='open'){
-    ctx.beginPath(); ctx.ellipse(cx, cy+4, 26, 18, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle='#fcd34d'; ctx.beginPath(); ctx.ellipse(cx, cy+10, 18, 10, 0, 0, Math.PI*2); ctx.fill(); // tongue-ish
-  }else if(style==='smirk'){
-    ctx.beginPath(); ctx.arc(cx+12, cy+4, width/2.4, 0.1*Math.PI, 0.7*Math.PI); ctx.stroke();
-  }
+  if(style==='smile'){ ctx.beginPath(); ctx.arc(cx, cy, width/2.2, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
+  else if(style==='line'){ ctx.beginPath(); ctx.moveTo(cx-width/2, cy); ctx.lineTo(cx+width/2, cy); ctx.stroke(); }
+  else if(style==='o'){ ctx.beginPath(); ctx.ellipse(cx, cy, 14+8*adorable, 11+6*adorable, 0, 0, Math.PI*2); ctx.stroke(); }
+  else if(style==='open'){ ctx.beginPath(); ctx.ellipse(cx, cy+4, 24+10*adorable, 16+6*adorable, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fcd34d'; ctx.beginPath(); ctx.ellipse(cx, cy+10, 16+6*adorable, 10+4*adorable, 0, 0, Math.PI*2); ctx.fill(); }
+  else if(style==='smirk'){ ctx.beginPath(); ctx.arc(cx+12, cy+4, width/2.6, 0.1*Math.PI, 0.7*Math.PI); ctx.stroke(); }
   ctx.restore();
 }
-
-function drawBlush(ctx, cx, cy, w, accent){
-  const offset = Math.min(90, w*0.35);
-  ctx.save(); ctx.fillStyle = 'rgba(236, 72, 153, 0.28)';
-  ctx.beginPath(); ctx.ellipse(cx-offset, cy, 20, 12, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx+offset, cy, 20, 12, 0, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+function drawBlush(ctx, cx, cy, w, accent, adorable=0.7){
+  const offset = Math.min(90, w*(0.32+0.08*adorable)), rX = 22+10*adorable, rY = 14+8*adorable;
+  ctx.save(); ctx.fillStyle = 'rgba(244, 114, 182, 0.24)';
+  ctx.beginPath(); ctx.ellipse(cx-offset, cy, rX, rY, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+offset, cy, rX, rY, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
 }
-
 function drawAccessory(ctx, cx, cy, w, type, accent){
-  if(!type) return;
-  ctx.save();
+  if(!type) return; ctx.save();
   if(type==='sunglasses'){
-    const width = Math.min(140, w*0.6), h=34;
+    const width = Math.min(140, w*0.58), h=34;
     ctx.fillStyle='rgba(15,23,42,0.9)'; ctx.strokeStyle='#111827'; ctx.lineWidth=6;
-    ctx.beginPath(); ctx.roundRect(cx - width/2 - 6, cy - 36, width/2 - 6, h, 8); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.roundRect(cx + 4, cy - 36, width/2 - 6, h, 8); ctx.fill(); ctx.stroke();
+    roundRect(ctx,cx - width/2 - 6, cy - 36, width/2 - 6, h, 8); ctx.fill(); ctx.stroke();
+    roundRect(ctx,cx + 4, cy - 36, width/2 - 6, h, 8); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx-6, cy-20); ctx.lineTo(cx+6, cy-20); ctx.stroke();
   } else if(type==='crown'){
     ctx.fillStyle=accent; ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=2;
-    ctx.beginPath();
-    const baseY = cy - 70, half = Math.min(90, w*0.35);
-    ctx.moveTo(cx - half, baseY);
-    ctx.lineTo(cx - half/2, baseY - 40);
-    ctx.lineTo(cx, baseY);
-    ctx.lineTo(cx + half/2, baseY - 40);
-    ctx.lineTo(cx + half, baseY);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    // jewels
-    ctx.fillStyle='#fff8dc';
-    for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.arc(cx + i*half/2, baseY-20, 6, 0, Math.PI*2); ctx.fill(); }
+    ctx.beginPath(); const baseY = cy - 70, half = Math.min(90, w*0.35);
+    ctx.moveTo(cx - half, baseY); ctx.lineTo(cx - half/2, baseY - 40); ctx.lineTo(cx, baseY);
+    ctx.lineTo(cx + half/2, baseY - 40); ctx.lineTo(cx + half, baseY); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#fff8dc'; for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.arc(cx + i*half/2, baseY-20, 6, 0, Math.PI*2); ctx.fill(); }
+  } else if(type==='bow'){
+    ctx.fillStyle=accent; bow(ctx, cx, cy-28, 28); 
+  } else if(type==='starclip'){
+    ctx.fillStyle='#fde68a'; star(ctx, cx + w*0.42, cy-34, 12);
+  } else if(type==='wand'){
+    ctx.strokeStyle=accent; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx + w*0.36, cy+8); ctx.lineTo(cx + w*0.14, cy+28); ctx.stroke();
+    ctx.fillStyle=accent; star(ctx, cx + w*0.38, cy+4, 10);
   }
   ctx.restore();
 }
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function bow(ctx,cx,cy,s){ ctx.beginPath(); ctx.ellipse(cx-s*0.6,cy,s*0.55,s*0.34,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(cx+s*0.6,cy,s*0.55,s*0.34,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(cx,cy,s*0.28,s*0.22,0,0,Math.PI*2); ctx.fill(); }
+function star(ctx,x,y,r){ ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2 + i*Math.PI/5, rad = i%2? r*0.5 : r; const px=x+Math.cos(a)*rad, py=y+Math.sin(a)*rad; i?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); }
 
-/* -------------------- Drip, Sprinkles, Topper, Inscription -------------------- */
+/* ------------------------ Toppers/Drip/Sprinkles/Inscription ------------------------ */
 function drawTopper(ctx,cx, y, type, accent, finish){
   ctx.save(); ctx.translate(cx,y);
-  let fill = accent;
-  if(finish==='metallic'){
-    const g = ctx.createLinearGradient(-60,-60,60,60);
-    g.addColorStop(0,'#f6f0d0'); g.addColorStop(0.25,'#d4b76f'); g.addColorStop(0.5,'#fff6d8'); g.addColorStop(0.75,'#b88a2d'); g.addColorStop(1,'#fff4c6');
-    fill = g;
-  }
-  ctx.fillStyle=fill; ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth=2;
-  if(type==='heart'){
-    ctx.beginPath();
-    ctx.moveTo(0,-6); ctx.bezierCurveTo(40,-46,70,-8,0,40);
-    ctx.bezierCurveTo(-70,-8,-40,-46,0,-6); ctx.fill(); ctx.stroke();
-  } else if(type==='star'){
-    const R=40,r=18; ctx.beginPath();
-    for(let i=0;i<10;i++){
-      const a=-Math.PI/2 + i*Math.PI/5, rad=i%2?r:R;
-      const x=Math.cos(a)*rad, y=Math.sin(a)*rad; i?ctx.lineTo(x,y):ctx.moveTo(x,y);
-    }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  } else if(type==='ring'){
-    ctx.lineWidth=8; ctx.beginPath(); ctx.arc(-22,10,30,0,Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(22,10,30,0,Math.PI*2); ctx.stroke();
-  }
-  if(finish==='metallic'){ ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fill(); ctx.filter='none'; ctx.globalAlpha=1; }
-  ctx.restore();
+  let fill = accent; if(finish==='metallic'){ const g=ctx.createLinearGradient(-60,-60,60,60); g.addColorStop(0,'#f6f0d0'); g.addColorStop(0.25,'#d4b76f'); g.addColorStop(0.5,'#fff6d8'); g.addColorStop(0.75,'#b88a2d'); g.addColorStop(1,'#fff4c6'); fill=g; }
+  ctx.fillStyle=fill; ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=2;
+  if(type==='heart'){ ctx.beginPath(); ctx.moveTo(0,-6); ctx.bezierCurveTo(40,-46,70,-8,0,40); ctx.bezierCurveTo(-70,-8,-40,-46,0,-6); ctx.fill(); ctx.stroke(); }
+  else if(type==='star'){ star(ctx,0,0,40); ctx.stroke(); }
+  else if(type==='ring'){ ctx.lineWidth=8; ctx.beginPath(); ctx.arc(-22,10,30,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(22,10,30,0,Math.PI*2); ctx.stroke(); }
+  if(finish==='metallic'){ ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fill(); ctx.filter='none'; ctx.globalAlpha=1; } ctx.restore();
 }
-
 function drawDrip(ctx,cx,topY,width,color,gloss){
-  ctx.save();
-  ctx.fillStyle=color; rr(ctx,cx-width, topY, width*2, 36, 18); ctx.fill();
+  ctx.save(); ctx.fillStyle=color; rr(ctx,cx-width, topY, width*2, 36, 18); ctx.fill();
   const drops = Math.max(6, Math.floor(width/40));
   for(let i=0;i<drops;i++){
-    const dx = cx - width + 20 + i*((width*2-40)/(drops-1));
-    const dh = 16 + Math.random()*28;
-    ctx.beginPath();
-    ctx.moveTo(dx, topY+36);
+    const dx = cx - width + 20 + i*((width*2-40)/(drops-1)), dh = 16 + rnd()*28;
+    ctx.beginPath(); ctx.moveTo(dx, topY+36);
     ctx.bezierCurveTo(dx-5, topY+36+dh*0.3, dx-5, topY+36+dh*0.7, dx, topY+36+dh);
-    ctx.bezierCurveTo(dx+5, topY+36+dh*0.7, dx+5, topY+36+dh*0.3, dx, topY+36);
-    ctx.closePath(); ctx.fill();
+    ctx.bezierCurveTo(dx+5, topY+36+dh*0.7, dx+5, topY+36+dh*0.3, dx, topY+36); ctx.closePath(); ctx.fill();
   }
-  if(gloss==='glossy'){
-    ctx.globalAlpha=0.2; ctx.fillStyle='white';
-    rr(ctx,cx-width, topY+4, width*2, 12, 12); ctx.fill();
-  }
+  if(gloss==='glossy'){ ctx.globalAlpha=0.2; ctx.fillStyle='white'; rr(ctx,cx-width, topY+4, width*2, 12, 12); ctx.fill(); }
   ctx.restore();
 }
-
 function drawSprinkles(ctx,cx, y, w, accent){
-  const colors = [accent, '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6'];
-  const count = Math.floor(w/3);
+  const colors = [accent, '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6', '#22d3ee'];
+  const count = Math.floor(w/2.6);
   for(let i=0;i<count;i++){
-    ctx.save();
-    ctx.translate(cx - w + 10 + Math.random()*(w*2-20), y + 14 + Math.random()*32);
-    ctx.rotate(Math.random()*Math.PI);
-    ctx.fillStyle = colors[i%colors.length];
-    rr(ctx,-6,-2,12,4,2); ctx.fill();
-    ctx.restore();
+    ctx.save(); ctx.translate(cx - w + 10 + rnd()*(w*2-20), y + 14 + rnd()*32); ctx.rotate(rnd()*Math.PI);
+    ctx.fillStyle = pick(colors); rr(ctx,-6,-2,12,4,2); ctx.fill(); ctx.restore();
   }
 }
-
 function drawInscription(ctx,text,color,cx,y,w,finish){
-  if(!text) return;
-  ctx.save(); ctx.fillStyle = color; let size=44;
-  ctx.font = `800 ${size}px Inter, system-ui, sans-serif`;
+  if(!text) return; ctx.save(); ctx.fillStyle = color; let size=44; ctx.font = `800 ${size}px Inter, system-ui, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   while(ctx.measureText(text).width > w*1.6 && size>16){ size -= 2; ctx.font = `800 ${size}px Inter, system-ui, sans-serif`; }
   if(finish==='glossy'){ ctx.shadowColor='rgba(0,0,0,0.12)'; ctx.shadowBlur=8; ctx.shadowOffsetY=2; }
-  ctx.fillText(text, cx, y);
-  ctx.restore();
+  ctx.fillText(text, cx, y); ctx.restore();
 }
 
-/* -------------------- Master Render -------------------- */
+/* ------------------------ Decorations ------------------------ */
+function deco(ctx,type,accent){
+  if(type==='cherry'){ ctx.fillStyle='#d90429'; ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(-4,-3,4,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#4d7c0f'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,-10); ctx.bezierCurveTo(6,-22,12,-26,14,-30); ctx.stroke();
+  } else if(type==='berry'){ ctx.fillStyle='#3b5ba9'; ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(-3,-3,3,0,Math.PI*2); ctx.fill();
+  } else if(type==='citrus'){ ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; for(let i=0;i<6;i++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(i*Math.PI/3)*10, Math.sin(i*Math.PI/3)*10); ctx.stroke(); }
+  } else if(type==='shard'){ const g = ctx.createLinearGradient(-12,-18,12,18); g.addColorStop(0,'#5b4636'); g.addColorStop(1,'#3b2a1e');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(10,10); ctx.lineTo(-6,12); ctx.closePath(); ctx.fill();
+  } else if(type==='wafer'){ ctx.rotate(-0.2); ctx.fillStyle='#e7c8a2'; rr(ctx,-3,-20,6,40,3); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.1)'; for(let y=-18;y<18;y+=6){ ctx.beginPath(); ctx.moveTo(-3,y); ctx.lineTo(3,y+3); ctx.stroke(); }
+  } else if(type==='macaron'){ ctx.fillStyle=pick(['#60a5fa','#f472b6','#34d399','#f59e0b']); ctx.beginPath(); ctx.ellipse(0,0,14,9,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#e5e7eb'; ctx.beginPath(); ctx.ellipse(0,2,12,4,0,0,Math.PI*2); ctx.fill();
+  } else if(type==='rosette'){ ctx.fillStyle=accent; for(let p=0;p<6;p++){ ctx.beginPath(); ctx.ellipse(0,-10,6,10,0,0,Math.PI*2); ctx.fill(); ctx.rotate(Math.PI/3); } }
+}
+
+/* ------------------------ Master Render ------------------------ */
 function drawCake(ctx,W,H,spec){
+  const adorable = spec.adorable;
   drawBackground(ctx,W,H,spec.bg);
   drawPlate(ctx,W,H,spec.plate,spec.finish);
 
@@ -633,30 +512,23 @@ function drawCake(ctx,W,H,spec){
 
   const tiers = spec.tierList.slice(0,spec.tiers);
   tiers.forEach((t,i)=>{
-    const w = sizeToPx(t.size), h = tierH[t.size];
-    const yTop = baseY - h;
+    const w = sizeToPx(t.size), h = tierH[t.size]; const yTop = baseY - h;
 
-    ctx.save();
-    ctx.beginPath(); rr(ctx,cx-w, yTop, w*2, h, 28); ctx.clip();
+    ctx.save(); ctx.beginPath(); rr(ctx,cx-w, yTop, w*2, h, 28); ctx.clip();
     fillTexture(ctx, cx-w, yTop, w*2, h, t.texture, t.color, spec.accent);
     const lg = ctx.createLinearGradient(cx-w, yTop, cx+w, yTop);
     lg.addColorStop(0,'rgba(255,255,255,0.26)'); lg.addColorStop(0.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,0.08)');
-    ctx.fillStyle=lg; ctx.fillRect(cx-w, yTop, w*2, h);
-    ctx.restore();
+    ctx.fillStyle=lg; ctx.fillRect(cx-w, yTop, w*2, h); ctx.restore();
     ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2; ctx.stroke();
 
-    ctx.save();
-    ctx.fillStyle = t.color; ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2;
+    ctx.save(); ctx.fillStyle=t.color; ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.ellipse(cx, yTop, w, 22, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    if(spec.finish!=='velvet'){
-      const tg = ctx.createLinearGradient(cx-w, yTop-22, cx+w, yTop+22);
+    if(spec.finish!=='velvet'){ const tg = ctx.createLinearGradient(cx-w, yTop-22, cx+w, yTop+22);
       tg.addColorStop(0,'rgba(255,255,255,0.25)'); tg.addColorStop(0.5,'rgba(255,255,255,0)'); tg.addColorStop(1,'rgba(255,255,255,0.2)');
-      ctx.fillStyle=tg; ctx.beginPath(); ctx.ellipse(cx, yTop, w*0.95, 16, 0, 0, Math.PI*2); ctx.fill();
-    }
+      ctx.fillStyle=tg; ctx.beginPath(); ctx.ellipse(cx, yTop, w*0.95, 16, 0, 0, Math.PI*2); ctx.fill(); }
     ctx.restore();
 
-    baseY = yTop - 26;
-    if(i===tiers.length-1) topTier = {cx, yTop, w, h};
+    baseY = yTop - 26; if(i===tiers.length-1) topTier = {cx, yTop, w, h};
   });
 
   if(topTier){
@@ -664,153 +536,87 @@ function drawCake(ctx,W,H,spec){
     if(spec.sprinkles) drawSprinkles(ctx, topTier.cx, topTier.yTop-6, topTier.w*0.95, spec.accent);
     drawInscription(ctx, spec.inscription?.text, spec.inscription?.color, topTier.cx, topTier.yTop + topTier.h*0.55, topTier.w, spec.finish);
 
-    // Personality face (on front wall of top tier)
     if(spec.face && spec.face.enabled){
-      const faceY = topTier.yTop + topTier.h*0.42;
-      const eyeY = faceY - 24;
-      drawEyes(ctx, topTier.cx, eyeY, topTier.w, spec.face.eyes, spec.face.color);
-      if(spec.face.blush) drawBlush(ctx, topTier.cx, eyeY+8, topTier.w, spec.accent);
-      drawMouth(ctx, topTier.cx, faceY + 18, topTier.w, spec.face.mouth, spec.face.color);
+      const faceY = topTier.yTop + topTier.h*(0.40 + 0.06*adorable);
+      const eyeY  = faceY - (24 - 6*adorable);
+      drawEyes(ctx, topTier.cx, eyeY, topTier.w, spec.face.eyes, spec.face.color, adorable);
+      if(spec.face.blush) drawBlush(ctx, topTier.cx, eyeY+8, topTier.w, spec.accent, adorable);
+      drawMouth(ctx, topTier.cx, faceY + 18, topTier.w, spec.face.mouth, spec.face.color, adorable);
       if(spec.face.accessory) drawAccessory(ctx, topTier.cx, eyeY, topTier.w, spec.face.accessory, spec.accent);
     }
 
     if(spec.topper!=='none') drawTopper(ctx, topTier.cx, topTier.yTop-24, spec.topper, spec.accent, spec.finish);
   }
 
-  // free decor
   ctx.save();
   spec.items.forEach(it=>{
-    ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.rot); ctx.scale(it.scale,it.scale);
-    ctx.globalAlpha = 0.95;
+    ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.rot); ctx.scale(it.scale,it.scale); ctx.globalAlpha=0.96;
     ctx.save(); ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(6,8,10,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
-    switch(it.type){ case 'cherry': deco_cherry(ctx); break; case 'berry': deco_blueberry(ctx); break; case 'citrus': deco_citrus(ctx); break; case 'shard': deco_shard(ctx); break; case 'wafer': deco_wafer(ctx); break; case 'macaron': deco_macaron(ctx); break; case 'rosette': deco_rosette(ctx, spec.accent); break; }
-    ctx.restore();
-  });
-  ctx.restore();
+    deco(ctx,it.type, spec.accent); ctx.restore();
+  }); ctx.restore();
 
   addGrain(ctx,W,H,0.045);
 }
 
-/* -------------------- Spec / Randomizer -------------------- */
+/* ------------------------ Personas & Random Spec ------------------------ */
+const PERSONAS = {
+  Sweetheart: { eyes: 'sparkle', mouth:'smile',  blush:true,  accessory: pickChance([['bow',0.4],['starclip',0.25],[null,0.35]]) },
+  Party:      { eyes: 'sparkle', mouth:'open',   blush:true,  accessory: pickChance([['sunglasses',0.5],['wand',0.2],[null,0.3]]) },
+  Stoic:      { eyes: 'flat',    mouth:'line',   blush:false, accessory: null },
+  Sassy:      { eyes: 'lash',    mouth:'smirk',  blush:true,  accessory: pickChance([['starclip',0.35],[null,0.65]]) },
+  Dreamer:    { eyes: 'sleepy',  mouth:'o',      blush:true,  accessory: pickChance([['wand',0.25],[null,0.75]]) },
+  Royal:      { eyes: 'round',   mouth:'smile',  blush:false, accessory: 'crown' }
+};
+function pickChance(pairs){ const r = rnd(); let acc=0; for(const [k,p] of pairs){ acc+=p; if(r<=acc) return k; } return pairs[pairs.length-1][0]; }
+
 function choosePalette(){
-  const key = chooseWeighted([
-    {key:'pastel', w:+document.getElementById('wPastel').value||0},
-    {key:'gelato', w:+document.getElementById('wGelato').value||0},
-    {key:'patisserie', w:+document.getElementById('wPatisserie').value||0},
-    {key:'luxe', w:+document.getElementById('wLuxe').value||0},
-  ]);
+  const key = pick(paletteKeys);
   const base = palettes[key];
   return { key, base,
-    tier1: randFrom(base), tier2: randFrom(base), tier3: randFrom(base),
-    accent: randFrom(base),
-    text: key==='luxe' ? '#f8f8f8' : '#1f2937'
+    tier1: pick(base), tier2: pick(base), tier3: pick(base),
+    accent: pick(base), text: key==='luxeNoir' ? '#f8f8f8' : '#162035'
   };
 }
 function chooseTexture(){
-  return chooseWeighted([
-    {key:'marble', w:+document.getElementById('wMarble').value||0},
-    {key:'ombre', w:+document.getElementById('wOmbre').value||0},
-    {key:'speckle', w:+document.getElementById('wSpeckle').value||0},
-    {key:'stripe', w:+document.getElementById('wStripe').value||0},
-    {key:'velvet', w:2}
-  ]);
+  return weighted([{key:'marble',w:3},{key:'ombre',w:5},{key:'speckle',w:4},{key:'stripe',w:2},{key:'velvet',w:2}]);
 }
-
-function choosePersonality(){
-  const wOn = +document.getElementById('wFacesOn').value||0;
-  const facesOn = Math.random() < (wOn/(wOn+1));
+function choosePersonality(weightsOn=6, accessoryOdds=0.2){
+  const facesOn = rnd() < (weightsOn/(weightsOn+1));
   if(!facesOn) return {enabled:false};
-
-  const persona = chooseWeighted([
-    {key:'Sweetheart', w:+document.getElementById('wP_Sweetheart').value||0},
-    {key:'Party Animal', w:+document.getElementById('wP_Party').value||0},
-    {key:'Stoic', w:+document.getElementById('wP_Stoic').value||0},
-    {key:'Sassy', w:+document.getElementById('wP_Sassy').value||0},
-    {key:'Dreamer', w:+document.getElementById('wP_Dreamer').value||0},
-    {key:'Royal', w:+document.getElementById('wP_Royal').value||0},
+  const persona = weighted([
+    {key:'Sweetheart',w:5},{key:'Party',w:4},{key:'Stoic',w:2},{key:'Sassy',w:3},{key:'Dreamer',w:3},{key:'Royal',w:2}
   ]);
-
   const base = PERSONAS[persona];
-  const sunglassesOdds = clamp(+document.getElementById('faceAccessoryOdds').value||0, 0, 100)/100;
-
-  // derive details
   let eyes = base.eyes, mouth = base.mouth, blush = !!base.blush, accessory = base.accessory;
-  // Chance to wink sometimes for Sweetheart/Sassy
-  if(['Sweetheart','Sassy'].includes(persona) && Math.random()<0.15) eyes='wink';
-  // Party Animal sunglasses chance
-  if(persona==='Party Animal' && Math.random()<Math.max(0.35, sunglassesOdds)) accessory='sunglasses';
-  // Royal always crown; sunglasses rarely override
-  if(persona==='Royal'){
-    accessory='crown';
-    if(Math.random()<0.08) accessory='sunglasses';
-  }
-
-  return { enabled:true, persona, eyes, mouth, blush, accessory, color:'#1f2937' };
+  if((persona==='Sweetheart' || persona==='Sassy') && rnd()<0.12) eyes='wink';
+  if(persona!=='Royal' && rnd()<accessoryOdds){ accessory = accessory || pick(['bow','starclip','wand','sunglasses']); }
+  if(persona==='Royal' && rnd()<0.08) accessory='sunglasses';
+  return { enabled:true, persona, eyes, mouth, blush, accessory, color:'#182033' };
 }
 
-function randomSpec(W,H){
-  const tiers = +chooseWeighted([
-    {key:1, w:+document.getElementById('wTier1').value||0},
-    {key:2, w:+document.getElementById('wTier2').value||0},
-    {key:3, w:+document.getElementById('wTier3').value||0},
-  ]);
+function randomSpec(W,H, adorable){
+  const tiers = +weighted([{key:1,w:+document.getElementById('wTier1').value||0},{key:2,w:+document.getElementById('wTier2').value||0},{key:3,w:+document.getElementById('wTier3').value||0}]);
   const pal = choosePalette();
   const textures = [chooseTexture(), chooseTexture(), chooseTexture()];
-  const sizes = [
-    chooseWeighted([{key:'L',w:5},{key:'M',w:3},{key:'S',w:1}]),
-    chooseWeighted([{key:'M',w:5},{key:'S',w:2}]),
-    'S'
-  ];
-  const tierList = [
-    {size:sizes[0], color:pal.tier1, texture:textures[0]},
-    {size:sizes[1], color:pal.tier2, texture:textures[1]},
-    {size:sizes[2], color:pal.tier3, texture:textures[2]},
-  ];
+  const sizes = [ weighted([{key:'L',w:5},{key:'M',w:3},{key:'S',w:1}]), weighted([{key:'M',w:5},{key:'S',w:2}]), 'S'];
+  const tierList = [{size:sizes[0], color:pal.tier1, texture:textures[0]}, {size:sizes[1], color:pal.tier2, texture:textures[1]}, {size:sizes[2], color:pal.tier3, texture:textures[2]}];
 
-  const topper = chooseWeighted([
-    {key:'none', w:+document.getElementById('wTopNone').value||0},
-    {key:'heart',w:+document.getElementById('wTopHeart').value||0},
-    {key:'star', w:+document.getElementById('wTopStar').value||0},
-    {key:'ring', w:+document.getElementById('wTopRing').value||0},
-  ]);
-  const drip = Math.random() < (+document.getElementById('wDripOn').value||0) / ((+document.getElementById('wDripOn').value||0) + 1);
-  const sprinkles = Math.random() < (+document.getElementById('wSprOn').value||0) / ((+document.getElementById('wSprOn').value||0) + 1);
+  const topper = weighted([{key:'none',w:2},{key:'heart',w:5},{key:'star',w:3},{key:'ring',w:2}]);
+  const drip = rnd() < 0.7, sprinkles = rnd() < 0.65;
 
-  const inscription = Math.random()<0.35 ? {text: randFrom(['Happy Day!','Sweet Life','Celebrate','With Love','Congrats!']), color: pal.text} : null;
+  const inscription = rnd()<0.34 ? {text: pick(['Happy Day!','Sweet Life','Celebrate','With Love','Congrats!','Yum!','BFF']), color: pal.text} : null;
 
-  // decor items
-  const pool = [
-    ['cherry', +document.getElementById('wCherry').value||0],
-    ['berry', +document.getElementById('wBerry').value||0],
-    ['citrus', +document.getElementById('wCitrus').value||0],
-    ['shard', +document.getElementById('wShard').value||0],
-    ['wafer', +document.getElementById('wWafer').value||0],
-    ['macaron', +document.getElementById('wMac').value||0],
-    ['rosette', +document.getElementById('wRose').value||0],
-  ].filter(p=>p[1]>0);
-  const pickWeighted = ()=>chooseWeighted(pool.map(p=>({key:p[0], w:p[1]})));
-  const count = Math.floor(Math.random()*5); // 0..4
-  const items=[];
-  for(let i=0;i<count;i++){
-    items.push({
-      type: pickWeighted(),
-      x: W/2 + (Math.random()-0.5)*240,
-      y: H/2 + (Math.random()-0.6)*180,
-      scale: 0.8 + Math.random()*0.8,
-      rot: (Math.random()-0.5)*1.2
-    });
-  }
+  const pool = [['cherry', +document.getElementById('wCherry').value||0],['berry', +document.getElementById('wBerry').value||0],['citrus', +document.getElementById('wCitrus').value||0],['shard', +document.getElementById('wShard').value||0],['wafer', +document.getElementById('wWafer').value||0],['macaron', +document.getElementById('wMac').value||0],['rosette', +document.getElementById('wRose').value||0]].filter(p=>p[1]>0);
+  const pickWeighted = ()=>weighted(pool.map(p=>({key:p[0], w:p[1]})));
+  const count = Math.floor(rnd()*5); const items=[];
+  for(let i=0;i<count;i++){ items.push({ type: pickWeighted(), x: W/2 + (rnd()-0.5)*240, y: H/2 + (rnd()-0.6)*180, scale: 0.8 + rnd()*0.8, rot: (rnd()-0.5)*1.2 }); }
 
   const finish = document.getElementById('finish').value;
   const bg = document.getElementById('bgTheme').value;
-  const plate = Math.random()<0.35 ? 'stand' : 'round';
-  const face = choosePersonality();
+  const plate = rnd()<0.35 ? 'stand' : 'round';
+  const face = choosePersonality(+document.getElementById('wFacesOn').value||0, clamp((+document.getElementById('faceAccessoryOdds').value||0)/100,0,1));
 
-  return {
-    plate, tiers, tierList, topper, accent: pal.accent,
-    drip, sprinkles, inscription, items, finish, bg, paletteKey: pal.key,
-    face
-  };
+  return { plate, tiers, tierList, topper, accent: pal.accent, drip, sprinkles, inscription, items, finish, bg, paletteKey: pal.key, face, adorable };
 }
 
 function fingerprint(spec){
@@ -821,54 +627,91 @@ function fingerprint(spec){
   return `${spec.bg};${spec.finish};${spec.plate};${spec.tiers};${t};top:${spec.topper};dr:${spec.drip};sp:${spec.sprinkles};msg:${spec.inscription?spec.inscription.text:'_'};acc:${spec.accent};it:${i};face:${faceFp}`;
 }
 
-/* -------------------- UI / Generation -------------------- */
+/* ------------------------ Rarity Tiering ------------------------ */
+function rarityFor(spec){
+  // Simple heuristic: assign rarity by presence of special combos.
+  let score = 0;
+  if(spec.face?.enabled) score+=2;
+  if(spec.face?.accessory==='crown' || spec.topper==='ring') score+=2;
+  if(spec.paletteKey==='luxeNoir') score+=1.5;
+  if(spec.tiers===3) score+=1.5;
+  if(spec.finish==='metallic') score+=1.5;
+  const rare = ['marble','stripe']; for(const t of spec.tierList.slice(0,spec.tiers)){ if(rare.includes(t.texture)) score+=0.6; }
+  if(spec.drip && spec.sprinkles) score+=0.5;
+
+  // Map to tiers then cap number of ultra-rare later when exporting metadata if needed.
+  if(score>=5.2) return 'Ultra';
+  if(score>=3.4) return 'Rare';
+  if(score>=1.6) return 'Uncommon';
+  return 'Common';
+}
+
+/* ------------------------ UI & Generation ------------------------ */
 const previewEl = document.getElementById('preview');
 const barEl = document.getElementById('bar');
 const btnGen = document.getElementById('gen');
 const btnZip = document.getElementById('zip');
+const btnShuffle = document.getElementById('shuffle');
 
 let lastRun = null;
 
+btnShuffle.addEventListener('click', ()=>{
+  const s = `${Date.now().toString(36)}-${Math.floor(Math.random()*1e6).toString(36)}`;
+  document.getElementById('seed').value = s;
+});
+
 btnGen.addEventListener('click', async ()=>{
   const name = document.getElementById('colName').value.trim() || 'CakeBuds';
-  const supply = clamp(+document.getElementById('supply').value||10, 1, 300);
+  const supply = clamp(+document.getElementById('supply').value||12, 1, 300);
   const startId = Math.max(0, +document.getElementById('startId').value||1);
   const size = clamp(+document.getElementById('imgSize').value||1024, 640, 4096);
+  const adorable = (+document.getElementById('adorable').value||70)/100;
+  const seed = (document.getElementById('seed').value||'cakebuds'); setSeed(seed);
 
-  const seen = new Set();
-  const specs=[];
+  const seen = new Set(); const specs=[]; const rarities=[];
   previewEl.innerHTML=''; barEl.style.width='0%'; btnZip.disabled=true;
 
   for(let i=0;i<supply;i++){
     let spec, fp, tries=0;
     do{
-      spec = randomSpec(size, Math.round(size*0.75));
-      fp = fingerprint(spec); tries++;
-      if(tries>80) break;
+      spec = randomSpec(size, Math.round(size*0.75), adorable);
+      fp = fingerprint(spec); tries++; if(tries>100) break;
     }while(seen.has(fp));
     seen.add(fp);
-    specs.push(spec);
+    const rTier = rarityFor(spec); rarities.push(rTier);
+    specs.push({...spec, rarity:rTier});
 
-    // preview (use <img> from canvas pixels)
+    // preview (first 6 → <img> snapshots)
     if(i<6){
       const c=document.createElement('canvas'); c.width=size; c.height=Math.round(size*0.75);
       const cctx=c.getContext('2d'); drawCake(cctx, c.width, c.height, spec);
       const img = new Image(); img.src = c.toDataURL('image/png');
 
       const card=document.createElement('div'); card.className='card';
-      const tag=document.createElement('div'); tag.style.padding='8px';
-      tag.innerHTML=`<span class="badge-mini">#${startId+i}</span> <span class="muted">${name}</span>`;
-      card.appendChild(img); card.appendChild(tag); previewEl.appendChild(card);
+      const badge=document.createElement('div'); badge.className='tag'; badge.textContent=rTier;
+      if(rTier==='Rare') badge.classList.add('rare'); if(rTier==='Ultra') badge.classList.add('ultra');
+      const tag=document.createElement('div'); tag.style.padding='8px'; tag.innerHTML=`<span class="badge-mini">#${startId+i}</span> <span class="muted">${name}</span>`;
+      card.appendChild(badge); card.appendChild(img); card.appendChild(tag); previewEl.appendChild(card);
       await new Promise(r=>setTimeout(r,0));
     }
-
     barEl.style.width = `${Math.round(((i+1)/supply)*100)}%`;
     await new Promise(r=>setTimeout(r,0));
+  }
+
+  // Enforce ultra-rare cap (convert overflow to Rare)
+  const ultraCapPct = clamp((+document.getElementById('ultraCap').value||5)/100,0,0.2);
+  const cap = Math.max(1, Math.floor(specs.length*ultraCapPct));
+  const ultraIdx = specs.map((s,idx)=>[s.rarity,idx]).filter(x=>x[0]==='Ultra').map(x=>x[1]);
+  if(ultraIdx.length>cap){
+    // demote random extras
+    const shuffle=[...ultraIdx].sort(()=>Math.random()-0.5);
+    for(let k=cap;k<shuffle.length;k++){ specs[shuffle[k]].rarity='Rare'; }
   }
 
   const meta = specs.map((spec, idx)=>{
     const tokenId = startId + idx;
     const attrs = [
+      {trait_type:'Rarity', value: spec.rarity},
       {trait_type:'Background', value: spec.bg},
       {trait_type:'Finish', value: spec.finish},
       {trait_type:'Plate', value: spec.plate},
@@ -883,7 +726,6 @@ btnGen.addEventListener('click', async ()=>{
       {trait_type:'Accent', value: spec.accent},
       {trait_type:'Inscription', value: spec.inscription? spec.inscription.text : 'None'}
     ];
-
     if(spec.face && spec.face.enabled){
       attrs.push(
         {trait_type:'Personality', value: spec.face.persona},
@@ -895,26 +737,34 @@ btnGen.addEventListener('click', async ()=>{
     } else {
       attrs.push({trait_type:'Personality', value:'None'});
     }
-
     return {
       tokenId,
       name: `${name} #${tokenId}`,
-      description: "CakeBuds Character Series — textured, cinematic cakes with adorable faces and personalities. Generated fully in-browser.",
+      description: "CakeBuds · Adorable Series — collectible cakes with kawaii faces, curated palettes, and rarity tiers. Generated fully in-browser.",
       image: `ipfs://REPLACE_WITH_CID/images/${tokenId}.png`,
-      attributes: attrs
+      attributes: attrs,
+      external_url: "https://cakebuds.example"
     };
   });
 
-  lastRun = {specs, meta, size, startId, name};
+  lastRun = {specs, meta, size, startId, name, seed};
   btnZip.disabled=false;
 });
 
 btnZip.addEventListener('click', async ()=>{
   if(!lastRun) return;
-  const {specs, meta, size, startId, name} = lastRun;
+  const {specs, meta, size, startId, name, seed} = lastRun;
   const zip = new JSZip();
   const imgFolder = zip.folder('images');
   const metaFolder = zip.folder('metadata');
+
+  // include a README
+  zip.file('README.txt', `CakeBuds Adorable Series
+Seed: ${seed}
+Count: ${specs.length}
+Image size: ${size}x${Math.round(size*0.75)} px
+— Upload images to IPFS and replace metadata image URIs (ipfs://REPLACE_WITH_CID/images/ID.png).
+`);
 
   for(let i=0;i<specs.length;i++){
     const tokenId = startId + i;
@@ -932,7 +782,7 @@ btnZip.addEventListener('click', async ()=>{
   const blob = await zip.generateAsync({type:'blob'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `${name.toLowerCase().replace(/\s+/g,'_')}_nft_collection.zip`;
+  a.download = `${name.toLowerCase().replace(/\s+/g,'_')}_adorable_collection.zip`;
   a.click();
   URL.revokeObjectURL(a.href);
 });
