@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>CakeBuds · NFT Maker (Pro Visuals)</title>
+<title>CakeBuds · NFT Maker (Personalities)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="Generate a unique NFT collection of artisan cake artworks with cinematic backgrounds, textures, lighting, and metadata — all in the browser." />
+<meta name="description" content="Generate an NFT collection of artisan cakes with cinematic visuals and cute personalities — images + ERC-721 metadata, all in the browser." />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
@@ -34,7 +34,7 @@
   .preview{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   @media (max-width:900px){.preview{grid-template-columns:repeat(2,1fr)}}
   .card{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .card img,.card canvas{display:block;width:100%;height:auto}
+  .card img{display:block;width:100%;height:auto}
   .muted{color:var(--muted);font-size:12px}
   .badge-mini{display:inline-block;padding:2px 8px;border-radius:999px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;font-weight:600;font-size:11px}
   .meter{height:8px;background:#f1f5f9;border-radius:999px;overflow:hidden}
@@ -48,10 +48,10 @@
       <div class="badge">🎂</div>
       <div>
         <div style="font-weight:800">CakeBuds</div>
-        <div class="sub">NFT Maker · Pro Visuals</div>
+        <div class="sub">NFT Maker · Personalities</div>
       </div>
     </div>
-    <div class="sub">Cinematic cakes · Unique traits · ZIP export</div>
+    <div class="sub">Cinematic cakes · Cute faces · ZIP export</div>
   </header>
 
   <div class="grid">
@@ -62,7 +62,7 @@
         <div class="row">
           <div>
             <label for="colName">Collection name</label>
-            <input id="colName" type="text" value="CakeBuds — Artisan Series">
+            <input id="colName" type="text" value="CakeBuds — Character Series">
           </div>
           <div>
             <label for="supply">Supply (1–300)</label>
@@ -163,6 +163,30 @@
       </div>
 
       <div class="group">
+        <h3>Faces & Personalities</h3>
+        <div class="row">
+          <div>
+            <label class="muted">Faces on (weight)</label>
+            <input id="wFacesOn" type="number" min="0" value="6">
+          </div>
+          <div>
+            <label class="muted">Accessory odds (% sunglasses)</label>
+            <input id="faceAccessoryOdds" type="number" min="0" max="100" value="22">
+          </div>
+        </div>
+        <div class="row3" style="margin-top:8px">
+          <div><label class="muted">Sweetheart</label><input id="wP_Sweetheart" type="number" min="0" value="5"></div>
+          <div><label class="muted">Party Animal</label><input id="wP_Party" type="number" min="0" value="4"></div>
+          <div><label class="muted">Stoic</label><input id="wP_Stoic" type="number" min="0" value="3"></div>
+        </div>
+        <div class="row3" style="margin-top:8px">
+          <div><label class="muted">Sassy</label><input id="wP_Sassy" type="number" min="0" value="3"></div>
+          <div><label class="muted">Dreamer</label><input id="wP_Dreamer" type="number" min="0" value="3"></div>
+          <div><label class="muted">Royal</label><input id="wP_Royal" type="number" min="0" value="2"></div>
+        </div>
+      </div>
+
+      <div class="group">
         <h3>Decor Items (0–4 per cake)</h3>
         <div class="row3">
           <div><label class="muted">🍒 Cherry</label><input id="wCherry" type="number" min="0" value="5"></div>
@@ -181,7 +205,7 @@
         <button class="primary" id="gen">Generate Preview</button>
         <button id="zip" disabled>Download ZIP (images + metadata)</button>
       </div>
-      <div class="muted" style="margin-top:8px">Metadata uses OpenSea attributes and includes background, textures, finish, and decor counts.</div>
+      <div class="muted" style="margin-top:8px">Metadata includes background, textures, finish, decor, and now face traits.</div>
 
       <div style="margin-top:12px">
         <div class="muted">Progress</div>
@@ -199,7 +223,7 @@
 <script>
 /* -------------------- Helpers & Palettes -------------------- */
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const chooseWeighted = (entries)=>{ const total = entries.reduce((s,e)=>s+e.w,0) || 1; let r = Math.random()*total; for(const e of entries){ if((r-=e.w)<=0) return e.key; } return entries[entries.length-1].key; };
+const chooseWeighted = (entries)=>{ const total = entries.reduce((s,e)=>s+Math.max(0,e.w),0) || 1; let r = Math.random()*total; for(const e of entries){ r-=Math.max(0,e.w); if(r<=0) return e.key; } return entries[entries.length-1].key; };
 const rnd=(n)=>Math.random()*n;
 const randFrom=(arr)=>arr[Math.floor(Math.random()*arr.length)];
 
@@ -326,7 +350,6 @@ function drawPlate(ctx,W,H,type,finish){
     ctx.translate(cx, H-140);
     ctx.fillStyle = '#f6f7fb'; ctx.strokeStyle='#d8dde8'; ctx.lineWidth=3;
     ctx.beginPath(); ctx.ellipse(0,0,320,36,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    // reflection if glossy
     if(finish==='glossy'){
       const g=ctx.createLinearGradient(-320,0,320,0);
       g.addColorStop(0,'rgba(255,255,255,0.2)');
@@ -348,31 +371,23 @@ function drawPlate(ctx,W,H,type,finish){
 }
 
 function fillTexture(ctx,x,y,w,h,style,baseColor,accent){
-  if(style==='velvet'){
-    ctx.fillStyle = baseColor; ctx.fill(); // matte
-    return;
-  }
+  if(style==='velvet'){ ctx.fillStyle=baseColor; ctx.fill(); return; }
   if(style==='ombre'){
     const g=ctx.createLinearGradient(x,y,x,y+h);
-    g.addColorStop(0, baseColor);
-    g.addColorStop(1, shade(baseColor, -0.15));
-    ctx.fillStyle=g; ctx.fill();
-    return;
+    g.addColorStop(0, baseColor); g.addColorStop(1, shade(baseColor, -0.15));
+    ctx.fillStyle=g; ctx.fill(); return;
   }
   if(style==='speckle'){
     ctx.fillStyle=baseColor; ctx.fill();
-    ctx.save();
-    ctx.clip();
+    ctx.save(); ctx.clip();
     for(let i=0;i<Math.max(80, Math.floor(w*h/600)); i++){
       ctx.globalAlpha = 0.12 + Math.random()*0.18;
       ctx.fillStyle = randFrom([shade(baseColor,-0.2), shade(baseColor,0.15), accent]);
-      const sx = x + Math.random()*w;
-      const sy = y + Math.random()*h;
+      const sx = x + Math.random()*w, sy = y + Math.random()*h;
       const r = 0.6 + Math.random()*1.8;
       ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
     }
-    ctx.restore();
-    return;
+    ctx.restore(); return;
   }
   if(style==='stripe'){
     const g = ctx.createLinearGradient(x,y,x+w,y+h);
@@ -382,34 +397,27 @@ function fillTexture(ctx,x,y,w,h,style,baseColor,accent){
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     const step = 16;
     for(let i=-w;i<w+h;i+=step){
-      ctx.save();
-      ctx.translate(x,y);
-      ctx.rotate(-Math.PI/6);
-      ctx.fillRect(i,-h,8,h*3);
-      ctx.restore();
+      ctx.save(); ctx.translate(x,y); ctx.rotate(-Math.PI/6);
+      ctx.fillRect(i,-h,8,h*3); ctx.restore();
     }
-    ctx.restore();
-    return;
+    ctx.restore(); return;
   }
   if(style==='marble'){
     ctx.fillStyle = baseColor; ctx.fill();
     ctx.save(); ctx.clip();
     for(let k=0;k<6;k++){
       ctx.strokeStyle = k%2? shade(baseColor,-0.25) : shade(baseColor,0.25);
-      ctx.globalAlpha = 0.14;
-      ctx.lineWidth = 6 + Math.random()*6;
+      ctx.globalAlpha = 0.14; ctx.lineWidth = 6 + Math.random()*6;
       ctx.beginPath();
       const waveAmp = 10 + Math.random()*20;
       const waveFreq = 0.012 + Math.random()*0.02;
       for(let xx=x-20; xx<x+w+20; xx+=8){
         const yy = y + h*0.2 + Math.sin(xx*waveFreq + k)*waveAmp + k*8;
-        if(xx===x-20) ctx.moveTo(xx, yy);
-        else ctx.lineTo(xx, yy);
+        if(xx===x-20) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
       }
       ctx.stroke();
     }
-    ctx.restore();
-    return;
+    ctx.restore(); return;
   }
 }
 
@@ -423,54 +431,125 @@ function shade(hex, amt){
 }
 
 /* -------------------- Decorations -------------------- */
-function deco_cherry(ctx){
-  ctx.save();
-  ctx.fillStyle='#d90429'; ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(-4,-3,4,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#4d7c0f'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,-10); ctx.bezierCurveTo(6,-22,12,-26,14,-30); ctx.stroke();
-  ctx.restore();
-}
-function deco_blueberry(ctx){
-  ctx.save();
-  ctx.fillStyle='#3b5ba9'; ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(-3,-3,3,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-function deco_citrus(ctx){
-  ctx.save();
-  ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#fff'; ctx.lineWidth=2;
-  for(let i=0;i<6;i++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(i*Math.PI/3)*10, Math.sin(i*Math.PI/3)*10); ctx.stroke();}
-  ctx.restore();
-}
-function deco_shard(ctx){
-  ctx.save();
-  const g = ctx.createLinearGradient(-12,-18,12,18);
-  g.addColorStop(0,'#5b4636'); g.addColorStop(1,'#3b2a1e');
-  ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(10,10); ctx.lineTo(-6,12); ctx.closePath(); ctx.fill();
-  ctx.restore();
-}
-function deco_wafer(ctx){
-  ctx.save();
-  ctx.rotate(-0.2);
-  ctx.fillStyle='#e7c8a2'; rr(ctx,-3,-20,6,40,3); ctx.fill();
-  ctx.strokeStyle='rgba(0,0,0,0.1)';
-  for(let y=-18;y<18;y+=6){ ctx.beginPath(); ctx.moveTo(-3,y); ctx.lineTo(3,y+3); ctx.stroke();}
-  ctx.restore();
-}
-function deco_macaron(ctx){
-  ctx.save();
-  ctx.fillStyle=randFrom(['#60a5fa','#f472b6','#34d399','#f59e0b']); ctx.beginPath(); ctx.ellipse(0,0,14,9,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#e5e7eb'; ctx.beginPath(); ctx.ellipse(0,2,12,4,0,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-function deco_rosette(ctx,color='#fde68a'){
-  ctx.save();
-  ctx.fillStyle=color;
-  for(let p=0;p<6;p++){ ctx.rotate(Math.PI/3); ctx.beginPath(); ctx.ellipse(0,-10,6,10,0,0,Math.PI*2); ctx.fill(); }
+function deco_cherry(ctx){ ctx.save(); ctx.fillStyle='#d90429'; ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(-4,-3,4,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#4d7c0f'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,-10); ctx.bezierCurveTo(6,-22,12,-26,14,-30); ctx.stroke(); ctx.restore(); }
+function deco_blueberry(ctx){ ctx.save(); ctx.fillStyle='#3b5ba9'; ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(-3,-3,3,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+function deco_citrus(ctx){ ctx.save(); ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; for(let i=0;i<6;i++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(i*Math.PI/3)*10, Math.sin(i*Math.PI/3)*10); ctx.stroke(); } ctx.restore(); }
+function deco_shard(ctx){ ctx.save(); const g = ctx.createLinearGradient(-12,-18,12,18); g.addColorStop(0,'#5b4636'); g.addColorStop(1,'#3b2a1e'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(10,10); ctx.lineTo(-6,12); ctx.closePath(); ctx.fill(); ctx.restore(); }
+function deco_wafer(ctx){ ctx.save(); ctx.rotate(-0.2); ctx.fillStyle='#e7c8a2'; rr(ctx,-3,-20,6,40,3); ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.1)'; for(let y=-18;y<18;y+=6){ ctx.beginPath(); ctx.moveTo(-3,y); ctx.lineTo(3,y+3); ctx.stroke(); } ctx.restore(); }
+function deco_macaron(ctx){ ctx.save(); ctx.fillStyle=randFrom(['#60a5fa','#f472b6','#34d399','#f59e0b']); ctx.beginPath(); ctx.ellipse(0,0,14,9,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#e5e7eb'; ctx.beginPath(); ctx.ellipse(0,2,12,4,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+function deco_rosette(ctx,color='#fde68a'){ ctx.save(); ctx.fillStyle=color; for(let p=0;p<6;p++){ ctx.rotate(Math.PI/3); ctx.beginPath(); ctx.ellipse(0,-10,6,10,0,0,Math.PI*2); ctx.fill(); } ctx.restore(); }
+
+/* -------------------- Face System -------------------- */
+const PERSONAS = {
+  Sweetheart: { eyes:'round', mouth:'smile', blush:true, accessory:null },
+  'Party Animal': { eyes:'star',  mouth:'open',  blush:true, accessory:'sunglasses' },
+  Stoic:      { eyes:'flat',  mouth:'line',  blush:false, accessory:null },
+  Sassy:      { eyes:'lash',  mouth:'smirk', blush:true, accessory:null },
+  Dreamer:    { eyes:'sleepy',mouth:'o',     blush:true, accessory:null },
+  Royal:      { eyes:'round', mouth:'smile', blush:false, accessory:'crown' }
+};
+
+function drawEyes(ctx, cx, cy, w, style, color='#1f2937'){
+  const spacing = Math.min(w*0.55, 140);
+  const rx = cx - spacing/2, lx = cx + spacing/2; // right eye (canvas left), left eye
+  const r = 18;
+
+  ctx.save(); ctx.fillStyle=color; ctx.strokeStyle=color; ctx.lineWidth=3;
+
+  const eye = (x,y)=>{
+    if(style==='round'){
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(x-6,y-6,6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=color;
+    }else if(style==='sleepy'){
+      ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x-r,y); ctx.quadraticCurveTo(x,y+6,x+r,y); ctx.stroke();
+    }else if(style==='flat'){
+      ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x-r+4,y); ctx.lineTo(x+r-4,y); ctx.stroke();
+    }else if(style==='star'){
+      ctx.beginPath();
+      for(let i=0;i<10;i++){
+        const a=-Math.PI/2 + i*Math.PI/5, rad=i%2? r*0.6 : r;
+        const ex=x + Math.cos(a)*rad, ey=y + Math.sin(a)*rad;
+        i?ctx.lineTo(ex,ey):ctx.moveTo(ex,ey);
+      }
+      ctx.closePath(); ctx.fill();
+    }else if(style==='wink'){
+      ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x-r+2,y); ctx.quadraticCurveTo(x,y+4,x+r-2,y); ctx.stroke();
+    }else if(style==='lash'){
+      // round eye + 3 little lashes
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      for(let k=0;k<3;k++){
+        const a=(-Math.PI/2) + k*0.2 - 0.2;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a)*r, y + Math.sin(a)*r);
+        ctx.lineTo(x + Math.cos(a)*(r+10), y + Math.sin(a)*(r+10));
+        ctx.stroke();
+      }
+    }
+  };
+
+  eye(rx,cy);
+  // second eye style: special case for wink → other eye round
+  eye(style==='wink'? lx : lx, cy);
   ctx.restore();
 }
 
+function drawMouth(ctx, cx, cy, w, style, color='#1f2937'){
+  const width = Math.min(120, w*0.5);
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=5; ctx.lineCap='round';
+  if(style==='smile'){
+    ctx.beginPath(); ctx.arc(cx, cy, width/2, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+  }else if(style==='line'){
+    ctx.beginPath(); ctx.moveTo(cx-width/2, cy); ctx.lineTo(cx+width/2, cy); ctx.stroke();
+  }else if(style==='o'){
+    ctx.beginPath(); ctx.ellipse(cx, cy, 16, 12, 0, 0, Math.PI*2); ctx.stroke();
+  }else if(style==='open'){
+    ctx.beginPath(); ctx.ellipse(cx, cy+4, 26, 18, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fcd34d'; ctx.beginPath(); ctx.ellipse(cx, cy+10, 18, 10, 0, 0, Math.PI*2); ctx.fill(); // tongue-ish
+  }else if(style==='smirk'){
+    ctx.beginPath(); ctx.arc(cx+12, cy+4, width/2.4, 0.1*Math.PI, 0.7*Math.PI); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBlush(ctx, cx, cy, w, accent){
+  const offset = Math.min(90, w*0.35);
+  ctx.save(); ctx.fillStyle = 'rgba(236, 72, 153, 0.28)';
+  ctx.beginPath(); ctx.ellipse(cx-offset, cy, 20, 12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+offset, cy, 20, 12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawAccessory(ctx, cx, cy, w, type, accent){
+  if(!type) return;
+  ctx.save();
+  if(type==='sunglasses'){
+    const width = Math.min(140, w*0.6), h=34;
+    ctx.fillStyle='rgba(15,23,42,0.9)'; ctx.strokeStyle='#111827'; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.roundRect(cx - width/2 - 6, cy - 36, width/2 - 6, h, 8); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(cx + 4, cy - 36, width/2 - 6, h, 8); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-6, cy-20); ctx.lineTo(cx+6, cy-20); ctx.stroke();
+  } else if(type==='crown'){
+    ctx.fillStyle=accent; ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=2;
+    ctx.beginPath();
+    const baseY = cy - 70, half = Math.min(90, w*0.35);
+    ctx.moveTo(cx - half, baseY);
+    ctx.lineTo(cx - half/2, baseY - 40);
+    ctx.lineTo(cx, baseY);
+    ctx.lineTo(cx + half/2, baseY - 40);
+    ctx.lineTo(cx + half, baseY);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // jewels
+    ctx.fillStyle='#fff8dc';
+    for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.arc(cx + i*half/2, baseY-20, 6, 0, Math.PI*2); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+/* -------------------- Drip, Sprinkles, Topper, Inscription -------------------- */
 function drawTopper(ctx,cx, y, type, accent, finish){
   ctx.save(); ctx.translate(cx,y);
   let fill = accent;
@@ -482,27 +561,20 @@ function drawTopper(ctx,cx, y, type, accent, finish){
   ctx.fillStyle=fill; ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth=2;
   if(type==='heart'){
     ctx.beginPath();
-    ctx.moveTo(0,-6);
-    ctx.bezierCurveTo(40,-46,70,-8,0,40);
-    ctx.bezierCurveTo(-70,-8,-40,-46,0,-6);
-    ctx.fill(); ctx.stroke();
+    ctx.moveTo(0,-6); ctx.bezierCurveTo(40,-46,70,-8,0,40);
+    ctx.bezierCurveTo(-70,-8,-40,-46,0,-6); ctx.fill(); ctx.stroke();
   } else if(type==='star'){
     const R=40,r=18; ctx.beginPath();
     for(let i=0;i<10;i++){
-      const a=-Math.PI/2 + i*Math.PI/5;
-      const rad=i%2?r:R;
-      const x=Math.cos(a)*rad, y=Math.sin(a)*rad;
-      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      const a=-Math.PI/2 + i*Math.PI/5, rad=i%2?r:R;
+      const x=Math.cos(a)*rad, y=Math.sin(a)*rad; i?ctx.lineTo(x,y):ctx.moveTo(x,y);
     }
     ctx.closePath(); ctx.fill(); ctx.stroke();
   } else if(type==='ring'){
-    ctx.lineWidth=8;
-    ctx.beginPath(); ctx.arc(-22,10,30,0,Math.PI*2); ctx.stroke();
+    ctx.lineWidth=8; ctx.beginPath(); ctx.arc(-22,10,30,0,Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.arc(22,10,30,0,Math.PI*2); ctx.stroke();
   }
-  if(finish==='metallic'){
-    ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fill(); ctx.filter='none'; ctx.globalAlpha=1;
-  }
+  if(finish==='metallic'){ ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fill(); ctx.filter='none'; ctx.globalAlpha=1; }
   ctx.restore();
 }
 
@@ -517,8 +589,7 @@ function drawDrip(ctx,cx,topY,width,color,gloss){
     ctx.moveTo(dx, topY+36);
     ctx.bezierCurveTo(dx-5, topY+36+dh*0.3, dx-5, topY+36+dh*0.7, dx, topY+36+dh);
     ctx.bezierCurveTo(dx+5, topY+36+dh*0.7, dx+5, topY+36+dh*0.3, dx, topY+36);
-    ctx.closePath();
-    ctx.fill();
+    ctx.closePath(); ctx.fill();
   }
   if(gloss==='glossy'){
     ctx.globalAlpha=0.2; ctx.fillStyle='white';
@@ -541,16 +612,12 @@ function drawSprinkles(ctx,cx, y, w, accent){
 }
 
 function drawInscription(ctx,text,color,cx,y,w,finish){
-  ctx.save();
-  ctx.fillStyle = color; let size=44;
+  if(!text) return;
+  ctx.save(); ctx.fillStyle = color; let size=44;
   ctx.font = `800 ${size}px Inter, system-ui, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  while(ctx.measureText(text).width > w*1.6 && size>16){
-    size -= 2; ctx.font = `800 ${size}px Inter, system-ui, sans-serif`;
-  }
-  if(finish==='glossy'){
-    ctx.shadowColor='rgba(0,0,0,0.12)'; ctx.shadowBlur=8; ctx.shadowOffsetY=2;
-  }
+  while(ctx.measureText(text).width > w*1.6 && size>16){ size -= 2; ctx.font = `800 ${size}px Inter, system-ui, sans-serif`; }
+  if(finish==='glossy'){ ctx.shadowColor='rgba(0,0,0,0.12)'; ctx.shadowBlur=8; ctx.shadowOffsetY=2; }
   ctx.fillText(text, cx, y);
   ctx.restore();
 }
@@ -562,38 +629,28 @@ function drawCake(ctx,W,H,spec){
 
   const cx=W/2;
   let baseY = H - (spec.plate==='round'? 190 : 210);
-
-  // tiers
   let topTier=null;
+
   const tiers = spec.tierList.slice(0,spec.tiers);
   tiers.forEach((t,i)=>{
     const w = sizeToPx(t.size), h = tierH[t.size];
     const yTop = baseY - h;
 
-    // side with texture & light
     ctx.save();
-    ctx.beginPath();
-    rr(ctx,cx-w, yTop, w*2, h, 28);
-    ctx.clip();
+    ctx.beginPath(); rr(ctx,cx-w, yTop, w*2, h, 28); ctx.clip();
     fillTexture(ctx, cx-w, yTop, w*2, h, t.texture, t.color, spec.accent);
-
     const lg = ctx.createLinearGradient(cx-w, yTop, cx+w, yTop);
-    lg.addColorStop(0,'rgba(255,255,255,0.26)');
-    lg.addColorStop(0.5,'rgba(255,255,255,0)');
-    lg.addColorStop(1,'rgba(0,0,0,0.08)');
+    lg.addColorStop(0,'rgba(255,255,255,0.26)'); lg.addColorStop(0.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,0.08)');
     ctx.fillStyle=lg; ctx.fillRect(cx-w, yTop, w*2, h);
     ctx.restore();
     ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2; ctx.stroke();
 
-    // top
     ctx.save();
     ctx.fillStyle = t.color; ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.ellipse(cx, yTop, w, 22, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     if(spec.finish!=='velvet'){
       const tg = ctx.createLinearGradient(cx-w, yTop-22, cx+w, yTop+22);
-      tg.addColorStop(0,'rgba(255,255,255,0.25)');
-      tg.addColorStop(0.5,'rgba(255,255,255,0)');
-      tg.addColorStop(1,'rgba(255,255,255,0.2)');
+      tg.addColorStop(0,'rgba(255,255,255,0.25)'); tg.addColorStop(0.5,'rgba(255,255,255,0)'); tg.addColorStop(1,'rgba(255,255,255,0.2)');
       ctx.fillStyle=tg; ctx.beginPath(); ctx.ellipse(cx, yTop, w*0.95, 16, 0, 0, Math.PI*2); ctx.fill();
     }
     ctx.restore();
@@ -602,11 +659,21 @@ function drawCake(ctx,W,H,spec){
     if(i===tiers.length-1) topTier = {cx, yTop, w, h};
   });
 
-  // frosting & inscription on top tier
   if(topTier){
     if(spec.drip) drawDrip(ctx, topTier.cx, topTier.yTop-8, topTier.w*0.98, spec.accent, spec.finish);
     if(spec.sprinkles) drawSprinkles(ctx, topTier.cx, topTier.yTop-6, topTier.w*0.95, spec.accent);
-    if(spec.inscription) drawInscription(ctx, spec.inscription.text, spec.inscription.color, topTier.cx, topTier.yTop + topTier.h*0.55, topTier.w, spec.finish);
+    drawInscription(ctx, spec.inscription?.text, spec.inscription?.color, topTier.cx, topTier.yTop + topTier.h*0.55, topTier.w, spec.finish);
+
+    // Personality face (on front wall of top tier)
+    if(spec.face && spec.face.enabled){
+      const faceY = topTier.yTop + topTier.h*0.42;
+      const eyeY = faceY - 24;
+      drawEyes(ctx, topTier.cx, eyeY, topTier.w, spec.face.eyes, spec.face.color);
+      if(spec.face.blush) drawBlush(ctx, topTier.cx, eyeY+8, topTier.w, spec.accent);
+      drawMouth(ctx, topTier.cx, faceY + 18, topTier.w, spec.face.mouth, spec.face.color);
+      if(spec.face.accessory) drawAccessory(ctx, topTier.cx, eyeY, topTier.w, spec.face.accessory, spec.accent);
+    }
+
     if(spec.topper!=='none') drawTopper(ctx, topTier.cx, topTier.yTop-24, spec.topper, spec.accent, spec.finish);
   }
 
@@ -616,20 +683,11 @@ function drawCake(ctx,W,H,spec){
     ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.rot); ctx.scale(it.scale,it.scale);
     ctx.globalAlpha = 0.95;
     ctx.save(); ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(6,8,10,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
-    switch(it.type){
-      case 'cherry': deco_cherry(ctx); break;
-      case 'berry': deco_blueberry(ctx); break;
-      case 'citrus': deco_citrus(ctx); break;
-      case 'shard': deco_shard(ctx); break;
-      case 'wafer': deco_wafer(ctx); break;
-      case 'macaron': deco_macaron(ctx); break;
-      case 'rosette': deco_rosette(ctx, spec.accent); break;
-    }
+    switch(it.type){ case 'cherry': deco_cherry(ctx); break; case 'berry': deco_blueberry(ctx); break; case 'citrus': deco_citrus(ctx); break; case 'shard': deco_shard(ctx); break; case 'wafer': deco_wafer(ctx); break; case 'macaron': deco_macaron(ctx); break; case 'rosette': deco_rosette(ctx, spec.accent); break; }
     ctx.restore();
   });
   ctx.restore();
 
-  // post-process
   addGrain(ctx,W,H,0.045);
 }
 
@@ -656,6 +714,38 @@ function chooseTexture(){
     {key:'stripe', w:+document.getElementById('wStripe').value||0},
     {key:'velvet', w:2}
   ]);
+}
+
+function choosePersonality(){
+  const wOn = +document.getElementById('wFacesOn').value||0;
+  const facesOn = Math.random() < (wOn/(wOn+1));
+  if(!facesOn) return {enabled:false};
+
+  const persona = chooseWeighted([
+    {key:'Sweetheart', w:+document.getElementById('wP_Sweetheart').value||0},
+    {key:'Party Animal', w:+document.getElementById('wP_Party').value||0},
+    {key:'Stoic', w:+document.getElementById('wP_Stoic').value||0},
+    {key:'Sassy', w:+document.getElementById('wP_Sassy').value||0},
+    {key:'Dreamer', w:+document.getElementById('wP_Dreamer').value||0},
+    {key:'Royal', w:+document.getElementById('wP_Royal').value||0},
+  ]);
+
+  const base = PERSONAS[persona];
+  const sunglassesOdds = clamp(+document.getElementById('faceAccessoryOdds').value||0, 0, 100)/100;
+
+  // derive details
+  let eyes = base.eyes, mouth = base.mouth, blush = !!base.blush, accessory = base.accessory;
+  // Chance to wink sometimes for Sweetheart/Sassy
+  if(['Sweetheart','Sassy'].includes(persona) && Math.random()<0.15) eyes='wink';
+  // Party Animal sunglasses chance
+  if(persona==='Party Animal' && Math.random()<Math.max(0.35, sunglassesOdds)) accessory='sunglasses';
+  // Royal always crown; sunglasses rarely override
+  if(persona==='Royal'){
+    accessory='crown';
+    if(Math.random()<0.08) accessory='sunglasses';
+  }
+
+  return { enabled:true, persona, eyes, mouth, blush, accessory, color:'#1f2937' };
 }
 
 function randomSpec(W,H){
@@ -688,6 +778,7 @@ function randomSpec(W,H){
 
   const inscription = Math.random()<0.35 ? {text: randFrom(['Happy Day!','Sweet Life','Celebrate','With Love','Congrats!']), color: pal.text} : null;
 
+  // decor items
   const pool = [
     ['cherry', +document.getElementById('wCherry').value||0],
     ['berry', +document.getElementById('wBerry').value||0],
@@ -713,17 +804,21 @@ function randomSpec(W,H){
   const finish = document.getElementById('finish').value;
   const bg = document.getElementById('bgTheme').value;
   const plate = Math.random()<0.35 ? 'stand' : 'round';
+  const face = choosePersonality();
 
   return {
     plate, tiers, tierList, topper, accent: pal.accent,
-    drip, sprinkles, inscription, items, finish, bg, paletteKey: pal.key
+    drip, sprinkles, inscription, items, finish, bg, paletteKey: pal.key,
+    face
   };
 }
 
 function fingerprint(spec){
   const t = spec.tierList.slice(0, spec.tiers).map(t=>`${t.size}-${t.texture}-${t.color}`).join('|');
   const i = spec.items.map(x=>x.type).sort().join(',');
-  return `${spec.bg};${spec.finish};${spec.plate};${spec.tiers};${t};top:${spec.topper};dr:${spec.drip};sp:${spec.sprinkles};msg:${spec.inscription?spec.inscription.text:'_'};acc:${spec.accent};it:${i}`;
+  const faceFp = spec.face && spec.face.enabled ? `${spec.face.persona}-${spec.face.eyes}-${spec.face.mouth}-${spec.face.accessory}-${spec.face.blush?'b':'_'}`
+                                               : 'noface';
+  return `${spec.bg};${spec.finish};${spec.plate};${spec.tiers};${t};top:${spec.topper};dr:${spec.drip};sp:${spec.sprinkles};msg:${spec.inscription?spec.inscription.text:'_'};acc:${spec.accent};it:${i};face:${faceFp}`;
 }
 
 /* -------------------- UI / Generation -------------------- */
@@ -749,28 +844,21 @@ btnGen.addEventListener('click', async ()=>{
     do{
       spec = randomSpec(size, Math.round(size*0.75));
       fp = fingerprint(spec); tries++;
-      if(tries>60) break;
+      if(tries>80) break;
     }while(seen.has(fp));
     seen.add(fp);
     specs.push(spec);
 
-    // ---- Patched preview: use <img> from canvas pixels (no cloneNode) ----
+    // preview (use <img> from canvas pixels)
     if(i<6){
       const c=document.createElement('canvas'); c.width=size; c.height=Math.round(size*0.75);
-      const cctx=c.getContext('2d');
-      drawCake(cctx, c.width, c.height, spec);
-
-      const img = new Image();
-      img.src = c.toDataURL('image/png'); // ✅ copy actual pixels
+      const cctx=c.getContext('2d'); drawCake(cctx, c.width, c.height, spec);
+      const img = new Image(); img.src = c.toDataURL('image/png');
 
       const card=document.createElement('div'); card.className='card';
       const tag=document.createElement('div'); tag.style.padding='8px';
       tag.innerHTML=`<span class="badge-mini">#${startId+i}</span> <span class="muted">${name}</span>`;
-
-      card.appendChild(img);
-      card.appendChild(tag);
-      previewEl.appendChild(card);
-
+      card.appendChild(img); card.appendChild(tag); previewEl.appendChild(card);
       await new Promise(r=>setTimeout(r,0));
     }
 
@@ -793,15 +881,25 @@ btnGen.addEventListener('click', async ()=>{
       {trait_type:'Drip', value: spec.drip? 'On':'Off'},
       {trait_type:'Sprinkles', value: spec.sprinkles? 'On':'Off'},
       {trait_type:'Accent', value: spec.accent},
-      {trait_type:'Inscription', value: spec.inscription? spec.inscription.text : 'None'},
-      ...(['cherry','berry','citrus','shard','wafer','macaron','rosette'].map(type=>({
-        trait_type:`Decor: ${type}`, value: spec.items.filter(i=>i.type===type).length
-      })))
+      {trait_type:'Inscription', value: spec.inscription? spec.inscription.text : 'None'}
     ];
+
+    if(spec.face && spec.face.enabled){
+      attrs.push(
+        {trait_type:'Personality', value: spec.face.persona},
+        {trait_type:'Eyes', value: spec.face.eyes},
+        {trait_type:'Mouth', value: spec.face.mouth},
+        {trait_type:'Blush', value: spec.face.blush? 'On':'Off'},
+        {trait_type:'Accessory', value: spec.face.accessory ? spec.face.accessory : 'None'}
+      );
+    } else {
+      attrs.push({trait_type:'Personality', value:'None'});
+    }
+
     return {
       tokenId,
       name: `${name} #${tokenId}`,
-      description: "CakeBuds Artisan Series — richly lit, textured cakes generated on-canvas. Crafted backgrounds, materials, and patisserie decor for unique pieces.",
+      description: "CakeBuds Character Series — textured, cinematic cakes with adorable faces and personalities. Generated fully in-browser.",
       image: `ipfs://REPLACE_WITH_CID/images/${tokenId}.png`,
       attributes: attrs
     };
