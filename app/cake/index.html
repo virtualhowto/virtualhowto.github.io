@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CakeBuds · Designer Cake Studio — Design Your Own Cake Online</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Design your own custom cake online with CakeBuds. Choose tiers, colors, decorations, and a topper. Preview instantly and download or share your design." />
+  <link rel="canonical" href="https://example.com/cakebuds-designer" />
+  <meta property="og:title" content="CakeBuds · Designer Cake Studio" />
+  <meta property="og:description" content="Design a custom cake in your browser — tiers, colors, toppers, sprinkles, and more. Download or share in one click." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='48'%3E🎂%3C/text%3E%3C/svg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --brand:#10b981; --brand-ink:#064e3b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink); background:var(--bg);
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    header{
+      display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap
+    }
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo-badge{
+      width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+      background:linear-gradient(135deg,#34d399,#10b981);
+      color:white;font-size:22px;box-shadow:0 8px 24px rgba(16,185,129,.25)
+    }
+    .title{font-weight:800;letter-spacing:.2px}
+    .subtitle{color:var(--muted);font-size:14px}
+    .cta{
+      display:inline-flex;align-items:center;gap:10px;background:var(--brand);color:white;
+      padding:10px 14px;border-radius:12px;font-weight:600;border:1px solid #0ea37f; text-decoration:none
+    }
+    .hero{
+      margin:18px 0 22px;border:1px solid var(--line);border-radius:18px;padding:18px 18px;
+      background:linear-gradient(180deg,#fafafa, #fff)
+    }
+    .grid{
+      display:grid;grid-template-columns:1.2fr 1fr;gap:18px;
+    }
+    @media (max-width:960px){ .grid{grid-template-columns:1fr;}}
+    .panel{
+      border:1px solid var(--line);border-radius:16px; padding:16px; background:white;
+    }
+    h2{font-size:18px;margin:0 0 10px 0}
+    .controls{display:grid;gap:12px}
+    .group{border:1px dashed #e6e9ef;border-radius:12px;padding:12px}
+    .group h3{margin:0 0 8px 0;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+    label{font-size:14px;color:#0f172a;display:block;margin-bottom:6px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:640px){ .row{grid-template-columns:1fr}}
+    input[type="text"], select{
+      width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font:inherit;
+      background:#fff;
+    }
+    input[type="color"]{width:100%;height:42px;border:1px solid var(--line);border-radius:8px;padding:0}
+    input[type="range"]{width:100%}
+    .toggle{display:flex;align-items:center;gap:8px}
+    .toggle input{transform:scale(1.15)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    button, .ghost{
+      appearance:none;border:1px solid var(--line);background:#fff;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:600
+    }
+    button.primary{background:var(--brand);border-color:#0ea37f;color:#fff}
+    canvas{
+      width:100%; height:auto; display:block; background:
+        radial-gradient(1200px 600px at 50% 0%, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%);
+      border-radius:14px; border:1px solid var(--line)
+    }
+    footer{margin-top:24px;color:var(--muted);font-size:13px;text-align:center}
+    .note{color:var(--muted);font-size:12px}
+    .pill{display:inline-block;padding:4px 10px;border-radius:9999px;background:#ecfdf5;color:#065f46;font-weight:600;font-size:12px;border:1px solid #a7f3d0}
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"WebSite",
+    "name":"CakeBuds",
+    "url":"https://example.com/cakebuds-designer",
+    "potentialAction":{
+      "@type":"SearchAction",
+      "target":"https://example.com/cakebuds-designer?q={search_term_string}",
+      "query-input":"required name=search_term_string"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="logo-badge">🎂</div>
+        <div>
+          <div class="title">CakeBuds</div>
+          <div class="subtitle">Designer Cake Studio</div>
+        </div>
+      </div>
+      <a class="cta" href="#studio" title="Jump to Studio">Start Designing</a>
+    </header>
+
+    <section class="hero">
+      <div style="display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap">
+        <div>
+          <h1 style="margin:0 0 8px 0;font-size:28px;letter-spacing:.2px;">Design your cake — simple, elegant, instant.</h1>
+          <p style="margin:0;color:var(--muted);max-width:52ch">
+            Choose tiers, colors, decorations, and a topper. Preview live, <span class="pill">Download PNG</span> or <span class="pill">Share Link</span>.
+            Perfect for bakers, stylists, and sweet dreamers.
+          </p>
+        </div>
+        <div class="note">SEO: custom cake planner · online cake designer · cake mockup generator</div>
+      </div>
+    </section>
+
+    <section id="studio" class="grid">
+      <!-- Preview Panel -->
+      <div class="panel">
+        <h2>Live Preview</h2>
+        <canvas id="cake" width="1200" height="900" aria-label="Cake preview canvas"></canvas>
+        <div class="actions">
+          <button class="primary" id="downloadBtn">Download PNG</button>
+          <button id="copyLinkBtn">Copy Share Link</button>
+          <button class="ghost" id="resetBtn">Reset</button>
+        </div>
+        <p class="note">Tip: Your design is encoded in the URL — paste it anywhere to reopen exactly as-is.</p>
+      </div>
+
+      <!-- Controls Panel -->
+      <div class="panel">
+        <h2>Studio Controls</h2>
+        <div class="controls" id="controls">
+          <div class="group">
+            <h3>Base</h3>
+            <div class="row">
+              <div>
+                <label for="plate">Plate / Stand</label>
+                <select id="plate">
+                  <option value="round">Round Plate</option>
+                  <option value="stand">Pedestal Stand</option>
+                </select>
+              </div>
+              <div>
+                <label for="tiers">Number of Tiers</label>
+                <select id="tiers">
+                  <option value="1">1 Tier</option>
+                  <option value="2" selected>2 Tiers</option>
+                  <option value="3">3 Tiers</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3>Tier Sizes & Colors</h3>
+            <div class="row">
+              <div>
+                <label for="tier1Size">Tier 1 (bottom) size</label>
+                <select id="tier1Size">
+                  <option value="L" selected>Large</option>
+                  <option value="M">Medium</option>
+                  <option value="S">Small</option>
+                </select>
+              </div>
+              <div>
+                <label for="tier1Color">Tier 1 color</label>
+                <input type="color" id="tier1Color" value="#f1e4f9" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="tier2Size">Tier 2 (middle) size</label>
+                <select id="tier2Size">
+                  <option value="M" selected>Medium</option>
+                  <option value="S">Small</option>
+                </select>
+              </div>
+              <div>
+                <label for="tier2Color">Tier 2 color</label>
+                <input type="color" id="tier2Color" value="#ffe4e6" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="tier3Size">Tier 3 (top) size</label>
+                <select id="tier3Size">
+                  <option value="S" selected>Small</option>
+                </select>
+              </div>
+              <div>
+                <label for="tier3Color">Tier 3 color</label>
+                <input type="color" id="tier3Color" value="#e0f2fe" />
+              </div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3>Decorations</h3>
+            <div class="row">
+              <div>
+                <label for="accentColor">Accent (drip/sprinkles)</label>
+                <input type="color" id="accentColor" value="#8b5cf6" />
+              </div>
+              <div class="toggle" style="margin-top:26px">
+                <input type="checkbox" id="drip" checked><label for="drip">Chocolate Drip</label>
+              </div>
+            </div>
+            <div class="row">
+              <div class="toggle">
+                <input type="checkbox" id="sprinkles" checked><label for="sprinkles">Sprinkles</label>
+              </div>
+              <div>
+                <label for="topper">Topper</label>
+                <select id="topper">
+                  <option value="none">None</option>
+                  <option value="heart" selected>Heart</option>
+                  <option value="star">Star</option>
+                  <option value="ring">Rings</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3>Inscription</h3>
+            <div class="row">
+              <div>
+                <label for="inscription">Text</label>
+                <input type="text" id="inscription" placeholder="Happy Birthday!" value="Happy Birthday!" maxlength="22">
+              </div>
+              <div>
+                <label for="inscriptionColor">Text Color</label>
+                <input type="color" id="inscriptionColor" value="#1f2937" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      © <span id="year"></span> CakeBuds — Made with ❤️ for bakers & cake lovers.
+    </footer>
+  </div>
+
+  <script>
+    // --- State & URL helpers -------------------------------------------------
+    const $ = (id)=>document.getElementById(id);
+    const controls = [
+      'plate','tiers','tier1Size','tier1Color','tier2Size','tier2Color','tier3Size','tier3Color',
+      'accentColor','drip','sprinkles','topper','inscription','inscriptionColor'
+    ];
+    function readState(){
+      const s = {
+        plate: $('plate').value,
+        tiers: +$('tiers').value,
+        t1Size: $('tier1Size').value, t1Color: $('tier1Color').value,
+        t2Size: $('tier2Size').value, t2Color: $('tier2Color').value,
+        t3Size: $('tier3Size').value, t3Color: $('tier3Color').value,
+        accent: $('accentColor').value,
+        drip: $('drip').checked, sprinkles: $('sprinkles').checked,
+        topper: $('topper').value,
+        inscription: $('inscription').value,
+        inscriptionColor: $('inscriptionColor').value
+      };
+      return s;
+    }
+    function applyState(s){
+      $('plate').value = s.plate ?? 'round';
+      $('tiers').value = s.tiers ?? 2;
+      $('tier1Size').value = s.t1Size ?? 'L'; $('tier1Color').value = s.t1Color ?? '#f1e4f9';
+      $('tier2Size').value = s.t2Size ?? 'M'; $('tier2Color').value = s.t2Color ?? '#ffe4e6';
+      $('tier3Size').value = s.t3Size ?? 'S'; $('tier3Color').value = s.t3Color ?? '#e0f2fe';
+      $('accentColor').value = s.accent ?? '#8b5cf6';
+      $('drip').checked = !!s.drip; $('sprinkles').checked = !!s.sprinkles;
+      $('topper').value = s.topper ?? 'heart';
+      $('inscription').value = s.inscription ?? 'Happy Birthday!';
+      $('inscriptionColor').value = s.inscriptionColor ?? '#1f2937';
+    }
+    function encodeState(s){
+      return new URLSearchParams({
+        plate:s.plate, tiers:s.tiers,
+        t1:s.t1Size+':'+s.t1Color, t2:s.t2Size+':'+s.t2Color, t3:s.t3Size+':'+s.t3Color,
+        accent:s.accent, drip:s.drip?1:0, spr:s.sprinkles?1:0, top:s.topper,
+        msg:s.inscription, msgc:s.inscriptionColor
+      }).toString();
+    }
+    function decodeState(qs){
+      const p = new URLSearchParams(qs);
+      const parseTier=(v,defS,defC)=>{ if(!v) return [defS,defC]; const [s,c]=String(v).split(':'); return [s||defS,c||defC]; };
+      const [t1s,t1c]=parseTier(p.get('t1'),'L','#f1e4f9');
+      const [t2s,t2c]=parseTier(p.get('t2'),'M','#ffe4e6');
+      const [t3s,t3c]=parseTier(p.get('t3'),'S','#e0f2fe');
+      return {
+        plate:p.get('plate')||'round',
+        tiers:+(p.get('tiers')||2),
+        t1Size:t1s, t1Color:t1c, t2Size:t2s, t2Color:t2c, t3Size:t3s, t3Color:t3c,
+        accent:p.get('accent')||'#8b5cf6',
+        drip:(p.get('drip')||'1')==='1', sprinkles:(p.get('spr')||'1')==='1',
+        topper:p.get('top')||'heart',
+        inscription:p.get('msg')||'Happy Birthday!',
+        inscriptionColor:p.get('msgc')||'#1f2937'
+      };
+    }
+
+    // --- Drawing -------------------------------------------------------------
+    const canvas = $('cake'); const ctx = canvas.getContext('2d');
+
+    function sizeToPx(size){ // base radius in px
+      return size==='L'? 240 : size==='M'? 190 : 140;
+    }
+
+    function drawPlate(plate){
+      const w=canvas.width, h=canvas.height, cx=w/2;
+      if(plate==='round'){
+        // plate
+        ctx.save();
+        ctx.translate(cx, h-140);
+        ctx.fillStyle = '#f3f4f6';
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 320, 36, 0, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      } else {
+        // pedestal stand
+        ctx.save();
+        ctx.translate(cx, h-170);
+        ctx.fillStyle = '#f3f4f6';
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 4;
+        // top plate
+        ctx.beginPath(); ctx.ellipse(0,0,320,30,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        // stem
+        ctx.beginPath();
+        ctx.moveTo(-40,10); ctx.bezierCurveTo(-30,80,-30,120,-10,160);
+        ctx.lineTo(10,160); ctx.bezierCurveTo(30,120,30,80,40,10);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // base
+        ctx.beginPath(); ctx.ellipse(0,170,110,16,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function roundedRect(x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+w,y,x+w,y+h,r);
+      ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r);
+      ctx.arcTo(x,y,x+w,y,r);
+      ctx.closePath();
+    }
+
+    function drawDripLayer(cx, topY, width, height, color){
+      // simple scalloped drip
+      ctx.save();
+      ctx.fillStyle = color;
+      roundedRect(cx - width, topY, width*2, height, 18);
+      ctx.fill();
+      // drips
+      const drops = Math.max(6, Math.floor(width/40));
+      for(let i=0;i<drops;i++){
+        const dx = cx - width + 20 + i*((width*2-40)/(drops-1));
+        const dh = 20 + Math.random()*28;
+        ctx.beginPath();
+        ctx.moveTo(dx, topY+height);
+        ctx.bezierCurveTo(dx-6, topY+height+dh*0.3, dx-6, topY+height+dh*0.7, dx, topY+height+dh);
+        ctx.bezierCurveTo(dx+6, topY+height+dh*0.7, dx+6, topY+height+dh*0.3, dx, topY+height);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawSprinkles(cx, topY, width, color){
+      const colors = [color, '#f59e0b', '#ef4444', '#10b981', '#3b82f6'];
+      const count = Math.floor(width/4);
+      for(let i=0;i<count;i++){
+        const x = cx - width + 10 + Math.random()*(width*2-20);
+        const y = topY + 16 + Math.random()*32;
+        const ang = Math.random()*Math.PI;
+        ctx.save();
+        ctx.translate(x,y); ctx.rotate(ang);
+        ctx.fillStyle = colors[i%colors.length];
+        roundedRect(-6,-2,12,4,2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawTopper(cx, y, type, color){
+      ctx.save();
+      ctx.translate(cx, y);
+      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=6;
+      if(type==='heart'){
+        ctx.beginPath();
+        ctx.moveTo(0,-6);
+        ctx.bezierCurveTo(40,-46,70,-8,0,40);
+        ctx.bezierCurveTo(-70,-8,-40,-46,0,-6);
+        ctx.fill();
+      } else if(type==='star'){
+        const R=40,r=18; ctx.beginPath();
+        for(let i=0;i<10;i++){
+          const a = -Math.PI/2 + i*Math.PI/5;
+          const rad = i%2? r : R;
+          const x = Math.cos(a)*rad, y = Math.sin(a)*rad;
+          i? ctx.lineTo(x,y): ctx.moveTo(x,y);
+        }
+        ctx.closePath(); ctx.fill();
+      } else if(type==='ring'){
+        ctx.lineWidth=8;
+        ctx.beginPath(); ctx.arc(-22,10,30,0,Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(22,10,30,0,Math.PI*2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawInscription(text, color, cx, y, w){
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 44px Inter, system-ui, sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      // fit text
+      let size=44;
+      while(ctx.measureText(text).width > w*1.6 && size>16){
+        size -= 2; ctx.font = `bold ${size}px Inter, system-ui, sans-serif`;
+      }
+      ctx.fillText(text, cx, y);
+      ctx.restore();
+    }
+
+    function render(){
+      const s = readState();
+      // clear
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      // subtle floor ellipse
+      ctx.save();
+      ctx.fillStyle = '#eef2f7';
+      ctx.beginPath(); ctx.ellipse(canvas.width/2, canvas.height-80, 420, 30, 0, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+
+      drawPlate(s.plate);
+
+      const cx = canvas.width/2;
+      let baseY = canvas.height - (s.plate==='round'? 190 : 210);
+      const tiers = Math.min(3, Math.max(1, s.tiers));
+
+      const tiersData = [
+        {size:s.t1Size, color:s.t1Color},
+        {size:s.t2Size, color:s.t2Color},
+        {size:s.t3Size, color:s.t3Color},
+      ].slice(0, tiers);
+
+      // draw each tier (bottom to top)
+      const tierHeights = {L: 220, M: 190, S: 160};
+      tiersData.forEach((t,i)=>{
+        const w = sizeToPx(t.size);
+        const h = tierHeights[t.size];
+        const yTop = baseY - h;
+
+        // cake body
+        const topEllipseH = 22;
+        // side
+        ctx.save();
+        ctx.fillStyle = t.color; ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 3;
+        roundedRect(cx - w, yTop, w*2, h, 28);
+        ctx.fill(); ctx.stroke();
+        // top shine
+        ctx.globalAlpha=.5;
+        const grad = ctx.createLinearGradient(cx - w, yTop, cx + w, yTop);
+        grad.addColorStop(0, 'rgba(255,255,255,.35)');
+        grad.addColorStop(.5, 'rgba(255,255,255,0)');
+        grad.addColorStop(1, 'rgba(255,255,255,.2)');
+        ctx.fillStyle = grad;
+        roundedRect(cx - w, yTop, w*2, h*0.5, 28);
+        ctx.fill();
+        ctx.restore();
+
+        // top ellipse for 3D feel
+        ctx.save();
+        ctx.fillStyle = t.color; ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(cx, yTop, w, topEllipseH, 0, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+
+        // decorations per tier
+        if(s.drip && i===0){ // drip only on topmost visible tier (last drawn)
+          // actually apply on the uppermost tier
+        }
+        if(s.drip && i===tiersData.length-1){
+          drawDripLayer(cx, yTop-8, w*0.98, 36, s.accent);
+        }
+        if(s.sprinkles && i===tiersData.length-1){
+          drawSprinkles(cx, yTop-6, w*0.95, s.accent);
+        }
+
+        // inscription on middle of top tier's side
+        if(i===tiersData.length-1 && (s.inscription||'').trim()){
+          drawInscription(s.inscription, s.inscriptionColor, cx, yTop + h*0.55, w);
+        }
+
+        // update for next tier
+        baseY = yTop - 26; // spacing between tiers
+      });
+
+      // topper
+      const topTier = tiersData[tiersData.length-1];
+      if(topTier && s.topper!=='none'){
+        const topY = baseY + 12;
+        drawTopper(cx, topY, s.topper, s.accent);
+      }
+    }
+
+    // --- Wiring --------------------------------------------------------------
+    controls.forEach(id=>{
+      const el = $(id);
+      if(!el) return;
+      el.addEventListener(el.type==='checkbox' ? 'change' : 'input', ()=>{
+        render();
+        updateUrl();
+      });
+    });
+
+    function updateUrl(){
+      const qs = encodeState(readState());
+      const url = location.pathname + '?' + qs + location.hash;
+      history.replaceState(null,'',url);
+    }
+
+    function loadFromUrl(){
+      const s = decodeState(location.search.slice(1));
+      applyState(s);
+      render();
+    }
+
+    $('downloadBtn').addEventListener('click', ()=>{
+      const link = document.createElement('a');
+      link.download = 'cakebuds-design.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    $('copyLinkBtn').addEventListener('click', async ()=>{
+      const url = location.href;
+      try{
+        await navigator.clipboard.writeText(url);
+        const b = $('copyLinkBtn'); const old = b.textContent;
+        b.textContent='Copied!'; setTimeout(()=>b.textContent=old,1200);
+      }catch(e){ alert('Copy failed. Select and copy from the address bar instead.'); }
+    });
+
+    $('resetBtn').addEventListener('click', ()=>{
+      applyState({
+        plate:'round', tiers:2,
+        t1Size:'L', t1Color:'#f1e4f9',
+        t2Size:'M', t2Color:'#ffe4e6',
+        t3Size:'S', t3Color:'#e0f2fe',
+        accent:'#8b5cf6', drip:true, sprinkles:true, topper:'heart',
+        inscription:'Happy Birthday!', inscriptionColor:'#1f2937'
+      });
+      updateUrl(); render();
+    });
+
+    // Init
+    $('year').textContent = new Date().getFullYear();
+    loadFromUrl();
+    // Re-render occasionally to keep drip randomness fresh if user tweaks
+    // (drips are re-randomized on every render)
+  </script>
+</body>
+</html>
