@@ -1,582 +1,733 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>CakeBuds · Designer Cake Studio — Design Your Own Cake Online</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Design your own custom cake online with CakeBuds. Choose tiers, colors, decorations, and a topper. Preview instantly and download or share your design." />
-  <link rel="canonical" href="https://example.com/cakebuds-designer" />
-  <meta property="og:title" content="CakeBuds · Designer Cake Studio" />
-  <meta property="og:description" content="Design a custom cake in your browser — tiers, colors, toppers, sprinkles, and more. Download or share in one click." />
-  <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#ffffff">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='48'%3E🎂%3C/text%3E%3C/svg%3E">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
-  <style>
-    :root{
-      --bg:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --brand:#10b981; --brand-ink:#064e3b;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
-      color:var(--ink); background:var(--bg);
-    }
-    .wrap{max-width:1100px;margin:0 auto;padding:24px}
-    header{
-      display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap
-    }
-    .logo{display:flex;align-items:center;gap:12px}
-    .logo-badge{
-      width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
-      background:linear-gradient(135deg,#34d399,#10b981);
-      color:white;font-size:22px;box-shadow:0 8px 24px rgba(16,185,129,.25)
-    }
-    .title{font-weight:800;letter-spacing:.2px}
-    .subtitle{color:var(--muted);font-size:14px}
-    .cta{
-      display:inline-flex;align-items:center;gap:10px;background:var(--brand);color:white;
-      padding:10px 14px;border-radius:12px;font-weight:600;border:1px solid #0ea37f; text-decoration:none
-    }
-    .hero{
-      margin:18px 0 22px;border:1px solid var(--line);border-radius:18px;padding:18px 18px;
-      background:linear-gradient(180deg,#fafafa, #fff)
-    }
-    .grid{
-      display:grid;grid-template-columns:1.2fr 1fr;gap:18px;
-    }
-    @media (max-width:960px){ .grid{grid-template-columns:1fr;}}
-    .panel{
-      border:1px solid var(--line);border-radius:16px; padding:16px; background:white;
-    }
-    h2{font-size:18px;margin:0 0 10px 0}
-    .controls{display:grid;gap:12px}
-    .group{border:1px dashed #e6e9ef;border-radius:12px;padding:12px}
-    .group h3{margin:0 0 8px 0;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-    label{font-size:14px;color:#0f172a;display:block;margin-bottom:6px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:640px){ .row{grid-template-columns:1fr}}
-    input[type="text"], select{
-      width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font:inherit;
-      background:#fff;
-    }
-    input[type="color"]{width:100%;height:42px;border:1px solid var(--line);border-radius:8px;padding:0}
-    input[type="range"]{width:100%}
-    .toggle{display:flex;align-items:center;gap:8px}
-    .toggle input{transform:scale(1.15)}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    button, .ghost{
-      appearance:none;border:1px solid var(--line);background:#fff;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:600
-    }
-    button.primary{background:var(--brand);border-color:#0ea37f;color:#fff}
-    canvas{
-      width:100%; height:auto; display:block; background:
-        radial-gradient(1200px 600px at 50% 0%, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%);
-      border-radius:14px; border:1px solid var(--line)
-    }
-    footer{margin-top:24px;color:var(--muted);font-size:13px;text-align:center}
-    .note{color:var(--muted);font-size:12px}
-    .pill{display:inline-block;padding:4px 10px;border-radius:9999px;background:#ecfdf5;color:#065f46;font-weight:600;font-size:12px;border:1px solid #a7f3d0}
-  </style>
-
-  <script type="application/ld+json">
-  {
-    "@context":"https://schema.org",
-    "@type":"WebSite",
-    "name":"CakeBuds",
-    "url":"https://example.com/cakebuds-designer",
-    "potentialAction":{
-      "@type":"SearchAction",
-      "target":"https://example.com/cakebuds-designer?q={search_term_string}",
-      "query-input":"required name=search_term_string"
-    }
+<meta charset="utf-8" />
+<title>CakeBuds · Drag-and-Drop Cake Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Design your own cake with drag-and-drop decorations. Choose tiers, colors, drips, toppers and place strawberries, flowers, macarons and more. Download or share." />
+<meta name="theme-color" content="#10b981">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+    --brand:#10b981; --brand-ink:#064e3b;
   }
-  </script>
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:10px}
+  .badge{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;font-size:22px;box-shadow:0 8px 24px rgba(16,185,129,.25)}
+  .subtitle{color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:14px}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px}
+  h2{font-size:16px;margin:0 0 10px}
+  .stage{
+    position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    background: radial-gradient(1200px 600px at 50% 0%, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%);
+    min-height:300px;
+  }
+  canvas{display:block;width:100%;height:auto}
+  /* Overlay handles */
+  .overlay{position:absolute; inset:0; pointer-events:none}
+  .handle{position:absolute; width:16px;height:16px;border-radius:50%; border:2px solid #111827;background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.25); pointer-events:auto}
+  .handle.rotate{cursor:grab}
+  .handle.scale{cursor:nwse-resize}
+  .bbox{position:absolute;border:2px dashed #111827; border-radius:6px; pointer-events:none}
+  .pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-weight:600;font-size:12px}
+  .controls{display:grid;gap:10px}
+  .group{border:1px dashed #e6e9ef;border-radius:12px;padding:12px}
+  .group h3{margin:0 0 8px 0;font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:600px){.row{grid-template-columns:1fr}}
+  label{font-size:14px;margin-bottom:4px;display:block}
+  select,input[type="text"]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  input[type="color"]{width:100%;height:40px;border:1px solid var(--line);border-radius:8px;padding:0}
+  .toggle{display:flex;align-items:center;gap:8px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{appearance:none;border:1px solid var(--line);background:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
+  .primary{background:var(--brand);border-color:#0ea37f;color:#fff}
+  /* Palette */
+  .palette{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 10px;cursor:pointer;user-select:none}
+  .chip:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  .muted{color:var(--muted);font-size:12px}
+  footer{margin-top:16px;color:var(--muted);font-size:12px;text-align:center}
+  .hint{font-size:12px;color:var(--muted)}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="logo">
-        <div class="logo-badge">🎂</div>
-        <div>
-          <div class="title">CakeBuds</div>
-          <div class="subtitle">Designer Cake Studio</div>
-        </div>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="badge">🎂</div>
+      <div>
+        <div style="font-weight:800">CakeBuds</div>
+        <div class="subtitle">Drag-and-Drop Cake Studio</div>
       </div>
-      <a class="cta" href="#studio" title="Jump to Studio">Start Designing</a>
-    </header>
+    </div>
+    <div class="subtitle">Tip: <span class="pill">Drag</span> to move · <span class="pill">Rotate</span>/<span class="pill">Scale</span> via handles · <span class="pill">Del</span> to delete</div>
+  </header>
 
-    <section class="hero">
-      <div style="display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap">
-        <div>
-          <h1 style="margin:0 0 8px 0;font-size:28px;letter-spacing:.2px;">Design your cake — simple, elegant, instant.</h1>
-          <p style="margin:0;color:var(--muted);max-width:52ch">
-            Choose tiers, colors, decorations, and a topper. Preview live, <span class="pill">Download PNG</span> or <span class="pill">Share Link</span>.
-            Perfect for bakers, stylists, and sweet dreamers.
-          </p>
-        </div>
-        <div class="note">SEO: custom cake planner · online cake designer · cake mockup generator</div>
+  <div class="grid">
+    <!-- Left: Stage -->
+    <div class="panel">
+      <h2>Live Studio</h2>
+      <div id="stage" class="stage" aria-label="Cake design stage">
+        <canvas id="cake" width="1200" height="900"></canvas>
+        <div class="overlay" id="overlay" aria-hidden="true"></div>
       </div>
-    </section>
-
-    <section id="studio" class="grid">
-      <!-- Preview Panel -->
-      <div class="panel">
-        <h2>Live Preview</h2>
-        <canvas id="cake" width="1200" height="900" aria-label="Cake preview canvas"></canvas>
-        <div class="actions">
-          <button class="primary" id="downloadBtn">Download PNG</button>
-          <button id="copyLinkBtn">Copy Share Link</button>
-          <button class="ghost" id="resetBtn">Reset</button>
-        </div>
-        <p class="note">Tip: Your design is encoded in the URL — paste it anywhere to reopen exactly as-is.</p>
+      <div class="actions">
+        <button class="primary" id="download">Download PNG</button>
+        <button id="share">Copy Share Link</button>
+        <button id="clear">Reset</button>
       </div>
+      <p class="hint">Snapping is enabled near tier centers. Export includes your decorations and text.</p>
+    </div>
 
-      <!-- Controls Panel -->
-      <div class="panel">
-        <h2>Studio Controls</h2>
-        <div class="controls" id="controls">
-          <div class="group">
-            <h3>Base</h3>
-            <div class="row">
-              <div>
-                <label for="plate">Plate / Stand</label>
-                <select id="plate">
-                  <option value="round">Round Plate</option>
-                  <option value="stand">Pedestal Stand</option>
-                </select>
-              </div>
-              <div>
-                <label for="tiers">Number of Tiers</label>
-                <select id="tiers">
-                  <option value="1">1 Tier</option>
-                  <option value="2" selected>2 Tiers</option>
-                  <option value="3">3 Tiers</option>
-                </select>
-              </div>
+    <!-- Right: Controls -->
+    <div class="panel">
+      <h2>Controls</h2>
+      <div class="controls">
+        <div class="group">
+          <h3>Base</h3>
+          <div class="row">
+            <div>
+              <label for="plate">Plate / Stand</label>
+              <select id="plate">
+                <option value="round">Round Plate</option>
+                <option value="stand">Pedestal Stand</option>
+              </select>
             </div>
-          </div>
-
-          <div class="group">
-            <h3>Tier Sizes & Colors</h3>
-            <div class="row">
-              <div>
-                <label for="tier1Size">Tier 1 (bottom) size</label>
-                <select id="tier1Size">
-                  <option value="L" selected>Large</option>
-                  <option value="M">Medium</option>
-                  <option value="S">Small</option>
-                </select>
-              </div>
-              <div>
-                <label for="tier1Color">Tier 1 color</label>
-                <input type="color" id="tier1Color" value="#f1e4f9" />
-              </div>
-            </div>
-            <div class="row">
-              <div>
-                <label for="tier2Size">Tier 2 (middle) size</label>
-                <select id="tier2Size">
-                  <option value="M" selected>Medium</option>
-                  <option value="S">Small</option>
-                </select>
-              </div>
-              <div>
-                <label for="tier2Color">Tier 2 color</label>
-                <input type="color" id="tier2Color" value="#ffe4e6" />
-              </div>
-            </div>
-            <div class="row">
-              <div>
-                <label for="tier3Size">Tier 3 (top) size</label>
-                <select id="tier3Size">
-                  <option value="S" selected>Small</option>
-                </select>
-              </div>
-              <div>
-                <label for="tier3Color">Tier 3 color</label>
-                <input type="color" id="tier3Color" value="#e0f2fe" />
-              </div>
-            </div>
-          </div>
-
-          <div class="group">
-            <h3>Decorations</h3>
-            <div class="row">
-              <div>
-                <label for="accentColor">Accent (drip/sprinkles)</label>
-                <input type="color" id="accentColor" value="#8b5cf6" />
-              </div>
-              <div class="toggle" style="margin-top:26px">
-                <input type="checkbox" id="drip" checked><label for="drip">Chocolate Drip</label>
-              </div>
-            </div>
-            <div class="row">
-              <div class="toggle">
-                <input type="checkbox" id="sprinkles" checked><label for="sprinkles">Sprinkles</label>
-              </div>
-              <div>
-                <label for="topper">Topper</label>
-                <select id="topper">
-                  <option value="none">None</option>
-                  <option value="heart" selected>Heart</option>
-                  <option value="star">Star</option>
-                  <option value="ring">Rings</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="group">
-            <h3>Inscription</h3>
-            <div class="row">
-              <div>
-                <label for="inscription">Text</label>
-                <input type="text" id="inscription" placeholder="Happy Birthday!" value="Happy Birthday!" maxlength="22">
-              </div>
-              <div>
-                <label for="inscriptionColor">Text Color</label>
-                <input type="color" id="inscriptionColor" value="#1f2937" />
-              </div>
+            <div>
+              <label for="tiers">Tiers</label>
+              <select id="tiers">
+                <option value="1">1 Tier</option>
+                <option value="2" selected>2 Tiers</option>
+                <option value="3">3 Tiers</option>
+              </select>
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <footer>
-      © <span id="year"></span> CakeBuds — Made with ❤️ for bakers & cake lovers.
-    </footer>
+        <div class="group">
+          <h3>Tier Sizes & Colors</h3>
+          <div class="row">
+            <div>
+              <label for="t1size">Tier 1 (bottom) size</label>
+              <select id="t1size">
+                <option value="L" selected>Large</option>
+                <option value="M">Medium</option>
+                <option value="S">Small</option>
+              </select>
+            </div>
+            <div>
+              <label for="t1color">Tier 1 color</label>
+              <input type="color" id="t1color" value="#f1e4f9"/>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="t2size">Tier 2 (middle) size</label>
+              <select id="t2size">
+                <option value="M" selected>Medium</option>
+                <option value="S">Small</option>
+              </select>
+            </div>
+            <div>
+              <label for="t2color">Tier 2 color</label>
+              <input type="color" id="t2color" value="#ffe4e6"/>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="t3size">Tier 3 (top) size</label>
+              <select id="t3size">
+                <option value="S" selected>Small</option>
+              </select>
+            </div>
+            <div>
+              <label for="t3color">Tier 3 color</label>
+              <input type="color" id="t3color" value="#e0f2fe"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Decor</h3>
+          <div class="row">
+            <div>
+              <label for="accent">Accent (drip/sprinkles)</label>
+              <input type="color" id="accent" value="#8b5cf6"/>
+            </div>
+            <div class="toggle" style="margin-top:26px">
+              <input type="checkbox" id="drip" checked />
+              <label for="drip">Chocolate Drip</label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="toggle">
+              <input type="checkbox" id="sprinkles" checked />
+              <label for="sprinkles">Sprinkles</label>
+            </div>
+            <div>
+              <label for="topper">Topper</label>
+              <select id="topper">
+                <option value="none">None</option>
+                <option value="heart" selected>Heart</option>
+                <option value="star">Star</option>
+                <option value="ring">Rings</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Inscription</h3>
+          <div class="row">
+            <div>
+              <label for="msg">Text</label>
+              <input type="text" id="msg" value="Happy Birthday!" maxlength="24" placeholder="Happy Birthday!"/>
+            </div>
+            <div>
+              <label for="msgc">Text color</label>
+              <input type="color" id="msgc" value="#1f2937"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Palette — Click to add, then drag on stage</h3>
+          <div class="palette" id="palette">
+            <div class="chip" data-type="strawberry">🍓 Strawberry</div>
+            <div class="chip" data-type="flower">🌸 Flower</div>
+            <div class="chip" data-type="macaron">🍬 Macaron</div>
+            <div class="chip" data-type="candle">🕯️ Candle</div>
+            <div class="chip" data-type="ribbon">🎀 Ribbon</div>
+          </div>
+          <div class="muted">Select an item on the cake to show its handles. Drag to move; use handles to rotate/scale. Press <strong>Delete</strong> to remove.</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script>
-    // --- State & URL helpers -------------------------------------------------
-    const $ = (id)=>document.getElementById(id);
-    const controls = [
-      'plate','tiers','tier1Size','tier1Color','tier2Size','tier2Color','tier3Size','tier3Color',
-      'accentColor','drip','sprinkles','topper','inscription','inscriptionColor'
-    ];
-    function readState(){
-      const s = {
-        plate: $('plate').value,
-        tiers: +$('tiers').value,
-        t1Size: $('tier1Size').value, t1Color: $('tier1Color').value,
-        t2Size: $('tier2Size').value, t2Color: $('tier2Color').value,
-        t3Size: $('tier3Size').value, t3Color: $('tier3Color').value,
-        accent: $('accentColor').value,
-        drip: $('drip').checked, sprinkles: $('sprinkles').checked,
-        topper: $('topper').value,
-        inscription: $('inscription').value,
-        inscriptionColor: $('inscriptionColor').value
-      };
-      return s;
-    }
-    function applyState(s){
-      $('plate').value = s.plate ?? 'round';
-      $('tiers').value = s.tiers ?? 2;
-      $('tier1Size').value = s.t1Size ?? 'L'; $('tier1Color').value = s.t1Color ?? '#f1e4f9';
-      $('tier2Size').value = s.t2Size ?? 'M'; $('tier2Color').value = s.t2Color ?? '#ffe4e6';
-      $('tier3Size').value = s.t3Size ?? 'S'; $('tier3Color').value = s.t3Color ?? '#e0f2fe';
-      $('accentColor').value = s.accent ?? '#8b5cf6';
-      $('drip').checked = !!s.drip; $('sprinkles').checked = !!s.sprinkles;
-      $('topper').value = s.topper ?? 'heart';
-      $('inscription').value = s.inscription ?? 'Happy Birthday!';
-      $('inscriptionColor').value = s.inscriptionColor ?? '#1f2937';
-    }
-    function encodeState(s){
-      return new URLSearchParams({
-        plate:s.plate, tiers:s.tiers,
-        t1:s.t1Size+':'+s.t1Color, t2:s.t2Size+':'+s.t2Color, t3:s.t3Size+':'+s.t3Color,
-        accent:s.accent, drip:s.drip?1:0, spr:s.sprinkles?1:0, top:s.topper,
-        msg:s.inscription, msgc:s.inscriptionColor
-      }).toString();
-    }
-    function decodeState(qs){
-      const p = new URLSearchParams(qs);
-      const parseTier=(v,defS,defC)=>{ if(!v) return [defS,defC]; const [s,c]=String(v).split(':'); return [s||defS,c||defC]; };
-      const [t1s,t1c]=parseTier(p.get('t1'),'L','#f1e4f9');
-      const [t2s,t2c]=parseTier(p.get('t2'),'M','#ffe4e6');
-      const [t3s,t3c]=parseTier(p.get('t3'),'S','#e0f2fe');
-      return {
-        plate:p.get('plate')||'round',
-        tiers:+(p.get('tiers')||2),
-        t1Size:t1s, t1Color:t1c, t2Size:t2s, t2Color:t2c, t3Size:t3s, t3Color:t3c,
-        accent:p.get('accent')||'#8b5cf6',
-        drip:(p.get('drip')||'1')==='1', sprinkles:(p.get('spr')||'1')==='1',
-        topper:p.get('top')||'heart',
-        inscription:p.get('msg')||'Happy Birthday!',
-        inscriptionColor:p.get('msgc')||'#1f2937'
-      };
-    }
+  <footer>© <span id="year"></span> CakeBuds — Made with ❤️ for bakers & cake lovers.</footer>
+</div>
 
-    // --- Drawing -------------------------------------------------------------
-    const canvas = $('cake'); const ctx = canvas.getContext('2d');
+<script>
+/* ------------------------------ Utilities -------------------------------- */
+const $ = (id)=>document.getElementById(id);
+const canvas = $('cake');
+const ctx = canvas.getContext('2d');
+const overlay = $('overlay');
+const stage = $('stage');
 
-    function sizeToPx(size){ // base radius in px
-      return size==='L'? 240 : size==='M'? 190 : 140;
+const stateControls = [
+  'plate','tiers','t1size','t1color','t2size','t2color','t3size','t3color',
+  'accent','drip','sprinkles','topper','msg','msgc'
+];
+
+function sizeToPx(s){ return s==='L'?240: s==='M'?190:140; }
+const tierHeight = {L:220, M:190, S:160};
+
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+/* ----------------------------- Core State -------------------------------- */
+const S = {
+  plate:'round',
+  tiers:2,
+  t1:{size:'L', color:'#f1e4f9'},
+  t2:{size:'M', color:'#ffe4e6'},
+  t3:{size:'S', color:'#e0f2fe'},
+  accent:'#8b5cf6',
+  drip:true, sprinkles:true, topper:'heart',
+  msg:'Happy Birthday!', msgc:'#1f2937',
+  items:[], // draggable: {id,type,x,y,scale,rot}
+  sel:null
+};
+
+/* ---------------------------- Encode / Decode ---------------------------- */
+function encodeState(){
+  const params = new URLSearchParams({
+    plate:S.plate, tiers:S.tiers,
+    t1: S.t1.size+':'+S.t1.color,
+    t2: S.t2.size+':'+S.t2.color,
+    t3: S.t3.size+':'+S.t3.color,
+    accent:S.accent, drip:S.drip?1:0, spr:S.sprinkles?1:0, top:S.topper,
+    msg:S.msg, msgc:S.msgc,
+    its: JSON.stringify(S.items.map(({id,type,x,y,scale,rot})=>[id,type,~~x,~~y,+(scale.toFixed(2)),+rot.toFixed(2)]))
+  });
+  return params.toString();
+}
+function decodeState(qs){
+  const p = new URLSearchParams(qs);
+  const parseTier=(v,defS,defC)=>{ if(!v) return [defS,defC]; const [s,c]=String(v).split(':'); return [s||defS,c||defC]; };
+  const [s1,c1]=parseTier(p.get('t1'),'L','#f1e4f9');
+  const [s2,c2]=parseTier(p.get('t2'),'M','#ffe4e6');
+  const [s3,c3]=parseTier(p.get('t3'),'S','#e0f2fe');
+  S.plate = p.get('plate')||'round';
+  S.tiers = +(p.get('tiers')||2);
+  S.t1 = {size:s1, color:c1};
+  S.t2 = {size:s2, color:c2};
+  S.t3 = {size:s3, color:c3};
+  S.accent = p.get('accent')||'#8b5cf6';
+  S.drip = (p.get('drip')||'1')==='1';
+  S.sprinkles = (p.get('spr')||'1')==='1';
+  S.topper = p.get('top')||'heart';
+  S.msg = p.get('msg')||'Happy Birthday!';
+  S.msgc = p.get('msgc')||'#1f2937';
+  try{
+    const arr = JSON.parse(p.get('its')||'[]');
+    S.items = arr.map(([id,type,x,y,scale,rot])=>({id,type,x,y,scale,rot}));
+  }catch{ S.items=[]; }
+}
+
+function updateUrl(){
+  const qs = encodeState();
+  history.replaceState(null,'',location.pathname+'?'+qs+location.hash);
+}
+
+function applyControls(){
+  $('plate').value = S.plate;
+  $('tiers').value = S.tiers;
+  $('t1size').value = S.t1.size; $('t1color').value = S.t1.color;
+  $('t2size').value = S.t2.size; $('t2color').value = S.t2.color;
+  $('t3size').value = S.t3.size; $('t3color').value = S.t3.color;
+  $('accent').value = S.accent;
+  $('drip').checked = S.drip;
+  $('sprinkles').checked = S.sprinkles;
+  $('topper').value = S.topper;
+  $('msg').value = S.msg;
+  $('msgc').value = S.msgc;
+}
+
+/* ------------------------------- Drawing --------------------------------- */
+function roundedRectPath(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function drawPlate(type){
+  const w=canvas.width, h=canvas.height, cx=w/2;
+  ctx.save();
+  if(type==='round'){
+    ctx.translate(cx, h-140);
+    ctx.fillStyle = '#f3f4f6'; ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.ellipse(0,0,320,36,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  }else{
+    ctx.translate(cx, h-170);
+    ctx.fillStyle = '#f3f4f6'; ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.ellipse(0,0,320,30,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-40,10); ctx.bezierCurveTo(-30,80,-30,120,-10,160);
+    ctx.lineTo(10,160); ctx.bezierCurveTo(30,120,30,80,40,10);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0,170,110,16,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawDripLayer(cx, topY, width, height, color){
+  ctx.save();
+  ctx.fillStyle = color;
+  roundedRectPath(cx - width, topY, width*2, height, 18);
+  ctx.fill();
+  const drops = Math.max(6, Math.floor(width/40));
+  for(let i=0;i<drops;i++){
+    const dx = cx - width + 20 + i*((width*2-40)/(drops-1));
+    const dh = 20 + Math.random()*28;
+    ctx.beginPath();
+    ctx.moveTo(dx, topY+height);
+    ctx.bezierCurveTo(dx-6, topY+height+dh*0.3, dx-6, topY+height+dh*0.7, dx, topY+height+dh);
+    ctx.bezierCurveTo(dx+6, topY+height+dh*0.7, dx+6, topY+height+dh*0.3, dx, topY+height);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawSprinkles(cx, topY, width, color){
+  const colors = [color, '#f59e0b', '#ef4444', '#10b981', '#3b82f6'];
+  const count = Math.floor(width/4);
+  for(let i=0;i<count;i++){
+    const x = cx - width + 10 + Math.random()*(width*2-20);
+    const y = topY + 16 + Math.random()*32;
+    const ang = Math.random()*Math.PI;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+    ctx.fillStyle = colors[i%colors.length];
+    roundedRectPath(-6,-2,12,4,2);
+    ctx.fill(); ctx.restore();
+  }
+}
+
+function drawTopper(cx, y, type, color){
+  ctx.save(); ctx.translate(cx,y);
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=6;
+  if(type==='heart'){
+    ctx.beginPath();
+    ctx.moveTo(0,-6);
+    ctx.bezierCurveTo(40,-46,70,-8,0,40);
+    ctx.bezierCurveTo(-70,-8,-40,-46,0,-6);
+    ctx.fill();
+  }else if(type==='star'){
+    const R=40,r=18; ctx.beginPath();
+    for(let i=0;i<10;i++){
+      const a=-Math.PI/2 + i*Math.PI/5;
+      const rad=i%2?r:R;
+      const x=Math.cos(a)*rad, y=Math.sin(a)*rad;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
     }
+    ctx.closePath(); ctx.fill();
+  }else if(type==='ring'){
+    ctx.lineWidth=8;
+    ctx.beginPath(); ctx.arc(-22,10,30,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(22,10,30,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+}
 
-    function drawPlate(plate){
-      const w=canvas.width, h=canvas.height, cx=w/2;
-      if(plate==='round'){
-        // plate
-        ctx.save();
-        ctx.translate(cx, h-140);
-        ctx.fillStyle = '#f3f4f6';
-        ctx.strokeStyle = '#e5e7eb';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 320, 36, 0, 0, Math.PI*2);
-        ctx.fill(); ctx.stroke();
-        ctx.restore();
-      } else {
-        // pedestal stand
-        ctx.save();
-        ctx.translate(cx, h-170);
-        ctx.fillStyle = '#f3f4f6';
-        ctx.strokeStyle = '#e5e7eb';
-        ctx.lineWidth = 4;
-        // top plate
-        ctx.beginPath(); ctx.ellipse(0,0,320,30,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-        // stem
-        ctx.beginPath();
-        ctx.moveTo(-40,10); ctx.bezierCurveTo(-30,80,-30,120,-10,160);
-        ctx.lineTo(10,160); ctx.bezierCurveTo(30,120,30,80,40,10);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        // base
-        ctx.beginPath(); ctx.ellipse(0,170,110,16,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-        ctx.restore();
+function drawInscription(text, color, cx, y, w){
+  ctx.save();
+  ctx.fillStyle = color; let size=44;
+  ctx.font = `bold ${size}px Inter, system-ui, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  while(ctx.measureText(text).width > w*1.6 && size>16){
+    size -= 2; ctx.font = `bold ${size}px Inter, system-ui, sans-serif`;
+  }
+  ctx.fillText(text, cx, y);
+  ctx.restore();
+}
+
+/* Decorations */
+function drawItem(it){
+  ctx.save();
+  ctx.translate(it.x, it.y);
+  ctx.rotate(it.rot);
+  ctx.scale(it.scale, it.scale);
+
+  // Shadow
+  ctx.save(); ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(8, 10, 22, 10, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+
+  switch(it.type){
+    case 'strawberry':
+      // body
+      ctx.fillStyle = '#ef4444'; ctx.strokeStyle='#b91c1c'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(0,-18);
+      ctx.bezierCurveTo(16,-12,18,4,0,22);
+      ctx.bezierCurveTo(-18,4,-16,-12,0,-18); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // seeds
+      ctx.fillStyle='#fde68a';
+      for(let i=-2;i<=2;i++){
+        for(let j=-2;j<=1;j++){
+          ctx.beginPath(); ctx.arc(i*5 + (j%2?2:0), j*6+4, 1.2, 0, Math.PI*2); ctx.fill();
+        }
       }
-    }
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-
-    function drawDripLayer(cx, topY, width, height, color){
-      // simple scalloped drip
-      ctx.save();
-      ctx.fillStyle = color;
-      roundedRect(cx - width, topY, width*2, height, 18);
+      // leaves
+      ctx.fillStyle='#10b981'; ctx.beginPath();
+      for(let k=0;k<5;k++){ ctx.rotate((Math.PI*2)/5); ctx.moveTo(0,-20); ctx.quadraticCurveTo(8,-28, 10,-16); ctx.quadraticCurveTo(6,-18,0,-20); }
       ctx.fill();
-      // drips
-      const drops = Math.max(6, Math.floor(width/40));
-      for(let i=0;i<drops;i++){
-        const dx = cx - width + 20 + i*((width*2-40)/(drops-1));
-        const dh = 20 + Math.random()*28;
-        ctx.beginPath();
-        ctx.moveTo(dx, topY+height);
-        ctx.bezierCurveTo(dx-6, topY+height+dh*0.3, dx-6, topY+height+dh*0.7, dx, topY+height+dh);
-        ctx.bezierCurveTo(dx+6, topY+height+dh*0.7, dx+6, topY+height+dh*0.3, dx, topY+height);
-        ctx.closePath();
-        ctx.fill();
+      break;
+    case 'flower':
+      ctx.fillStyle='#f472b6';
+      for(let p=0;p<6;p++){
+        ctx.rotate(Math.PI/3);
+        ctx.beginPath(); ctx.ellipse(0,-12,8,14,0,0,Math.PI*2); ctx.fill();
       }
-      ctx.restore();
+      ctx.fillStyle='#fde68a'; ctx.beginPath(); ctx.arc(0,0,6,0,Math.PI*2); ctx.fill();
+      break;
+    case 'macaron':
+      ctx.fillStyle='#60a5fa'; ctx.strokeStyle='#1d4ed8'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(0,0,24,14,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#e5e7eb'; ctx.beginPath(); ctx.ellipse(0,2,22,6,0,0,Math.PI*2); ctx.fill();
+      break;
+    case 'candle':
+      ctx.fillStyle='#fef08a'; roundedRectPath(-4,-24,8,32,4); ctx.fill(); ctx.strokeStyle='#eab308'; ctx.stroke();
+      // flame
+      ctx.fillStyle='#fb923c'; ctx.beginPath();
+      ctx.moveTo(0,-32); ctx.quadraticCurveTo(6,-40,0,-50); ctx.quadraticCurveTo(-6,-40,0,-32); ctx.fill();
+      break;
+    case 'ribbon':
+      ctx.fillStyle='#a78bfa'; ctx.beginPath();
+      roundedRectPath(-36,-4,72,8,4); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-36,0); ctx.lineTo(-54,12); ctx.lineTo(-28,8); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(36,0); ctx.lineTo(54,12); ctx.lineTo(28,8); ctx.closePath(); ctx.fill();
+      break;
+  }
+  ctx.restore();
+}
+
+/* ----------------------------- Geometry ---------------------------------- */
+function cakeGeometry(){
+  const cx = canvas.width/2;
+  let baseY = canvas.height - (S.plate==='round'? 190 : 210);
+  const list = [];
+  const tiers = Math.min(3, Math.max(1, S.tiers));
+  const arr = [S.t1, S.t2, S.t3].slice(0, tiers);
+  arr.forEach((t,i)=>{
+    const w = sizeToPx(t.size), h = tierHeight[t.size];
+    const yTop = baseY - h;
+    list.push({idx:i, cx, yTop, w, h});
+    baseY = yTop - 26;
+  });
+  return list; // bottom->top
+}
+
+/* ------------------------------ Render ----------------------------------- */
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // floor
+  ctx.save(); ctx.fillStyle='#eef2f7';
+  ctx.beginPath(); ctx.ellipse(canvas.width/2, canvas.height-80, 420, 30, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+
+  drawPlate(S.plate);
+
+  const tiers = cakeGeometry();
+  tiers.forEach((t,i)=>{
+    // body
+    ctx.save();
+    ctx.fillStyle = [S.t1.color,S.t2.color,S.t3.color][i]; ctx.strokeStyle='#d1d5db'; ctx.lineWidth=3;
+    roundedRectPath(t.cx - t.w, t.yTop, t.w*2, t.h, 28);
+    ctx.fill(); ctx.stroke();
+    // top ellipse
+    ctx.fillStyle = [S.t1.color,S.t2.color,S.t3.color][i]; ctx.strokeStyle='#d1d5db'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(t.cx, t.yTop, t.w, 22, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  });
+
+  // Decorations anchored to the topmost tier (drip/sprinkles/inscription)
+  const top = tiers[tiers.length-1];
+  if(top){
+    if(S.drip) drawDripLayer(top.cx, top.yTop-8, top.w*0.98, 36, S.accent);
+    if(S.sprinkles) drawSprinkles(top.cx, top.yTop-6, top.w*0.95, S.accent);
+    if(S.msg && S.msg.trim()) drawInscription(S.msg, S.msgc, top.cx, top.yTop + top.h*0.55, top.w);
+    if(S.topper!=='none') drawTopper(top.cx, top.yTop-20, S.topper, S.accent);
+  }
+
+  // User items (draw above tiers)
+  S.items.forEach(drawItem);
+
+  drawSelectionBox(); // overlay box/handles
+}
+
+/* ----------------------- Selection / Drag / Handles ---------------------- */
+function canvasToClient(x,y){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return { x: (x-rect.left)*scaleX, y: (y-rect.top)*scaleY };
+}
+
+function pointInItem(ix,iy,it){
+  // quick hit test using bounding circle
+  const dx = ix - it.x, dy = iy - it.y;
+  const r = 30 * it.scale; // generous
+  return (dx*dx + dy*dy) <= (r*r);
+}
+
+function selectItemByPoint(ix,iy){
+  // topmost hit
+  for(let i=S.items.length-1;i>=0;i--){
+    const it = S.items[i];
+    if(pointInItem(ix,iy,it)){ S.sel = it.id; return it; }
+  }
+  S.sel = null; return null;
+}
+
+function currentItem(){ return S.items.find(x=>x.id===S.sel) || null; }
+
+function drawSelectionBox(){
+  overlay.innerHTML = '';
+  const it = currentItem(); if(!it) return;
+  // Approximate bbox in canvas space (square ~60x60 scaled)
+  const size = 60 * it.scale;
+  // Compute client coords for overlay positioning
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width;
+  const scaleY = rect.height / canvas.height;
+
+  // Corner position (top-left of bbox in canvas coords)
+  const x = it.x - size, y = it.y - size;
+  const w = size*2, h = size*2;
+
+  // Because the item can rotate, we’ll show a square bbox aligned with canvas for simplicity
+  const box = document.createElement('div');
+  box.className = 'bbox';
+  box.style.left = (x*scaleX + rect.left - rect.left) + 'px';
+  box.style.top  = (y*scaleY + rect.top  - rect.top ) + 'px';
+  box.style.width = (w*scaleX)+'px';
+  box.style.height = (h*scaleY)+'px';
+  overlay.appendChild(box);
+
+  const mkHandle=(cls, cx, cy)=>{
+    const h = document.createElement('div');
+    h.className='handle '+cls;
+    h.style.left = ( (x+cx)*scaleX + rect.left - rect.left - 8 )+'px';
+    h.style.top  = ( (y+cy)*scaleY + rect.top  - rect.top  - 8 )+'px';
+    overlay.appendChild(h);
+    return h;
+  };
+  const rotH = mkHandle('rotate', w/2, -16);
+  const sclH = mkHandle('scale', w, h);
+
+  // Pointer handlers
+  let mode=null;
+  function onMove(e){
+    const c = canvasToClient(e.clientX, e.clientY);
+    if(mode==='rotate'){
+      const ang = Math.atan2(c.y - it.y, c.x - it.x);
+      it.rot = ang + Math.PI/2; // nicer default
+      render(); drawSelectionBox();
+      updateUrl();
+    }else if(mode==='scale'){
+      const dist = Math.hypot(c.x - it.x, c.y - it.y);
+      it.scale = clamp(dist/60, 0.4, 3.0);
+      render(); drawSelectionBox();
+      updateUrl();
     }
+  }
+  function stop(){
+    mode=null;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', stop);
+  }
+  rotH.addEventListener('pointerdown',(e)=>{ e.preventDefault(); mode='rotate'; window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', stop);});
+  sclH.addEventListener('pointerdown',(e)=>{ e.preventDefault(); mode='scale';  window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', stop);});
+}
 
-    function drawSprinkles(cx, topY, width, color){
-      const colors = [color, '#f59e0b', '#ef4444', '#10b981', '#3b82f6'];
-      const count = Math.floor(width/4);
-      for(let i=0;i<count;i++){
-        const x = cx - width + 10 + Math.random()*(width*2-20);
-        const y = topY + 16 + Math.random()*32;
-        const ang = Math.random()*Math.PI;
-        ctx.save();
-        ctx.translate(x,y); ctx.rotate(ang);
-        ctx.fillStyle = colors[i%colors.length];
-        roundedRect(-6,-2,12,4,2);
-        ctx.fill();
-        ctx.restore();
-      }
+let dragging = false;
+let dragDx = 0, dragDy = 0;
+
+canvas.addEventListener('pointerdown', (e)=>{
+  const p = canvasToClient(e.clientX, e.clientY);
+  const hit = selectItemByPoint(p.x,p.y);
+  if(hit){
+    dragging = true;
+    dragDx = p.x - hit.x;
+    dragDy = p.y - hit.y;
+    render();
+  }else{
+    S.sel = null; render();
+  }
+});
+
+window.addEventListener('pointermove', (e)=>{
+  if(!dragging) return;
+  const it = currentItem(); if(!it) return;
+  const p = canvasToClient(e.clientX, e.clientY);
+  it.x = p.x - dragDx;
+  it.y = p.y - dragDy;
+
+  // Snap to tier centers
+  const tiers = cakeGeometry();
+  for(const t of tiers){
+    const cx=t.cx, cy=t.yTop + t.h/2;
+    const dx = Math.abs(it.x - cx);
+    const dy = Math.abs(it.y - cy);
+    if(dx<18 && dy<18){ it.x=cx; it.y=cy; break; }
+  }
+
+  render();
+});
+
+window.addEventListener('pointerup', ()=>{
+  if(dragging){ dragging=false; updateUrl(); }
+});
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='Delete' || e.key==='Backspace'){
+    if(S.sel!=null){
+      S.items = S.items.filter(x=>x.id!==S.sel);
+      S.sel=null; render(); updateUrl();
     }
+  }
+});
 
-    function drawTopper(cx, y, type, color){
-      ctx.save();
-      ctx.translate(cx, y);
-      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=6;
-      if(type==='heart'){
-        ctx.beginPath();
-        ctx.moveTo(0,-6);
-        ctx.bezierCurveTo(40,-46,70,-8,0,40);
-        ctx.bezierCurveTo(-70,-8,-40,-46,0,-6);
-        ctx.fill();
-      } else if(type==='star'){
-        const R=40,r=18; ctx.beginPath();
-        for(let i=0;i<10;i++){
-          const a = -Math.PI/2 + i*Math.PI/5;
-          const rad = i%2? r : R;
-          const x = Math.cos(a)*rad, y = Math.sin(a)*rad;
-          i? ctx.lineTo(x,y): ctx.moveTo(x,y);
-        }
-        ctx.closePath(); ctx.fill();
-      } else if(type==='ring'){
-        ctx.lineWidth=8;
-        ctx.beginPath(); ctx.arc(-22,10,30,0,Math.PI*2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(22,10,30,0,Math.PI*2); ctx.stroke();
-      }
-      ctx.restore();
-    }
+/* ------------------------------- Controls -------------------------------- */
+stateControls.forEach(id=>{
+  const el = $(id);
+  el.addEventListener(el.type==='checkbox' ? 'change':'input', ()=>{
+    S.plate = $('plate').value;
+    S.tiers = +$('tiers').value;
+    S.t1 = {size:$('t1size').value, color:$('t1color').value};
+    S.t2 = {size:$('t2size').value, color:$('t2color').value};
+    S.t3 = {size:$('t3size').value, color:$('t3color').value};
+    S.accent = $('accent').value;
+    S.drip = $('drip').checked;
+    S.sprinkles = $('sprinkles').checked;
+    S.topper = $('topper').value;
+    S.msg = $('msg').value;
+    S.msgc = $('msgc').value;
+    render(); updateUrl();
+  });
+});
 
-    function drawInscription(text, color, cx, y, w){
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.font = 'bold 44px Inter, system-ui, sans-serif';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      // fit text
-      let size=44;
-      while(ctx.measureText(text).width > w*1.6 && size>16){
-        size -= 2; ctx.font = `bold ${size}px Inter, system-ui, sans-serif`;
-      }
-      ctx.fillText(text, cx, y);
-      ctx.restore();
-    }
+$('palette').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip'); if(!chip) return;
+  const type = chip.dataset.type;
+  // default position: center of top tier or canvas center
+  const tiers = cakeGeometry();
+  const t = tiers[tiers.length-1];
+  const x = t ? t.cx : canvas.width/2;
+  const y = t ? (t.yTop + 40) : canvas.height/2;
+  const it = { id: Date.now()+Math.random().toString(16).slice(2), type, x, y, scale:1, rot:0 };
+  S.items.push(it);
+  S.sel = it.id;
+  render(); updateUrl();
+});
 
-    function render(){
-      const s = readState();
-      // clear
-      ctx.clearRect(0,0,canvas.width,canvas.height);
+/* ------------------------------ Export/Share ------------------------------ */
+$('download').addEventListener('click', ()=>{
+  // Re-render to a fresh offscreen canvas to ensure handles aren’t included
+  const off = document.createElement('canvas');
+  off.width = canvas.width; off.height = canvas.height;
+  const octx = off.getContext('2d');
+  // swap ctx temporarily
+  const oldCtx = ctx;
+  (function tempDraw(){
+    // draw onto offscreen using same functions
+    // We replicate render() in a tiny way by overriding ctx
+    const savedCtx = ctx;
+    window.ctx = octx;
+    render();
+    window.ctx = savedCtx;
+  })();
+  const a = document.createElement('a');
+  a.download = 'cakebuds-design.png';
+  a.href = off.toDataURL('image/png');
+  a.click();
+});
 
-      // subtle floor ellipse
-      ctx.save();
-      ctx.fillStyle = '#eef2f7';
-      ctx.beginPath(); ctx.ellipse(canvas.width/2, canvas.height-80, 420, 30, 0, 0, Math.PI*2); ctx.fill();
-      ctx.restore();
+$('share').addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText(location.href);
+    const b = $('share'); const old=b.textContent; b.textContent='Link Copied!'; setTimeout(()=>b.textContent=old,1200);
+  }catch{ alert('Copy failed. Copy from the address bar instead.');}
+});
 
-      drawPlate(s.plate);
+$('clear').addEventListener('click', ()=>{
+  S.plate='round'; S.tiers=2;
+  S.t1={size:'L',color:'#f1e4f9'}; S.t2={size:'M',color:'#ffe4e6'}; S.t3={size:'S',color:'#e0f2fe'};
+  S.accent='#8b5cf6'; S.drip=true; S.sprinkles=true; S.topper='heart';
+  S.msg='Happy Birthday!'; S.msgc='#1f2937';
+  S.items=[]; S.sel=null;
+  applyControls(); render(); updateUrl();
+});
 
-      const cx = canvas.width/2;
-      let baseY = canvas.height - (s.plate==='round'? 190 : 210);
-      const tiers = Math.min(3, Math.max(1, s.tiers));
-
-      const tiersData = [
-        {size:s.t1Size, color:s.t1Color},
-        {size:s.t2Size, color:s.t2Color},
-        {size:s.t3Size, color:s.t3Color},
-      ].slice(0, tiers);
-
-      // draw each tier (bottom to top)
-      const tierHeights = {L: 220, M: 190, S: 160};
-      tiersData.forEach((t,i)=>{
-        const w = sizeToPx(t.size);
-        const h = tierHeights[t.size];
-        const yTop = baseY - h;
-
-        // cake body
-        const topEllipseH = 22;
-        // side
-        ctx.save();
-        ctx.fillStyle = t.color; ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 3;
-        roundedRect(cx - w, yTop, w*2, h, 28);
-        ctx.fill(); ctx.stroke();
-        // top shine
-        ctx.globalAlpha=.5;
-        const grad = ctx.createLinearGradient(cx - w, yTop, cx + w, yTop);
-        grad.addColorStop(0, 'rgba(255,255,255,.35)');
-        grad.addColorStop(.5, 'rgba(255,255,255,0)');
-        grad.addColorStop(1, 'rgba(255,255,255,.2)');
-        ctx.fillStyle = grad;
-        roundedRect(cx - w, yTop, w*2, h*0.5, 28);
-        ctx.fill();
-        ctx.restore();
-
-        // top ellipse for 3D feel
-        ctx.save();
-        ctx.fillStyle = t.color; ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(cx, yTop, w, topEllipseH, 0, 0, Math.PI*2);
-        ctx.fill(); ctx.stroke();
-        ctx.restore();
-
-        // decorations per tier
-        if(s.drip && i===0){ // drip only on topmost visible tier (last drawn)
-          // actually apply on the uppermost tier
-        }
-        if(s.drip && i===tiersData.length-1){
-          drawDripLayer(cx, yTop-8, w*0.98, 36, s.accent);
-        }
-        if(s.sprinkles && i===tiersData.length-1){
-          drawSprinkles(cx, yTop-6, w*0.95, s.accent);
-        }
-
-        // inscription on middle of top tier's side
-        if(i===tiersData.length-1 && (s.inscription||'').trim()){
-          drawInscription(s.inscription, s.inscriptionColor, cx, yTop + h*0.55, w);
-        }
-
-        // update for next tier
-        baseY = yTop - 26; // spacing between tiers
-      });
-
-      // topper
-      const topTier = tiersData[tiersData.length-1];
-      if(topTier && s.topper!=='none'){
-        const topY = baseY + 12;
-        drawTopper(cx, topY, s.topper, s.accent);
-      }
-    }
-
-    // --- Wiring --------------------------------------------------------------
-    controls.forEach(id=>{
-      const el = $(id);
-      if(!el) return;
-      el.addEventListener(el.type==='checkbox' ? 'change' : 'input', ()=>{
-        render();
-        updateUrl();
-      });
-    });
-
-    function updateUrl(){
-      const qs = encodeState(readState());
-      const url = location.pathname + '?' + qs + location.hash;
-      history.replaceState(null,'',url);
-    }
-
-    function loadFromUrl(){
-      const s = decodeState(location.search.slice(1));
-      applyState(s);
-      render();
-    }
-
-    $('downloadBtn').addEventListener('click', ()=>{
-      const link = document.createElement('a');
-      link.download = 'cakebuds-design.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    });
-
-    $('copyLinkBtn').addEventListener('click', async ()=>{
-      const url = location.href;
-      try{
-        await navigator.clipboard.writeText(url);
-        const b = $('copyLinkBtn'); const old = b.textContent;
-        b.textContent='Copied!'; setTimeout(()=>b.textContent=old,1200);
-      }catch(e){ alert('Copy failed. Select and copy from the address bar instead.'); }
-    });
-
-    $('resetBtn').addEventListener('click', ()=>{
-      applyState({
-        plate:'round', tiers:2,
-        t1Size:'L', t1Color:'#f1e4f9',
-        t2Size:'M', t2Color:'#ffe4e6',
-        t3Size:'S', t3Color:'#e0f2fe',
-        accent:'#8b5cf6', drip:true, sprinkles:true, topper:'heart',
-        inscription:'Happy Birthday!', inscriptionColor:'#1f2937'
-      });
-      updateUrl(); render();
-    });
-
-    // Init
-    $('year').textContent = new Date().getFullYear();
-    loadFromUrl();
-    // Re-render occasionally to keep drip randomness fresh if user tweaks
-    // (drips are re-randomized on every render)
-  </script>
+/* ------------------------------- Init ------------------------------------ */
+(function init(){
+  $('year').textContent = new Date().getFullYear();
+  if(location.search.length>1){ decodeState(location.search.slice(1)); }
+  applyControls(); render();
+})();
+</script>
 </body>
 </html>
