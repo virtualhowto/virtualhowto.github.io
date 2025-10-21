@@ -34,7 +34,7 @@
   .preview{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   @media (max-width:900px){.preview{grid-template-columns:repeat(2,1fr)}}
   .card{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .card canvas{display:block;width:100%;height:auto}
+  .card img,.card canvas{display:block;width:100%;height:auto}
   .muted{color:var(--muted);font-size:12px}
   .badge-mini{display:inline-block;padding:2px 8px;border-radius:999px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;font-weight:600;font-size:11px}
   .meter{height:8px;background:#f1f5f9;border-radius:999px;overflow:hidden}
@@ -216,7 +216,6 @@ function drawBackground(ctx,W,H,theme){
     const g = ctx.createRadialGradient(W*0.5,H*0.3,10, W*0.5,H*0.6, Math.max(W,H));
     g.addColorStop(0,'#ffffff'); g.addColorStop(0.5,'#f7f8fb'); g.addColorStop(1,'#e9edf4');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    // soft vignette
     vignette(ctx,W,H,0.25);
     return;
   }
@@ -393,9 +392,7 @@ function fillTexture(ctx,x,y,w,h,style,baseColor,accent){
     return;
   }
   if(style==='marble'){
-    // base
     ctx.fillStyle = baseColor; ctx.fill();
-    // veining: layered translucent curves
     ctx.save(); ctx.clip();
     for(let k=0;k<6;k++){
       ctx.strokeStyle = k%2? shade(baseColor,-0.25) : shade(baseColor,0.25);
@@ -417,7 +414,6 @@ function fillTexture(ctx,x,y,w,h,style,baseColor,accent){
 }
 
 function shade(hex, amt){
-  // hex like #rrggbb, amt -1..1
   const c = hex.replace('#','');
   const r = parseInt(c.substring(0,2),16);
   const g = parseInt(c.substring(2,4),16);
@@ -427,7 +423,7 @@ function shade(hex, amt){
 }
 
 /* -------------------- Decorations -------------------- */
-function deco_cherry(ctx){ // glossy cherry w/ highlight & stem
+function deco_cherry(ctx){
   ctx.save();
   ctx.fillStyle='#d90429'; ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(-4,-3,4,0,Math.PI*2); ctx.fill();
@@ -477,7 +473,6 @@ function deco_rosette(ctx,color='#fde68a'){
 
 function drawTopper(ctx,cx, y, type, accent, finish){
   ctx.save(); ctx.translate(cx,y);
-  // metallic gradient for finish
   let fill = accent;
   if(finish==='metallic'){
     const g = ctx.createLinearGradient(-60,-60,60,60);
@@ -562,10 +557,7 @@ function drawInscription(ctx,text,color,cx,y,w,finish){
 
 /* -------------------- Master Render -------------------- */
 function drawCake(ctx,W,H,spec){
-  // background
   drawBackground(ctx,W,H,spec.bg);
-
-  // plate
   drawPlate(ctx,W,H,spec.plate,spec.finish);
 
   const cx=W/2;
@@ -578,31 +570,25 @@ function drawCake(ctx,W,H,spec){
     const w = sizeToPx(t.size), h = tierH[t.size];
     const yTop = baseY - h;
 
-    // body (rounded rect)
+    // side with texture & light
     ctx.save();
-    // side wall
     ctx.beginPath();
     rr(ctx,cx-w, yTop, w*2, h, 28);
     ctx.clip();
-    // fill with texture
     fillTexture(ctx, cx-w, yTop, w*2, h, t.texture, t.color, spec.accent);
 
-    // soft lighting — left rim light & right shade
     const lg = ctx.createLinearGradient(cx-w, yTop, cx+w, yTop);
     lg.addColorStop(0,'rgba(255,255,255,0.26)');
     lg.addColorStop(0.5,'rgba(255,255,255,0)');
     lg.addColorStop(1,'rgba(0,0,0,0.08)');
     ctx.fillStyle=lg; ctx.fillRect(cx-w, yTop, w*2, h);
-
     ctx.restore();
-    // edge stroke
     ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2; ctx.stroke();
 
-    // top ellipse
+    // top
     ctx.save();
     ctx.fillStyle = t.color; ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.ellipse(cx, yTop, w, 22, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    // top sheen
     if(spec.finish!=='velvet'){
       const tg = ctx.createLinearGradient(cx-w, yTop-22, cx+w, yTop+22);
       tg.addColorStop(0,'rgba(255,255,255,0.25)');
@@ -612,7 +598,6 @@ function drawCake(ctx,W,H,spec){
     }
     ctx.restore();
 
-    // move up
     baseY = yTop - 26;
     if(i===tiers.length-1) topTier = {cx, yTop, w, h};
   });
@@ -630,7 +615,6 @@ function drawCake(ctx,W,H,spec){
   spec.items.forEach(it=>{
     ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.rot); ctx.scale(it.scale,it.scale);
     ctx.globalAlpha = 0.95;
-    // soft drop shadow
     ctx.save(); ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(6,8,10,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
     switch(it.type){
       case 'cherry': deco_cherry(ctx); break;
@@ -645,12 +629,12 @@ function drawCake(ctx,W,H,spec){
   });
   ctx.restore();
 
-  // post-process: subtle grain for depth
+  // post-process
   addGrain(ctx,W,H,0.045);
 }
 
 /* -------------------- Spec / Randomizer -------------------- */
-function choosePalette(weights){
+function choosePalette(){
   const key = chooseWeighted([
     {key:'pastel', w:+document.getElementById('wPastel').value||0},
     {key:'gelato', w:+document.getElementById('wGelato').value||0},
@@ -704,7 +688,6 @@ function randomSpec(W,H){
 
   const inscription = Math.random()<0.35 ? {text: randFrom(['Happy Day!','Sweet Life','Celebrate','With Love','Congrats!']), color: pal.text} : null;
 
-  // decor items
   const pool = [
     ['cherry', +document.getElementById('wCherry').value||0],
     ['berry', +document.getElementById('wBerry').value||0],
@@ -738,7 +721,7 @@ function randomSpec(W,H){
 }
 
 function fingerprint(spec){
-  const t = spec.tierList.slice(0,spec.tiers).map(t=>`${t.size}-${t.texture}-${t.color}`).join('|');
+  const t = spec.tierList.slice(0, spec.tiers).map(t=>`${t.size}-${t.texture}-${t.color}`).join('|');
   const i = spec.items.map(x=>x.type).sort().join(',');
   return `${spec.bg};${spec.finish};${spec.plate};${spec.tiers};${t};top:${spec.topper};dr:${spec.drip};sp:${spec.sprinkles};msg:${spec.inscription?spec.inscription.text:'_'};acc:${spec.accent};it:${i}`;
 }
@@ -771,14 +754,23 @@ btnGen.addEventListener('click', async ()=>{
     seen.add(fp);
     specs.push(spec);
 
-    // preview first 6
+    // ---- Patched preview: use <img> from canvas pixels (no cloneNode) ----
     if(i<6){
       const c=document.createElement('canvas'); c.width=size; c.height=Math.round(size*0.75);
       const cctx=c.getContext('2d');
       drawCake(cctx, c.width, c.height, spec);
+
+      const img = new Image();
+      img.src = c.toDataURL('image/png'); // ✅ copy actual pixels
+
       const card=document.createElement('div'); card.className='card';
-      const tag=document.createElement('div'); tag.style.padding='8px'; tag.innerHTML=`<span class="badge-mini">#${startId+i}</span> <span class="muted">${name}</span>`;
-      card.appendChild(c.cloneNode(true)); card.appendChild(tag); previewEl.appendChild(card);
+      const tag=document.createElement('div'); tag.style.padding='8px';
+      tag.innerHTML=`<span class="badge-mini">#${startId+i}</span> <span class="muted">${name}</span>`;
+
+      card.appendChild(img);
+      card.appendChild(tag);
+      previewEl.appendChild(card);
+
       await new Promise(r=>setTimeout(r,0));
     }
 
