@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>CakeBuds · Adorable NFT Maker</title>
+<title>CakeBuds · Adorable NFT Maker (Share Tags)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -15,7 +15,6 @@
     --muted: #b6c0de;
     --brand: #8b5cf6; /* grape */
     --brand-2: #22d3ee; /* aqua */
-    --ok: #10b981;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -72,14 +71,17 @@
   }
   .card:hover{transform:translateY(-2px); box-shadow:0 16px 40px rgba(0,0,0,.35)}
   .card img{display:block;width:100%;height:auto}
-  .tag{position:absolute;left:8px;top:8px;font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.85);color:#0b0f1a;font-weight:800}
+  .tag{
+    position:absolute; top:8px; left:8px;
+    font-size:11px; padding:4px 8px; border-radius:999px;
+    background:rgba(255,255,255,.85); color:#0b0f1a; font-weight:800
+  }
   .tag.rare{background:linear-gradient(90deg,#f59e0b,#ef4444);color:white}
   .tag.ultra{background:linear-gradient(90deg,#a855f7,#22d3ee);color:#0b0f1a;box-shadow:0 0 24px rgba(139,92,246,.5)}
   .muted{color:var(--muted);font-size:12px}
   .badge-mini{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);color:#a5f3fc;font-weight:700;font-size:11px}
   .meter{height:8px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
   .meter > div{height:100%;background:linear-gradient(90deg,#22d3ee,#8b5cf6);width:0%}
-
   .pill{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .pill > span{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid var(--stroke);color:var(--muted)}
 </style>
@@ -91,11 +93,11 @@
       <div class="logo">🎂</div>
       <div>
         <div class="title">CakeBuds</div>
-        <div class="sub">Adorable NFT Collection Maker</div>
+        <div class="sub">Adorable NFT Collection Maker · Share Tags</div>
       </div>
     </div>
     <div class="pill">
-      <span>kawaii visuals</span><span>seeded randomness</span><span>rarity tiers</span><span>zip export</span>
+      <span>kawaii visuals</span><span>seeded randomness</span><span>rarity tiers</span><span>shareable tags</span><span>zip export</span>
     </div>
   </header>
 
@@ -203,7 +205,7 @@
         <button class="ghost" id="shuffle">Shuffle Seed</button>
         <button id="zip" disabled>Download ZIP (images + metadata)</button>
       </div>
-      <div class="muted" style="margin-top:8px">Rarity tags appear on previews; metadata includes a tier and trait list.</div>
+      <div class="muted" style="margin-top:8px">Rarity tags appear on previews; each token also shows a unique <b>#CakeBuds-XXXXXX</b> share tag.</div>
 
       <div style="margin-top:12px">
         <div class="muted">Progress</div>
@@ -228,6 +230,13 @@ function rnd(){ return rng(); }
 function pick(arr){ return arr[Math.floor(rnd()*arr.length)] }
 function weighted(weights){ const tot = weights.reduce((s,w)=>s+Math.max(0,w.w),0)||1; let r = rnd()*tot; for(const w of weights){ r -= Math.max(0,w.w); if(r<=0) return w.key; } return weights[weights.length-1].key; }
 
+/* ------------------------ Share tag helpers ------------------------ */
+function base36pad(n, len=6){ return n.toString(36).toUpperCase().padStart(len, '0').slice(-len); }
+function shareTag(seed, tokenId){
+  const h = hashString(`${seed}::${tokenId}`);
+  return `#CakeBuds-${base36pad(h, 6)}`;
+}
+
 /* ------------------------ Palettes ------------------------ */
 const palettes = {
   cotton: ['#fff1f2','#fde2ff','#e1f0ff','#e9fdf3','#fff7e6','#f2f0ff','#fbe4ea','#e3f7f6'],
@@ -238,7 +247,7 @@ const palettes = {
 };
 const paletteKeys = Object.keys(palettes);
 
-/* ------------------------ Geometry ------------------------ */
+/* ------------------------ Geometry & utils ------------------------ */
 const tierH = {L:220, M:190, S:160};
 const sizeToPx = (s)=> s==='L'?240: s==='M'?190:140;
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -378,15 +387,17 @@ function drawEyes(ctx, cx, cy, w, style, color='#1f2937', adorable=0.7){
   const eye = (x,y)=>{
     if(style==='round' || style==='sparkle'){
       ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-      // highlight
       ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(x-5,y-5,5+adorable*2,0,Math.PI*2); ctx.fill();
       ctx.fillStyle='rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.arc(x+4,y+2,3+adorable*1.2,0,Math.PI*2); ctx.fill();
       ctx.fillStyle=color;
       if(style==='sparkle'){
         ctx.save(); ctx.fillStyle='rgba(255,255,255,0.85)';
         ctx.beginPath();
-        for(let i=0;i<4;i++){ const a=i*Math.PI/2; const ex=x+Math.cos(a)*0, ey=y+Math.sin(a)*0;
-          ctx.moveTo(ex,ey-8); ctx.lineTo(ex+2,ey-2); ctx.lineTo(ex+8,ey); ctx.lineTo(ex+2,ey+2); ctx.lineTo(ex,ey+8); ctx.lineTo(ex-2,ey+2); ctx.lineTo(ex-8,ey); ctx.lineTo(ex-2,ey-2);
+        for(let i=0;i<4;i++){
+          const a=i*Math.PI/2;
+          const ex=x, ey=y;
+          ctx.moveTo(ex,ey-8); ctx.lineTo(ex+2,ey-2); ctx.lineTo(ex+8,ey);
+          ctx.lineTo(ex+2,ey+2); ctx.lineTo(ex,ey+8); ctx.lineTo(ex-2,ey+2); ctx.lineTo(ex-8,ey); ctx.lineTo(ex-2,ey-2);
         } ctx.fill(); ctx.restore();
       }
     }else if(style==='sleepy'){ ctx.beginPath(); ctx.moveTo(x-r,y); ctx.quadraticCurveTo(x,y+6,x+r,y); ctx.stroke(); }
@@ -397,7 +408,7 @@ function drawEyes(ctx, cx, cy, w, style, color='#1f2937', adorable=0.7){
       for(let k=0;k<3;k++){ const a=(-Math.PI/2)+k*0.22 - 0.2; ctx.beginPath(); ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r); ctx.lineTo(x+Math.cos(a)*(r+10),y+Math.sin(a)*(r+10)); ctx.stroke(); }
     }
   };
-  eye(rx,cy); eye(style==='wink'? lx : lx, cy); ctx.restore();
+  eye(rx,cy); eye(lx, cy); ctx.restore();
 }
 function drawMouth(ctx, cx, cy, w, style, color='#1f2937', adorable=0.7){
   const width = Math.min(120, w*(0.42+0.1*adorable));
@@ -416,6 +427,10 @@ function drawBlush(ctx, cx, cy, w, accent, adorable=0.7){
   ctx.beginPath(); ctx.ellipse(cx-offset, cy, rX, rY, 0, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(cx+offset, cy, rX, rY, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
 }
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function bow(ctx,cx,cy,s){ ctx.beginPath(); ctx.ellipse(cx-s*0.6,cy,s*0.55,s*0.34,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(cx+s*0.6,cy,s*0.55,s*0.34,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(cx,cy,s*0.28,s*0.22,0,0,Math.PI*2); ctx.fill(); }
+function star(ctx,x,y,r){ ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2 + i*Math.PI/5, rad = i%2? r*0.5 : r; const px=x+Math.cos(a)*rad, py=y+Math.sin(a)*rad; i?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); }
+
 function drawAccessory(ctx, cx, cy, w, type, accent){
   if(!type) return; ctx.save();
   if(type==='sunglasses'){
@@ -431,7 +446,7 @@ function drawAccessory(ctx, cx, cy, w, type, accent){
     ctx.lineTo(cx + half/2, baseY - 40); ctx.lineTo(cx + half, baseY); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle='#fff8dc'; for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.arc(cx + i*half/2, baseY-20, 6, 0, Math.PI*2); ctx.fill(); }
   } else if(type==='bow'){
-    ctx.fillStyle=accent; bow(ctx, cx, cy-28, 28); 
+    ctx.fillStyle=accent; bow(ctx, cx, cy-28, 28);
   } else if(type==='starclip'){
     ctx.fillStyle='#fde68a'; star(ctx, cx + w*0.42, cy-34, 12);
   } else if(type==='wand'){
@@ -440,9 +455,6 @@ function drawAccessory(ctx, cx, cy, w, type, accent){
   }
   ctx.restore();
 }
-function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-function bow(ctx,cx,cy,s){ ctx.beginPath(); ctx.ellipse(cx-s*0.6,cy,s*0.55,s*0.34,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(cx+s*0.6,cy,s*0.55,s*0.34,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(cx,cy,s*0.28,s*0.22,0,0,Math.PI*2); ctx.fill(); }
-function star(ctx,x,y,r){ ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2 + i*Math.PI/5, rad = i%2? r*0.5 : r; const px=x+Math.cos(a)*rad, py=y+Math.sin(a)*rad; i?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); }
 
 /* ------------------------ Toppers/Drip/Sprinkles/Inscription ------------------------ */
 function drawTopper(ctx,cx, y, type, accent, finish){
@@ -498,64 +510,6 @@ function deco(ctx,type,accent){
   } else if(type==='macaron'){ ctx.fillStyle=pick(['#60a5fa','#f472b6','#34d399','#f59e0b']); ctx.beginPath(); ctx.ellipse(0,0,14,9,0,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='#e5e7eb'; ctx.beginPath(); ctx.ellipse(0,2,12,4,0,0,Math.PI*2); ctx.fill();
   } else if(type==='rosette'){ ctx.fillStyle=accent; for(let p=0;p<6;p++){ ctx.beginPath(); ctx.ellipse(0,-10,6,10,0,0,Math.PI*2); ctx.fill(); ctx.rotate(Math.PI/3); } }
-}
-
-/* ------------------------ Master Render ------------------------ */
-function drawCake(ctx,W,H,spec){
-  const adorable = spec.adorable;
-  drawBackground(ctx,W,H,spec.bg);
-  drawPlate(ctx,W,H,spec.plate,spec.finish);
-
-  const cx=W/2;
-  let baseY = H - (spec.plate==='round'? 190 : 210);
-  let topTier=null;
-
-  const tiers = spec.tierList.slice(0,spec.tiers);
-  tiers.forEach((t,i)=>{
-    const w = sizeToPx(t.size), h = tierH[t.size]; const yTop = baseY - h;
-
-    ctx.save(); ctx.beginPath(); rr(ctx,cx-w, yTop, w*2, h, 28); ctx.clip();
-    fillTexture(ctx, cx-w, yTop, w*2, h, t.texture, t.color, spec.accent);
-    const lg = ctx.createLinearGradient(cx-w, yTop, cx+w, yTop);
-    lg.addColorStop(0,'rgba(255,255,255,0.26)'); lg.addColorStop(0.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,0.08)');
-    ctx.fillStyle=lg; ctx.fillRect(cx-w, yTop, w*2, h); ctx.restore();
-    ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2; ctx.stroke();
-
-    ctx.save(); ctx.fillStyle=t.color; ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.ellipse(cx, yTop, w, 22, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    if(spec.finish!=='velvet'){ const tg = ctx.createLinearGradient(cx-w, yTop-22, cx+w, yTop+22);
-      tg.addColorStop(0,'rgba(255,255,255,0.25)'); tg.addColorStop(0.5,'rgba(255,255,255,0)'); tg.addColorStop(1,'rgba(255,255,255,0.2)');
-      ctx.fillStyle=tg; ctx.beginPath(); ctx.ellipse(cx, yTop, w*0.95, 16, 0, 0, Math.PI*2); ctx.fill(); }
-    ctx.restore();
-
-    baseY = yTop - 26; if(i===tiers.length-1) topTier = {cx, yTop, w, h};
-  });
-
-  if(topTier){
-    if(spec.drip) drawDrip(ctx, topTier.cx, topTier.yTop-8, topTier.w*0.98, spec.accent, spec.finish);
-    if(spec.sprinkles) drawSprinkles(ctx, topTier.cx, topTier.yTop-6, topTier.w*0.95, spec.accent);
-    drawInscription(ctx, spec.inscription?.text, spec.inscription?.color, topTier.cx, topTier.yTop + topTier.h*0.55, topTier.w, spec.finish);
-
-    if(spec.face && spec.face.enabled){
-      const faceY = topTier.yTop + topTier.h*(0.40 + 0.06*adorable);
-      const eyeY  = faceY - (24 - 6*adorable);
-      drawEyes(ctx, topTier.cx, eyeY, topTier.w, spec.face.eyes, spec.face.color, adorable);
-      if(spec.face.blush) drawBlush(ctx, topTier.cx, eyeY+8, topTier.w, spec.accent, adorable);
-      drawMouth(ctx, topTier.cx, faceY + 18, topTier.w, spec.face.mouth, spec.face.color, adorable);
-      if(spec.face.accessory) drawAccessory(ctx, topTier.cx, eyeY, topTier.w, spec.face.accessory, spec.accent);
-    }
-
-    if(spec.topper!=='none') drawTopper(ctx, topTier.cx, topTier.yTop-24, spec.topper, spec.accent, spec.finish);
-  }
-
-  ctx.save();
-  spec.items.forEach(it=>{
-    ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.rot); ctx.scale(it.scale,it.scale); ctx.globalAlpha=0.96;
-    ctx.save(); ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(6,8,10,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
-    deco(ctx,it.type, spec.accent); ctx.restore();
-  }); ctx.restore();
-
-  addGrain(ctx,W,H,0.045);
 }
 
 /* ------------------------ Personas & Random Spec ------------------------ */
@@ -629,7 +583,6 @@ function fingerprint(spec){
 
 /* ------------------------ Rarity Tiering ------------------------ */
 function rarityFor(spec){
-  // Simple heuristic: assign rarity by presence of special combos.
   let score = 0;
   if(spec.face?.enabled) score+=2;
   if(spec.face?.accessory==='crown' || spec.topper==='ring') score+=2;
@@ -638,8 +591,6 @@ function rarityFor(spec){
   if(spec.finish==='metallic') score+=1.5;
   const rare = ['marble','stripe']; for(const t of spec.tierList.slice(0,spec.tiers)){ if(rare.includes(t.texture)) score+=0.6; }
   if(spec.drip && spec.sprinkles) score+=0.5;
-
-  // Map to tiers then cap number of ultra-rare later when exporting metadata if needed.
   if(score>=5.2) return 'Ultra';
   if(score>=3.4) return 'Rare';
   if(score>=1.6) return 'Uncommon';
@@ -668,8 +619,7 @@ btnGen.addEventListener('click', async ()=>{
   const adorable = (+document.getElementById('adorable').value||70)/100;
   const seed = (document.getElementById('seed').value||'cakebuds'); setSeed(seed);
 
-  const seen = new Set(); const specs=[]; const rarities=[];
-  previewEl.innerHTML=''; barEl.style.width='0%'; btnZip.disabled=true;
+  const seen = new Set(); const specs=[]; previewEl.innerHTML=''; barEl.style.width='0%'; btnZip.disabled=true;
 
   for(let i=0;i<supply;i++){
     let spec, fp, tries=0;
@@ -678,38 +628,39 @@ btnGen.addEventListener('click', async ()=>{
       fp = fingerprint(spec); tries++; if(tries>100) break;
     }while(seen.has(fp));
     seen.add(fp);
-    const rTier = rarityFor(spec); rarities.push(rTier);
-    specs.push({...spec, rarity:rTier});
+    const rTier = rarityFor(spec);
+    spec = {...spec, rarity:rTier};
+    specs.push(spec);
 
-    // preview (first 6 → <img> snapshots)
+    // preview (first 6 → <img> snapshots) + rarity tag + share tag
     if(i<6){
       const c=document.createElement('canvas'); c.width=size; c.height=Math.round(size*0.75);
       const cctx=c.getContext('2d'); drawCake(cctx, c.width, c.height, spec);
       const img = new Image(); img.src = c.toDataURL('image/png');
 
       const card=document.createElement('div'); card.className='card';
-      const badge=document.createElement('div'); badge.className='tag'; badge.textContent=rTier;
-      if(rTier==='Rare') badge.classList.add('rare'); if(rTier==='Ultra') badge.classList.add('ultra');
+      const rarityBadge=document.createElement('div'); rarityBadge.className='tag'; rarityBadge.textContent=rTier;
+      if(rTier==='Rare') rarityBadge.classList.add('rare'); if(rTier==='Ultra') rarityBadge.classList.add('ultra');
+
+      const shareBadge=document.createElement('div'); shareBadge.className='tag';
+      shareBadge.style.left = 'auto'; shareBadge.style.right = '8px';
+      shareBadge.textContent = shareTag(seed, startId + i);
+
       const tag=document.createElement('div'); tag.style.padding='8px'; tag.innerHTML=`<span class="badge-mini">#${startId+i}</span> <span class="muted">${name}</span>`;
-      card.appendChild(badge); card.appendChild(img); card.appendChild(tag); previewEl.appendChild(card);
+      card.appendChild(rarityBadge);
+      card.appendChild(shareBadge);
+      card.appendChild(img);
+      card.appendChild(tag);
+      previewEl.appendChild(card);
       await new Promise(r=>setTimeout(r,0));
     }
     barEl.style.width = `${Math.round(((i+1)/supply)*100)}%`;
     await new Promise(r=>setTimeout(r,0));
   }
 
-  // Enforce ultra-rare cap (convert overflow to Rare)
-  const ultraCapPct = clamp((+document.getElementById('ultraCap').value||5)/100,0,0.2);
-  const cap = Math.max(1, Math.floor(specs.length*ultraCapPct));
-  const ultraIdx = specs.map((s,idx)=>[s.rarity,idx]).filter(x=>x[0]==='Ultra').map(x=>x[1]);
-  if(ultraIdx.length>cap){
-    // demote random extras
-    const shuffle=[...ultraIdx].sort(()=>Math.random()-0.5);
-    for(let k=cap;k<shuffle.length;k++){ specs[shuffle[k]].rarity='Rare'; }
-  }
-
   const meta = specs.map((spec, idx)=>{
     const tokenId = startId + idx;
+    const tagText = shareTag(seed, tokenId);
     const attrs = [
       {trait_type:'Rarity', value: spec.rarity},
       {trait_type:'Background', value: spec.bg},
@@ -724,7 +675,7 @@ btnGen.addEventListener('click', async ()=>{
       {trait_type:'Drip', value: spec.drip? 'On':'Off'},
       {trait_type:'Sprinkles', value: spec.sprinkles? 'On':'Off'},
       {trait_type:'Accent', value: spec.accent},
-      {trait_type:'Inscription', value: spec.inscription? spec.inscription.text : 'None'}
+      {trait_type:'Inscription', value: spec.inscription? spec.inscription.text : 'None'},
     ];
     if(spec.face && spec.face.enabled){
       attrs.push(
@@ -737,12 +688,16 @@ btnGen.addEventListener('click', async ()=>{
     } else {
       attrs.push({trait_type:'Personality', value:'None'});
     }
+    // Add share tag as attribute
+    attrs.push({trait_type:'Share Tag', value: tagText});
+
     return {
       tokenId,
       name: `${name} #${tokenId}`,
-      description: "CakeBuds · Adorable Series — collectible cakes with kawaii faces, curated palettes, and rarity tiers. Generated fully in-browser.",
+      description: "CakeBuds · Adorable Series — collectible cakes with kawaii faces, curated palettes, rarity tiers, and shareable tags. Generated fully in-browser.",
       image: `ipfs://REPLACE_WITH_CID/images/${tokenId}.png`,
       attributes: attrs,
+      share_tag: tagText,
       external_url: "https://cakebuds.example"
     };
   });
@@ -758,11 +713,13 @@ btnZip.addEventListener('click', async ()=>{
   const imgFolder = zip.folder('images');
   const metaFolder = zip.folder('metadata');
 
-  // include a README
+  // include a README with share tag info
   zip.file('README.txt', `CakeBuds Adorable Series
 Seed: ${seed}
 Count: ${specs.length}
 Image size: ${size}x${Math.round(size*0.75)} px
+Share tags: Each token has a unique hashtag like #CakeBuds-ABC123. Share it when you claim!
+
 — Upload images to IPFS and replace metadata image URIs (ipfs://REPLACE_WITH_CID/images/ID.png).
 `);
 
@@ -786,6 +743,64 @@ Image size: ${size}x${Math.round(size*0.75)} px
   a.click();
   URL.revokeObjectURL(a.href);
 });
+
+/* ------------------------ Main draw ------------------------ */
+function drawCake(ctx,W,H,spec){
+  const adorable = spec.adorable;
+  drawBackground(ctx,W,H,spec.bg);
+  drawPlate(ctx,W,H,spec.plate,spec.finish);
+
+  const cx=W/2;
+  let baseY = H - (spec.plate==='round'? 190 : 210);
+  let topTier=null;
+
+  const tiers = spec.tierList.slice(0,spec.tiers);
+  tiers.forEach((t,i)=>{
+    const w = sizeToPx(t.size), h = tierH[t.size]; const yTop = baseY - h;
+
+    ctx.save(); ctx.beginPath(); rr(ctx,cx-w, yTop, w*2, h, 28); ctx.clip();
+    fillTexture(ctx, cx-w, yTop, w*2, h, t.texture, t.color, spec.accent);
+    const lg = ctx.createLinearGradient(cx-w, yTop, cx+w, yTop);
+    lg.addColorStop(0,'rgba(255,255,255,0.26)'); lg.addColorStop(0.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,0.08)');
+    ctx.fillStyle=lg; ctx.fillRect(cx-w, yTop, w*2, h); ctx.restore();
+    ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2; ctx.stroke();
+
+    ctx.save(); ctx.fillStyle=t.color; ctx.strokeStyle='rgba(17,24,39,0.12)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(cx, yTop, w, 22, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    if(spec.finish!=='velvet'){ const tg = ctx.createLinearGradient(cx-w, yTop-22, cx+w, yTop+22);
+      tg.addColorStop(0,'rgba(255,255,255,0.25)'); tg.addColorStop(0.5,'rgba(255,255,255,0)'); tg.addColorStop(1,'rgba(255,255,255,0.2)');
+      ctx.fillStyle=tg; ctx.beginPath(); ctx.ellipse(cx, yTop, w*0.95, 16, 0, 0, Math.PI*2); ctx.fill(); }
+    ctx.restore();
+
+    baseY = yTop - 26; if(i===tiers.length-1) topTier = {cx, yTop, w, h};
+  });
+
+  if(topTier){
+    if(spec.drip) drawDrip(ctx, topTier.cx, topTier.yTop-8, topTier.w*0.98, spec.accent, spec.finish);
+    if(spec.sprinkles) drawSprinkles(ctx, topTier.cx, topTier.yTop-6, topTier.w*0.95, spec.accent);
+    drawInscription(ctx, spec.inscription?.text, spec.inscription?.color, topTier.cx, topTier.yTop + topTier.h*0.55, topTier.w, spec.finish);
+
+    if(spec.face && spec.face.enabled){
+      const faceY = topTier.yTop + topTier.h*(0.40 + 0.06*adorable);
+      const eyeY  = faceY - (24 - 6*adorable);
+      drawEyes(ctx, topTier.cx, eyeY, topTier.w, spec.face.eyes, spec.face.color, adorable);
+      if(spec.face.blush) drawBlush(ctx, topTier.cx, eyeY+8, topTier.w, spec.accent, adorable);
+      drawMouth(ctx, topTier.cx, faceY + 18, topTier.w, spec.face.mouth, spec.face.color, adorable);
+      if(spec.face.accessory) drawAccessory(ctx, topTier.cx, eyeY, topTier.w, spec.face.accessory, spec.accent);
+    }
+
+    if(spec.topper!=='none') drawTopper(ctx, topTier.cx, topTier.yTop-24, spec.topper, spec.accent, spec.finish);
+  }
+
+  ctx.save();
+  spec.items.forEach(it=>{
+    ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.rot); ctx.scale(it.scale,it.scale); ctx.globalAlpha=0.96;
+    ctx.save(); ctx.globalAlpha=0.18; ctx.filter='blur(2px)'; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(6,8,10,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+    deco(ctx,it.type, spec.accent); ctx.restore();
+  }); ctx.restore();
+
+  addGrain(ctx,W,H,0.045);
+}
 </script>
 </body>
 </html>
