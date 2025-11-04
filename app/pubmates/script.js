@@ -68,10 +68,10 @@ function setStatus(msg) { statusBar.textContent = msg; }
 // ==========================
 addLocationInput(); addLocationInput();
 addBtn.addEventListener("click", addLocationInput);
-function addLocationInput() {
+function addLocationInput(value="") {
   const wrap = document.createElement("div");
   wrap.className = "location-input";
-  wrap.innerHTML = `<input type="text" placeholder="Enter address or place" class="address" />
+  wrap.innerHTML = `<input type="text" placeholder="Enter address or place" class="address" value="${value}" />
                     <button class="remove-btn">✖</button>`;
   wrap.querySelector(".remove-btn").addEventListener("click", () => wrap.remove());
   locationsDiv.appendChild(wrap);
@@ -85,8 +85,15 @@ findBtn.addEventListener("click", async () => {
   const addresses = [...document.querySelectorAll(".address")].map(i => i.value.trim()).filter(Boolean);
   if (addresses.length < 2) { alert("Please enter at least two addresses."); hideLoading(); return; }
 
+  // Clear previous data
   [midpointMarker, ...poiMarkers, ...driveLayers].forEach(l => l && map.removeLayer(l));
   poiMarkers = []; driveLayers = [];
+
+  // Encode shareable URL
+  const params = new URLSearchParams();
+  params.set("locations", encodeURIComponent(JSON.stringify(addresses)));
+  params.set("driving", drivingModeToggle.checked ? "1" : "0");
+  history.replaceState(null, "", `${location.pathname}?${params}`);
 
   const coords = [];
   for (const addr of addresses) {
@@ -117,12 +124,16 @@ findBtn.addEventListener("click", async () => {
         <span class="map-icon" data-type="park">🌳</span>
         <span class="map-icon" data-type="creek">💧</span>
         <span class="map-icon" data-type="prospecting">⛏️</span>
-      </div><small>Click an icon to search nearby.</small>`;
+      </div>
+      <button id="shareBtn" class="share-btn">🔗 Share Meetup</button>
+      <small>Click an icon to search nearby.</small>`;
     midpointMarker.bindPopup(popupHtml).openPopup();
+
     midpointMarker.on("popupopen", () => {
       document.querySelectorAll(".map-icon").forEach(i =>
         i.addEventListener("click", () => findNearbyPlaces(lat, lon, i.dataset.type))
       );
+      document.getElementById("shareBtn").addEventListener("click", copyShareLink);
     });
     setStatus("🧭 Geographic midpoint ready");
   }
@@ -130,11 +141,11 @@ findBtn.addEventListener("click", async () => {
 });
 
 // ==========================
-// Driving Isochrone Mode (Secure Proxy)
+// Driving Isochrone Mode
 // ==========================
 async function drawDrivingIsochrones(coords) {
   showLoading("🚗 Fetching drive zones...");
-  const proxyUrl = "https://pubmates-proxy.scottm.workers.dev"; // Replace with your Worker URL
+  const proxyUrl = "https://pubmates-proxy.scottm.workers.dev";
   const colors = ["#ff0000", "#00ff00", "#00b4ff", "#ffa500", "#ff00ff"];
   const layers = [];
 
@@ -229,5 +240,32 @@ async function findNearbyPlaces(lat, lon, type) {
   }
   hideLoading();
 }
+
+// ==========================
+// Share Link Functionality
+// ==========================
+function copyShareLink() {
+  const shareUrl = location.href;
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    alert("✅ Meetup link copied to clipboard!");
+    setStatus("🔗 Meetup link copied");
+  });
+}
+
+// ==========================
+// Auto-load from shared link
+// ==========================
+window.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(location.search);
+  if (params.has("locations")) {
+    const addresses = JSON.parse(decodeURIComponent(params.get("locations")));
+    const driving = params.get("driving") === "1";
+    locationsDiv.innerHTML = "";
+    addresses.forEach(a => addLocationInput(a));
+    drivingModeToggle.checked = driving;
+    findBtn.click();
+    setStatus("🔗 Loaded shared meetup");
+  }
+});
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
