@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Central Meet</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>🍻 PubMates</h1>
+    <p>Find the perfect pub or park halfway between you and your mates.</p>
+  </header>
+
+  <main>
+    <section id="inputs">
+      <div id="locations">
+        <input type="text" placeholder="Enter address 1" class="address" />
+        <input type="text" placeholder="Enter address 2" class="address" />
+        <input type="text" placeholder="Enter address 3 (optional)" class="address" />
+        <input type="text" placeholder="Enter address 4 (optional)" class="address" />
+      </div>
+
+      <div class="controls">
+        <label for="type">Find nearby:</label>
+        <select id="type">
+          <option value="pub">Pubs 🍺</option>
+          <option value="park">Parks 🌳</option>
+        </select>
+        <button id="findBtn">Find Meeting Spot</button>
+      </div>
+    </section>
+
+    <div id="map"></div>
+  </main>
+
+  <footer>
+    <p>Made with ❤️ using OpenStreetMap & Leaflet | <a href="https://virtualhowto.github.io">virtualhowto</a></p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
