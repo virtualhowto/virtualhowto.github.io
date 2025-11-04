@@ -1,0 +1,78 @@
+const map = L.map('map').setView([-33.8688, 151.2093], 10); // Sydney default
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+}).addTo(map);
+
+document.getElementById("findBtn").addEventListener("click", async () => {
+  const addresses = Array.from(document.querySelectorAll(".address"))
+    .map(i => i.value.trim())
+    .filter(Boolean);
+
+  if (addresses.length < 2) {
+    alert("Please enter at least two addresses.");
+    return;
+  }
+
+  const coords = [];
+  for (const addr of addresses) {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
+    const data = await res.json();
+    if (data.length) coords.push([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+  }
+
+  if (coords.length < 2) {
+    alert("Could not geocode enough addresses.");
+    return;
+  }
+
+  // Calculate geographic midpoint
+  let lat = 0, lon = 0;
+  coords.forEach(c => { lat += c[0]; lon += c[1]; });
+  lat /= coords.length; lon /= coords.length;
+
+  map.setView([lat, lon], 12);
+  L.marker([lat, lon]).addTo(map).bindPopup("Midpoint 🧭").openPopup();
+
+  // Mark user addresses
+  coords.forEach((c, i) => {
+    L.marker(c, { icon: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      iconSize: [28, 28],
+    }) }).addTo(map).bindPopup(`Address ${i + 1}`);
+  });
+
+  // Search nearby places using Overpass API
+  const type = document.getElementById("type").value;
+  const query = `
+    [out:json];
+    (
+      node["amenity"="${type}"](around:5000,${lat},${lon});
+    );
+    out body;
+  `;
+  const overpassUrl = "https://overpass-api.de/api/interpreter";
+  const placesRes = await fetch(overpassUrl, {
+    method: "POST",
+    body: query
+  });
+  const placesData = await placesRes.json();
+
+  if (!placesData.elements.length) {
+    alert(`No ${type}s found nearby.`);
+    return;
+  }
+
+  placesData.elements.slice(0, 10).forEach(place => {
+    const name = place.tags.name || `${type.charAt(0).toUpperCase() + type.slice(1)} (Unnamed)`;
+    L.marker([place.lat, place.lon], {
+      icon: L.icon({
+        iconUrl: type === "pub"
+          ? "https://cdn-icons-png.flaticon.com/512/2935/2935416.png"
+          : "https://cdn-icons-png.flaticon.com/512/616/616408.png",
+        iconSize: [28, 28]
+      })
+    })
+      .addTo(map)
+      .bindPopup(`<b>${name}</b><br><a target="_blank" href="https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lon}">View on map</a>`);
+  });
+});
