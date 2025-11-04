@@ -16,10 +16,16 @@
   <main>
     <section id="inputs" class="glass">
       <div id="locations">
-        <input type="text" placeholder="Enter address 1" class="address" />
-        <input type="text" placeholder="Enter address 2" class="address" />
-        <input type="text" placeholder="Enter address 3 (optional)" class="address" />
-        <input type="text" placeholder="Enter address 4 (optional)" class="address" />
+        <div class="address-group">
+          <input type="text" placeholder="Enter address 1" class="address" />
+        </div>
+        <div class="address-group">
+          <input type="text" placeholder="Enter address 2" class="address" />
+        </div>
+      </div>
+
+      <div class="add-remove">
+        <button id="addLocationBtn">➕ Add another address</button>
       </div>
 
       <div class="controls">
@@ -36,7 +42,8 @@
   </main>
 
   <footer>
-    <p>© 2025 PubMates | Built with ❤️ by <a href="https://virtualhowto.github.io">VirtualHowTo</a></p>
+    <p>© 2025 PubMates | Built with ❤️ by 
+      <a href="https://virtualhowto.github.io">VirtualHowTo</a></p>
   </footer>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
