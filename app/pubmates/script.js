@@ -1,4 +1,4 @@
-// Initialize map using NSW Spatial Services Topographic basemap
+// Initialize NSW Spatial Services basemap
 const map = L.map('map', {
   center: [-33.8688, 151.2093],
   zoom: 8,
@@ -13,26 +13,15 @@ L.tileLayer(
 const locationsDiv = document.getElementById("locations");
 const addBtn = document.getElementById("addLocationBtn");
 const findBtn = document.getElementById("findBtn");
-let activeType = "pub";
+let midpointMarker = null;
+let poiMarkers = [];
 
-// Add two default location fields
+// Default locations
 addLocationInput();
 addLocationInput();
 
-// Add new input field
 addBtn.addEventListener("click", () => addLocationInput());
 
-// Handle icon selection
-document.querySelectorAll(".icon-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".icon-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    activeType = btn.dataset.type;
-  });
-});
-document.querySelector('.icon-btn[data-type="pub"]').classList.add("active");
-
-// Add a new address input with remove button
 function addLocationInput() {
   const wrapper = document.createElement("div");
   wrapper.className = "location-input";
@@ -44,7 +33,6 @@ function addLocationInput() {
   locationsDiv.appendChild(wrapper);
 }
 
-// Main find function
 findBtn.addEventListener("click", async () => {
   const addresses = Array.from(document.querySelectorAll(".address"))
     .map(i => i.value.trim())
@@ -55,9 +43,12 @@ findBtn.addEventListener("click", async () => {
     return;
   }
 
+  // Clear previous markers
   map.eachLayer(layer => {
     if (layer instanceof L.Marker && !layer._url) map.removeLayer(layer);
   });
+  poiMarkers.forEach(m => map.removeLayer(m));
+  poiMarkers = [];
 
   const coords = [];
   for (const addr of addresses) {
@@ -71,6 +62,7 @@ findBtn.addEventListener("click", async () => {
     return;
   }
 
+  // Plot input markers
   coords.forEach((c, i) => {
     L.marker(c, {
       icon: L.icon({
@@ -85,10 +77,71 @@ findBtn.addEventListener("click", async () => {
   coords.forEach(c => { lat += c[0]; lon += c[1]; });
   lat /= coords.length; lon /= coords.length;
 
-  // Fit all markers
   map.fitBounds(L.latLngBounds(coords));
 
-  // Show midpoint marker
+  // Create midpoint marker
+  if (midpointMarker) midpointMarker.remove();
+  midpointMarker = L.marker([lat, lon], {
+    icon: L.icon({
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+      iconSize: [36, 36]
+    })
+  }).addTo(map);
+
+  const popupHtml = `
+    <b>🧭 Central Point</b><br>
+    (${lat.toFixed(4)}, ${lon.toFixed(4)})<br><br>
+    <div style="display:flex;justify-content:space-around;font-size:1.5em;">
+      <span class="map-icon" data-type="pub" title="Find pubs">🍺</span>
+      <span class="map-icon" data-type="park" title="Find parks">🌳</span>
+      <span class="map-icon" data-type="creek" title="Find creeks">💧</span>
+      <span class="map-icon" data-type="prospecting" title="Find prospecting areas">⛏️</span>
+    </div>
+  `;
+  midpointMarker.bindPopup(popupHtml).openPopup();
+
+  midpointMarker.on("popupopen", () => {
+    document.querySelectorAll(".map-icon").forEach(icon => {
+      icon.addEventListener("click", () => {
+        const type = icon.dataset.type;
+        findNearbyPlaces(lat, lon, type);
+      });
+    });
+  });
+});
+
+// Fetch nearby POIs from Overpass API
+async function findNearbyPlaces(lat, lon, type) {
+  poiMarkers.forEach(m => map.removeLayer(m));
+  poiMarkers = [];
+
+  let query = "";
+  switch (type) {
+    case "pub":
+      query = `[out:json];node["amenity"="pub"](around:6000,${lat},${lon});out body;`;
+      break;
+    case "park":
+      query = `[out:json];node["leisure"="park"](around:6000,${lat},${lon});out body;`;
+      break;
+    case "creek":
+      query = `[out:json];way["waterway"="stream"](around:6000,${lat},${lon});out center;`;
+      break;
+    case "prospecting":
+      query = `[out:json];(node["natural"="bare_rock"](around:6000,${lat},${lon});node["landuse"="quarry"](around:6000,${lat},${lon}););out body;`;
+      break;
+  }
+
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    body: query
+  });
+
+  const data = await res.json();
+  if (!data.elements.length) {
+    alert(`No ${type}s found nearby.`);
+    return;
+  }
+
   const icons = {
     pub: "https://cdn-icons-png.flaticon.com/512/2935/2935416.png",
     park: "https://cdn-icons-png.flaticon.com/512/616/616408.png",
@@ -96,15 +149,27 @@ findBtn.addEventListener("click", async () => {
     prospecting: "https://cdn-icons-png.flaticon.com/512/5325/5325730.png"
   };
 
-  const midpoint = L.marker([lat, lon], {
-    icon: L.icon({
-      iconUrl: icons[activeType],
-      iconSize: [36, 36]
-    })
-  }).addTo(map);
+  data.elements.slice(0, 20).forEach(place => {
+    const latP = place.lat || place.center?.lat;
+    const lonP = place.lon || place.center?.lon;
+    if (!latP || !lonP) return;
 
-  midpoint.bindPopup(`<b>🧭 Central ${capitalize(activeType)} Spot!</b><br>(${lat.toFixed(4)}, ${lon.toFixed(4)})`).openPopup();
-});
+    const name = place.tags?.name || `${capitalize(type)} spot`;
+    const marker = L.marker([latP, lonP], {
+      icon: L.icon({
+        iconUrl: icons[type],
+        iconSize: [30, 30]
+      })
+    }).addTo(map);
+    marker.bindPopup(`<b>${name}</b><br>
+      <a target="_blank" href="https://www.openstreetmap.org/?mlat=${latP}&mlon=${lonP}">
+      View on Map</a>`);
+    poiMarkers.push(marker);
+  });
+
+  const bounds = L.latLngBounds(poiMarkers.map(m => m.getLatLng()));
+  map.fitBounds(bounds.pad(0.2));
+}
 
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
