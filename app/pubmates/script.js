@@ -13,7 +13,6 @@ document.getElementById("findBtn").addEventListener("click", async () => {
     return;
   }
 
-  // Clear old markers (except tile layer)
   map.eachLayer(layer => {
     if (layer instanceof L.Marker && !layer._url) map.removeLayer(layer);
   });
@@ -26,29 +25,28 @@ document.getElementById("findBtn").addEventListener("click", async () => {
   }
 
   if (coords.length < 2) {
-    alert("Could not locate enough addresses.");
+    alert("Could not geocode enough addresses.");
     return;
   }
 
-  // Calculate midpoint
+  // midpoint
   let lat = 0, lon = 0;
   coords.forEach(c => { lat += c[0]; lon += c[1]; });
   lat /= coords.length; lon /= coords.length;
 
   map.setView([lat, lon], 12);
-  L.marker([lat, lon]).addTo(map).bindPopup("Midpoint 🧭").openPopup();
+  L.marker([lat, lon]).addTo(map)
+    .bindPopup("<b>🍻 Midpoint!</b><br>Time to meet up!")
+    .openPopup();
 
-  // Address markers
+  // markers for inputs
   coords.forEach((c, i) => {
-    L.marker(c, {
-      icon: L.icon({
-        iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-        iconSize: [26, 26]
-      })
-    }).addTo(map).bindPopup(`Address ${i + 1}`);
+    L.marker(c, { icon: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      iconSize: [28, 28]
+    })}).addTo(map).bindPopup(`📍 Address ${i + 1}`);
   });
 
-  // Search nearby pubs or parks
   const type = document.getElementById("type").value;
   const query = `
     [out:json];
@@ -57,10 +55,7 @@ document.getElementById("findBtn").addEventListener("click", async () => {
   `;
 
   try {
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      body: query
-    });
+    const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: query });
     const data = await res.json();
 
     if (!data.elements.length) {
@@ -75,12 +70,10 @@ document.getElementById("findBtn").addEventListener("click", async () => {
           iconUrl: type === "pub"
             ? "https://cdn-icons-png.flaticon.com/512/2935/2935416.png"
             : "https://cdn-icons-png.flaticon.com/512/616/616408.png",
-          iconSize: [26, 26]
+          iconSize: [30, 30]
         })
       }).addTo(map)
-        .bindPopup(`<b>${name}</b><br>
-          <a target="_blank" href="https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lon}">
-          View on Map</a>`);
+        .bindPopup(`<b>${name}</b><br><a target="_blank" href="https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lon}">View on Map</a>`);
     });
   } catch (err) {
     alert("Error fetching nearby places. Please try again.");
