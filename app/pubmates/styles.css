@@ -59,6 +59,8 @@ main {
   width: min(95%, 600px);
   box-shadow: 0 8px 24px rgba(0,0,0,0.3);
   animation: fadeIn 0.6s ease-in-out;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 @keyframes fadeIn {
@@ -66,10 +68,16 @@ main {
   to {opacity: 1; transform: translateY(0);}
 }
 
-#locations input {
-  width: 100%;
-  padding: 0.8em;
+.address-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
   margin: 0.4em 0;
+}
+
+.address-group input {
+  flex: 1;
+  padding: 0.8em;
   border-radius: 10px;
   border: none;
   outline: none;
@@ -79,9 +87,42 @@ main {
   transition: 0.2s;
 }
 
-#locations input:focus {
+.address-group input:focus {
   background: rgba(255,255,255,0.2);
   box-shadow: 0 0 8px var(--primary);
+}
+
+.remove-btn {
+  background: transparent;
+  border: none;
+  color: #ff6666;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.remove-btn:hover {
+  transform: scale(1.2);
+}
+
+.add-remove {
+  text-align: center;
+  margin: 0.8em 0;
+}
+
+.add-remove button {
+  background: rgba(255,255,255,0.1);
+  border: 1px dashed var(--primary);
+  color: var(--primary);
+  padding: 0.6em 1em;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.3s;
+}
+
+.add-remove button:hover {
+  background: rgba(255,255,255,0.2);
 }
 
 .controls {
@@ -91,11 +132,6 @@ main {
   align-items: center;
   gap: 0.6em;
   justify-content: center;
-}
-
-.controls label {
-  font-weight: 500;
-  font-size: 1em;
 }
 
 select, button {
@@ -111,14 +147,14 @@ select {
   color: #fff;
 }
 
-button {
+button#findBtn {
   background: linear-gradient(90deg, var(--primary), var(--secondary));
   color: white;
   font-weight: 600;
   transition: transform 0.2s, box-shadow 0.3s;
 }
 
-button:hover {
+button#findBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 14px rgba(0,0,0,0.4);
 }
@@ -129,7 +165,6 @@ button:hover {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-  animation: fadeIn 1s ease;
 }
 
 footer {
@@ -146,10 +181,9 @@ footer a {
   text-decoration: none;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   header h1 { font-size: 1.7em; }
-  .glass { width: 92%; }
+  .glass { width: 92%; max-height: 65vh; }
   .controls { flex-direction: column; }
   #map { height: calc(100vh - 420px); margin: 0.8em; }
 }
