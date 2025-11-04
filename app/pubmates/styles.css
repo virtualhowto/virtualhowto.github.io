@@ -1,121 +1,161 @@
 :root {
-  --primary: #ff9800;
-  --dark: #212529;
-  --light: #f8f9fa;
+  --primary: #ffb300;
+  --secondary: #ff6f00;
+  --bg1: #1f1c2c;
+  --bg2: #928dab;
+  --dark: #121212;
+  --glass-bg: rgba(255, 255, 255, 0.12);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
 
 body {
   margin: 0;
-  font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+  font-family: "Poppins", "Segoe UI", Roboto, system-ui, sans-serif;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: var(--light);
-  color: #333;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  color: #fff;
+  overflow-x: hidden;
 }
 
 header {
   text-align: center;
-  padding: 1em 0.5em;
-  background: var(--dark);
-  color: white;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  padding: 2em 1em;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+header h1 {
+  font-size: 2em;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+header p {
+  font-size: 1.1em;
+  opacity: 0.9;
 }
 
 main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  position: relative;
   overflow: hidden;
 }
 
-#inputs {
-  background: white;
-  padding: 1em;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  border-radius: 0 0 10px 10px;
+.glass {
+  backdrop-filter: blur(10px);
+  background: var(--glass-bg);
+  border-radius: 16px;
+  margin: 1em auto;
+  padding: 1.2em;
+  width: min(95%, 600px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-10px);}
+  to {opacity: 1; transform: translateY(0);}
 }
 
 #locations input {
   width: 100%;
   padding: 0.8em;
   margin: 0.4em 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
   font-size: 1em;
+  transition: 0.2s;
+}
+
+#locations input:focus {
+  background: rgba(255,255,255,0.2);
+  box-shadow: 0 0 8px var(--primary);
 }
 
 .controls {
-  margin-top: 0.8em;
+  margin-top: 1em;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.6em;
+  justify-content: center;
 }
 
 .controls label {
   font-weight: 500;
-}
-
-select, button {
-  padding: 0.7em;
-  border-radius: 8px;
   font-size: 1em;
 }
 
+select, button {
+  padding: 0.8em 1em;
+  border-radius: 10px;
+  font-size: 1em;
+  border: none;
+  cursor: pointer;
+}
+
 select {
-  border: 1px solid #ccc;
-  background: #fff;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
 }
 
 button {
-  background: var(--primary);
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
   color: white;
-  border: none;
-  flex: 1;
-  min-width: 120px;
-  cursor: pointer;
-  transition: background 0.2s;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.3s;
 }
 
-button:hover, button:active {
-  background: #e68900;
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
 }
 
 #map {
   flex: 1;
-  width: 100%;
-  height: 100%;
+  margin: 1em;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  animation: fadeIn 1s ease;
 }
 
 footer {
   text-align: center;
-  padding: 0.6em;
-  background: var(--dark);
-  color: #ddd;
+  padding: 1em;
   font-size: 0.9em;
+  color: #ccc;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(5px);
 }
 
 footer a {
-  color: #ffb84d;
+  color: var(--primary);
   text-decoration: none;
 }
 
-/* Responsive layout */
+/* Responsive */
 @media (max-width: 768px) {
-  #inputs { padding: 0.8em; }
-  .controls { flex-direction: column; align-items: stretch; }
-  button { width: 100%; }
-  #map { height: calc(100vh - 320px); }
+  header h1 { font-size: 1.7em; }
+  .glass { width: 92%; }
+  .controls { flex-direction: column; }
+  #map { height: calc(100vh - 420px); margin: 0.8em; }
 }
 
 @media (max-width: 480px) {
-  header h1 { font-size: 1.4em; }
   header p { font-size: 0.9em; }
-  select, input, button { font-size: 0.95em; }
-  #map { height: calc(100vh - 360px); }
+  select, button, input { font-size: 0.95em; }
+  #map { height: calc(100vh - 460px); }
 }
