@@ -1,36 +1,50 @@
+:root {
+  --primary: #ff9800;
+  --dark: #212529;
+  --light: #f8f9fa;
+}
+
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: "Segoe UI", Roboto, system-ui, sans-serif;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #f8f9fa;
+  background: var(--light);
+  color: #333;
 }
 
 header {
   text-align: center;
-  padding: 1em;
-  background: #212529;
+  padding: 1em 0.5em;
+  background: var(--dark);
   color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 #inputs {
-  background: #fff;
+  background: white;
   padding: 1em;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  border-radius: 0 0 10px 10px;
 }
 
 #locations input {
   width: 100%;
-  padding: 0.6em;
-  margin: 0.3em 0;
-  border-radius: 6px;
+  padding: 0.8em;
+  margin: 0.4em 0;
+  border-radius: 8px;
   border: 1px solid #ccc;
   font-size: 1em;
 }
@@ -38,38 +52,70 @@ main {
 .controls {
   margin-top: 0.8em;
   display: flex;
-  align-items: center;
-  gap: 0.5em;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em;
 }
 
-button {
-  background: #007bff;
-  color: white;
-  border: none;
-  padding: 0.7em 1.4em;
-  border-radius: 6px;
-  cursor: pointer;
+.controls label {
+  font-weight: 500;
+}
+
+select, button {
+  padding: 0.7em;
+  border-radius: 8px;
   font-size: 1em;
 }
 
-button:hover {
-  background: #0056b3;
+select {
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  flex: 1;
+  min-width: 120px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover, button:active {
+  background: #e68900;
 }
 
 #map {
   flex: 1;
+  width: 100%;
+  height: 100%;
 }
 
 footer {
   text-align: center;
-  padding: 0.5em;
-  background: #212529;
+  padding: 0.6em;
+  background: var(--dark);
   color: #ddd;
   font-size: 0.9em;
 }
 
 footer a {
-  color: #00b4ff;
+  color: #ffb84d;
   text-decoration: none;
+}
+
+/* Responsive layout */
+@media (max-width: 768px) {
+  #inputs { padding: 0.8em; }
+  .controls { flex-direction: column; align-items: stretch; }
+  button { width: 100%; }
+  #map { height: calc(100vh - 320px); }
+}
+
+@media (max-width: 480px) {
+  header h1 { font-size: 1.4em; }
+  header p { font-size: 0.9em; }
+  select, input, button { font-size: 0.95em; }
+  #map { height: calc(100vh - 360px); }
 }
