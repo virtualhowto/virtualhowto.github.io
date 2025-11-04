@@ -1,14 +1,38 @@
-// Initialize NSW Spatial Services basemap
+// Initialize map
 const map = L.map('map', {
   center: [-33.8688, 151.2093],
   zoom: 8,
   zoomControl: true
 });
 
-L.tileLayer(
+// NSW Spatial Services basemaps
+const topoLayer = L.tileLayer(
   'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Base_Map/MapServer/tile/{z}/{y}/{x}',
   { attribution: '&copy; NSW Spatial Services', maxZoom: 18 }
-).addTo(map);
+);
+
+const imageryLayer = L.tileLayer(
+  'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: '&copy; NSW Spatial Services', maxZoom: 18 }
+);
+
+const transportLayer = L.tileLayer(
+  'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Transport/MapServer/tile/{z}/{y}/{x}',
+  { attribution: '&copy; NSW Spatial Services', maxZoom: 18 }
+);
+
+// Add default
+topoLayer.addTo(map);
+
+// Map selector control
+const baseMaps = {
+  "🗺️ Topographic": topoLayer,
+  "🛰️ Imagery": imageryLayer,
+  "🚗 Street / Transport": transportLayer
+};
+
+L.control.layers(baseMaps, null, { position: 'topright', collapsed: false }).addTo(map);
+
 
 const locationsDiv = document.getElementById("locations");
 const addBtn = document.getElementById("addLocationBtn");
