@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tide Pattern Matcher – Australia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+
+  <!-- Day.js -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- SunCalc CDN + Local fallback -->
+  <script src="https://unpkg.com/suncalc/suncalc.js"></script>
+  <script>
+    if (typeof SunCalc === "undefined") {
+      document.write('<script src="suncalc.js"><\/script>');
+    }
+  </script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="bg-slate-950 text-slate-100" data-theme="marine-dark">
+  <div class="min-h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <header class="border-b border-slate-800 bg-slate-950/90 backdrop-blur">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight">Tide Pattern Matcher</h1>
+          <p class="text-xs text-slate-400">Select a beach, load tide, find matching patterns & insights.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="text-xs text-slate-400">
+            Theme
+            <select id="themeSelect" class="ml-1 bg-slate-900 border border-slate-700 text-xs rounded px-2 py-1">
+              <option value="marine-dark">Marine Dark</option>
+              <option value="classic">Classic</option>
+              <option value="aqua-light">Aqua Light</option>
+              <option value="minimal-white">Minimal White</option>
+            </select>
+          </label>
+
+          <span id="statusBadge"
+            class="text-[10px] px-2 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-400/40">
+            Select a beach
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-4 flex flex-col gap-6">
+
+      <!-- TOP: Map + Date Controls -->
+      <section class="grid md:grid-cols-[2fr,3fr] gap-4">
+
+        <!-- MAP PANEL -->
+        <div class="card h-[460px] relative">
+          <div class="card-header">
+            <h2 class="card-title">1. Select Location</h2>
+            <p class="card-subtitle">Search or click the map. Patrolled = blue.</p>
+          </div>
+
+          <div class="card-body h-full flex flex-col gap-3">
+
+            <!-- Beach Search -->
+            <div class="relative">
+              <input id="beachSearch" class="field-input text-xs" placeholder="Search beaches…">
+              <div id="beachSearchResults"
+                   class="absolute left-0 right-0 bg-slate-900 border border-slate-700 rounded mt-1 hidden z-50 text-xs max-h-48 overflow-auto"></div>
+            </div>
+
+            <!-- Favourites -->
+            <div class="mt-1">
+              <div class="text-xs text-slate-400 mb-1">⭐ Favourite Beaches</div>
+              <div id="favouritesList"
+                   class="mt-1 bg-slate-900 border border-slate-700 rounded p-2 text-xs max-h-32 overflow-auto space-y-1">
+                <!-- Filled dynamically -->
+              </div>
+            </div>
+
+            <label class="text-[11px] text-slate-400 flex items-center gap-2 mt-1">
+              <input type="checkbox" id="patrolledOnlyToggle" class="w-3 h-3"> Show patrolled only
+            </label>
+
+            <!-- Favourite Button (for current selection) -->
+            <button id="favButton"
+                    class="hidden mt-2 px-3 py-1 text-xs rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">
+              ⭐ Add to Favourites
+            </button>
+
+            <!-- Map -->
+            <div id="map" class="w-full flex-1 rounded-xl overflow-hidden border border-slate-800 mt-2"></div>
+
+          </div>
+        </div>
+
+        <!-- DATE AREA -->
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <div>
+              <h2 class="card-title">2. Base Day & Search Range</h2>
+              <p class="card-subtitle">Load base tide, then scan for matching patterns.</p>
+            </div>
+
+            <button id="useTodayBtn" class="btn-secondary text-xs px-3 py-1">Use Today</button>
+          </div>
+
+          <div class="card-body flex flex-col gap-4">
+
+            <!-- BASE DATE -->
+            <div class="flex gap-3 items-end">
+              <div class="flex-1">
+                <label class="field-label">Base Date</label>
+                <input id="baseDate" type="date" class="field-input">
+              </div>
+              <button id="loadBaseBtn" class="btn-primary px-4 py-2 text-sm">Load Base Tide</button>
+            </div>
+
+            <hr class="border-slate-800" />
+
+            <!-- SEARCH RANGE -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="field-label">Search From</label>
+                <input id="searchStart" type="date" class="field-input">
+              </div>
+              <div>
+                <label class="field-label">Search To</label>
+                <input id="searchEnd" type="date" class="field-input">
+              </div>
+            </div>
+
+            <button id="searchMatchesBtn" class="btn-accent px-4 py-2 text-sm">Find Matches</button>
+
+            <div class="text-[11px] text-slate-400" id="matchSummary">No search yet.</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- CHART -->
+      <section class="card">
+        <div class="card-header flex justify-between items-center">
+          <h2 class="card-title">3. Tide Overlay Chart</h2>
+          <div class="text-xs flex gap-3">
+            <span><span class="legend-dot base"></span> Base</span>
+            <span><span class="legend-dot overlay"></span> Overlay</span>
+          </div>
+        </div>
+
+        <div class="card-body flex flex-col gap-4">
+
+          <div class="relative h-[300px]">
+            <canvas id="tideChart"></canvas>
+            <div id="chartEmptyState" class="empty-overlay">Load a base tide to begin</div>
+          </div>
+
+          <!-- OVERLAY CONTROLS -->
+          <div id="overlayControls" class="hidden flex flex-col gap-3">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+
+              <label class="text-xs">
+                Overlay Day
+                <select id="overlayDaySelect" class="field-input text-xs w-auto"></select>
+              </label>
+
+              <label class="text-xs">
+                Scroll
+                <input id="overlaySlider" type="range" min="0" max="0" value="0" class="w-40">
+              </label>
+
+              <button id="jumpBestBtn" class="btn-secondary px-3 py-1 text-xs">Best Match</button>
+
+              <div class="text-right text-xs">
+                <div id="currentOverlayLabel"></div>
+                <div id="currentScoreLabel" class="text-slate-400"></div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- MATCH TILE -->
+          <div id="matchTile" class="hidden">
+            <div id="matchTileBody"></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- INSIGHTS -->
+      <section class="grid md:grid-cols-3 gap-4">
+
+        <!-- Moon -->
+        <div id="moonTile" class="insight-card hidden">
+          <h3 class="insight-title">🌕 Moon Phase</h3>
+          <div id="moonTileBody"></div>
+        </div>
+
+        <!-- Sun -->
+        <div id="sunTile" class="insight-card hidden">
+          <h3 class="insight-title">🌅 Solar Cycle</h3>
+          <div id="sunTileBody"></div>
+        </div>
+
+        <!-- Tide Strength -->
+        <div id="strengthTile" class="insight-card hidden">
+          <h3 class="insight-title">🌊 Tide Strength</h3>
+          <div id="strengthTileBody"></div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <footer class="text-[10px] text-slate-500 pb-4 flex justify-between">
+      <div>Mock tides used unless API connected.</div>
+      <div>Beach data from australia_beaches_final.json</div>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+/* -----------------------------------------------------------
+   Base Reset
+----------------------------------------------------------- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* -----------------------------------------------------------
+   Theme Variables
+----------------------------------------------------------- */
+:root {
+  --bg: #0f172a;          /* default: marine-dark */
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --text: #e2e8f0;
+  --subtext: #94a3b8;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59,130,246,0.15);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+/* Marine Dark */
+[data-theme="marine-dark"] {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --text: #e2e8f0;
+  --subtext: #94a3b8;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59,130,246,0.15);
+}
+
+/* Classic */
+[data-theme="classic"] {
+  --bg: #152238;
+  --card-bg: #203354;
+  --card-border: #2d456e;
+  --text: #f8fafc;
+  --subtext: #cbd5e1;
+  --accent: #38bdf8;
+  --accent-soft: rgba(56,189,248,0.15);
+}
+
+/* Aqua Light */
+[data-theme="aqua-light"] {
+  --bg: #e0f7fa;
+  --card-bg: #ffffff;
+  --card-border: #b2ebf2;
+  --text: #03404d;
+  --subtext: #06606e;
+  --accent: #00acc1;
+  --accent-soft: rgba(0,172,193,0.15);
+}
+
+/* Minimal White */
+[data-theme="minimal-white"] {
+  --bg: #f7f7f7;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --text: #111827;
+  --subtext: #6b7280;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59,130,246,0.15);
+}
+
+/* -----------------------------------------------------------
+   Card Components
+----------------------------------------------------------- */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+.card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--card-bg);
+}
+
+.card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.card-subtitle {
+  margin: 0;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--subtext);
+}
+
+.card-body {
+  padding: 16px 18px;
+}
+
+/* -----------------------------------------------------------
+   Insight Cards
+----------------------------------------------------------- */
+.insight-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+.insight-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.insight-item {
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.insight-item:last-child {
+  border-bottom: none;
+}
+
+/* Gradient highlight for values */
+.insight-value {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* -----------------------------------------------------------
+   Modern Match Tile
+----------------------------------------------------------- */
+#matchTile {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+#matchTileBody {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.match-value {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Accent text utility */
+.text-accent {
+  color: var(--accent);
+}
+
+/* -----------------------------------------------------------
+   Inputs / Buttons
+----------------------------------------------------------- */
+.field-label {
+  font-size: 11px;
+  color: var(--subtext);
+  margin-bottom: 3px;
+  display: block;
+}
+
+.field-input {
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-radius: 8px;
+  color: white;
+  border: none;
+}
+
+.btn-secondary {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  color: var(--accent);
+  border: none;
+}
+
+.btn-accent {
+  background: var(--success);
+  border-radius: 8px;
+  color: white;
+  border: none;
+}
+
+/* -----------------------------------------------------------
+   Chart Empty State
+----------------------------------------------------------- */
+.empty-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--subtext);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* -----------------------------------------------------------
+   Legend Dots
+----------------------------------------------------------- */
+.legend-dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.legend-dot.base {
+  background: #3b82f6;
+}
+
+.legend-dot.overlay {
+  background: #ec4899;
+}
+
+/* -----------------------------------------------------------
+   Search Result Box
+----------------------------------------------------------- */
+#beachSearchResults > div {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+#beachSearchResults > div:hover {
+  background: var(--accent-soft);
+}
+
+/* -----------------------------------------------------------
+   Animations
+----------------------------------------------------------- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0px); }
+}
