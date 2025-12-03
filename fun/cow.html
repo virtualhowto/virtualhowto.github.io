@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Cow Shooter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        body {
+            background-color: #0d1117; /* Dark GitHub color */
+            font-family: 'Orbitron', sans-serif;
+            color: #00ff88; /* Neon green */
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        #gameCanvas {
+            /* Uses the original digital gradient background */
+            background: linear-gradient(180deg, #101d2a, #000000);
+            border: 3px solid #00ff88;
+            box-shadow: 0 0 20px #00ff88, inset 0 0 10px #00ff8880;
+            cursor: crosshair;
+            touch-action: none; /* Disable default touch actions */
+        }
+
+        .digital-button {
+            transition: all 0.15s ease-in-out;
+            background: #00ff881a;
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            box-shadow: 0 0 10px #00ff8880;
+        }
+        .digital-button:hover {
+            background: #00ff8840;
+            box-shadow: 0 0 15px #00ff88;
+            transform: translateY(-2px);
+        }
+        .digital-button:active {
+            transform: translateY(0);
+            box-shadow: 0 0 5px #00ff88;
+        }
+
+        .score-board {
+            background: #000000cc;
+            border: 1px solid #00ff88;
+            box-shadow: 0 0 5px #00ff88;
+        }
+
+        .user-id-display {
+            font-size: 0.75rem;
+            word-break: break-all;
+            opacity: 0.6;
+            margin-top: 10px;
+        }
+
+        /* Responsive Canvas container */
+        .canvas-container {
+            width: 95vw;
+            max-width: 800px;
+            aspect-ratio: 16 / 9;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="text-center mb-6">
+        <h1 class="text-3xl sm:text-4xl font-bold uppercase tracking-wider">
+            <span class="text-white">Cyber</span> Cow Tipper
+        </h1>
+        <p class="text-sm sm:text-base text-gray-400 mt-1">Click/Tap to decommission the digital cattle!</p>
+    </div>
+
+    <div class="canvas-container flex justify-center items-center">
+        <canvas id="gameCanvas" class="w-full h-full rounded-lg"></canvas>
+    </div>
+
+    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6 w-full max-w-lg">
+        <div id="stats" class="score-board p-4 rounded-lg flex-1">
+            <p class="text-lg">SCORE: <span id="scoreValue" class="font-bold">0</span></p>
+            <p class="text-lg">TIME: <span id="timeValue" class="font-bold">60</span>s</p>
+            <p class="text-lg">HITS: <span id="hitsValue" class="font-bold">0</span> / <span id="totalCowsValue" class="font-bold">0</span></p>
+        </div>
+        <div id="leaderboard" class="score-board p-4 rounded-lg flex-1">
+            <h2 class="text-xl font-bold mb-2 border-b border-gray-700 pb-1">Leaderboard (Top 5)</h2>
+            <ul id="leaderboard-list">
+                <!-- Leaderboard items will be inserted here -->
+            </ul>
+        </div>
+    </div>
+
+    <button id="startButton" class="digital-button px-6 py-3 rounded-full mt-6 text-xl">
+        START GAME
+    </button>
+    <p id="messageBox" class="text-xl mt-4 text-red-400 font-bold hidden"></p>
+    <div class="user-id-display">
+        User ID: <span id="currentUserId">Loading...</span>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, onSnapshot, collection, query, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // setLogLevel('Debug'); // Uncomment for debugging Firestore
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+        const scoreValueSpan = document.getElementById('scoreValue');
+        const timeValueSpan = document.getElementById('timeValue');
+        const hitsValueSpan = document.getElementById('hitsValue');
+        const totalCowsValueSpan = document.getElementById('totalCowsValue');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const messageBox = document.getElementById('messageBox');
+        const currentUserIdSpan = document.getElementById('currentUserId');
+
+        // --- Global Firebase Variables (Canvas-provided) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- Game Constants ---
+        const GAME_DURATION = 60; // seconds
+        const COW_COUNT = 15;
+        const COW_SIZE = 45; // Defined size for the cow targets
+        // GROUND_Y_RATIO is no longer used since cows can spawn anywhere vertically
+        const RESPAWN_DELAY = 1500; // ms
+
+        // Vendor definitions for digital identity
+        const VENDOR_CONFIGS = [
+            { name: "Google", color: "#4285F4" },   // Blue
+            { name: "Microsoft", color: "#7FBA00" }, // Green
+            { name: "Amazon", color: "#FF9900" },  // Orange
+            { name: "Apple", color: "#A2AAAD" }    // Silver
+        ];
+
+
+        // --- Game State ---
+        let gameTime = GAME_DURATION;
+        let score = 0;
+        let hits = 0;
+        let gameState = 'IDLE'; // IDLE, PLAYING, ENDED
+        let cows = [];
+        let lastClick = { x: 0, y: 0, active: false };
+        let timerInterval = null;
+        let cowRespawnTimeouts = [];
+
+        // --- Utility Functions ---
+
+        // Converts base64 to ArrayBuffer for WAV creation (Not needed for this use case, but good to have)
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Handles exponential backoff for API calls
+        async function fetchWithBackoff(url, options, maxRetries = 5, delay = 1000) {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (attempt === maxRetries - 1) {
+                        throw error;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay * (2 ** attempt)));
+                }
+            }
+        }
+
+
+        // --- Firebase Setup and Data Management ---
+
+        function initializeFirebase() {
+            if (!firebaseConfig) {
+                console.error("Firebase config is not available.");
+                messageBox.textContent = "Error: Firebase configuration missing.";
+                messageBox.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        currentUserIdSpan.textContent = userId;
+                        isAuthReady = true;
+                        console.log("Authenticated with userId:", userId);
+                        // Start listening for scores once authenticated
+                        startScoreListener();
+                    } else {
+                        // Attempt to sign in
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                messageBox.textContent = "Error initializing game services. Check console.";
+                messageBox.classList.remove('hidden');
+            }
+        }
+
+        function getHighScoresCollectionRef() {
+            if (!db || !appId) return null;
+            // Public data collection path: /artifacts/{appId}/public/data/high_scores
+            return collection(db, 'artifacts', appId, 'public', 'data', 'high_scores');
+        }
+
+        async function saveHighScore(finalScore, finalHits) {
+            if (!isAuthReady || !userId) {
+                console.error("Cannot save score: Auth not ready.");
+                return;
+            }
+
+            const scoresRef = getHighScoresCollectionRef();
+            if (!scoresRef) return;
+
+            const now = new Date();
+            const userName = "Player " + userId.substring(0, 4);
+
+            const scoreData = {
+                score: finalScore,
+                hits: finalHits,
+                timestamp: now.getTime(),
+                userId: userId,
+                userName: userName
+            };
+
+            try {
+                await addDoc(scoresRef, scoreData);
+                console.log("Score saved successfully!");
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                messageBox.textContent = "Failed to save score. Check connection.";
+                messageBox.classList.remove('hidden');
+            }
+        }
+
+        function startScoreListener() {
+            if (!isAuthReady) return;
+
+            const scoresRef = getHighScoresCollectionRef();
+            if (!scoresRef) return;
+
+            // Fetch all scores (due to orderBy restriction), sort locally, and display top 5
+            const unsubscribe = onSnapshot(scoresRef, async (snapshot) => {
+                const allScores = [];
+                snapshot.forEach(doc => {
+                    allScores.push(doc.data());
+                });
+
+                // Sort scores by score value (descending) then by timestamp (ascending)
+                allScores.sort((a, b) => {
+                    if (b.score !== a.score) {
+                        return b.score - a.score; // Higher score first
+                    }
+                    return a.timestamp - b.timestamp; // Earlier time first for ties
+                });
+
+                // Take only the top 5
+                const topScores = allScores.slice(0, 5);
+                updateLeaderboardUI(topScores);
+            }, (error) => {
+                console.error("Error listening to scores:", error);
+            });
+
+            // Note: In a real application, you might clean up this listener
+            // when the component unmounts/page closes, but for this single-file
+            // implementation, we keep it active.
+        }
+
+        function updateLeaderboardUI(scores) {
+            leaderboardList.innerHTML = '';
+            if (scores.length === 0) {
+                leaderboardList.innerHTML = '<li class="text-sm opacity-75">No scores yet!</li>';
+                return;
+            }
+
+            scores.forEach((s, index) => {
+                const li = document.createElement('li');
+                const rank = index + 1;
+                const isCurrentUser = s.userId === userId;
+                li.className = `flex justify-between text-sm py-0.5 ${isCurrentUser ? 'font-extrabold text-yellow-300' : ''}`;
+                li.innerHTML = `
+                    <span>#${rank}. ${s.userName}</span>
+                    <span>${s.score} pts</span>
+                `;
+                leaderboardList.appendChild(li);
+            });
+        }
+
+
+        // --- Game Logic ---
+
+        class Cow {
+            constructor(id, vendorConfig) {
+                this.id = id;
+                this.vendor = vendorConfig.name;
+                this.vendorColor = vendorConfig.color;
+                this.reset();
+            }
+
+            reset() {
+                this.width = COW_SIZE; // Use the constant
+                this.height = COW_SIZE; // Use the constant
+                
+                // Random X position across the entire width (Cow must be fully visible)
+                this.x = Math.random() * (canvas.width - this.width); 
+                
+                // Random Y position across the entire height (Cow must be fully visible)
+                this.y = Math.random() * (canvas.height - this.height);
+                
+                this.health = 1;
+                this.isHit = false;
+                this.angle = 0;
+                this.fallSpeed = 0;
+                this.fallAngle = 0;
+                this.fallRate = 0;
+                this.glitchOffset = { x: 0, y: 0 };
+                this.glitchOpacity = 0;
+                this.lastHitTime = 0;
+            }
+
+            draw(ctx) {
+                if (this.health <= 0 && this.fallAngle >= 1.57) return; // Completely fallen
+
+                ctx.save();
+                // Translate to center, rotate, and translate back
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+                ctx.rotate(this.fallAngle);
+                ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
+
+                const drawX = this.x;
+                const drawY = this.y;
+                const emojiSize = 40; 
+
+                // --- 1. Digital Frame/Outline (Vendor Color) ---
+                ctx.strokeStyle = this.vendorColor;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(drawX, drawY, this.width, this.height);
+
+                // --- 2. Glitch Effect (Vendor Color Flash) ---
+                if (this.isHit) {
+                    ctx.globalAlpha = this.glitchOpacity * 0.5;
+                    ctx.fillStyle = this.vendorColor; 
+                    // Draw a glitchy outline/shadow around the cow size
+                    ctx.fillRect(drawX + this.glitchOffset.x, drawY + this.glitchOffset.y, this.width, this.height);
+                    ctx.globalAlpha = 1;
+                }
+                
+                // --- 3. Draw the Cow Emoji (🐄) ---
+                ctx.font = `${emojiSize}px sans-serif`; 
+                ctx.textAlign = 'center';
+                ctx.fillText('🐄', drawX + this.width / 2, drawY + this.height / 2 + (emojiSize * 0.35));
+
+                // --- 4. Digital Glitch Overlay (Binary text & Vendor Name) ---
+                if (this.isHit) {
+                    // Binary code text (constant glitch color)
+                    ctx.globalAlpha = this.glitchOpacity;
+                    ctx.fillStyle = 'cyan';
+                    ctx.font = '10px Orbitron';
+                    ctx.fillText('101010', drawX + this.width / 2 + 5, drawY + this.height / 2 - 10);
+                    ctx.fillText('011001', drawX + this.width / 2 - 5, drawY + this.height / 2 + 10);
+
+                    // Vendor Name text (vendor color)
+                    ctx.fillStyle = this.vendorColor; 
+                    ctx.font = '8px Orbitron';
+                    ctx.fillText(this.vendor.toUpperCase(), drawX + this.width / 2, drawY - 5);
+                    ctx.globalAlpha = 1;
+                }
+
+                ctx.restore();
+            }
+
+            update(deltaTime) {
+                if (this.health <= 0) {
+                    // Cow is falling over (rotation up to PI/2 radians, or 90 degrees)
+                    if (this.fallAngle < 1.57) {
+                        this.fallAngle += this.fallRate * deltaTime;
+                        this.fallRate += 0.0001; // Accelerate fall slightly
+                        if (this.fallAngle > 1.57) {
+                            this.fallAngle = 1.57; // Stop at 90 degrees (on its side)
+                        }
+                    }
+                }
+
+                if (this.isHit) {
+                    // Glitch animation
+                    const timeSinceHit = Date.now() - this.lastHitTime;
+                    if (timeSinceHit < 300) {
+                        this.glitchOffset.x = (Math.random() - 0.5) * 5;
+                        this.glitchOffset.y = (Math.random() - 0.5) * 5;
+                        this.glitchOpacity = 0.8;
+                    } else if (timeSinceHit < 500) {
+                        this.glitchOpacity *= 0.8;
+                    } else {
+                        this.isHit = false;
+                        this.glitchOpacity = 0;
+                        this.glitchOffset = { x: 0, y: 0 };
+                    }
+                }
+            }
+
+            hit(clickX, clickY) {
+                if (this.health > 0) {
+                    if (clickX >= this.x && clickX <= this.x + this.width &&
+                        clickY >= this.y && clickY <= this.y + this.height) {
+
+                        this.health = 0; // The cow is shot
+                        this.isHit = true;
+                        this.lastHitTime = Date.now();
+                        this.fallRate = 0.005; // Initial fall speed
+
+                        // Start respawn sequence
+                        cowRespawnTimeouts.push(setTimeout(() => {
+                            this.reset();
+                            console.log(`Cow ${this.id} (${this.vendor}) respawned.`);
+                        }, RESPAWN_DELAY));
+
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        function initCows() {
+            cows = [];
+            for (let i = 0; i < COW_COUNT; i++) {
+                // Assign a vendor configuration cyclically
+                const vendorConfig = VENDOR_CONFIGS[i % VENDOR_CONFIGS.length];
+                cows.push(new Cow(i, vendorConfig));
+            }
+            totalCowsValueSpan.textContent = COW_COUNT;
+        }
+
+        function startGame() {
+            if (gameState === 'PLAYING') return;
+
+            // Clear any old state
+            clearTimeouts();
+            initCows();
+            score = 0;
+            hits = 0;
+            gameTime = GAME_DURATION;
+            gameState = 'PLAYING';
+            lastClick.active = false;
+            messageBox.classList.add('hidden');
+            startButton.textContent = 'GAME IN PROGRESS...';
+            startButton.disabled = true;
+
+            updateStats();
+
+            // Start timer
+            timerInterval = setInterval(() => {
+                gameTime--;
+                updateStats();
+                if (gameTime <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // Start the main game loop
+            animate(0);
+        }
+
+        function endGame() {
+            gameState = 'ENDED';
+            clearInterval(timerInterval);
+            clearTimeouts();
+            startButton.textContent = 'PLAY AGAIN';
+            startButton.disabled = false;
+            messageBox.textContent = `TIME UP! Final Score: ${score}`;
+            messageBox.classList.remove('hidden');
+
+            // Save the score
+            if (isAuthReady) {
+                saveHighScore(score, hits);
+            } else {
+                console.warn("Auth not ready, score not saved.");
+            }
+        }
+
+        function clearTimeouts() {
+            cowRespawnTimeouts.forEach(t => clearTimeout(t));
+            cowRespawnTimeouts = [];
+        }
+
+        // --- Drawing Functions ---
+        
+        // Removed drawGround() as targets are no longer constrained to the bottom edge.
+
+        function drawCrosshair(ctx) {
+            const size = 10;
+            const x = lastClick.x;
+            const y = lastClick.y;
+
+            ctx.strokeStyle = '#ff0044';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            // Vertical line
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x, y + size);
+            // Horizontal line
+            ctx.moveTo(x - size, y);
+            ctx.lineTo(x + size, y);
+            ctx.stroke();
+
+            // Center dot
+            ctx.fillStyle = '#ff0044';
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function updateStats() {
+            scoreValueSpan.textContent = score;
+            timeValueSpan.textContent = gameTime;
+            hitsValueSpan.textContent = hits;
+        }
+
+        // --- Main Loop ---
+
+        let lastTime = 0;
+        function animate(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            // Resize canvas on every frame to ensure responsiveness (simplified)
+            resizeCanvas();
+
+            // Clear canvas, relying on CSS background gradient
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Removed call to drawGround(ctx)
+
+            if (gameState === 'PLAYING' || gameState === 'ENDED') {
+                // Update and draw cows
+                cows.forEach(cow => {
+                    if (gameState === 'PLAYING') {
+                        cow.update(deltaTime);
+                    }
+                    cow.draw(ctx);
+                });
+            }
+
+            // Draw the crosshair only if we have a last click
+            if (lastClick.active) {
+                drawCrosshair(ctx);
+            }
+
+            if (gameState === 'PLAYING') {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // --- Event Handlers ---
+
+        function resizeCanvas() {
+            // Match canvas size to its container size
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        function handleShot(event) {
+            if (gameState !== 'PLAYING') return;
+
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+
+            // Handle both mouse and touch events
+            if (event.type === 'touchstart' || event.type === 'touchmove') {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+                event.preventDefault(); // Prevent scrolling/zooming on touch
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+
+            const clickX = clientX - rect.left;
+            const clickY = clientY - rect.top;
+
+            // Update crosshair position
+            lastClick.x = clickX;
+            lastClick.y = clickY;
+            lastClick.active = true;
+
+            // Simple visual feedback for the click (will fade naturally in animate loop)
+            setTimeout(() => lastClick.active = false, 100);
+
+            let hitOccurred = false;
+            cows.forEach(cow => {
+                if (cow.hit(clickX, clickY)) {
+                    score += 10;
+                    hits++;
+                    hitOccurred = true;
+                }
+            });
+
+            if (!hitOccurred) {
+                score = Math.max(0, score - 5); // Penalty for missing
+            }
+
+            updateStats();
+        }
+
+        // --- Initialization ---
+
+        window.onload = function () {
+            initializeFirebase();
+
+            // Initialize canvas size and cow count display
+            resizeCanvas();
+            initCows();
+            totalCowsValueSpan.textContent = COW_COUNT;
+            currentUserIdSpan.textContent = 'Signing in...'; // Initial state
+
+            // Set up event listeners
+            startButton.addEventListener('click', startGame);
+            canvas.addEventListener('mousedown', handleShot);
+            canvas.addEventListener('touchstart', handleShot);
+            window.addEventListener('resize', () => {
+                if (gameState !== 'PLAYING') resizeCanvas();
+            });
+
+            // Initial draw (for setup screen)
+            animate(0);
+        }
+
+        // Expose a few functions for initial debug/testing if needed
+        // window.startGame = startGame;
+        // window.endGame = endGame;
+
+    </script>
+</body>
+</html>
