@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Campervan ROI / IRR Comparison (AU) — Multi-Scenario + Tax + Depreciation + Chart + Export</title>
+
+<style>
+  :root{
+    --bg:#020617;
+    --panel:#0f172a;
+    --panel2:#111827;
+    --ink:#e5e7eb;
+    --muted:#94a3b8;
+    --accent:#38bdf8;
+    --good:#22c55e;
+    --warn:#facc15;
+    --bad:#ef4444;
+    --line:rgba(255,255,255,.10);
+  }
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  body{margin:0;background:linear-gradient(145deg,#020617,#04102a);color:var(--ink);padding:16px;}
+  .container{max-width:1200px;margin:0 auto;}
+  h1{margin:0 0 6px 0;text-align:center;font-size:1.35rem;}
+  .subtitle{margin:0 0 18px 0;text-align:center;color:var(--muted);font-size:.92rem;}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;}
+  @media(min-width:980px){ .grid{grid-template-columns:1fr 1fr;} }
+  .card{
+    background:rgba(15,23,42,.92);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.28);
+  }
+  .card h2{margin:0 0 10px 0;font-size:1.02rem;color:var(--accent);}
+  .row{display:grid;grid-template-columns:1fr;gap:10px;}
+  @media(min-width:620px){ .row{grid-template-columns:1fr 1fr;} }
+  label{display:block;color:var(--muted);font-size:.78rem;margin:10px 0 6px;}
+  input, select{
+    width:100%;
+    padding:10px 10px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.08);
+    background:#020617;
+    color:var(--ink);
+    outline:none;
+  }
+  input:focus, select:focus{border-color:rgba(56,189,248,.55); box-shadow:0 0 0 3px rgba(56,189,248,.10);}
+  .buttons{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px;}
+  @media(min-width:620px){ .buttons{grid-template-columns:1fr 1fr 1fr;} }
+  button{
+    padding:11px 12px;
+    border-radius:12px;
+    border:none;
+    background:var(--accent);
+    color:#06101d;
+    font-weight:700;
+    cursor:pointer;
+  }
+  button.secondary{background:#1e293b;color:var(--ink);border:1px solid rgba(255,255,255,.08);}
+  button.danger{background:#ef4444;color:#0b1220;}
+  .pill{
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:.72rem;
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--muted);
+    margin-left:8px;
+  }
+  table{width:100%;border-collapse:collapse;font-size:.86rem;}
+  th, td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:center;vertical-align:middle;}
+  th{color:var(--muted);font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.06em;}
+  td:first-child, th:first-child{text-align:left;}
+  .hi{color:var(--good);font-weight:800;}
+  .hi2{color:var(--accent);font-weight:800;}
+  .low{color:var(--bad);font-weight:800;}
+  .note{color:var(--muted);font-size:.78rem;line-height:1.35;margin-top:10px;}
+  .split{display:grid;grid-template-columns:1fr;gap:12px;}
+  @media(min-width:980px){ .split{grid-template-columns:1.1fr .9fr;} }
+  .canvasWrap{background:#020617;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px;}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;color:var(--muted);font-size:.78rem;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:10px;height:10px;border-radius:50%;}
+  .mono{font-variant-numeric:tabular-nums;}
+  .topActions{display:grid;grid-template-columns:1fr;gap:10px;}
+  @media(min-width:700px){ .topActions{grid-template-columns:1fr 1fr;} }
+
+  /* Print styling for "Export PDF" (browser print to PDF) */
+  @media print{
+    body{background:#fff;color:#000;padding:0;}
+    .card{background:#fff;border:1px solid #ddd;box-shadow:none;}
+    button, .note .hidePrint, .subtitle{display:none !important;}
+    canvas{max-width:100% !important;}
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <h1>Campervan Investment Calculator (AU)</h1>
+  <p class="subtitle">Save multiple vans (Van 1 / Van 2 / Van 3 …), compare ROI & IRR, include resale, optional ATO depreciation + tax, 5-year cashflow chart, scoring, and export.</p>
+
+  <div class="grid">
+
+    <!-- INPUTS -->
+    <div class="card">
+      <h2>Scenario Inputs <span class="pill">Saved in your browser</span></h2>
+
+      <div class="row">
+        <div>
+          <label>Scenario Name</label>
+          <input id="name" value="Van 1" />
+        </div>
+        <div>
+          <label>Holding Period (years)</label>
+          <input id="years" type="number" min="1" max="20" value="5" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Purchase Price ($)</label>
+          <input id="purchase" type="number" min="0" value="12000" />
+        </div>
+        <div>
+          <label>Resale Value at End ($)</label>
+          <input id="resale" type="number" min="0" value="6000" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Nightly Rate ($)</label>
+          <input id="rate" type="number" min="0" value="120" />
+        </div>
+        <div>
+          <label>Nights / Year</label>
+          <input id="nights" type="number" min="0" value="60" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Platform</label>
+          <select id="platformPreset">
+            <option value="camplify">Camplify (typical)</option>
+            <option value="rvshare">RVshare (typical)</option>
+            <option value="private">Private / Direct (no platform)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div>
+          <label>Platform Fee (%)</label>
+          <input id="platformFee" type="number" min="0" step="0.1" value="20" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Insurance ($/yr)</label>
+          <input id="insurance" type="number" min="0" value="900" />
+        </div>
+        <div>
+          <label>Registration ($/yr)</label>
+          <input id="rego" type="number" min="0" value="800" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Maintenance ($/yr)</label>
+          <input id="maintenance" type="number" min="0" value="800" />
+        </div>
+        <div>
+          <label>Other Fixed Costs ($/yr)</label>
+          <input id="otherFixed" type="number" min="0" value="300" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Cleaning ($ per booking)</label>
+          <input id="cleaning" type="number" min="0" value="40" />
+        </div>
+        <div>
+          <label>Bookings / Year</label>
+          <input id="bookings" type="number" min="0" value="10" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label><input id="taxToggle" type="checkbox" checked /> Include Tax (after-tax cashflow)</label>
+          <div class="row" style="gap:10px;">
+            <div>
+              <label>Marginal Tax Rate (%)</label>
+              <input id="taxRate" type="number" min="0" max="60" step="0.1" value="37" />
+            </div>
+            <div>
+              <label><input id="lossOffsetToggle" type="checkbox" checked /> Allow tax benefit on losses</label>
+              <div class="note">If unchecked, negative taxable income produces $0 tax benefit (conservative).</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label><input id="depToggle" type="checkbox" checked /> Include ATO Depreciation (vehicle)</label>
+          <div class="row" style="gap:10px;">
+            <div>
+              <label>Method</label>
+              <select id="depMethod">
+                <option value="diminishing">Diminishing Value (default)</option>
+                <option value="prime">Prime Cost</option>
+              </select>
+            </div>
+            <div>
+              <label>Effective Life (years)</label>
+              <input id="effectiveLife" type="number" min="1" max="20" value="8" />
+            </div>
+          </div>
+          <div class="note">
+            ATO depreciation reduces <span class="mono">taxable income</span> (non-cash deduction). This tool models it as if the van is 100% income-producing.
+          </div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button onclick="saveScenario()">Save / Update</button>
+        <button class="secondary" onclick="loadScenario()">Load</button>
+        <button class="danger" onclick="deleteScenario()">Delete</button>
+      </div>
+
+      <div class="topActions" style="margin-top:12px;">
+        <button class="secondary" onclick="exportCSV()">Export CSV (all scenarios)</button>
+        <button class="secondary" onclick="exportPDF()">Export PDF (Print)</button>
+      </div>
+
+      <div class="note">
+        <span class="hidePrint">PDF export uses your browser’s “Print → Save as PDF”.</span>
+        This is a modelling tool (not financial advice). Results depend heavily on utilisation, repairs, downtime, insurance, and local demand.
+      </div>
+    </div>
+
+    <!-- RESULTS + CHART -->
+    <div class="card">
+      <h2>Results + 5-Year Cashflow</h2>
+
+      <div class="split">
+        <div>
+          <table>
+            <tbody>
+              <tr><th>Metric</th><th>Value</th></tr>
+              <tr><td>Gross Revenue / Year</td><td class="mono" id="r_gross">$0</td></tr>
+              <tr><td>Total Cash Costs / Year</td><td class="mono" id="r_costs">$0</td></tr>
+              <tr><td>Net Cashflow / Year (pre-tax)</td><td class="mono" id="r_net">$0</td></tr>
+              <tr><td>Taxable Income / Year</td><td class="mono" id="r_taxable">$0</td></tr>
+              <tr><td>After-Tax Cashflow / Year</td><td class="mono" id="r_after">$0</td></tr>
+              <tr><td>Cash-on-Cash ROI (after-tax)</td><td class="mono" id="r_roi">0%</td></tr>
+              <tr><td>Payback (years, after-tax)</td><td class="mono" id="r_payback">–</td></tr>
+              <tr><td>IRR (incl. resale)</td><td class="mono" id="r_irr">–</td></tr>
+              <tr><td>5-Year Profit (after-tax, incl. resale)</td><td class="mono" id="r_profit5">$0</td></tr>
+            </tbody>
+          </table>
+
+          <div class="note">
+            IRR uses cashflows: <span class="mono">Year 0 = -Purchase</span>, each year = after-tax cashflow, final year adds resale value.
+          </div>
+        </div>
+
+        <div class="canvasWrap">
+          <canvas id="chart" width="520" height="360" style="width:100%;height:auto;"></canvas>
+          <div class="legend">
+            <span><span class="dot" style="background:var(--accent)"></span>After-tax annual cashflow</span>
+            <span><span class="dot" style="background:var(--good)"></span>Cumulative after-tax + resale</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- COMPARISON -->
+  <div class="card" style="margin-top:14px;">
+    <h2>Comparison (Saved Scenarios) <span class="pill">Auto “Best Investment” score</span></h2>
+    <div class="note" style="margin-top:0;">
+      Score blends <span class="mono">IRR</span>, <span class="mono">ROI</span>, and <span class="mono">Payback</span> (faster is better). It’s a helper, not a guarantee.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Platform</th>
+          <th>Net / yr (after-tax)</th>
+          <th>ROI (after-tax)</th>
+          <th>Payback (yrs)</th>
+          <th>IRR</th>
+          <th>5y Profit</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody id="compareBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  // ---------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+
+  function money(n){
+    if (!isFinite(n)) return "–";
+    const sign = n < 0 ? "-" : "";
+    const v = Math.abs(n);
+    return sign + "$" + v.toLocaleString(undefined,{maximumFractionDigits:0});
+  }
+  function pct(n){
+    if (!isFinite(n)) return "–";
+    return n.toFixed(1) + "%";
+  }
+
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+  // IRR via bisection (robust for typical investments)
+  // cashflows: array with CF0..CFN
+  function npv(rate, cfs){
+    let sum = 0;
+    for (let t=0; t<cfs.length; t++){
+      sum += cfs[t] / Math.pow(1+rate, t);
+    }
+    return sum;
+  }
+  function irr(cfs){
+    // If no sign change, IRR may not exist
+    let hasPos = cfs.some(x => x > 0);
+    let hasNeg = cfs.some(x => x < 0);
+    if (!(hasPos && hasNeg)) return NaN;
+
+    // Search bounds: -0.95 .. 3.0 (i.e., -95% to 300%)
+    let lo = -0.95, hi = 3.0;
+    let fLo = npv(lo, cfs), fHi = npv(hi, cfs);
+
+    // Expand hi if needed
+    let tries = 0;
+    while (fLo * fHi > 0 && tries < 20){
+      hi *= 1.5;
+      fHi = npv(hi, cfs);
+      tries++;
+      if (hi > 100) break;
+    }
+    if (fLo * fHi > 0) return NaN;
+
+    for (let i=0; i<80; i++){
+      const mid = (lo+hi)/2;
+      const fMid = npv(mid, cfs);
+      if (Math.abs(fMid) < 1e-7) return mid;
+      if (fLo * fMid <= 0){
+        hi = mid; fHi = fMid;
+      } else {
+        lo = mid; fLo = fMid;
+      }
+    }
+    return (lo+hi)/2;
+  }
+
+  // Depreciation schedule (ATO-style simplified)
+  // Diminishing value: rate = 200% / effectiveLife
+  // Prime cost: rate = 100% / effectiveLife
+  function depreciationForYear(openingValue, method, effectiveLife){
+    const life = Math.max(1, effectiveLife);
+    if (method === "prime"){
+      const rate = 1 / life;
+      return openingValue * rate;
+    } else {
+      const rate = 2 / life;
+      return openingValue * rate;
+    }
+  }
+
+  // Platform presets (adjust if you want)
+  const PLATFORM_PRESETS = {
+    camplify: { name: "Camplify", feePct: 20 },
+    rvshare:  { name: "RVshare",  feePct: 25 },
+    private:  { name: "Private",  feePct: 0  },
+    custom:   { name: "Custom",   feePct: 20 }
+  };
+
+  function getForm(){
+    return {
+      name: $("name").value.trim() || "Unnamed",
+      years: +$("years").value || 5,
+      purchase: +$("purchase").value || 0,
+      resale: +$("resale").value || 0,
+      rate: +$("rate").value || 0,
+      nights: +$("nights").value || 0,
+      platformPreset: $("platformPreset").value,
+      platformFee: +$("platformFee").value || 0,
+      insurance: +$("insurance").value || 0,
+      rego: +$("rego").value || 0,
+      maintenance: +$("maintenance").value || 0,
+      otherFixed: +$("otherFixed").value || 0,
+      cleaning: +$("cleaning").value || 0,
+      bookings: +$("bookings").value || 0,
+      taxToggle: $("taxToggle").checked,
+      taxRate: (+$("taxRate").value || 0) / 100,
+      lossOffsetToggle: $("lossOffsetToggle").checked,
+      depToggle: $("depToggle").checked,
+      depMethod: $("depMethod").value,
+      effectiveLife: +$("effectiveLife").value || 8
+    };
+  }
+
+  function computeScenario(s){
+    const years = Math.max(1, Math.floor(s.years));
+
+    const gross = s.rate * s.nights;
+    const platformFeeCash = gross * (s.platformFee / 100);
+    const cleaningCash = s.cleaning * s.bookings;
+
+    const cashCosts =
+      platformFeeCash +
+      s.insurance +
+      s.rego +
+      s.maintenance +
+      s.otherFixed +
+      cleaningCash;
+
+    const netCashPreTax = gross - cashCosts;
+
+    // Depreciation schedule (for taxable income only; non-cash)
+    let dep = 0;
+    if (s.depToggle){
+      // We model depreciation on the purchase value (simplified), with opening value reducing each year for diminishing.
+      // Note: Real ATO calcs can be more nuanced (days held, low-value pools, etc.).
+      let opening = s.purchase;
+      for (let y=1; y<=years; y++){
+        const d = depreciationForYear(opening, s.depMethod, s.effectiveLife);
+        if (y === 1) dep = d; // show year-1 on dashboard
+        // update opening
+        if (s.depMethod === "prime"){
+          opening = Math.max(0, opening - (s.purchase / Math.max(1, s.effectiveLife)));
+        } else {
+          opening = Math.max(0, opening - d);
+        }
+      }
+    }
+
+    // Taxable income (year 1 proxy for dashboard). For chart, we compute each year.
+    let taxableYear1 = netCashPreTax - (s.depToggle ? depreciationForYear(s.purchase, s.depMethod, s.effectiveLife) : 0);
+
+    // After-tax cashflow per year (assumes same every year except depreciation changing for diminishing value)
+    const afterTaxByYear = [];
+    const taxableByYear = [];
+    const depByYear = [];
+
+    let opening = s.purchase;
+    for (let y=1; y<=years; y++){
+      let depY = 0;
+      if (s.depToggle){
+        depY = depreciationForYear(opening, s.depMethod, s.effectiveLife);
+        // update opening
+        if (s.depMethod === "prime"){
+          opening = Math.max(0, opening - (s.purchase / Math.max(1, s.effectiveLife)));
+        } else {
+          opening = Math.max(0, opening - depY);
+        }
+      }
+
+      const taxable = netCashPreTax - depY;
+      let tax = 0;
+
+      if (s.taxToggle){
+        if (taxable >= 0){
+          tax = taxable * s.taxRate;
+        } else {
+          tax = s.lossOffsetToggle ? (taxable * s.taxRate) : 0; // negative => tax benefit (negative tax)
+        }
+      }
+
+      const afterTax = netCashPreTax - tax;
+
+      depByYear.push(depY);
+      taxableByYear.push(taxable);
+      afterTaxByYear.push(afterTax);
+    }
+
+    // Cashflows for IRR
+    const cfs = [];
+    cfs.push(-s.purchase);
+    for (let y=1; y<=years; y++){
+      let cf = afterTaxByYear[y-1];
+      if (y === years) cf += s.resale;
+      cfs.push(cf);
+    }
+
+    const irrVal = irr(cfs);
+    const irrPct = isFinite(irrVal) ? irrVal * 100 : NaN;
+
+    // ROI + payback (after-tax annual)
+    const annualAfter = afterTaxByYear[0] ?? 0;
+    const roi = s.purchase > 0 ? (annualAfter / s.purchase) * 100 : NaN;
+    const payback = annualAfter > 0 ? (s.purchase / annualAfter) : Infinity;
+
+    // 5-year profit (or holding period profit) after-tax incl. resale - purchase
+    const totalIn = cfs.slice(1).reduce((a,b)=>a+b,0);
+    const profit = totalIn - s.purchase; // equivalent to sum(CFs) since CF0 is -purchase
+
+    // Build cumulative line for chart (yearly cum after-tax, with resale at end)
+    const cum = [];
+    let running = -s.purchase;
+    for (let y=1; y<=years; y++){
+      running += afterTaxByYear[y-1];
+      if (y === years) running += s.resale;
+      cum.push(running);
+    }
+
+    return {
+      ...s,
+      gross, cashCosts, netCashPreTax,
+      taxableYear1,
+      annualAfter,
+      roi, payback,
+      irrPct,
+      profit,
+      afterTaxByYear, taxableByYear, depByYear,
+      cfs, cum
+    };
+  }
+
+  // ---------- UI Wiring ----------
+  function applyPlatformPreset(){
+    const presetKey = $("platformPreset").value;
+    const preset = PLATFORM_PRESETS[presetKey] || PLATFORM_PRESETS.custom;
+    if (presetKey !== "custom"){
+      $("platformFee").value = preset.feePct;
+    }
+    update();
+  }
+
+  $("platformPreset").addEventListener("change", applyPlatformPreset);
+
+  // Auto-switch preset to custom if user edits fee directly
+  $("platformFee").addEventListener("input", () => {
+    if ($("platformPreset").value !== "custom"){
+      $("platformPreset").value = "custom";
+    }
+    update();
+  });
+
+  // Recalc on input
+  Array.from(document.querySelectorAll("input, select")).forEach(el => {
+    el.addEventListener("input", update);
+    el.addEventListener("change", update);
+  });
+
+  // ---------- Save/Load/Delete ----------
+  function keyForScenario(name){
+    return "vanScenario:" + name.toLowerCase();
+  }
+
+  function saveScenario(){
+    const s = getForm();
+    const computed = computeScenario(s);
+    localStorage.setItem(keyForScenario(s.name), JSON.stringify(computed));
+    renderComparison();
+    update(); // keeps UI consistent
+  }
+
+  function loadScenario(){
+    const name = $("name").value.trim();
+    if (!name) return alert("Enter a Scenario Name to load.");
+    const raw = localStorage.getItem(keyForScenario(name));
+    if (!raw) return alert("Scenario not found.");
+    const s = JSON.parse(raw);
+
+    $("years").value = s.years;
+    $("purchase").value = s.purchase;
+    $("resale").value = s.resale;
+    $("rate").value = s.rate;
+    $("nights").value = s.nights;
+
+    $("platformPreset").value = s.platformPreset || "custom";
+    $("platformFee").value = s.platformFee;
+
+    $("insurance").value = s.insurance;
+    $("rego").value = s.rego;
+    $("maintenance").value = s.maintenance;
+    $("otherFixed").value = s.otherFixed;
+    $("cleaning").value = s.cleaning;
+    $("bookings").value = s.bookings;
+
+    $("taxToggle").checked = !!s.taxToggle;
+    $("taxRate").value = (s.taxRate * 100).toFixed(1).replace(/\.0$/,'');
+    $("lossOffsetToggle").checked = !!s.lossOffsetToggle;
+
+    $("depToggle").checked = !!s.depToggle;
+    $("depMethod").value = s.depMethod || "diminishing";
+    $("effectiveLife").value = s.effectiveLife || 8;
+
+    update();
+  }
+
+  function deleteScenario(){
+    const name = $("name").value.trim();
+    if (!name) return alert("Enter a Scenario Name to delete.");
+    const k = keyForScenario(name);
+    if (!localStorage.getItem(k)) return alert("Scenario not found.");
+    localStorage.removeItem(k);
+    renderComparison();
+    update();
+  }
+
+  // ---------- Export ----------
+  function exportCSV(){
+    const scenarios = getAllSavedScenarios();
+    if (!scenarios.length) return alert("No saved scenarios to export.");
+
+    const headers = [
+      "Scenario","Platform","Years","Purchase","Resale","NightlyRate","NightsPerYear","PlatformFeePct",
+      "GrossPerYear","CashCostsPerYear","NetCashPreTaxPerYear",
+      "TaxToggle","TaxRatePct","LossOffsetAllowed",
+      "DepToggle","DepMethod","EffectiveLife",
+      "AfterTaxPerYear","ROI_AfterTax_Pct","PaybackYears","IRR_Pct","Profit_InclResale"
+    ];
+
+    const rows = scenarios.map(s => ([
+      s.name,
+      PLATFORM_PRESETS[s.platformPreset]?.name || s.platformPreset,
+      s.years,
+      s.purchase,
+      s.resale,
+      s.rate,
+      s.nights,
+      s.platformFee,
+      Math.round(s.gross),
+      Math.round(s.cashCosts),
+      Math.round(s.netCashPreTax),
+      s.taxToggle ? "Y" : "N",
+      (s.taxRate*100).toFixed(2),
+      s.lossOffsetToggle ? "Y" : "N",
+      s.depToggle ? "Y" : "N",
+      s.depMethod,
+      s.effectiveLife,
+      Math.round(s.annualAfter),
+      isFinite(s.roi) ? s.roi.toFixed(2) : "",
+      isFinite(s.payback) ? s.payback.toFixed(2) : "",
+      isFinite(s.irrPct) ? s.irrPct.toFixed(2) : "",
+      Math.round(s.profit)
+    ].map(escapeCSV).join(",")));
+
+    const csv = [headers.join(","), ...rows].join("\n");
+    downloadText(csv, "campervan_scenarios.csv", "text/csv;charset=utf-8;");
+  }
+
+  function escapeCSV(v){
+    const s = String(v ?? "");
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  }
+
+  function downloadText(text, filename, mime){
+    const blob = new Blob([text], {type:mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 500);
+  }
+
+  function exportPDF(){
+    window.print(); // user chooses "Save as PDF"
+  }
+
+  // ---------- Chart ----------
+  function drawChart(model){
+    const canvas = $("chart");
+    const ctx = canvas.getContext("2d");
+
+    // Resize for crispness on high DPI
+    const cssW = canvas.clientWidth;
+    const ratio = window.devicePixelRatio || 1;
+    const targetW = Math.floor(cssW * ratio);
+    const targetH = Math.floor((cssW * 0.69) * ratio); // keep aspect
+    if (canvas.width !== targetW || canvas.height !== targetH){
+      canvas.width = targetW;
+      canvas.height = targetH;
+    }
+
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+
+    // Background
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0,0,w,h);
+
+    const padL = 52*ratio, padR = 14*ratio, padT = 18*ratio, padB = 42*ratio;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
+
+    const years = Math.max(1, Math.floor(model.years));
+    const x = (i) => padL + (plotW * (i/(years-1 || 1)));
+    const yVals1 = model.afterTaxByYear.map((v,i)=>v); // annual
+    const yVals2 = model.cum.map(v=>v); // cumulative
+
+    const allY = [...yVals1, ...yVals2, 0];
+    let minY = Math.min(...allY), maxY = Math.max(...allY);
+    if (minY === maxY){ minY -= 1; maxY += 1; }
+
+    // Add a little headroom
+    const range = maxY - minY;
+    minY -= range*0.08;
+    maxY += range*0.08;
+
+    const yMap = (v) => padT + (maxY - v) * (plotH/(maxY - minY));
+
+    // Grid
+    ctx.strokeStyle = "rgba(255,255,255,.08)";
+    ctx.lineWidth = 1*ratio;
+
+    const gridLines = 5;
+    for (let i=0;i<=gridLines;i++){
+      const yy = padT + (plotH * (i/gridLines));
+      ctx.beginPath();
+      ctx.moveTo(padL, yy);
+      ctx.lineTo(padL+plotW, yy);
+      ctx.stroke();
+    }
+
+    // Axes labels (Y)
+    ctx.fillStyle = "rgba(229,231,235,.85)";
+    ctx.font = `${12*ratio}px system-ui`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+
+    for (let i=0;i<=gridLines;i++){
+      const v = maxY - (range * (i/gridLines));
+      const yy = padT + (plotH * (i/gridLines));
+      ctx.fillText(money(v), padL-8*ratio, yy);
+    }
+
+    // X labels
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(148,163,184,.95)";
+    for (let i=0;i<years;i++){
+      const xx = x(i);
+      ctx.fillText("Y"+(i+1), xx, padT+plotH+10*ratio);
+    }
+
+    // Line 1: Annual after-tax cashflow
+    ctx.strokeStyle = "rgba(56,189,248,.95)";
+    ctx.lineWidth = 2*ratio;
+    ctx.beginPath();
+    for (let i=0;i<years;i++){
+      const xx = x(i);
+      const yy = yMap(yVals1[i]);
+      if (i===0) ctx.moveTo(xx,yy);
+      else ctx.lineTo(xx,yy);
+    }
+    ctx.stroke();
+
+    // Points
+    ctx.fillStyle = "rgba(56,189,248,1)";
+    for (let i=0;i<years;i++){
+      ctx.beginPath();
+      ctx.arc(x(i), yMap(yVals1[i]), 3.4*ratio, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Line 2: Cumulative after-tax + resale
+    ctx.strokeStyle = "rgba(34,197,94,.95)";
+    ctx.lineWidth = 2*ratio;
+    ctx.beginPath();
+    for (let i=0;i<years;i++){
+      const xx = x(i);
+      const yy = yMap(yVals2[i]);
+      if (i===0) ctx.moveTo(xx,yy);
+      else ctx.lineTo(xx,yy);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(34,197,94,1)";
+    for (let i=0;i<years;i++){
+      ctx.beginPath();
+      ctx.arc(x(i), yMap(yVals2[i]), 3.4*ratio, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Zero line emphasis
+    ctx.strokeStyle = "rgba(250,204,21,.40)";
+    ctx.lineWidth = 1.5*ratio;
+    const y0 = yMap(0);
+    ctx.beginPath();
+    ctx.moveTo(padL, y0);
+    ctx.lineTo(padL+plotW, y0);
+    ctx.stroke();
+  }
+
+  // ---------- Comparison + scoring ----------
+  function getAllSavedScenarios(){
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("vanScenario:"));
+    const scenarios = [];
+    for (const k of keys){
+      try{
+        const obj = JSON.parse(localStorage.getItem(k));
+        if (obj && obj.name) scenarios.push(obj);
+      } catch {}
+    }
+    // recompute with current logic in case older stored items exist
+    return scenarios.map(s => computeScenario(s));
+  }
+
+  function scoreScenarios(list){
+    if (!list.length) return [];
+
+    // Normalize within the set
+    const irrVals = list.map(s => isFinite(s.irrPct) ? s.irrPct : NaN).filter(v => isFinite(v));
+    const roiVals = list.map(s => isFinite(s.roi) ? s.roi : NaN).filter(v => isFinite(v));
+    const pbVals  = list.map(s => isFinite(s.payback) ? s.payback : NaN).filter(v => isFinite(v));
+
+    const irrMin = Math.min(...irrVals, 0), irrMax = Math.max(...irrVals, 1);
+    const roiMin = Math.min(...roiVals, 0), roiMax = Math.max(...roiVals, 1);
+    const pbMin  = Math.min(...pbVals, 0.1), pbMax  = Math.max(...pbVals, 1);
+
+    const norm = (v, a, b) => {
+      if (!isFinite(v)) return 0;
+      if (b - a < 1e-9) return 1;
+      return clamp((v - a) / (b - a), 0, 1);
+    };
+
+    // Payback: smaller is better. Convert to "speed" score.
+    const pbScore = (pb) => {
+      if (!isFinite(pb) || pb <= 0) return 0;
+      // map pbMin..pbMax to 1..0
+      if (pbMax - pbMin < 1e-9) return 1;
+      return clamp(1 - ((pb - pbMin) / (pbMax - pbMin)), 0, 1);
+    };
+
+    return list.map(s => {
+      const nIRR = norm(s.irrPct, irrMin, irrMax);
+      const nROI = norm(s.roi, roiMin, roiMax);
+      const nPB  = pbScore(s.payback);
+
+      // weights
+      const score = 100 * (0.45*nIRR + 0.35*nROI + 0.20*nPB);
+      return { ...s, score };
+    });
+  }
+
+  function renderComparison(){
+    const list = scoreScenarios(getAllSavedScenarios());
+
+    // Best markers
+    const bestScore = Math.max(...list.map(s => s.score), -Infinity);
+    const bestIRR   = Math.max(...list.map(s => s.irrPct), -Infinity);
+    const bestROI   = Math.max(...list.map(s => s.roi), -Infinity);
+    const bestPB    = Math.min(...list.map(s => s.payback), Infinity);
+
+    const tbody = $("compareBody");
+    if (!list.length){
+      tbody.innerHTML = `<tr><td colspan="8" style="color:var(--muted);">No saved scenarios yet. Save Van 1 / Van 2 / Van 3 to compare.</td></tr>`;
+      return;
+    }
+
+    // Sort by score desc
+    list.sort((a,b)=>b.score - a.score);
+
+    tbody.innerHTML = list.map(s => {
+      const platName = PLATFORM_PRESETS[s.platformPreset]?.name || s.platformPreset || "Custom";
+      const hiScore = (Math.abs(s.score - bestScore) < 1e-9) ? "hi" : "";
+      const hiIRR = (Math.abs(s.irrPct - bestIRR) < 1e-9) ? "hi" : "";
+      const hiROI = (Math.abs(s.roi - bestROI) < 1e-9) ? "hi" : "";
+      const hiPB  = (Math.abs(s.payback - bestPB) < 1e-9) ? "hi" : "";
+      const netClass = s.annualAfter >= 0 ? "hi2" : "low";
+
+      return `
+        <tr>
+          <td><strong>${escapeHTML(s.name)}</strong></td>
+          <td>${escapeHTML(platName)}</td>
+          <td class="mono ${netClass}">${money(s.annualAfter)}</td>
+          <td class="mono ${hiROI}">${pct(s.roi)}</td>
+          <td class="mono ${hiPB}">${isFinite(s.payback) ? s.payback.toFixed(1) : "–"}</td>
+          <td class="mono ${hiIRR}">${isFinite(s.irrPct) ? pct(s.irrPct) : "–"}</td>
+          <td class="mono">${money(s.profit)}</td>
+          <td class="mono ${hiScore}">${isFinite(s.score) ? s.score.toFixed(1) : "–"}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function escapeHTML(str){
+    return String(str).replace(/[&<>"']/g, s => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[s]));
+  }
+
+  // ---------- Main update ----------
+  function update(){
+    const s = getForm();
+
+    // Keep platform fee aligned when selecting a preset
+    const preset = PLATFORM_PRESETS[s.platformPreset] || PLATFORM_PRESETS.custom;
+    // (If preset not custom, platformFee already set by change handler)
+
+    const model = computeScenario(s);
+
+    $("r_gross").textContent = money(model.gross);
+    $("r_costs").textContent = money(model.cashCosts);
+    $("r_net").textContent = money(model.netCashPreTax);
+
+    // Dashboard: show year-1 taxable
+    const taxable1 = model.taxableByYear[0] ?? model.taxableYear1;
+    $("r_taxable").textContent = money(taxable1);
+
+    $("r_after").textContent = money(model.annualAfter);
+    $("r_roi").textContent = isFinite(model.roi) ? pct(model.roi) : "–";
+    $("r_payback").textContent = isFinite(model.payback) ? model.payback.toFixed(1) : "–";
+    $("r_irr").textContent = isFinite(model.irrPct) ? pct(model.irrPct) : "–";
+    $("r_profit5").textContent = money(model.profit);
+
+    drawChart(model);
+    renderComparison();
+  }
+
+  // ---------- Init ----------
+  // Apply initial preset
+  applyPlatformPreset();
+  // Render existing saved
+  renderComparison();
+  // First calc
+  update();
+
+  // Redraw chart on resize
+  window.addEventListener("resize", () => drawChart(computeScenario(getForm())));
+</script>
+</body>
+</html>
