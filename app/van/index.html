@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Campervan Investment ROI Calculator (AU)</title>
+
+<style>
+:root {
+  --bg: #0f172a;
+  --card: #111827;
+  --accent: #38bdf8;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(145deg, #020617, #0f172a);
+  color: var(--text);
+  padding: 1rem;
+}
+
+.container {
+  max-width: 960px;
+  margin: auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  background: rgba(17,24,39,0.9);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+  color: var(--muted);
+}
+
+input {
+  width: 100%;
+  padding: 0.55rem;
+  margin-top: 0.25rem;
+  border-radius: 8px;
+  border: none;
+  background: #020617;
+  color: var(--text);
+}
+
+.results {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.result {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem;
+  background: #020617;
+  border-radius: 8px;
+}
+
+.result strong {
+  color: var(--accent);
+}
+
+.footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2rem;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Campervan Investment ROI Calculator</h1>
+<div class="subtitle">
+Australia · Pure Rental Asset · No Personal Use
+</div>
+
+<div class="grid">
+
+  <!-- INPUTS -->
+  <div class="card">
+    <h2>Investment Inputs</h2>
+
+    <label>Purchase Price ($)</label>
+    <input type="number" id="purchase" value="12000" />
+
+    <label>Nightly Rate ($)</label>
+    <input type="number" id="rate" value="120" />
+
+    <label>Nights Booked Per Year</label>
+    <input type="number" id="nights" value="60" />
+
+    <label>Platform Fee (%)</label>
+    <input type="number" id="platform" value="20" />
+
+    <label>Annual Insurance ($)</label>
+    <input type="number" id="insurance" value="900" />
+
+    <label>Annual Registration ($)</label>
+    <input type="number" id="rego" value="800" />
+
+    <label>Annual Servicing & Repairs ($)</label>
+    <input type="number" id="maintenance" value="800" />
+
+    <label>Cleaning Cost Per Booking ($)</label>
+    <input type="number" id="cleaning" value="40" />
+
+    <label>Bookings Per Year</label>
+    <input type="number" id="bookings" value="10" />
+  </div>
+
+  <!-- RESULTS -->
+  <div class="card">
+    <h2>ROI Results</h2>
+
+    <div class="results">
+      <div class="result">
+        <span>Gross Revenue</span>
+        <strong id="gross">$0</strong>
+      </div>
+
+      <div class="result">
+        <span>Total Operating Costs</span>
+        <strong id="costs">$0</strong>
+      </div>
+
+      <div class="result">
+        <span>Net Annual Cashflow</span>
+        <strong id="net">$0</strong>
+      </div>
+
+      <div class="result">
+        <span>Cash-on-Cash ROI</span>
+        <strong id="roi">0%</strong>
+      </div>
+
+      <div class="result">
+        <span>Payback Period</span>
+        <strong id="payback">– years</strong>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+Purely indicative · Excludes tax & depreciation (can be added)
+</div>
+
+</div>
+
+<script>
+function calculate() {
+  const purchase = +purchaseInput.value;
+  const rate = +rateInput.value;
+  const nights = +nightsInput.value;
+  const platformPct = +platformInput.value / 100;
+  const insurance = +insuranceInput.value;
+  const rego = +regoInput.value;
+  const maintenance = +maintenanceInput.value;
+  const cleaning = +cleaningInput.value;
+  const bookings = +bookingsInput.value;
+
+  const gross = rate * nights;
+  const platformFee = gross * platformPct;
+  const cleaningCost = cleaning * bookings;
+
+  const totalCosts =
+    platformFee +
+    insurance +
+    rego +
+    maintenance +
+    cleaningCost;
+
+  const net = gross - totalCosts;
+  const roi = purchase > 0 ? (net / purchase) * 100 : 0;
+  const payback = net > 0 ? (purchase / net) : 0;
+
+  grossEl.textContent = `$${gross.toLocaleString()}`;
+  costsEl.textContent = `$${totalCosts.toLocaleString()}`;
+  netEl.textContent = `$${net.toLocaleString()}`;
+  roiEl.textContent = `${roi.toFixed(1)}%`;
+  paybackEl.textContent = payback ? `${payback.toFixed(1)} years` : "–";
+}
+
+const purchaseInput = document.getElementById("purchase");
+const rateInput = document.getElementById("rate");
+const nightsInput = document.getElementById("nights");
+const platformInput = document.getElementById("platform");
+const insuranceInput = document.getElementById("insurance");
+const regoInput = document.getElementById("rego");
+const maintenanceInput = document.getElementById("maintenance");
+const cleaningInput = document.getElementById("cleaning");
+const bookingsInput = document.getElementById("bookings");
+
+const grossEl = document.getElementById("gross");
+const costsEl = document.getElementById("costs");
+const netEl = document.getElementById("net");
+const roiEl = document.getElementById("roi");
+const paybackEl = document.getElementById("payback");
+
+document.querySelectorAll("input").forEach(i =>
+  i.addEventListener("input", calculate)
+);
+
+calculate();
+</script>
+
+</body>
+</html>
