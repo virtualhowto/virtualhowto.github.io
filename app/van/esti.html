@@ -1,175 +1,639 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Campervan Auto Pricing + ROI (AU)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Campervan Investment Risk Engine (AU) — Bands + Risk + Go/No-Go</title>
 
 <style>
-body {
-  background:#020617;
-  color:#e5e7eb;
-  font-family:system-ui, sans-serif;
-  margin:0;
-  padding:16px;
-}
-.container {
-  max-width:900px;
-  margin:auto;
-}
-.card {
-  background:#0f172a;
-  border-radius:14px;
-  padding:16px;
-  margin-bottom:16px;
-}
-label {
-  display:block;
-  font-size:.8rem;
-  color:#94a3b8;
-  margin-top:10px;
-}
-input {
-  width:100%;
-  padding:10px;
-  border-radius:10px;
-  border:none;
-  background:#020617;
-  color:#e5e7eb;
-}
-.result {
-  display:flex;
-  justify-content:space-between;
-  padding:8px;
-  background:#020617;
-  border-radius:8px;
-  margin-top:6px;
-}
-strong { color:#38bdf8; }
+  :root{
+    --bg:#020617;
+    --card:#0f172a;
+    --ink:#e5e7eb;
+    --muted:#94a3b8;
+    --accent:#38bdf8;
+    --good:#22c55e;
+    --warn:#facc15;
+    --bad:#ef4444;
+    --line:rgba(255,255,255,.10);
+  }
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  body{margin:0;background:linear-gradient(145deg,#020617,#04102a);color:var(--ink);padding:16px;}
+  .container{max-width:1100px;margin:0 auto;}
+  h1{margin:0 0 6px 0;text-align:center;font-size:1.35rem;}
+  .subtitle{margin:0 0 18px 0;text-align:center;color:var(--muted);font-size:.92rem;line-height:1.35;}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;}
+  @media(min-width:980px){ .grid{grid-template-columns:1fr 1fr;} }
+  .card{
+    background:rgba(15,23,42,.92);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.28);
+  }
+  .card h2{margin:0 0 10px 0;font-size:1.02rem;color:var(--accent);}
+  label{display:block;color:var(--muted);font-size:.78rem;margin:10px 0 6px;}
+  input, select{
+    width:100%;
+    padding:10px 10px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.08);
+    background:#020617;
+    color:var(--ink);
+    outline:none;
+  }
+  input:focus, select:focus{border-color:rgba(56,189,248,.55); box-shadow:0 0 0 3px rgba(56,189,248,.10);}
+  .row{display:grid;grid-template-columns:1fr;gap:10px;}
+  @media(min-width:620px){ .row{grid-template-columns:1fr 1fr;} }
+  table{width:100%;border-collapse:collapse;font-size:.86rem;}
+  th, td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:center;vertical-align:middle;}
+  th{color:var(--muted);font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.06em;}
+  td:first-child, th:first-child{text-align:left;}
+  .mono{font-variant-numeric:tabular-nums;}
+  .good{color:var(--good);font-weight:800;}
+  .warn{color:var(--warn);font-weight:800;}
+  .bad{color:var(--bad);font-weight:800;}
+  .note{color:var(--muted);font-size:.78rem;line-height:1.35;margin-top:10px;}
+  .pill{
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:.72rem;
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--muted);
+    margin-left:8px;
+  }
+  .callout{
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:12px;
+    padding:12px;
+    background:#020617;
+    margin-top:10px;
+  }
+  .callout h3{margin:0 0 6px 0;font-size:.95rem;color:var(--accent);}
+  .callout .big{font-size:1.05rem;font-weight:800;}
+  .small{font-size:.78rem;color:var(--muted);line-height:1.35;}
 </style>
 </head>
 
 <body>
 <div class="container">
+  <h1>Campervan Investment Risk Engine (AU)</h1>
+  <p class="subtitle">
+    Builds a Low/Likely/High nightly rate band, computes probability-weighted ROI/IRR, applies a maintenance risk penalty,
+    recommends Go/No-Go, and flags overpriced marketplace listings.
+  </p>
 
-<h2>Campervan Investment – Auto Nightly Rate</h2>
+  <div class="grid">
 
-<div class="card">
-<h3>Marketplace Input</h3>
+    <!-- Inputs -->
+    <div class="card">
+      <h2>Inputs <span class="pill">Offline modelling</span></h2>
 
-<label>Facebook Marketplace URL (paste)</label>
-<input id="fbUrl" placeholder="https://www.facebook.com/marketplace/item/..." />
+      <div class="row">
+        <div>
+          <label>Build Year</label>
+          <input id="year" type="number" value="2011" min="1980" max="2030">
+        </div>
+        <div>
+          <label>Model Keywords</label>
+          <input id="model" value="Jayco Swan pop-top" placeholder="e.g. HiAce, Sprinter, Jayco Swan, motorhome, off-grid">
+        </div>
+      </div>
 
-<label>Listing Title (optional but recommended)</label>
-<input id="title" placeholder="2011 Jayco Swan Camper Trailer" />
+      <div class="row">
+        <div>
+          <label>State</label>
+          <select id="state">
+            <option value="NSW" selected>NSW</option>
+            <option value="QLD">QLD</option>
+            <option value="VIC">VIC</option>
+            <option value="WA">WA</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Area Type</label>
+          <select id="area">
+            <option value="coast" selected>Coast</option>
+            <option value="capital">Capital city</option>
+            <option value="inland">Inland</option>
+            <option value="remote">Regional / remote</option>
+          </select>
+        </div>
+      </div>
 
-<label>
-  <input type="checkbox" id="autoRate" checked>
-  Auto-calculate nightly rate
-</label>
-</div>
+      <div class="row">
+        <div>
+          <label>Purchase Price (Ask Price) $</label>
+          <input id="purchase" type="number" value="12000" min="0">
+        </div>
+        <div>
+          <label>Expected Resale Value (end of hold) $</label>
+          <input id="resale" type="number" value="6000" min="0">
+        </div>
+      </div>
 
-<div class="card">
-<h3>Detected Details</h3>
+      <div class="row">
+        <div>
+          <label>Holding Period (years)</label>
+          <input id="holdYears" type="number" value="5" min="1" max="15">
+        </div>
+        <div>
+          <label>Nights Booked / Year</label>
+          <input id="nights" type="number" value="60" min="0" max="365">
+        </div>
+      </div>
 
-<div class="result">
-  <span>Detected Year</span>
-  <strong id="yearOut">–</strong>
-</div>
-<div class="result">
-  <span>Detected Model</span>
-  <strong id="modelOut">–</strong>
-</div>
-<div class="result">
-  <span>Suggested Nightly Rate</span>
-  <strong id="rateOut">$0</strong>
-</div>
-</div>
+      <div class="row">
+        <div>
+          <label>Platform Fee (%)</label>
+          <input id="platformFee" type="number" value="20" min="0" step="0.1">
+        </div>
+        <div>
+          <label>Annual Fixed Cash Costs ($/yr)</label>
+          <input id="fixedCosts" type="number" value="2700" min="0">
+        </div>
+      </div>
 
-<div class="card">
-<h3>Manual Override</h3>
-<label>Nightly Rate ($)</label>
-<input id="rate" type="number" value="120" />
-</div>
+      <div class="row">
+        <div>
+          <label>Cleaning ($ per booking)</label>
+          <input id="cleaning" type="number" value="40" min="0">
+        </div>
+        <div>
+          <label>Bookings / Year</label>
+          <input id="bookings" type="number" value="10" min="0">
+        </div>
+      </div>
 
+      <div class="row">
+        <div>
+          <label>Target ROI (%)</label>
+          <input id="targetROI" type="number" value="30" min="0" step="0.5">
+        </div>
+        <div>
+          <label>Discount Rate for “Fair Value” check (WACC) (%)</label>
+          <input id="discountRate" type="number" value="15" min="0" step="0.5">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Band Probabilities (Low / Likely / High)</label>
+          <div class="row">
+            <input id="pLow" type="number" value="25" min="0" max="100">
+            <input id="pLikely" type="number" value="55" min="0" max="100">
+            <input id="pHigh" type="number" value="20" min="0" max="100">
+          </div>
+          <div class="small">Tip: These should total 100. If not, the tool normalises automatically.</div>
+        </div>
+        <div>
+          <label>Risk Penalty Strength</label>
+          <select id="riskPenaltyMode">
+            <option value="light">Light</option>
+            <option value="medium" selected>Medium</option>
+            <option value="strong">Strong</option>
+          </select>
+          <div class="small">Penalises ROI/IRR based on maintenance risk (age).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Outputs -->
+    <div class="card">
+      <h2>Outputs</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Low</th>
+            <th>Likely</th>
+            <th>High</th>
+            <th>Weighted</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Nightly Rate</strong></td>
+            <td class="mono" id="rateLow">$0</td>
+            <td class="mono" id="rateLikely">$0</td>
+            <td class="mono" id="rateHigh">$0</td>
+            <td class="mono" id="rateW">$0</td>
+          </tr>
+          <tr>
+            <td>Net Cashflow / yr (pre-tax)</td>
+            <td class="mono" id="netLow">$0</td>
+            <td class="mono" id="netLikely">$0</td>
+            <td class="mono" id="netHigh">$0</td>
+            <td class="mono" id="netW">$0</td>
+          </tr>
+          <tr>
+            <td>ROI / yr (pre-tax)</td>
+            <td class="mono" id="roiLow">0%</td>
+            <td class="mono" id="roiLikely">0%</td>
+            <td class="mono" id="roiHigh">0%</td>
+            <td class="mono" id="roiW">0%</td>
+          </tr>
+          <tr>
+            <td>IRR (incl. resale)</td>
+            <td class="mono" id="irrLow">–</td>
+            <td class="mono" id="irrLikely">–</td>
+            <td class="mono" id="irrHigh">–</td>
+            <td class="mono" id="irrW">–</td>
+          </tr>
+          <tr>
+            <td><strong>Risk-Adjusted ROI</strong></td>
+            <td class="mono" id="raroiLow">0%</td>
+            <td class="mono" id="raroiLikely">0%</td>
+            <td class="mono" id="raroiHigh">0%</td>
+            <td class="mono" id="raroiW">0%</td>
+          </tr>
+          <tr>
+            <td><strong>Risk-Adjusted IRR</strong></td>
+            <td class="mono" id="rairrLow">–</td>
+            <td class="mono" id="rairrLikely">–</td>
+            <td class="mono" id="rairrHigh">–</td>
+            <td class="mono" id="rairrW">–</td>
+          </tr>
+          <tr>
+            <td>“Fair Value” (NPV @ discount rate)</td>
+            <td class="mono" id="fvLow">$0</td>
+            <td class="mono" id="fvLikely">$0</td>
+            <td class="mono" id="fvHigh">$0</td>
+            <td class="mono" id="fvW">$0</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <h3>Decision</h3>
+        <div class="big" id="decision">–</div>
+        <div class="small" id="decisionReason">–</div>
+      </div>
+
+      <div class="callout">
+        <h3>Marketplace Tag</h3>
+        <div class="big" id="tag">–</div>
+        <div class="small" id="tagReason">–</div>
+      </div>
+
+      <div class="callout">
+        <h3>Maintenance Risk</h3>
+        <div class="big" id="risk">–</div>
+        <div class="small" id="riskReason">–</div>
+      </div>
+
+      <div class="note">
+        “Overpriced” is flagged if the asking price is materially higher than the weighted “fair value” implied by cashflows at your chosen discount rate.
+        This is conservative and depends on your inputs (nights, costs, resale, discount rate).
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script>
-// --- Extract year from text or URL ---
-function extractYear(text) {
-  const match = text.match(/(19|20)\d{2}/);
-  return match ? parseInt(match[0]) : null;
-}
+  const $ = (id) => document.getElementById(id);
 
-// --- Extract model keywords ---
-function extractModel(text) {
-  const knownModels = [
-    "jayco swan",
-    "jayco",
-    "swan",
-    "hiace",
-    "sprinter",
-    "transit",
-    "motorhome",
-    "camper",
-    "pop top",
-    "pop-top"
-  ];
-  text = text.toLowerCase();
-  for (let m of knownModels) {
-    if (text.includes(m)) return m;
+  function money(n){
+    if (!isFinite(n)) return "–";
+    const sign = n < 0 ? "-" : "";
+    const v = Math.abs(n);
+    return sign + "$" + v.toLocaleString(undefined,{maximumFractionDigits:0});
   }
-  return "generic camper";
-}
-
-// --- Auto nightly rate logic ---
-function calculateRate(year, model) {
-  const currentYear = new Date().getFullYear();
-  const age = year ? currentYear - year : 15;
-
-  let base = 80;
-  if (age <= 5) base = 190;
-  else if (age <= 10) base = 150;
-  else if (age <= 15) base = 120;
-  else if (age <= 20) base = 95;
-
-  let multiplier = 1.0;
-  if (model.includes("motorhome")) multiplier = 1.15;
-  else if (model.includes("pop")) multiplier = 1.05;
-  else if (model.includes("swan")) multiplier = 1.05;
-
-  return Math.round(base * multiplier / 5) * 5;
-}
-
-// --- Main update ---
-function update() {
-  const url = document.getElementById("fbUrl").value;
-  const title = document.getElementById("title").value;
-
-  const combined = `${url} ${title}`;
-
-  const year = extractYear(combined);
-  const model = extractModel(combined);
-
-  document.getElementById("yearOut").textContent = year ?? "Unknown";
-  document.getElementById("modelOut").textContent = model;
-
-  if (document.getElementById("autoRate").checked) {
-    const rate = calculateRate(year, model);
-    document.getElementById("rate").value = rate;
-    document.getElementById("rateOut").textContent = `$${rate}`;
-  } else {
-    document.getElementById("rateOut").textContent =
-      `$${document.getElementById("rate").value}`;
+  function pct(n){
+    if (!isFinite(n)) return "–";
+    return n.toFixed(1) + "%";
   }
-}
+  function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
 
-["fbUrl","title","rate","autoRate"].forEach(id =>
-  document.getElementById(id).addEventListener("input", update)
-);
+  // --------- Multipliers ---------
+  const STATE_MULT = { NSW:1.00, QLD:1.05, VIC:0.98, WA:0.95, OTHER:1.00 };
+  const AREA_MULT  = { coast:1.10, capital:1.15, inland:0.95, remote:0.85 };
 
-update();
+  function modelMultiplier(model){
+    model = (model||"").toLowerCase();
+    if (model.includes("motorhome")) return 1.15;
+    if (model.includes("off-grid") || model.includes("offgrid")) return 1.10;
+    if (model.includes("pop")) return 1.05;
+    if (model.includes("swan")) return 1.05;
+    if (model.includes("sprinter") || model.includes("transit")) return 1.05;
+    if (model.includes("budget")) return 0.90;
+    return 1.00;
+  }
+
+  function baseRateByAge(age){
+    if (age <= 5) return 190;
+    if (age <= 10) return 150;
+    if (age <= 15) return 120;
+    if (age <= 20) return 95;
+    return 80;
+  }
+
+  // --------- Maintenance risk ---------
+  function maintenanceRisk(age){
+    if (age <= 5)  return {score:20, label:"Low", cls:"good", note:"Newer van: lower failure probability, more predictable costs."};
+    if (age <= 10) return {score:40, label:"Moderate", cls:"good", note:"Generally reliable if serviced; expect some repairs."};
+    if (age <= 15) return {score:60, label:"Elevated", cls:"warn", note:"More downtime risk; plan for higher repair variance."};
+    if (age <= 20) return {score:80, label:"High", cls:"bad",  note:"Risk of major components; bookings can be disrupted."};
+    return {score:95, label:"Very High", cls:"bad", note:"High probability of material repairs/downtime. Price accordingly."};
+  }
+
+  // Risk penalty factor applied to ROI/IRR
+  function riskPenaltyFactor(riskScore, mode){
+    // riskScore 0..100
+    // factor = 1 - k*(riskScore/100)
+    const k = mode === "light" ? 0.18 : mode === "strong" ? 0.35 : 0.26;
+    return clamp(1 - k*(riskScore/100), 0.55, 1.00);
+  }
+
+  // --------- IRR + NPV ---------
+  function npv(rate, cfs){
+    let sum = 0;
+    for (let t=0;t<cfs.length;t++){
+      sum += cfs[t] / Math.pow(1+rate, t);
+    }
+    return sum;
+  }
+
+  function irr(cfs){
+    const hasPos = cfs.some(x => x > 0);
+    const hasNeg = cfs.some(x => x < 0);
+    if (!(hasPos && hasNeg)) return NaN;
+
+    let lo = -0.95, hi = 3.0;
+    let fLo = npv(lo, cfs), fHi = npv(hi, cfs);
+
+    let tries = 0;
+    while (fLo * fHi > 0 && tries < 20){
+      hi *= 1.5;
+      fHi = npv(hi, cfs);
+      tries++;
+      if (hi > 100) break;
+    }
+    if (fLo * fHi > 0) return NaN;
+
+    for (let i=0;i<80;i++){
+      const mid = (lo+hi)/2;
+      const fMid = npv(mid, cfs);
+      if (Math.abs(fMid) < 1e-7) return mid;
+      if (fLo * fMid <= 0){
+        hi = mid; fHi = fMid;
+      } else {
+        lo = mid; fLo = fMid;
+      }
+    }
+    return (lo+hi)/2;
+  }
+
+  function fairValue(discountRate, cfs){
+    // NPV of cashflows at discountRate (as a dollar value "value today")
+    return npv(discountRate, cfs);
+  }
+
+  // --------- Compute one scenario for a given nightly rate ---------
+  function computeForRate(rate, inputs){
+    const {
+      purchase, resale, holdYears, nights,
+      platformFeePct, fixedCosts, cleaningPerBooking, bookingsPerYear
+    } = inputs;
+
+    const gross = rate * nights;
+    const platformFee = gross * (platformFeePct/100);
+    const cleaning = cleaningPerBooking * bookingsPerYear;
+    const cashCosts = platformFee + fixedCosts + cleaning;
+    const netPerYear = gross - cashCosts;
+
+    // cashflows for IRR: CF0 = -purchase, each year = netPerYear, final year adds resale
+    const years = Math.max(1, Math.floor(holdYears));
+    const cfs = [-purchase];
+    for (let y=1;y<=years;y++){
+      let cf = netPerYear;
+      if (y === years) cf += resale;
+      cfs.push(cf);
+    }
+
+    const irrVal = irr(cfs);
+    const irrPct = isFinite(irrVal) ? irrVal*100 : NaN;
+    const roiPct = purchase>0 ? (netPerYear/purchase)*100 : NaN;
+
+    return { gross, cashCosts, netPerYear, roiPct, irrPct, cfs };
+  }
+
+  // --------- Probability weighting ---------
+  function normalisedProbs(pL, pM, pH){
+    let sum = pL+pM+pH;
+    if (sum <= 0) return {pL:0.25,pM:0.55,pH:0.20};
+    return { pL:pL/sum, pM:pM/sum, pH:pH/sum };
+  }
+
+  // --------- Main update ---------
+  function update(){
+    const yr = +$("year").value || 2011;
+    const model = $("model").value || "";
+    const state = $("state").value;
+    const area = $("area").value;
+
+    const purchase = +$("purchase").value || 0;
+    const resale = +$("resale").value || 0;
+    const holdYears = +$("holdYears").value || 5;
+    const nights = +$("nights").value || 0;
+
+    const platformFeePct = +$("platformFee").value || 0;
+    const fixedCosts = +$("fixedCosts").value || 0;
+    const cleaningPerBooking = +$("cleaning").value || 0;
+    const bookingsPerYear = +$("bookings").value || 0;
+
+    const targetROI = +$("targetROI").value || 0;
+    const discountRatePct = +$("discountRate").value || 0;
+    const disc = discountRatePct/100;
+
+    const pLowRaw = +$("pLow").value || 0;
+    const pLikelyRaw = +$("pLikely").value || 0;
+    const pHighRaw = +$("pHigh").value || 0;
+    const probs = normalisedProbs(pLowRaw, pLikelyRaw, pHighRaw);
+
+    const nowYear = new Date().getFullYear();
+    const age = nowYear - yr;
+
+    const base = baseRateByAge(age);
+    const mMult = modelMultiplier(model);
+    const sMult = STATE_MULT[state] || 1.00;
+    const aMult = AREA_MULT[area] || 1.00;
+
+    const likely = Math.round((base*mMult*sMult*aMult)/5)*5;
+    const low = Math.max(0, Math.round((likely*0.80)/5)*5);
+    const high = Math.round((likely*1.20)/5)*5;
+
+    // Weighted nightly rate (expected)
+    const rateW = (low*probs.pL) + (likely*probs.pM) + (high*probs.pH);
+
+    const inputs = { purchase, resale, holdYears, nights, platformFeePct, fixedCosts, cleaningPerBooking, bookingsPerYear };
+
+    const sLow = computeForRate(low, inputs);
+    const sLikely = computeForRate(likely, inputs);
+    const sHigh = computeForRate(high, inputs);
+
+    // Weighted metrics (expected values)
+    const netW = sLow.netPerYear*probs.pL + sLikely.netPerYear*probs.pM + sHigh.netPerYear*probs.pH;
+    const roiW = purchase>0 ? (netW/purchase)*100 : NaN;
+
+    // Weighted IRR: better to compute IRR from weighted cashflows (not weighted IRR)
+    // We create weighted CFs per year using weighted net, and weighted resale in final year:
+    const years = Math.max(1, Math.floor(holdYears));
+    const cfsW = [-purchase];
+    for (let y=1;y<=years;y++){
+      let cf = netW;
+      if (y === years) cf += resale;
+      cfsW.push(cf);
+    }
+    const irrWv = irr(cfsW);
+    const irrW = isFinite(irrWv) ? irrWv*100 : NaN;
+
+    // Risk
+    const risk = maintenanceRisk(age);
+    const mode = $("riskPenaltyMode").value;
+    const penalty = riskPenaltyFactor(risk.score, mode); // 0.55..1
+
+    // Risk-adjusted ROI/IRR
+    const raRoiLow = sLow.roiPct * penalty;
+    const raRoiLikely = sLikely.roiPct * penalty;
+    const raRoiHigh = sHigh.roiPct * penalty;
+    const raRoiW = roiW * penalty;
+
+    const raIrrLow = sLow.irrPct * penalty;
+    const raIrrLikely = sLikely.irrPct * penalty;
+    const raIrrHigh = sHigh.irrPct * penalty;
+    const raIrrW = irrW * penalty;
+
+    // Fair value (NPV): If we treat the van as an asset you "buy" at purchase, its "fair value" is NPV of future inflows (excluding purchase),
+    // or equivalently NPV of cashflows with CF0=0 (value today). We'll compute NPV of inflows only:
+    // inflowCFs: year1..yearN
+    function inflowsNPV(netPerYear){
+      const inflows = [];
+      for (let y=1;y<=years;y++){
+        let cf = netPerYear;
+        if (y===years) cf += resale;
+        inflows.push(cf);
+      }
+      // NPV at disc: sum(cf/(1+r)^t), with t=1..years
+      let v = 0;
+      for (let t=1;t<=years;t++){
+        v += inflows[t-1]/Math.pow(1+disc, t);
+      }
+      return v;
+    }
+    const fvLow = inflowsNPV(sLow.netPerYear);
+    const fvLikely = inflowsNPV(sLikely.netPerYear);
+    const fvHigh = inflowsNPV(sHigh.netPerYear);
+    const fvW = inflowsNPV(netW);
+
+    // Overpriced tag: if purchase > fair value by threshold
+    const premium = fvW > 0 ? (purchase - fvW) / fvW : Infinity;
+
+    // Decision rules:
+    // GO if: risk-adjusted weighted ROI >= target ROI AND nights > 0 AND netW positive
+    // CAUTION if: meets ROI but high risk or overpriced
+    // NO-GO if: RA weighted ROI < target OR netW <= 0
+    let decision = "–", decisionCls = "warn", reason = "";
+    const meetsTarget = isFinite(raRoiW) && raRoiW >= targetROI;
+    const profitable = netW > 0;
+
+    const overpriced = (fvW > 0) && (purchase > fvW*1.10); // >10% above FV
+    const severelyOverpriced = (fvW > 0) && (purchase > fvW*1.25); // >25% above FV
+
+    if (!profitable || !meetsTarget){
+      decision = "NO-GO";
+      decisionCls = "bad";
+      reason = `Risk-adjusted weighted ROI ${pct(raRoiW)} vs target ${targetROI.toFixed(1)}%, and/or weighted net cashflow ${money(netW)} is not strong enough.`;
+    } else if (risk.score >= 80 || severelyOverpriced){
+      decision = "CAUTION";
+      decisionCls = "warn";
+      reason = `Meets target on paper, but risk/price is aggressive (risk ${risk.label}, and/or pricing premium vs fair value).`;
+    } else {
+      decision = "GO";
+      decisionCls = "good";
+      reason = `Risk-adjusted weighted ROI ${pct(raRoiW)} meets/exceeds target ${targetROI.toFixed(1)}% with positive weighted net ${money(netW)}.`;
+    }
+
+    // Marketplace tag
+    let tag = "Fair / Market-reasonable", tagCls="good", tagReason="";
+    if (fvW <= 0){
+      tag = "Cannot price (inputs imply no value)";
+      tagCls="bad";
+      tagReason = "Weighted cashflows are not positive enough to support a value at your discount rate. Check nights/costs/resale.";
+    } else if (severelyOverpriced){
+      tag = "OVERPRICED";
+      tagCls="bad";
+      tagReason = `Ask price is ~${Math.round((purchase/fvW-1)*100)}% above weighted fair value (${money(fvW)} @ ${discountRatePct.toFixed(1)}% discount).`;
+    } else if (overpriced){
+      tag = "Slightly Overpriced";
+      tagCls="warn";
+      tagReason = `Ask price is ~${Math.round((purchase/fvW-1)*100)}% above weighted fair value (${money(fvW)} @ ${discountRatePct.toFixed(1)}% discount).`;
+    } else if (purchase < fvW*0.90){
+      tag = "Potential Bargain";
+      tagCls="good";
+      tagReason = `Ask price is below weighted fair value (${money(fvW)} @ ${discountRatePct.toFixed(1)}% discount).`;
+    } else {
+      tagReason = `Ask price is broadly aligned with weighted fair value (${money(fvW)} @ ${discountRatePct.toFixed(1)}% discount).`;
+    }
+
+    // ---- Write outputs ----
+    $("rateLow").textContent = money(low);
+    $("rateLikely").textContent = money(likely);
+    $("rateHigh").textContent = money(high);
+    $("rateW").textContent = money(rateW);
+
+    $("netLow").textContent = money(sLow.netPerYear);
+    $("netLikely").textContent = money(sLikely.netPerYear);
+    $("netHigh").textContent = money(sHigh.netPerYear);
+    $("netW").textContent = money(netW);
+
+    $("roiLow").textContent = pct(sLow.roiPct);
+    $("roiLikely").textContent = pct(sLikely.roiPct);
+    $("roiHigh").textContent = pct(sHigh.roiPct);
+    $("roiW").textContent = pct(roiW);
+
+    $("irrLow").textContent = isFinite(sLow.irrPct) ? pct(sLow.irrPct) : "–";
+    $("irrLikely").textContent = isFinite(sLikely.irrPct) ? pct(sLikely.irrPct) : "–";
+    $("irrHigh").textContent = isFinite(sHigh.irrPct) ? pct(sHigh.irrPct) : "–";
+    $("irrW").textContent = isFinite(irrW) ? pct(irrW) : "–";
+
+    $("raroiLow").textContent = pct(raRoiLow);
+    $("raroiLikely").textContent = pct(raRoiLikely);
+    $("raroiHigh").textContent = pct(raRoiHigh);
+    $("raroiW").textContent = pct(raRoiW);
+
+    $("rairrLow").textContent = isFinite(raIrrLow) ? pct(raIrrLow) : "–";
+    $("rairrLikely").textContent = isFinite(raIrrLikely) ? pct(raIrrLikely) : "–";
+    $("rairrHigh").textContent = isFinite(raIrrHigh) ? pct(raIrrHigh) : "–";
+    $("rairrW").textContent = isFinite(raIrrW) ? pct(raIrrW) : "–";
+
+    $("fvLow").textContent = money(fvLow);
+    $("fvLikely").textContent = money(fvLikely);
+    $("fvHigh").textContent = money(fvHigh);
+    $("fvW").textContent = money(fvW);
+
+    $("decision").innerHTML = `<span class="${decisionCls}">${decision}</span>`;
+    $("decisionReason").textContent = reason;
+
+    $("tag").innerHTML = `<span class="${tagCls}">${tag}</span>`;
+    $("tagReason").textContent = tagReason;
+
+    $("risk").innerHTML = `<span class="${risk.cls}">${risk.label} (${risk.score}/100)</span>`;
+    $("riskReason").textContent =
+      `${risk.note} Penalty factor applied: ${(riskPenaltyFactor(risk.score, mode)*100).toFixed(0)}% of headline returns.`;
+  }
+
+  // Bind inputs
+  Array.from(document.querySelectorAll("input, select")).forEach(el => {
+    el.addEventListener("input", update);
+    el.addEventListener("change", update);
+  });
+
+  update();
 </script>
-
 </body>
 </html>
