@@ -3,9 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NSW RF Line of Sight (Mesh)</title>
+  <title>NSW RF Line of Sight (Terrain DEM + Satellite)</title>
 
-  <!-- ArcGIS JS API (4.x) -->
   <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.29/"></script>
 
@@ -13,26 +12,30 @@
     html, body, #viewDiv { height: 100%; width: 100%; margin: 0; padding: 0; }
     .panel {
       position: absolute; top: 12px; left: 12px; z-index: 10;
-      background: rgba(255,255,255,0.92);
-      padding: 12px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      width: 340px; max-width: calc(100% - 24px);
+      background: rgba(255,255,255,0.93);
+      padding: 12px; border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      width: 380px; max-width: calc(100% - 24px);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
+    .title { font-weight: 800; font-size: 14px; }
+    .hint { font-size: 12px; opacity: 0.75; line-height: 1.35; margin-top: 6px; }
     .row { display: flex; gap: 8px; margin: 8px 0; }
     .row > * { flex: 1; }
-    label { display:block; font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
+    label { display:block; font-size: 12px; opacity: 0.75; margin-bottom: 4px; }
     input, select, button {
-      width: 100%; padding: 8px 10px; border-radius: 10px;
-      border: 1px solid rgba(0,0,0,0.15); background: white;
+      width: 100%; padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.15);
       font-size: 14px;
+      background: white;
     }
     button { cursor: pointer; }
-    .btnRow { display:flex; gap:8px; margin-top: 10px; }
+    .btnRow { display:flex; gap:8px; margin-top: 8px; }
     .btnRow button { flex: 1; }
-    .hint { font-size: 12px; opacity: 0.75; line-height: 1.35; }
     .stats {
       margin-top: 10px;
-      background: rgba(0,0,0,0.04);
+      background: rgba(0,0,0,0.05);
       border: 1px solid rgba(0,0,0,0.06);
       border-radius: 10px;
       padding: 10px;
@@ -40,40 +43,63 @@
       line-height: 1.35;
     }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .profileBox {
+      margin-top: 10px;
+      background: rgba(0,0,0,0.03);
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    canvas { width: 100%; height: 110px; display:block; }
+    .small { font-size: 11px; opacity: 0.75; }
   </style>
 </head>
-
 <body>
   <div id="viewDiv"></div>
 
   <div class="panel">
-    <div style="font-weight:700; font-size:14px;">NSW RF Line-of-Sight (Terrain) + Mesh Links</div>
-    <div class="hint" style="margin-top:6px;">
-      Click the map to add points. Links turn <span style="color:#0a7;">green</span> if clear LOS, <span style="color:#c00;">red</span> if obstructed.
-      Uses NSW 5m DEM (terrain only).
+    <div class="title">NSW RF Line-of-Sight (Terrain DEM) + Satellite</div>
+    <div class="hint">
+      Click map to add points. Links are <span style="color:#0a7;">green</span> if terrain clears LOS, <span style="color:#c00;">red</span> if terrain intersects the path (plus clearance).
+      <br><b>DEM source:</b> NSW Spatial Services 5m Elevation (terrain only). Satellite is visual only.
     </div>
 
     <div class="row">
+      <div>
+        <label>Basemap</label>
+        <select id="basemapSelect">
+          <option value="topo-vector">Topographic</option>
+          <option value="satellite">Satellite</option>
+          <option value="hybrid" selected>Hybrid (Satellite + labels)</option>
+        </select>
+      </div>
       <div>
         <label>Link mode</label>
         <select id="linkMode">
           <option value="chain">Chain (A→B→C…)</option>
-          <option value="mesh">Mesh (all-to-all)</option>
+          <option value="mesh" selected>Mesh (all-to-all)</option>
         </select>
-      </div>
-      <div>
-        <label>Max links (mesh)</label>
-        <input id="maxLinks" type="number" min="1" max="5000" value="500" />
       </div>
     </div>
 
     <div class="row">
       <div>
-        <label>Antenna height (m) – Point A</label>
+        <label>Max mesh links</label>
+        <input id="maxLinks" type="number" min="1" max="5000" value="500" />
+      </div>
+      <div>
+        <label>Sample spacing (m)</label>
+        <input id="spacing" type="number" min="5" step="5" value="20" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Antenna height A (m)</label>
         <input id="hA" type="number" min="0" step="0.5" value="10" />
       </div>
       <div>
-        <label>Antenna height (m) – Point B</label>
+        <label>Antenna height B (m)</label>
         <input id="hB" type="number" min="0" step="0.5" value="10" />
       </div>
     </div>
@@ -84,324 +110,413 @@
         <input id="clearance" type="number" min="0" step="0.5" value="1" />
       </div>
       <div>
-        <label>Sample spacing (m)</label>
-        <input id="spacing" type="number" min="5" step="5" value="30" />
+        <label>Debug</label>
+        <select id="debugMode">
+          <option value="off" selected>Off</option>
+          <option value="on">On (log DEM samples)</option>
+        </select>
       </div>
     </div>
 
     <div class="btnRow">
-      <button id="undoBtn" title="Remove last point">Undo</button>
-      <button id="clearBtn" title="Remove all points and links">Clear</button>
+      <button id="undoBtn">Undo</button>
+      <button id="clearBtn">Clear</button>
+      <button id="recalcBtn">Recalc</button>
     </div>
 
-    <div class="stats" id="stats">
+    <div class="stats">
       <div><b>Points:</b> <span class="mono" id="ptCount">0</span></div>
       <div><b>Links:</b> <span class="mono" id="lnCount">0</span></div>
-      <div><b>Clear:</b> <span class="mono" id="clearCount">0</span> &nbsp; <b>Obstructed:</b> <span class="mono" id="badCount">0</span></div>
-      <div style="margin-top:6px;"><b>Tip:</b> pan/zoom, add points, then switch to Mesh to see a “mesh network” overlay.</div>
+      <div><b>Clear:</b> <span class="mono" id="okCount">0</span> &nbsp; <b>Obstructed:</b> <span class="mono" id="badCount">0</span></div>
+      <div class="small" style="margin-top:6px;">
+        If mountains aren’t being caught, reduce sample spacing (e.g. 10–20m).
+      </div>
+    </div>
+
+    <div class="profileBox">
+      <div style="font-weight:700; font-size:12px;">Last link profile (terrain vs LOS)</div>
+      <canvas id="profileCanvas" width="700" height="220"></canvas>
+      <div class="small">Grey = terrain, Blue = LOS line (incl antenna heights), Red dots = blocking samples</div>
     </div>
   </div>
 
-  <script>
-    require([
-      "esri/Map",
-      "esri/views/MapView",
-      "esri/Graphic",
-      "esri/layers/GraphicsLayer",
-      "esri/geometry/Point",
-      "esri/geometry/Polyline",
-      "esri/geometry/Multipoint",
-      "esri/geometry/geometryEngine",
-      "esri/layers/ElevationLayer"
-    ], function(
-      Map, MapView, Graphic, GraphicsLayer, Point, Polyline, Multipoint, geometryEngine, ElevationLayer
-    ) {
+<script>
+require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/Graphic",
+  "esri/layers/GraphicsLayer",
+  "esri/geometry/Point",
+  "esri/geometry/Polyline",
+  "esri/geometry/Multipoint",
+  "esri/geometry/geometryEngine",
+  "esri/layers/ElevationLayer"
+], function(
+  Map, MapView, Graphic, GraphicsLayer,
+  Point, Polyline, Multipoint, geometryEngine, ElevationLayer
+) {
 
-      // NSW Spatial Services 5m DEM (Elevation ImageServer)
-      const NSW_DEM_URL = "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_5M_Elevation/ImageServer";
-      const elevationLayer = new ElevationLayer({ url: NSW_DEM_URL });
+  // NSW Spatial Services 5m terrain DEM (ImageServer)
+  const NSW_DEM_URL = "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_5M_Elevation/ImageServer";
+  const dem = new ElevationLayer({ url: NSW_DEM_URL });
 
-      const pointsLayer = new GraphicsLayer();
-      const linksLayer  = new GraphicsLayer();
+  const pointsLayer = new GraphicsLayer();
+  const linksLayer  = new GraphicsLayer();
 
-      const map = new Map({
-        basemap: "topo-vector",
-        layers: [linksLayer, pointsLayer]
-      });
+  const map = new Map({
+    basemap: "hybrid",
+    layers: [linksLayer, pointsLayer]
+  });
 
-      const view = new MapView({
-        container: "viewDiv",
-        map,
-        center: [151.2093, -33.8688], // Sydney
-        zoom: 9
-      });
+  const view = new MapView({
+    container: "viewDiv",
+    map,
+    center: [151.21, -33.87],
+    zoom: 9
+  });
 
-      const ui = {
-        linkMode:   document.getElementById("linkMode"),
-        maxLinks:   document.getElementById("maxLinks"),
-        hA:         document.getElementById("hA"),
-        hB:         document.getElementById("hB"),
-        clearance:  document.getElementById("clearance"),
-        spacing:    document.getElementById("spacing"),
-        undoBtn:    document.getElementById("undoBtn"),
-        clearBtn:   document.getElementById("clearBtn"),
-        ptCount:    document.getElementById("ptCount"),
-        lnCount:    document.getElementById("lnCount"),
-        clearCount: document.getElementById("clearCount"),
-        badCount:   document.getElementById("badCount")
-      };
+  // UI
+  const el = {
+    basemapSelect: document.getElementById("basemapSelect"),
+    linkMode: document.getElementById("linkMode"),
+    maxLinks: document.getElementById("maxLinks"),
+    spacing: document.getElementById("spacing"),
+    hA: document.getElementById("hA"),
+    hB: document.getElementById("hB"),
+    clearance: document.getElementById("clearance"),
+    debugMode: document.getElementById("debugMode"),
+    undoBtn: document.getElementById("undoBtn"),
+    clearBtn: document.getElementById("clearBtn"),
+    recalcBtn: document.getElementById("recalcBtn"),
+    ptCount: document.getElementById("ptCount"),
+    lnCount: document.getElementById("lnCount"),
+    okCount: document.getElementById("okCount"),
+    badCount: document.getElementById("badCount"),
+    profileCanvas: document.getElementById("profileCanvas")
+  };
 
-      const state = {
-        points: [],         // { point: esri/Point, graphic: Graphic }
-        linkGraphics: [],   // segment graphics
-        computing: false
-      };
+  el.basemapSelect.addEventListener("change", () => map.basemap = el.basemapSelect.value);
 
-      function updateStats(clear = 0, bad = 0) {
-        ui.ptCount.textContent = state.points.length;
-        ui.lnCount.textContent = state.linkGraphics.length;
-        ui.clearCount.textContent = clear;
-        ui.badCount.textContent = bad;
+  const state = {
+    pts: [], // { p: Point, g: Graphic }
+    computing: false,
+    lastProfile: null // { terrain[], los[], blockedIdx[] }
+  };
+
+  function settings() {
+    return {
+      mode: el.linkMode.value,
+      maxLinks: clampInt(el.maxLinks.value, 1, 5000, 500),
+      spacing: clampNum(el.spacing.value, 5, 1000, 20),
+      hA: clampNum(el.hA.value, 0, 200, 10),
+      hB: clampNum(el.hB.value, 0, 200, 10),
+      clearance: clampNum(el.clearance.value, 0, 200, 1),
+      debug: el.debugMode.value === "on"
+    };
+  }
+
+  function clampNum(v, min, max, dflt) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return dflt;
+    return Math.max(min, Math.min(max, n));
+  }
+  function clampInt(v, min, max, dflt) {
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n)) return dflt;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function updateStats(ok, bad) {
+    el.ptCount.textContent = state.pts.length;
+    el.lnCount.textContent = (ok + bad).toString();
+    el.okCount.textContent = ok.toString();
+    el.badCount.textContent = bad.toString();
+  }
+
+  function addPoint(pt) {
+    const g = new Graphic({
+      geometry: pt,
+      symbol: {
+        type: "simple-marker",
+        size: 10,
+        color: [0, 120, 255, 0.95],
+        outline: { color: [255,255,255,1], width: 1.5 }
       }
+    });
+    pointsLayer.add(g);
+    state.pts.push({ p: pt, g });
+  }
 
-      function addPoint(pt) {
+  function clearAll() {
+    state.pts = [];
+    pointsLayer.removeAll();
+    linksLayer.removeAll();
+    state.lastProfile = null;
+    drawProfile(null);
+    updateStats(0,0);
+  }
+
+  function undoLast() {
+    if (!state.pts.length) return;
+    const last = state.pts.pop();
+    pointsLayer.remove(last.g);
+    recomputeLinks();
+  }
+
+  function buildSegments() {
+    const { mode, maxLinks } = settings();
+    const pts = state.pts.map(x => x.p);
+    const segs = [];
+    if (pts.length < 2) return segs;
+
+    if (mode === "chain") {
+      for (let i = 0; i < pts.length - 1; i++) {
+        segs.push({ a: pts[i], b: pts[i+1], key: `${i}-${i+1}` });
+      }
+      return segs;
+    }
+
+    let count = 0;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        segs.push({ a: pts[i], b: pts[j], key: `${i}-${j}` });
+        count++;
+        if (count >= maxLinks) return segs;
+      }
+    }
+    return segs;
+  }
+
+  function densifyLine(a, b, spacingMeters) {
+    const base = new Polyline({
+      spatialReference: a.spatialReference,
+      paths: [[[a.x, a.y], [b.x, b.y]]]
+    });
+
+    const dense = geometryEngine.geodesicDensify(base, spacingMeters, "meters");
+    const coords = dense.paths[0]; // [[x,y],...]
+    const pts = coords.map(xy => new Point({ x: xy[0], y: xy[1], spatialReference: a.spatialReference }));
+    const lengthM = geometryEngine.geodesicLength(base, "meters");
+    return { base, pts, lengthM };
+  }
+
+  async function queryElevations(points) {
+    const mp = new Multipoint({
+      spatialReference: points[0].spatialReference,
+      points: points.map(p => [p.x, p.y])
+    });
+
+    // This is the key DEM call:
+    const res = await dem.queryElevation(mp, { demResolution: "finest-contiguous" });
+
+    // Returns points as [x,y,z]
+    return res.geometry.points.map(p => ({ x: p[0], y: p[1], z: p[2] }));
+  }
+
+  function classifyLOS(samples, hA, hB, clearance) {
+    const zA = samples[0].z + hA;
+    const zB = samples[samples.length - 1].z + hB;
+
+    let blocked = false;
+    const blockedIdx = [];
+    const los = [];
+
+    for (let i = 0; i < samples.length; i++) {
+      const t = i / (samples.length - 1);
+      const zLine = zA + (zB - zA) * t;
+      los.push(zLine);
+
+      // skip endpoints for obstruction check (optional but typical)
+      if (i === 0 || i === samples.length - 1) continue;
+
+      if (samples[i].z + clearance > zLine) {
+        blocked = true;
+        blockedIdx.push(i);
+      }
+    }
+
+    return { blocked, zA, zB, los, blockedIdx };
+  }
+
+  function addLinkGraphic(polyline, blocked) {
+    const color = blocked ? [200, 0, 0, 0.85] : [0, 170, 80, 0.85];
+    const g = new Graphic({
+      geometry: polyline,
+      symbol: { type: "simple-line", color, width: 3 }
+    });
+    linksLayer.add(g);
+  }
+
+  function drawProfile(profile) {
+    const c = el.profileCanvas;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0,0,c.width,c.height);
+
+    // background
+    ctx.fillStyle = "rgba(0,0,0,0.02)";
+    ctx.fillRect(0,0,c.width,c.height);
+
+    if (!profile) {
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.font = "14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText("No link computed yet (click 2+ points).", 14, 28);
+      return;
+    }
+
+    const { terrain, los, blockedIdx } = profile;
+    const n = terrain.length;
+
+    // min/max for scaling
+    let minZ = Infinity, maxZ = -Infinity;
+    for (let i=0;i<n;i++){
+      minZ = Math.min(minZ, terrain[i], los[i]);
+      maxZ = Math.max(maxZ, terrain[i], los[i]);
+    }
+    const pad = 10;
+    const W = c.width, H = c.height;
+    const x0 = pad, y0 = pad, x1 = W - pad, y1 = H - pad;
+
+    function X(i){ return x0 + (i/(n-1))*(x1-x0); }
+    function Y(z){ return y1 - ((z-minZ)/(maxZ-minZ || 1))*(y1-y0); }
+
+    // terrain line
+    ctx.strokeStyle = "rgba(60,60,60,0.85)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i=0;i<n;i++){
+      const x = X(i), y = Y(terrain[i]);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // LOS line
+    ctx.strokeStyle = "rgba(0,90,255,0.85)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i=0;i<n;i++){
+      const x = X(i), y = Y(los[i]);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // blocked points
+    ctx.fillStyle = "rgba(200,0,0,0.9)";
+    for (const i of blockedIdx) {
+      const x = X(i), y = Y(terrain[i]);
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // labels
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New'";
+    ctx.fillText(`minZ=${minZ.toFixed(1)}m  maxZ=${maxZ.toFixed(1)}m  samples=${n}`, 14, H-10);
+  }
+
+  async function recomputeLinks() {
+    if (state.computing) return;
+    state.computing = true;
+
+    linksLayer.removeAll();
+    state.lastProfile = null;
+    drawProfile(null);
+
+    const segs = buildSegments();
+    if (!segs.length) {
+      updateStats(0,0);
+      state.computing = false;
+      return;
+    }
+
+    const { spacing, hA, hB, clearance, debug } = settings();
+
+    let ok = 0, bad = 0;
+
+    for (const seg of segs) {
+      try {
+        const { base, pts } = densifyLine(seg.a, seg.b, spacing);
+
+        // cap samples for performance (still good enough for ridges if spacing is small)
+        const MAX_SAMPLES = 600;
+        let samplePts = pts;
+        if (samplePts.length > MAX_SAMPLES) {
+          const step = (samplePts.length - 1) / (MAX_SAMPLES - 1);
+          const reduced = [];
+          for (let k=0;k<MAX_SAMPLES;k++){
+            reduced.push(samplePts[Math.round(k*step)]);
+          }
+          samplePts = reduced;
+        }
+
+        const samples = await queryElevations(samplePts);
+
+        if (debug) {
+          console.log("[DEM] segment", seg.key, "samples", samples.length,
+            "z(min/max)", Math.min(...samples.map(s=>s.z)).toFixed(1), "/",
+            Math.max(...samples.map(s=>s.z)).toFixed(1),
+            "source:", NSW_DEM_URL
+          );
+        }
+
+        const result = classifyLOS(samples, hA, hB, clearance);
+        addLinkGraphic(base, result.blocked);
+
+        if (result.blocked) bad++; else ok++;
+
+        // Store profile for the last segment (so you can see mountains/ridges)
+        state.lastProfile = {
+          terrain: samples.map(s => s.z),
+          los: result.los,
+          blockedIdx: result.blockedIdx
+        };
+        drawProfile(state.lastProfile);
+
+      } catch (e) {
+        console.warn("Segment failed:", seg.key, e);
+        // draw grey fallback
+        const base = new Polyline({
+          spatialReference: seg.a.spatialReference,
+          paths: [[[seg.a.x, seg.a.y], [seg.b.x, seg.b.y]]]
+        });
         const g = new Graphic({
-          geometry: pt,
-          symbol: {
-            type: "simple-marker",
-            size: 10,
-            color: [20, 120, 255, 0.95],
-            outline: { color: [255,255,255,1], width: 1.5 }
-          }
-        });
-        pointsLayer.add(g);
-        state.points.push({ point: pt, graphic: g });
-      }
-
-      function clearAll() {
-        state.points = [];
-        state.linkGraphics = [];
-        pointsLayer.removeAll();
-        linksLayer.removeAll();
-        updateStats(0,0);
-      }
-
-      function undoLast() {
-        if (!state.points.length) return;
-        const last = state.points.pop();
-        pointsLayer.remove(last.graphic);
-        recomputeLinks();
-      }
-
-      function getSettings() {
-        const hA = Math.max(0, Number(ui.hA.value || 0));
-        const hB = Math.max(0, Number(ui.hB.value || 0));
-        const clearance = Math.max(0, Number(ui.clearance.value || 0));
-        const spacing = Math.max(5, Number(ui.spacing.value || 30));
-        const linkMode = ui.linkMode.value;
-        const maxLinks = Math.max(1, Math.min(5000, Number(ui.maxLinks.value || 500)));
-        return { hA, hB, clearance, spacing, linkMode, maxLinks };
-      }
-
-      // Build segment list depending on mode
-      function buildSegments() {
-        const { linkMode, maxLinks } = getSettings();
-        const pts = state.points.map(p => p.point);
-        const segments = [];
-
-        if (pts.length < 2) return segments;
-
-        if (linkMode === "chain") {
-          for (let i = 0; i < pts.length - 1; i++) {
-            segments.push({ a: pts[i], b: pts[i+1], key: `${i}-${i+1}` });
-          }
-          return segments;
-        }
-
-        // mesh: all-to-all up to maxLinks
-        let count = 0;
-        for (let i = 0; i < pts.length; i++) {
-          for (let j = i + 1; j < pts.length; j++) {
-            segments.push({ a: pts[i], b: pts[j], key: `${i}-${j}` });
-            count++;
-            if (count >= maxLinks) return segments;
-          }
-        }
-        return segments;
-      }
-
-      // Densify line so we can sample elevations along it
-      function densifyLine(a, b, spacingMeters) {
-        const line = new Polyline({
-          spatialReference: a.spatialReference,
-          paths: [[[a.x, a.y], [b.x, b.y]]]
-        });
-
-        const lengthM = geometryEngine.geodesicLength(line, "meters");
-        const maxSegLen = Math.max(5, spacingMeters);
-
-        // geodesicDensify returns a polyline with more vertices
-        const dense = geometryEngine.geodesicDensify(line, maxSegLen, "meters");
-
-        // extract vertices
-        const coords = dense.paths[0];
-        const points = coords.map(xy => new Point({
-          x: xy[0], y: xy[1], spatialReference: a.spatialReference
-        }));
-
-        return { line, points, lengthM };
-      }
-
-      // Query elevations for an array of Points using ElevationLayer
-      async function queryElevations(points) {
-        const mp = new Multipoint({
-          spatialReference: points[0].spatialReference,
-          points: points.map(p => [p.x, p.y])
-        });
-
-        // returned geometry contains z values
-        const result = await elevationLayer.queryElevation(mp, {
-          demResolution: "finest-contiguous"
-        });
-
-        // result.geometry.points => [x,y,z]
-        return result.geometry.points.map(p => ({ x: p[0], y: p[1], z: p[2] }));
-      }
-
-      // LOS test: terrain obstruction against straight path between endpoints (incl antenna heights)
-      function isObstructed(samples, zA, zB, clearanceMeters) {
-        // samples include endpoints too
-        // straight line from (0, zA) to (1, zB)
-        const n = samples.length;
-        let worst = -Infinity;
-        let blocked = false;
-
-        for (let i = 1; i < n - 1; i++) {
-          const t = i / (n - 1);
-          const zLine = zA + (zB - zA) * t;
-          const zTerrain = samples[i].z + clearanceMeters;
-          const delta = zTerrain - zLine;
-          if (delta > worst) worst = delta;
-          if (zTerrain > zLine) {
-            blocked = true;
-            // don't early break: you might want worst clearance later; keeping simple anyway
-          }
-        }
-        return { blocked, worstDelta: worst };
-      }
-
-      function addLinkGraphic(line, colorRGBA, width = 3) {
-        const g = new Graphic({
-          geometry: line,
-          symbol: {
-            type: "simple-line",
-            color: colorRGBA,
-            width: width
-          }
+          geometry: base,
+          symbol: { type: "simple-line", color: [120,120,120,0.8], width: 2 }
         });
         linksLayer.add(g);
-        state.linkGraphics.push(g);
       }
+    }
 
-      async function recomputeLinks() {
-        if (state.computing) return;
-        state.computing = true;
+    updateStats(ok, bad);
+    state.computing = false;
+  }
 
-        // clear old links
-        linksLayer.removeAll();
-        state.linkGraphics = [];
+  // interactions
+  view.on("click", (ev) => {
+    if (!ev.mapPoint) return;
+    addPoint(ev.mapPoint);
+    recomputeLinks();
+  });
 
-        const segments = buildSegments();
-        if (!segments.length) {
-          updateStats(0,0);
-          state.computing = false;
-          return;
-        }
+  el.undoBtn.addEventListener("click", undoLast);
+  el.clearBtn.addEventListener("click", clearAll);
+  el.recalcBtn.addEventListener("click", recomputeLinks);
 
-        const { hA, hB, clearance, spacing } = getSettings();
+  ["change","input"].forEach(evt => {
+    el.linkMode.addEventListener(evt, recomputeLinks);
+    el.maxLinks.addEventListener(evt, recomputeLinks);
+    el.spacing.addEventListener(evt, recomputeLinks);
+    el.hA.addEventListener(evt, recomputeLinks);
+    el.hB.addEventListener(evt, recomputeLinks);
+    el.clearance.addEventListener(evt, recomputeLinks);
+    el.debugMode.addEventListener(evt, recomputeLinks);
+    el.basemapSelect.addEventListener(evt, () => map.basemap = el.basemapSelect.value);
+  });
 
-        let clearCount = 0;
-        let badCount = 0;
+  // initial
+  updateStats(0,0);
 
-        // Process sequentially (simple + reliable). You can parallelize later if you want.
-        for (const seg of segments) {
-          try {
-            const { line, points, lengthM } = densifyLine(seg.a, seg.b, spacing);
-
-            // limit samples to keep it snappy
-            const MAX_SAMPLES = 400;
-            let samplePts = points;
-            if (samplePts.length > MAX_SAMPLES) {
-              // downsample evenly
-              const step = (samplePts.length - 1) / (MAX_SAMPLES - 1);
-              const reduced = [];
-              for (let k = 0; k < MAX_SAMPLES; k++) {
-                reduced.push(samplePts[Math.round(k * step)]);
-              }
-              samplePts = reduced;
-            }
-
-            const samples = await queryElevations(samplePts);
-
-            // endpoint terrain + antenna heights
-            const zA = samples[0].z + hA;
-            const zB = samples[samples.length - 1].z + hB;
-
-            const { blocked } = isObstructed(samples, zA, zB, clearance);
-
-            if (blocked) {
-              badCount++;
-              addLinkGraphic(line, [200, 0, 0, 0.85], 3);
-            } else {
-              clearCount++;
-              addLinkGraphic(line, [0, 160, 80, 0.85], 3);
-            }
-
-            // Optional: label distance (commented to keep map clean)
-            // console.log(`Segment ${seg.key}: ${(lengthM/1000).toFixed(2)} km, ${blocked ? "OBSTRUCTED" : "CLEAR"}`);
-
-          } catch (err) {
-            // If elevation query fails, draw as grey
-            console.warn("Segment failed:", seg.key, err);
-            const line = new Polyline({
-              spatialReference: seg.a.spatialReference,
-              paths: [[[seg.a.x, seg.a.y], [seg.b.x, seg.b.y]]]
-            });
-            addLinkGraphic(line, [120, 120, 120, 0.8], 2);
-          }
-        }
-
-        updateStats(clearCount, badCount);
-        state.computing = false;
-      }
-
-      // Map click adds a point
-      view.on("click", async (ev) => {
-        const mapPoint = ev.mapPoint;
-        if (!mapPoint) return;
-
-        addPoint(mapPoint);
-        recomputeLinks();
-        updateStats(); // updates point count quickly
-      });
-
-      // UI events
-      ui.clearBtn.addEventListener("click", () => clearAll());
-      ui.undoBtn.addEventListener("click", () => undoLast());
-
-      ["change","input"].forEach(evt => {
-        ui.linkMode.addEventListener(evt, recomputeLinks);
-        ui.maxLinks.addEventListener(evt, recomputeLinks);
-        ui.hA.addEventListener(evt, recomputeLinks);
-        ui.hB.addEventListener(evt, recomputeLinks);
-        ui.clearance.addEventListener(evt, recomputeLinks);
-        ui.spacing.addEventListener(evt, recomputeLinks);
-      });
-
-      // Initial stats
-      updateStats(0,0);
-
-    });
-  </script>
+});
+</script>
 </body>
 </html>
