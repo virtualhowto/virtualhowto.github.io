@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PubMates 🍻 Prospect Edition</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <h1>🍻 PubMates</h1>
+      <p>Find your central meeting spot — pub, park, creek, or prospecting area.</p>
+
+      <label class="toggle">
+        <input type="checkbox" id="drivingMode" />
+        <span class="slider"></span> 🛣️ Driving Mode (Routes + Isochrones)
+      </label>
+
+      <div id="locations"></div>
+
+      <button id="addLocationBtn">➕ Add Location</button>
+      <button id="findBtn" class="main-btn">📍 Find Central Point</button>
+
+      <div id="routeSummary" class="route-summary">
+        <!-- Filled dynamically -->
+      </div>
+    </aside>
+
+    <div id="map"></div>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      <p id="loadingText">Loading...</p>
+      <small id="loadingSubText"></small>
+    </div>
+
+    <div id="statusBar">Ready ✅</div>
+  </div>
+
+  <footer>
+    <p>© 2025 PubMates Prospect Edition | Built by
+      <a href="https://virtualhowto.github.io">VirtualHowTo</a>
+    </p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
