@@ -55,10 +55,10 @@ html, body{
   letter-spacing: .2px;
 }
 
-#sidebar p{
-  margin:0;
+.subtext{
+  margin: 0 0 .6em 0;
+  opacity:.86;
   font-size:.92em;
-  opacity:.85;
 }
 
 .panel{
@@ -75,11 +75,33 @@ html, body{
   line-height:1.25em;
 }
 
+/* Sheet header (desktop still fine) */
+.sheet-grab{ display:none; }
+.sheet-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75em;
+}
+.sheet-header .brand{
+  display:flex;
+  flex-direction:column;
+  line-height:1.05em;
+}
+.sheet-header .brand small{
+  color: var(--muted2);
+  margin-top: .25em;
+}
+.sheet-toggle{
+  display:none;
+}
+
 /* Locations list */
 #locations{
   flex:1;
   overflow:auto;
   padding-right: .15em;
+  -webkit-overflow-scrolling: touch;
 }
 
 .location-input{
@@ -210,6 +232,7 @@ html, body{
   padding-top: .7em;
   max-height: 34vh;
   overflow:auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .route-summary .item{
@@ -301,7 +324,7 @@ footer{
 footer a{ color: var(--primary); text-decoration:none; }
 footer a:hover{ text-decoration:underline; }
 
-/* === Leaflet bottom-left highlight button styling === */
+/* Leaflet bottom-left highlight button */
 .leaflet-control.pmh-control button{
   display:flex;
   align-items:center;
@@ -325,19 +348,113 @@ footer a:hover{ text-decoration:underline; }
   border-color: rgba(0,0,0,0.18);
 }
 
-/* Mobile */
+/* Floating mobile "Panel" button */
+.fab-panel{
+  display:none;
+  position:absolute;
+  right: 14px;
+  bottom: 64px;
+  z-index: 9997;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.62);
+  color: rgba(255,255,255,0.92);
+  padding: .65em .8em;
+  border-radius: 14px;
+  font-weight: 950;
+  cursor:pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+}
+.fab-panel:hover{ background: rgba(0,0,0,0.72); }
+
+/* =========================
+   Mobile Bottom Sheet
+   ========================= */
 @media (max-width: 768px){
   #sidebar{
     position:absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top:0;
-    width: 92%;
-    max-width: 460px;
-    border-radius: 0 0 16px 16px;
+    left:0;
+    right:0;
+    bottom:0;
+    top:auto;
+
+    width: 100%;
+    max-width: none;
+    border-radius: 18px 18px 0 0;
     border-right: none;
-    box-shadow: 0 14px 44px rgba(0,0,0,0.55);
+    box-shadow: 0 -14px 44px rgba(0,0,0,0.62);
+
+    padding: .7em .9em .9em .9em;
+
+    /* bottom sheet */
+    height: 72vh;
+    transform: translateY(0);
+    transition: transform .22s ease;
   }
-  #map{ position:absolute; inset:0; }
-  .route-summary{ max-height: 22vh; }
+
+  #sidebar.sheet.collapsed{
+    transform: translateY(calc(72vh - 92px)); /* leave header visible */
+  }
+
+  .sheet-grab{
+    display:flex;
+    justify-content:center;
+    padding-top: .2em;
+    padding-bottom: .35em;
+  }
+  .grab-pill{
+    width: 58px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.22);
+  }
+
+  .sheet-toggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.9);
+    font-size: 1.2em;
+    cursor:pointer;
+  }
+
+  #sidebar.sheet.collapsed .sheet-toggle{
+    transform: rotate(180deg);
+  }
+
+  .sheet-content{
+    overflow:auto;
+    max-height: calc(72vh - 92px);
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #locations{ max-height: 22vh; }
+
+  .route-summary{ max-height: 18vh; }
+
+  #map{
+    position:absolute;
+    inset:0;
+  }
+
+  /* show FAB when collapsed */
+  .fab-panel{ display:block; }
+  #sidebar:not(.collapsed) ~ .fab-panel{
+    display:none;
+  }
+
+  /* keep leaflet controls away from footer a bit */
+  .leaflet-bottom.leaflet-left{
+    margin-bottom: 74px;
+  }
+
+  #statusBar{
+    bottom: 74px;
+  }
 }
