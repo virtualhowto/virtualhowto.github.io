@@ -53,6 +53,36 @@ map.on('moveend', () => {
 });
 
 // ==========================
+// Mobile Bottom Sheet UI
+// ==========================
+const sidebar = document.getElementById("sidebar");
+const sheetGrab = document.getElementById("sheetGrab");
+const sheetToggleBtn = document.getElementById("sheetToggleBtn");
+const fabPanel = document.getElementById("fabPanel");
+
+function isMobile() { return window.matchMedia("(max-width: 768px)").matches; }
+function setSheetCollapsed(collapsed) {
+  if (!isMobile()) return;
+  sidebar.classList.toggle("collapsed", !!collapsed);
+}
+function toggleSheet() {
+  if (!isMobile()) return;
+  sidebar.classList.toggle("collapsed");
+}
+sheetGrab?.addEventListener("click", toggleSheet);
+sheetToggleBtn?.addEventListener("click", toggleSheet);
+fabPanel?.addEventListener("click", () => setSheetCollapsed(false));
+
+// default collapsed on mobile
+window.addEventListener("DOMContentLoaded", () => {
+  if (isMobile()) setSheetCollapsed(true);
+});
+window.addEventListener("resize", () => {
+  // if switching between breakpoints, keep sane state
+  if (!isMobile()) sidebar.classList.remove("collapsed");
+});
+
+// ==========================
 // UI
 // ==========================
 const addBtn = document.getElementById("addLocationBtn");
@@ -70,18 +100,18 @@ const calcHint = document.getElementById("calcHint");
 // ==========================
 // State
 // ==========================
-let centerMarker = null;       // central point marker
-let meetupMarker = null;       // chosen meetup marker (POI or center)
+let centerMarker = null;
+let meetupMarker = null;
 let poiMarkers = [];
 let startMarkers = [];
-let routeLayers = [];          // { idx, layer, color }
+let routeLayers = [];     // { idx, layer, color }
 
 let selectedIdx = null;
 let dimOthers = false;
 
-let lastCoords = null;         // participants coords [ [lat,lon], ... ]
-let lastCenter = null;         // {lat,lon}
-let lastMeetup = null;         // {lat,lon,name,source}
+let lastCoords = null;    // [ [lat,lon], ... ]
+let lastCenter = null;    // {lat,lon}
+let lastMeetup = null;    // {lat,lon,name,source}
 let routesReady = false;
 
 const colors = ["#ff0000", "#00ff00", "#00b4ff", "#ffa500", "#ff00ff", "#a855f7", "#22c55e", "#f97316"];
@@ -284,7 +314,6 @@ function setMeetupPoint(meetup) {
      <small>${meetup.lat.toFixed(4)}, ${meetup.lon.toFixed(4)}</small>`
   ).openPopup();
 
-  // enable calc
   setCalcEnabled(true, "Meetup selected — click to calculate routes.");
   setStatus(`📍 Meetup set: ${meetup.name || "Selected point"}`);
 }
@@ -319,7 +348,6 @@ calcRoutesBtn.addEventListener("click", async () => {
       summary.push({ idx: i, color, distance_m: route.distance, duration_s: route.duration });
     }
 
-    // bounds
     const bounds = L.latLngBounds(lastCoords.map(c => L.latLng(c[0], c[1])));
     bounds.extend([lastMeetup.lat, lastMeetup.lon]);
     map.fitBounds(bounds.pad(0.25));
@@ -339,17 +367,18 @@ calcRoutesBtn.addEventListener("click", async () => {
       el.addEventListener("click", () => applyRouteHighlight(parseInt(el.dataset.idx, 10)));
     });
 
-    // default: highlight the longest route row (first after sort)
     if (summary.length) applyRouteHighlight(summary[0].idx);
 
     routesReady = true;
-
-    // show highlight button bottom-left now that routes exist
     highlightControl.setVisible(true);
     highlightControl.setActive(false);
 
     hideLoading();
     setStatus("✅ Routes calculated • use bottom-left Highlight button");
+
+    // nice mobile behavior: collapse sheet so map is visible
+    if (isMobile()) setSheetCollapsed(true);
+
   } catch (err){
     console.error(err);
     hideLoading();
@@ -460,10 +489,7 @@ async function searchPOIs(type) {
         icon: L.icon({ iconUrl: icons[type], iconSize: [30, 30] })
       }).addTo(map);
 
-      // click => set meetup (no auto-route)
-      m.on("click", () => {
-        setMeetupPoint({ lat: p.lat, lon: p.lon, name, source: "poi" });
-      });
+      m.on("click", () => setMeetupPoint({ lat: p.lat, lon: p.lon, name, source: "poi" }));
 
       m.bindPopup(
         `<b>${escapeHtml(name)}</b><br>
@@ -477,6 +503,10 @@ async function searchPOIs(type) {
     map.fitBounds(L.latLngBounds(poiMarkers.map(m => m.getLatLng())).pad(0.25));
     hideLoading();
     setStatus(`✅ Found ${poiMarkers.length} POIs • click one to set meetup`);
+
+    // mobile nicety: collapse so user can see POIs on map
+    if (isMobile()) setSheetCollapsed(true);
+
   } catch (err) {
     console.error(err);
     hideLoading();
@@ -525,7 +555,6 @@ findBtn.addEventListener("click", async () => {
 
     lastCoords = coords;
 
-    // start markers
     coords.forEach((c, i) => {
       const m = L.marker(c, {
         icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [28, 28] })
@@ -533,14 +562,12 @@ findBtn.addEventListener("click", async () => {
       startMarkers.push(m);
     });
 
-    // central: geographic midpoint
     let lat = 0, lon = 0;
     coords.forEach(c => { lat += c[0]; lon += c[1]; });
     lat /= coords.length; lon /= coords.length;
 
     lastCenter = { lat, lon };
 
-    // central marker
     centerMarker = L.circleMarker([lat, lon], {
       radius: 10,
       weight: 2,
@@ -550,20 +577,20 @@ findBtn.addEventListener("click", async () => {
     }).addTo(map);
     centerMarker.bindPopup(`<b>🧭 Central Point</b><br>${lat.toFixed(4)}, ${lon.toFixed(4)}<br><small>Now search POIs</small>`).openPopup();
 
-    // default meetup = central point
     setMeetupPoint({ lat, lon, name: "Central Point", source: "center" });
-
-    // enable POIs + calc
     setPoiEnabled(true);
     setCalcEnabled(true, "Meetup selected — click to calculate routes.");
 
-    // fit
     const bounds = L.latLngBounds(coords.map(c => L.latLng(c[0], c[1])));
     bounds.extend([lat, lon]);
     map.fitBounds(bounds.pad(0.25));
 
     hideLoading();
     setStatus("✅ Central point found • pick a POI meetup");
+
+    // mobile: collapse so map is primary
+    if (isMobile()) setSheetCollapsed(true);
+
   } catch (err) {
     console.error(err);
     hideLoading();
@@ -580,10 +607,8 @@ window.addEventListener("DOMContentLoaded", () => {
   if (params.has("locations")) {
     try {
       const addresses = JSON.parse(params.get("locations"));
-
       locationsDiv.innerHTML = "";
       addresses.forEach(a => addLocationInput(a));
-
       findBtn.click();
       setStatus("🔗 Loaded shared meetup");
     } catch {
