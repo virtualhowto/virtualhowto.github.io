@@ -58,10 +58,8 @@ map.on('moveend', () => {
 const addBtn = document.getElementById("addLocationBtn");
 const findBtn = document.getElementById("findBtn");
 const locationsDiv = document.getElementById("locations");
-const drivingModeToggle = document.getElementById("drivingMode");
 const statusBar = document.getElementById("statusBar");
 const routeSummary = document.getElementById("routeSummary");
-const dimToggleBtn = document.getElementById("dimToggleBtn");
 
 const poiHint = document.getElementById("poiHint");
 const poiButtons = [...document.querySelectorAll(".poi-btn")];
@@ -77,8 +75,9 @@ let meetupMarker = null;       // chosen meetup marker (POI or center)
 let poiMarkers = [];
 let startMarkers = [];
 let routeLayers = [];          // { idx, layer, color }
-let dimOthers = false;
+
 let selectedIdx = null;
+let dimOthers = false;
 
 let lastCoords = null;         // participants coords [ [lat,lon], ... ]
 let lastCenter = null;         // {lat,lon}
@@ -126,6 +125,17 @@ function setCalcEnabled(enabled, hintText){
   calcHint.textContent = hintText || (enabled ? "Ready to calculate driving routes." : "Select a meetup place first.");
 }
 
+function clearRoutesOnly() {
+  routeLayers.forEach(r => r.layer && map.removeLayer(r.layer));
+  routeLayers = [];
+  routeSummary.innerHTML = "";
+  selectedIdx = null;
+  routesReady = false;
+  dimOthers = false;
+  highlightControl?.setActive(false);
+  highlightControl?.setVisible(false);
+}
+
 function clearAll() {
   [centerMarker, meetupMarker, ...poiMarkers, ...startMarkers].forEach(l => l && map.removeLayer(l));
   poiMarkers = [];
@@ -133,25 +143,22 @@ function clearAll() {
   centerMarker = null;
   meetupMarker = null;
 
-  routeLayers.forEach(r => r.layer && map.removeLayer(r.layer));
-  routeLayers = [];
-  routeSummary.innerHTML = "";
-
-  selectedIdx = null;
-  dimOthers = false;
-  dimToggleBtn.classList.remove("active");
+  clearRoutesOnly();
 
   lastCoords = null;
   lastCenter = null;
   lastMeetup = null;
-  routesReady = false;
 
   setPoiEnabled(false);
   setCalcEnabled(false, "Select a meetup place first.");
 }
 
+// ==========================
+// Highlight My Route control (bottom-left)
+// ==========================
 function applyRouteHighlight(idx) {
   selectedIdx = idx;
+
   routeLayers.forEach(r => {
     const isSel = (idx !== null && idx !== undefined) && r.idx === idx;
     const opacity = dimOthers ? (isSel ? 0.95 : 0.15) : 0.9;
@@ -165,14 +172,42 @@ function applyRouteHighlight(idx) {
   });
 }
 
-// ==========================
-// Dim toggle
-// ==========================
-dimToggleBtn.addEventListener("click", () => {
-  dimOthers = !dimOthers;
-  dimToggleBtn.classList.toggle("active", dimOthers);
-  applyRouteHighlight(selectedIdx);
+const HighlightControl = L.Control.extend({
+  options: { position: "bottomleft" },
+  onAdd: function() {
+    const container = L.DomUtil.create("div", "leaflet-control pmh-control");
+    const btn = L.DomUtil.create("button", "", container);
+    btn.type = "button";
+    btn.textContent = "🎯 Highlight My Route";
+
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.disableScrollPropagation(container);
+
+    btn.addEventListener("click", () => {
+      if (!routesReady || selectedIdx === null) return;
+      dimOthers = !dimOthers;
+      btn.classList.toggle("active", dimOthers);
+      applyRouteHighlight(selectedIdx);
+    });
+
+    this._container = container;
+    this._btn = btn;
+
+    this.setVisible(false);
+    return container;
+  },
+  setVisible: function(visible) {
+    if (!this._container) return;
+    this._container.style.display = visible ? "block" : "none";
+  },
+  setActive: function(active) {
+    if (!this._btn) return;
+    this._btn.classList.toggle("active", !!active);
+  }
 });
+
+const highlightControl = new HighlightControl();
+map.addControl(highlightControl);
 
 // ==========================
 // Address inputs
@@ -235,12 +270,9 @@ async function osrmRoute(startLat, startLon, endLat, endLon) {
 // ==========================
 function setMeetupPoint(meetup) {
   lastMeetup = meetup;
-  routesReady = false;
-  // if routes already drawn, keep them but mark stale? easiest: clear routes
-  routeLayers.forEach(r => r.layer && map.removeLayer(r.layer));
-  routeLayers = [];
-  routeSummary.innerHTML = "";
-  selectedIdx = null;
+
+  // Changing meetup invalidates routes
+  clearRoutesOnly();
 
   if (meetupMarker) map.removeLayer(meetupMarker);
   meetupMarker = L.marker([meetup.lat, meetup.lon], {
@@ -252,10 +284,8 @@ function setMeetupPoint(meetup) {
      <small>${meetup.lat.toFixed(4)}, ${meetup.lon.toFixed(4)}</small>`
   ).openPopup();
 
-  // enable calc if driving mode
-  if (drivingModeToggle.checked) setCalcEnabled(true, "Meetup selected — click to calculate routes.");
-  else setCalcEnabled(false, "Turn on Driving Mode to calculate routes.");
-
+  // enable calc
+  setCalcEnabled(true, "Meetup selected — click to calculate routes.");
   setStatus(`📍 Meetup set: ${meetup.name || "Selected point"}`);
 }
 
@@ -263,15 +293,10 @@ function setMeetupPoint(meetup) {
 // Calculate routes button
 // ==========================
 calcRoutesBtn.addEventListener("click", async () => {
-  if (!drivingModeToggle.checked) return;
   if (!lastCoords || !lastMeetup) return;
 
   try{
-    // clear old routes
-    routeLayers.forEach(r => r.layer && map.removeLayer(r.layer));
-    routeLayers = [];
-    routeSummary.innerHTML = "";
-    selectedIdx = null;
+    clearRoutesOnly();
 
     showLoading("🚗 Calculating routes...", "Requesting OSRM routes");
     const summary = [];
@@ -314,11 +339,17 @@ calcRoutesBtn.addEventListener("click", async () => {
       el.addEventListener("click", () => applyRouteHighlight(parseInt(el.dataset.idx, 10)));
     });
 
+    // default: highlight the longest route row (first after sort)
     if (summary.length) applyRouteHighlight(summary[0].idx);
 
     routesReady = true;
+
+    // show highlight button bottom-left now that routes exist
+    highlightControl.setVisible(true);
+    highlightControl.setActive(false);
+
     hideLoading();
-    setStatus("✅ Routes calculated");
+    setStatus("✅ Routes calculated • use bottom-left Highlight button");
   } catch (err){
     console.error(err);
     hideLoading();
@@ -477,7 +508,6 @@ findBtn.addEventListener("click", async () => {
     // Shareable URL
     const params = new URLSearchParams();
     params.set("locations", JSON.stringify(addresses));
-    params.set("driving", drivingModeToggle.checked ? "1" : "0");
     history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
 
     // Geocode
@@ -503,7 +533,7 @@ findBtn.addEventListener("click", async () => {
       startMarkers.push(m);
     });
 
-    // central: simple geographic midpoint (always, so POI search is stable)
+    // central: geographic midpoint
     let lat = 0, lon = 0;
     coords.forEach(c => { lat += c[0]; lon += c[1]; });
     lat /= coords.length; lon /= coords.length;
@@ -523,12 +553,9 @@ findBtn.addEventListener("click", async () => {
     // default meetup = central point
     setMeetupPoint({ lat, lon, name: "Central Point", source: "center" });
 
-    // enable POIs
+    // enable POIs + calc
     setPoiEnabled(true);
-
-    // driving mode affects calc button text
-    if (drivingModeToggle.checked) setCalcEnabled(true, "Meetup selected — click to calculate routes.");
-    else setCalcEnabled(false, "Turn on Driving Mode to calculate routes.");
+    setCalcEnabled(true, "Meetup selected — click to calculate routes.");
 
     // fit
     const bounds = L.latLngBounds(coords.map(c => L.latLng(c[0], c[1])));
@@ -545,16 +572,6 @@ findBtn.addEventListener("click", async () => {
   }
 });
 
-// If driving mode toggled after meetup selected
-drivingModeToggle.addEventListener("change", () => {
-  if (!lastMeetup) {
-    setCalcEnabled(false, "Select a meetup place first.");
-    return;
-  }
-  if (drivingModeToggle.checked) setCalcEnabled(true, "Meetup selected — click to calculate routes.");
-  else setCalcEnabled(false, "Turn on Driving Mode to calculate routes.");
-});
-
 // ==========================
 // Auto-load share link
 // ==========================
@@ -563,11 +580,9 @@ window.addEventListener("DOMContentLoaded", () => {
   if (params.has("locations")) {
     try {
       const addresses = JSON.parse(params.get("locations"));
-      const driving = params.get("driving") === "1";
 
       locationsDiv.innerHTML = "";
       addresses.forEach(a => addLocationInput(a));
-      drivingModeToggle.checked = driving;
 
       findBtn.click();
       setStatus("🔗 Loaded shared meetup");
