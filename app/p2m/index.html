@@ -13,19 +13,28 @@
       <h1>🍻 PubMates</h1>
       <p>Find your central meeting spot — pub, park, creek, or prospecting area.</p>
 
-      <label class="toggle">
-        <input type="checkbox" id="drivingMode" />
-        <span class="slider"></span> 🛣️ Driving Mode (Routes + Isochrones)
-      </label>
+      <div class="panel">
+        <label class="toggle">
+          <input type="checkbox" id="drivingMode" />
+          <span class="slider"></span> 🛣️ Driving Mode (Best travel-time meetup)
+        </label>
+
+        <div class="segmented">
+          <button id="showRoutesBtn" class="seg active" type="button">🧭 Routes</button>
+          <button id="showAltBtn" class="seg" type="button">🧩 Dim Others</button>
+        </div>
+
+        <div class="hint">
+          Driving mode uses OSRM (no key). Click a participant in the list to highlight their route.
+        </div>
+      </div>
 
       <div id="locations"></div>
 
       <button id="addLocationBtn">➕ Add Location</button>
       <button id="findBtn" class="main-btn">📍 Find Central Point</button>
 
-      <div id="routeSummary" class="route-summary">
-        <!-- Filled dynamically -->
-      </div>
+      <div id="routeSummary" class="route-summary"></div>
     </aside>
 
     <div id="map"></div>
