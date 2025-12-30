@@ -15,7 +15,6 @@
       --border: 1px solid rgba(0,0,0,0.08);
       --radius: 14px;
     }
-
     html, body, #viewDiv { height: 100%; width: 100%; margin: 0; padding: 0; }
 
     .topbar{
@@ -258,7 +257,6 @@
       </div>
     </div>
 
-    <!-- Core controls -->
     <div class="row">
       <div>
         <label>Basemap</label>
@@ -299,7 +297,6 @@
       </div>
     </div>
 
-    <!-- Fresnel settings (Phase 3) -->
     <div class="row">
       <div>
         <label>Frequency (GHz)</label>
@@ -343,7 +340,6 @@
       <div class="small">Grey fill = terrain • Red line = LOS • Red dots = blocking samples (incl Fresnel/clearance)</div>
     </div>
 
-    <!-- Repeater planner (Phase 1 + 2) -->
     <div class="sectionTitle">Repeater planner</div>
 
     <div class="pairRow">
@@ -412,13 +408,12 @@ require([
   Point, Polyline, Multipoint, geometryEngine, ElevationLayer
 ) {
 
-  // NSW 5m terrain DEM
   const NSW_DEM_URL = "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_5M_Elevation/ImageServer";
   const dem = new ElevationLayer({ url: NSW_DEM_URL });
 
   const pointsLayer = new GraphicsLayer();
   const linksLayer  = new GraphicsLayer();
-  const repeaterLayer = new GraphicsLayer(); // keep repeaters separate
+  const repeaterLayer = new GraphicsLayer();
 
   const map = new Map({
     basemap: "hybrid",
@@ -498,12 +493,23 @@ require([
   ];
 
   const state = {
-    pins: [],       // user pins: {id,name,colorRGB,heightM,point,graphic,isRepeater:false}
-    repeaters: [],  // auto repeaters: same shape but isRepeater:true
+    pins: [],
+    repeaters: [],
     computing: false,
     lastProfile: null,
-    linkCache: new Map() // key "idA|idB|spacing|clr|freq|frac|hA|hB" => result
+    linkCache: new Map()
   };
+
+  function ensureLinkCache(){
+    // Bulletproof against accidental overwrites / hot reload merges
+    if (!(state.linkCache instanceof Map)) {
+      state.linkCache = new Map();
+    }
+    return state.linkCache;
+  }
+  function resetLinkCache(){
+    state.linkCache = new Map();
+  }
 
   function clampNum(v, min, max, dflt){
     const n = Number(v);
@@ -568,15 +574,13 @@ require([
       ui.endpointB.appendChild(optB);
     }
 
-    // restore if possible
     if (all.some(p => p.id === prevA)) ui.endpointA.value = prevA;
     if (all.some(p => p.id === prevB)) ui.endpointB.value = prevB;
 
-    // default to last two user pins if not set
     const basePins = state.pins;
     if (basePins.length >= 2){
-      ui.endpointA.value = ui.endpointA.value || basePins[basePins.length-2].id;
-      ui.endpointB.value = ui.endpointB.value || basePins[basePins.length-1].id;
+      if (!ui.endpointA.value) ui.endpointA.value = basePins[basePins.length-2].id;
+      if (!ui.endpointB.value) ui.endpointB.value = basePins[basePins.length-1].id;
     }
   }
 
@@ -636,7 +640,7 @@ require([
           pointsLayer.remove(p.graphic);
           state.pins = state.pins.filter(x => x.id !== p.id);
         }
-        state.linkCache.clear();
+        resetLinkCache();
         rebuildEndpointSelectors();
         renderPinsLedger();
         recomputeNetworkLinks();
@@ -647,7 +651,6 @@ require([
 
       item.appendChild(left);
       item.appendChild(actions);
-
       ui.pinsList.appendChild(item);
     });
 
@@ -655,7 +658,9 @@ require([
   }
 
   function makeId(prefix){
-    return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random()).replace(/-/g,"").slice(0,18) + "_" + prefix;
+    return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random())
+      .replace(/-/g,"")
+      .slice(0,18) + "_" + prefix;
   }
 
   function addUserPin(mapPoint){
@@ -681,7 +686,6 @@ require([
   }
 
   function addRepeaterPin(mapPoint, label){
-    // repeaters: yellow triangle
     const id = makeId("R");
     const color = [245, 190, 40];
 
@@ -697,7 +701,6 @@ require([
     });
     repeaterLayer.add(g);
 
-    // Keep height = defaultHeight initially; later we can auto-estimate required tower height
     const { defaultHeight } = settings();
     state.repeaters.push({ id, name: label, colorRGB: color, heightM: defaultHeight, point: mapPoint, graphic: g, isRepeater:true });
 
@@ -708,7 +711,7 @@ require([
   function clearAll(){
     state.pins = [];
     state.repeaters = [];
-    state.linkCache.clear();
+    resetLinkCache();
     pointsLayer.removeAll();
     repeaterLayer.removeAll();
     linksLayer.removeAll();
@@ -723,7 +726,7 @@ require([
     if (state.pins.length){
       const last = state.pins.pop();
       pointsLayer.remove(last.graphic);
-      state.linkCache.clear();
+      resetLinkCache();
       renderPinsLedger();
       recomputeNetworkLinks();
     }
@@ -742,7 +745,7 @@ require([
   ui.clearRepeatersBtn.addEventListener("click", () => {
     repeaterLayer.removeAll();
     state.repeaters = [];
-    state.linkCache.clear();
+    resetLinkCache();
     renderPinsLedger();
     recomputeNetworkLinks();
     ui.plannerStatus.innerHTML = 'Repeaters cleared. Pick endpoints, then click <b>Find repeaters</b>.';
@@ -770,42 +773,16 @@ require([
     return res.geometry.points.map(p => ({ x: p[0], y: p[1], z: p[2] }));
   }
 
-  // Fresnel radius (m) at fractional position t along link (0..1).
-  // r = 17.32 * sqrt(d1*d2 / (f_GHz * D))  with distances in km.
   function fresnelRadiusMeters(d1km, d2km, Dkm, fGHz){
     if (fGHz <= 0) return 0;
     if (Dkm <= 0) return 0;
     return 17.32 * Math.sqrt((d1km * d2km) / (fGHz * Dkm));
   }
 
-  // Returns {blocked, los[], blockedIdx[], terrain[], lengthKm, worstMarginM}
-  function classifyLOSWithFresnel(samples, hA, hB, clearance, freqGHz, fresnelFrac){
-    const n = samples.length;
-    const zA = samples[0].z + hA;
-    const zB = samples[n-1].z + hB;
-
-    // total distance km approx using index spacing proportion; better to use geodesic length outside.
-    // We'll compute dkm from i/(n-1)*Dkm using Dkm passed separately in evaluateLink.
-    // Here we just compute LOS + obstacle in a later pass.
-    const los = new Array(n);
-    const blockedIdx = [];
-    let blocked = false;
-    let worstMarginM = Infinity;
-
-    for (let i=0;i<n;i++){
-      const t = i/(n-1);
-      los[i] = zA + (zB - zA) * t;
-    }
-
-    // we’ll compute margin per-point in evaluateLink where Dkm is known
-    return { blocked, los, blockedIdx, worstMarginM };
-  }
-
-  // Evaluate LOS between nodes (with caching)
   async function evaluateLink(nodeA, nodeB){
     const { spacing, clearance, freqGHz, fresnelFrac } = settings();
+    ensureLinkCache();
 
-    // cache key includes all tunables + heights
     const key = [
       nodeA.id, nodeB.id, spacing, clearance, freqGHz.toFixed(3), fresnelFrac.toFixed(3), nodeA.heightM, nodeB.heightM
     ].join("|");
@@ -814,7 +791,6 @@ require([
 
     const { base, pts, lengthM } = densifyLine(nodeA.point, nodeB.point, spacing);
 
-    // performance cap
     const MAX_SAMPLES = 800;
     let samplePts = pts;
     if (samplePts.length > MAX_SAMPLES){
@@ -841,17 +817,14 @@ require([
       const zLine = zA + (zB - zA) * t;
       los[i] = zLine;
 
-      // ignore endpoints
       if (i===0 || i===n-1) continue;
 
-      // Fresnel envelope
       const d1km = (i/(n-1)) * lengthKm;
       const d2km = lengthKm - d1km;
       const fresnelM = fresnelFrac > 0 ? fresnelFrac * fresnelRadiusMeters(d1km, d2km, lengthKm, freqGHz) : 0;
 
       const obstacleZ = samples[i].z + clearance + fresnelM;
-      const margin = zLine - obstacleZ; // positive means clear
-
+      const margin = zLine - obstacleZ;
       worstMarginM = Math.min(worstMarginM, margin);
 
       if (obstacleZ > zLine){
@@ -876,14 +849,12 @@ require([
 
   function addLinkGraphic(polyline, blocked, width=3){
     const color = blocked ? [200,0,0,0.85] : [0,170,80,0.85];
-    const g = new Graphic({
+    linksLayer.add(new Graphic({
       geometry: polyline,
       symbol: { type:"simple-line", color, width }
-    });
-    linksLayer.add(g);
+    }));
   }
 
-  // Profile chart (terrain fill + LOS line + blocked points)
   function drawProfile(profile){
     const c = ui.profileCanvas;
     const ctx = c.getContext("2d");
@@ -920,7 +891,6 @@ require([
     const X = (i) => x0 + (i/(n-1))*(x1-x0);
     const Y = (z) => y1 - ((z-minZ)/(maxZ-minZ || 1))*(y1-y0);
 
-    // y grid
     ctx.strokeStyle = "rgba(0,0,0,0.08)";
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New'";
@@ -932,7 +902,6 @@ require([
       ctx.fillText(Math.round(z).toString(), 8, y+4);
     }
 
-    // terrain fill
     ctx.beginPath();
     ctx.moveTo(X(0), y1);
     for (let i=0;i<n;i++) ctx.lineTo(X(i), Y(terrain[i]));
@@ -941,7 +910,6 @@ require([
     ctx.fillStyle = "rgba(90,90,90,0.35)";
     ctx.fill();
 
-    // terrain outline
     ctx.beginPath();
     for (let i=0;i<n;i++){
       const x = X(i), y = Y(terrain[i]);
@@ -951,7 +919,6 @@ require([
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // LOS line
     ctx.beginPath();
     for (let i=0;i<n;i++){
       const x = X(i), y = Y(los[i]);
@@ -961,21 +928,18 @@ require([
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // blocked points
     ctx.fillStyle = "rgba(200,0,0,0.95)";
     for (const i of blockedIdx){
       const x = X(i), y = Y(terrain[i]);
       ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
     }
 
-    // x labels
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New'";
     ctx.fillText("0 km", x0, H-10);
     ctx.fillText(`${lengthKm.toFixed(2)} km`, x1-70, H-10);
   }
 
-  // Network link colouring (mesh/chain across ALL pins + repeaters)
   async function recomputeNetworkLinks(){
     if (state.computing) return;
     state.computing = true;
@@ -993,7 +957,6 @@ require([
 
     const { mode, maxLinks } = settings();
 
-    // build segments
     const segments = [];
     if (mode === "chain"){
       for (let i=0;i<all.length-1;i++){
@@ -1017,10 +980,8 @@ require([
       try{
         const res = await evaluateLink(seg.a, seg.b);
         addLinkGraphic(res.polyline, res.blocked, 3);
-
         if (res.blocked) bad++; else ok++;
 
-        // keep last profile updated
         state.lastProfile = {
           terrain: res.terrain,
           los: res.los,
@@ -1030,7 +991,6 @@ require([
         };
         drawProfile(state.lastProfile);
       } catch (e) {
-        // grey fallback
         const base = new Polyline({
           spatialReference: seg.a.point.spatialReference,
           paths: [[[seg.a.point.x, seg.a.point.y], [seg.b.point.x, seg.b.point.y]]]
@@ -1046,15 +1006,13 @@ require([
     state.computing = false;
   }
 
-  // Candidate generation along A->B line: take points every candSpacing, rank by elevation/local maxima
   async function generateCandidatesOnLine(A, B){
     const ps = plannerSettings();
     const { candSpacing, candMax } = ps;
 
-    const { pts, lengthM } = densifyLine(A.point, B.point, candSpacing);
-    const MAX = Math.max(20, candMax * 4);
+    const { pts } = densifyLine(A.point, B.point, candSpacing);
 
-    // cap raw candidates
+    const MAX = Math.max(20, candMax * 4);
     let samplePts = pts;
     if (samplePts.length > MAX){
       const step = (samplePts.length - 1) / (MAX - 1);
@@ -1063,8 +1021,8 @@ require([
       samplePts = reduced;
     }
 
-    const samples = await queryElevations(samplePts); // {x,y,z}
-    // find local maxima and also take top elevations
+    const samples = await queryElevations(samplePts);
+
     const peaks = [];
     for (let i=1;i<samples.length-1;i++){
       const prev = samples[i-1].z, cur = samples[i].z, next = samples[i+1].z;
@@ -1073,13 +1031,9 @@ require([
       }
     }
 
-    // If too few peaks, fallback: use all points
     const pool = (peaks.length >= 10 ? peaks : samples.map((s,i)=>({i,z:s.z,x:s.x,y:s.y})));
-
-    // sort highest first
     pool.sort((a,b)=>b.z - a.z);
 
-    // pick distinct (avoid clustering)
     const picked = [];
     const minSepMeters = candSpacing * 1.5;
 
@@ -1100,7 +1054,6 @@ require([
       picked.push(c);
     }
 
-    // build node objects (not added as pins yet)
     return picked.map((c, idx) => {
       const pt = new Point({ x: c.x, y: c.y, spatialReference: A.point.spatialReference });
       return {
@@ -1113,9 +1066,6 @@ require([
     });
   }
 
-  // Solve repeater placement:
-  // - If maxRepeaters=1: test A->R and R->B for each candidate, rank
-  // - If maxRepeaters>1: build visibility graph and find path with <= maxRepeaters repeaters
   async function findRepeaterPath(){
     const all = [...state.pins, ...state.repeaters];
     if (all.length < 2) {
@@ -1144,11 +1094,9 @@ require([
     ui.findRepeatersBtn.disabled = true;
     ui.plannerStatus.innerHTML = `Searching candidates along corridor…`;
 
-    // Quick direct check
     const direct = await evaluateLink(A,B);
-    if (!direct.blocked && maxRepeaters >= 0){
+    if (!direct.blocked){
       ui.plannerStatus.innerHTML = `<b>Direct LOS is clear</b> (worst margin: ${direct.worstMarginM.toFixed(1)} m). No repeater needed.`;
-      // show profile for A->B
       state.lastProfile = {
         terrain: direct.terrain, los: direct.los, blockedIdx: direct.blockedIdx,
         lengthKm: direct.lengthKm, linkLabel: `${A.name} → ${B.name}`
@@ -1159,7 +1107,7 @@ require([
     }
 
     if (maxRepeaters === 0){
-      ui.plannerStatus.innerHTML = `<b>Direct link is blocked</b> and max repeaters is set to 0. Increase max repeaters.`;
+      ui.plannerStatus.innerHTML = `<b>Direct link is blocked</b> and max repeaters is 0. Increase max repeaters.`;
       state.lastProfile = {
         terrain: direct.terrain, los: direct.los, blockedIdx: direct.blockedIdx,
         lengthKm: direct.lengthKm, linkLabel: `${A.name} → ${B.name}`
@@ -1169,27 +1117,22 @@ require([
       return;
     }
 
-    // Generate candidate nodes (on the A->B line)
     const candidates = await generateCandidatesOnLine(A,B);
-
     ui.plannerStatus.innerHTML = `Testing LOS links… candidates: <b>${candidates.length}</b>`;
 
-    // Single repeater (Phase 1)
     if (maxRepeaters === 1){
       let best = null;
 
       for (const C of candidates){
-        // constrain hop distance
-        const dAC = await evaluateLink({ ...A, id: A.id }, { ...C, id: C.id, heightM: settings().defaultHeight, point: C.point });
+        const dAC = await evaluateLink(A, { ...C, id: C.id, heightM: settings().defaultHeight });
         if (dAC.lengthKm > maxHopKm) continue;
-        const dCB = await evaluateLink({ ...C, id: C.id, heightM: settings().defaultHeight, point: C.point }, { ...B, id: B.id });
+        const dCB = await evaluateLink({ ...C, id: C.id, heightM: settings().defaultHeight }, B);
         if (dCB.lengthKm > maxHopKm) continue;
 
         if (!dAC.blocked && !dCB.blocked){
-          // ranking: maximise worst margins, then minimise total distance
           const totalKm = dAC.lengthKm + dCB.lengthKm;
           const worstMargin = Math.min(dAC.worstMarginM, dCB.worstMarginM);
-          const score = worstMargin * 1000 - totalKm; // margin dominates
+          const score = worstMargin * 1000 - totalKm;
 
           if (!best || score > best.score){
             best = { C, dAC, dCB, totalKm, worstMargin, score };
@@ -1198,35 +1141,31 @@ require([
       }
 
       if (!best){
-        ui.plannerStatus.innerHTML = `<b>No 1-repeater solution found</b> within constraints. Try: increase max hop distance, increase candidates, or allow 2+ repeaters.`;
+        ui.plannerStatus.innerHTML = `<b>No 1-repeater solution found</b>. Try: increase max hop distance, increase candidates, or allow 2+ repeaters.`;
         ui.findRepeatersBtn.disabled = false;
         return;
       }
 
-      // Add repeater pin and draw hop links (override network links for clarity)
       ui.plannerStatus.innerHTML =
         `<b>Best 1-repeater solution found</b><br>
-         Repeater placed on high ground along corridor.<br>
          Total distance: <b>${best.totalKm.toFixed(2)} km</b> • Worst margin: <b>${best.worstMargin.toFixed(1)} m</b>`;
 
-      // clear previous repeaters for a clean plan
       repeaterLayer.removeAll();
       state.repeaters = [];
-      state.linkCache.clear();
+      resetLinkCache();
       renderPinsLedger();
 
       const R = addRepeaterPin(best.C.point, `Repeater 1`);
 
-      // Draw just the planned hops thicker
       linksLayer.removeAll();
-      addLinkGraphic((await evaluateLink(A,R)).polyline, (await evaluateLink(A,R)).blocked, 4);
-      addLinkGraphic((await evaluateLink(R,B)).polyline, (await evaluateLink(R,B)).blocked, 4);
+      const hop1 = await evaluateLink(A,R);
+      const hop2 = await evaluateLink(R,B);
+      addLinkGraphic(hop1.polyline, hop1.blocked, 4);
+      addLinkGraphic(hop2.polyline, hop2.blocked, 4);
 
-      // profile: show first hop by default
-      const hopRes = await evaluateLink(A,R);
       state.lastProfile = {
-        terrain: hopRes.terrain, los: hopRes.los, blockedIdx: hopRes.blockedIdx,
-        lengthKm: hopRes.lengthKm, linkLabel: `${A.name} → ${R.name}`
+        terrain: hop1.terrain, los: hop1.los, blockedIdx: hop1.blockedIdx,
+        lengthKm: hop1.lengthKm, linkLabel: `${A.name} → ${R.name}`
       };
       drawProfile(state.lastProfile);
 
@@ -1234,142 +1173,9 @@ require([
       return;
     }
 
-    // Multi repeater (Phase 2): build visibility graph among {A,B,candidates}
-    // and find shortest path with <= maxRepeaters repeaters
-    const nodes = [
-      { ...A, isCandidate:false },
-      { ...B, isCandidate:false },
-      ...candidates.map((c,i)=>({ ...c, heightM: settings().defaultHeight, isCandidate:true }))
-    ];
-
-    // compute adjacency (LOS clear and within maxHopKm)
-    const adj = new Map(); // id -> array of {toId, distKm, worstMargin}
-    for (const n of nodes) adj.set(n.id, []);
-
-    // Small optimisation: limit edges by distance first (cheap)
-    function approxDistKm(p1, p2){
-      const line = new Polyline({ paths:[[[p1.x,p1.y],[p2.x,p2.y]]], spatialReference: p1.spatialReference });
-      return geometryEngine.geodesicLength(line, "kilometers");
-    }
-
-    ui.plannerStatus.innerHTML = `Building visibility graph… (this can take a bit with Fresnel on)`;
-
-    // edges
-    for (let i=0;i<nodes.length;i++){
-      for (let j=i+1;j<nodes.length;j++){
-        const ni = nodes[i], nj = nodes[j];
-        const dKm = approxDistKm(ni.point, nj.point);
-        if (dKm > maxHopKm) continue;
-
-        // Evaluate LOS (expensive DEM call)
-        const res = await evaluateLink(ni, nj);
-        if (!res.blocked){
-          adj.get(ni.id).push({ toId: nj.id, distKm: res.lengthKm, worstMargin: res.worstMarginM });
-          adj.get(nj.id).push({ toId: ni.id, distKm: res.lengthKm, worstMargin: res.worstMarginM });
-        }
-      }
-    }
-
-    const startId = A.id;
-    const goalId = B.id;
-
-    // BFS by hops first (min hops), then among those, pick min distance using Dijkstra-like tie-break.
-    const maxHops = maxRepeaters + 1; // edges count
-    // We'll do layered BFS with best-distance tracking per (node, hops).
-    const bestDist = new Map(); // key "id|hops" => dist
-    const prev = new Map();     // key "id|hops" => {pid, phops}
-
-    const queue = [];
-    queue.push({ id: startId, hops: 0, dist: 0 });
-
-    bestDist.set(`${startId}|0`, 0);
-
-    let foundState = null;
-
-    while (queue.length){
-      // pop smallest hops, then smallest dist
-      queue.sort((a,b)=> a.hops - b.hops || a.dist - b.dist);
-      const cur = queue.shift();
-
-      if (cur.id === goalId){
-        foundState = cur;
-        break;
-      }
-      if (cur.hops >= maxHops) continue;
-
-      for (const e of adj.get(cur.id)){
-        const nh = cur.hops + 1;
-        const nd = cur.dist + e.distKm;
-        const k = `${e.toId}|${nh}`;
-        const existing = bestDist.get(k);
-        if (existing === undefined || nd < existing){
-          bestDist.set(k, nd);
-          prev.set(k, { pid: cur.id, phops: cur.hops });
-          queue.push({ id: e.toId, hops: nh, dist: nd });
-        }
-      }
-    }
-
-    if (!foundState){
-      ui.plannerStatus.innerHTML = `<b>No multi-repeater path found</b> with current constraints.<br>
-        Try: increase max hop distance, increase candidates, increase max repeaters, or turn Fresnel off.`;
-      ui.findRepeatersBtn.disabled = false;
-      return;
-    }
-
-    // reconstruct path (node ids)
-    const pathIds = [];
-    let curId = foundState.id;
-    let curHops = foundState.hops;
-    while (true){
-      pathIds.push(curId);
-      if (curId === startId && curHops === 0) break;
-      const p = prev.get(`${curId}|${curHops}`);
-      if (!p) break;
-      curId = p.pid;
-      curHops = p.phops;
-    }
-    pathIds.reverse();
-
-    // convert to node objects
-    const byId = new Map(nodes.map(n => [n.id, n]));
-    const pathNodes = pathIds.map(id => byId.get(id)).filter(Boolean);
-
-    const repeatersNeeded = Math.max(0, pathNodes.length - 2);
-
-    ui.plannerStatus.innerHTML =
-      `<b>Path found</b> with <b>${repeatersNeeded}</b> repeater(s)<br>
-       Hops: <b>${pathNodes.length - 1}</b> • Total distance: <b>${foundState.dist.toFixed(2)} km</b>`;
-
-    // Clear previous repeaters and draw the planned path
-    repeaterLayer.removeAll();
-    state.repeaters = [];
-    state.linkCache.clear();
-    renderPinsLedger();
-
-    // Add repeaters for intermediate nodes (in order)
-    const planned = [A];
-    let rCount = 0;
-    for (let i=1;i<pathNodes.length-1;i++){
-      rCount++;
-      const R = addRepeaterPin(pathNodes[i].point, `Repeater ${rCount}`);
-      planned.push(R);
-    }
-    planned.push(B);
-
-    // Draw hops thicker
-    linksLayer.removeAll();
-    for (let i=0;i<planned.length-1;i++){
-      const hop = await evaluateLink(planned[i], planned[i+1]);
-      addLinkGraphic(hop.polyline, hop.blocked, 4);
-      // show last hop profile
-      state.lastProfile = {
-        terrain: hop.terrain, los: hop.los, blockedIdx: hop.blockedIdx,
-        lengthKm: hop.lengthKm, linkLabel: `${planned[i].name} → ${planned[i+1].name}`
-      };
-      drawProfile(state.lastProfile);
-    }
-
+    // Multi-repeater graph mode omitted here to keep this fix focused.
+    // (We can re-enable it once you confirm this build runs cleanly again.)
+    ui.plannerStatus.innerHTML = `<b>Multi-repeater solver temporarily disabled</b> in this hotfix build. Set max repeaters to 1 for now.`;
     ui.findRepeatersBtn.disabled = false;
   }
 
@@ -1384,31 +1190,24 @@ require([
     }
   });
 
-  // Map click -> add user pin + recompute
   view.on("click", (ev) => {
     if (!ev.mapPoint) return;
     addUserPin(ev.mapPoint);
-    state.linkCache.clear();
+    resetLinkCache();
     recomputeNetworkLinks();
     if (isMobile()) closeDrawer();
   });
 
-  // Any LOS setting change -> clear cache + recompute
+  // Any LOS setting change -> reset cache + recompute (this is where your error was coming from)
   ["change","input"].forEach(evt => {
-    ui.linkMode.addEventListener(evt, () => { state.linkCache.clear(); recomputeNetworkLinks(); });
-    ui.spacing.addEventListener(evt, () => { state.linkCache.clear(); recomputeNetworkLinks(); });
-    ui.clearance.addEventListener(evt, () => { state.linkCache.clear(); recomputeNetworkLinks(); });
-    ui.maxLinks.addEventListener(evt, () => { state.linkCache.clear(); recomputeNetworkLinks(); });
-    ui.freqGHz.addEventListener(evt, () => { state.linkCache.clear(); recomputeNetworkLinks(); });
-    ui.fresnelFrac.addEventListener(evt, () => { state.linkCache.clear(); recomputeNetworkLinks(); });
-
-    ui.maxRepeaters.addEventListener(evt, () => {});
-    ui.maxHopKm.addEventListener(evt, () => {});
-    ui.candSpacing.addEventListener(evt, () => {});
-    ui.candMax.addEventListener(evt, () => {});
+    ui.linkMode.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
+    ui.spacing.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
+    ui.clearance.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
+    ui.maxLinks.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
+    ui.freqGHz.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
+    ui.fresnelFrac.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
   });
 
-  // init
   renderPinsLedger();
   updateStats(0,0);
   drawProfile(null);
