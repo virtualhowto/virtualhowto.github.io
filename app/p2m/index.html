@@ -11,12 +11,12 @@
   <div id="app">
     <aside id="sidebar">
       <h1>🍻 PubMates</h1>
-      <p>Find your central meeting spot — then pick a POI as the meetup place.</p>
+      <p>Find a central point, pick a POI meetup, then calculate driving routes.</p>
 
       <div class="panel">
         <label class="toggle">
           <input type="checkbox" id="drivingMode" />
-          <span class="slider"></span> 🛣️ Driving Mode (Best travel-time meetup)
+          <span class="slider"></span> 🛣️ Driving Mode (OSRM routes)
         </label>
 
         <div class="segmented">
@@ -24,7 +24,7 @@
         </div>
 
         <div class="hint">
-          After central point is found, search nearby POIs and click one to set the meetup place.
+          Flow: Central point → POI search → click POI to set meetup → calculate routes.
         </div>
       </div>
 
@@ -40,15 +40,18 @@
         </div>
 
         <div class="poi-actions">
-          <button class="poi-btn" data-type="pub">🍺 Pubs</button>
-          <button class="poi-btn" data-type="park">🌳 Parks</button>
-          <button class="poi-btn" data-type="creek">💧 Creeks</button>
-          <button class="poi-btn" data-type="prospecting">⛏️ Prospecting</button>
+          <button class="poi-btn" data-type="pub" disabled>🍺 Pubs</button>
+          <button class="poi-btn" data-type="park" disabled>🌳 Parks</button>
+          <button class="poi-btn" data-type="creek" disabled>💧 Creeks</button>
+          <button class="poi-btn" data-type="prospecting" disabled>⛏️ Prospecting</button>
         </div>
 
         <small class="poi-sub">
-          Click a POI marker on the map to set it as the meetup and recalc routes.
+          Click a POI marker on the map to set it as the meetup place.
         </small>
+
+        <button id="calcRoutesBtn" class="calc-btn" disabled>🚗 Calculate Driving Routes</button>
+        <small id="calcHint" class="calc-hint">Select a meetup place first.</small>
       </div>
 
       <div id="routeSummary" class="route-summary"></div>
