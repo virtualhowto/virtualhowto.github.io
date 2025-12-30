@@ -33,6 +33,7 @@ body, html {
 .location-input input {
   flex: 1; padding: .6em; border-radius: 8px; border: none;
   background: rgba(255,255,255,0.1); color: #fff;
+  outline: none;
 }
 
 .remove-btn {
@@ -48,7 +49,7 @@ body, html {
 
 .main-btn {
   background: linear-gradient(90deg, var(--primary), var(--secondary));
-  color: #000; font-weight: 600; border: none; border-radius: 8px;
+  color: #000; font-weight: 700; border: none; border-radius: 8px;
   padding: .8em; cursor: pointer; font-size: 1em;
 }
 
@@ -74,21 +75,22 @@ body, html {
 #loading {
   display: none;
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6); color: white;
+  background: rgba(0,0,0,0.65); color: white;
   z-index: 9999; justify-content: center; align-items: center;
   flex-direction: column; text-align: center;
-  font-size: 1.2em; backdrop-filter: blur(5px);
+  font-size: 1.2em; backdrop-filter: blur(6px);
+  gap: .4em;
 }
 
 #loading.active { display: flex; }
 
 .spinner {
   width: 60px; height: 60px;
-  border: 6px solid rgba(255,255,255,0.3);
+  border: 6px solid rgba(255,255,255,0.25);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 1em;
+  margin-bottom: .6em;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -103,15 +105,16 @@ body, html {
 
 footer {
   position: absolute; bottom: 0; width: 100%;
-  text-align: center; background: rgba(0,0,0,0.5);
+  text-align: center; background: rgba(0,0,0,0.45);
   color: #ccc; padding: .5em; font-size: .9em;
+  z-index: 20;
 }
 
 footer a { color: var(--primary); text-decoration: none; }
 
 @media (max-width:768px){
   #sidebar{
-    position:absolute;width:90%;max-width:380px;border-radius:0 0 10px 10px;
+    position:absolute;width:92%;max-width:420px;border-radius:0 0 12px 12px;
     left:50%;transform:translateX(-50%);top:0;
   }
   #map{position:absolute;top:0;bottom:0;width:100%;}
