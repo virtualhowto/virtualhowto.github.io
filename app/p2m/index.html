@@ -11,7 +11,7 @@
   <div id="app">
     <aside id="sidebar">
       <h1>🍻 PubMates</h1>
-      <p>Find your central meeting spot — pub, park, creek, or prospecting area.</p>
+      <p>Find your central meeting spot — then pick a POI as the meetup place.</p>
 
       <div class="panel">
         <label class="toggle">
@@ -20,12 +20,11 @@
         </label>
 
         <div class="segmented">
-          <button id="showRoutesBtn" class="seg active" type="button">🧭 Routes</button>
-          <button id="showAltBtn" class="seg" type="button">🧩 Dim Others</button>
+          <button id="dimToggleBtn" class="seg" type="button">🧩 Dim Others</button>
         </div>
 
         <div class="hint">
-          Driving mode uses OSRM (no key). Click a participant in the list to highlight their route.
+          After central point is found, search nearby POIs and click one to set the meetup place.
         </div>
       </div>
 
@@ -33,6 +32,24 @@
 
       <button id="addLocationBtn">➕ Add Location</button>
       <button id="findBtn" class="main-btn">📍 Find Central Point</button>
+
+      <div class="panel" id="poiPanel">
+        <div class="poi-head">
+          <b>📌 POI Search</b>
+          <small id="poiHint">Find a central point first.</small>
+        </div>
+
+        <div class="poi-actions">
+          <button class="poi-btn" data-type="pub">🍺 Pubs</button>
+          <button class="poi-btn" data-type="park">🌳 Parks</button>
+          <button class="poi-btn" data-type="creek">💧 Creeks</button>
+          <button class="poi-btn" data-type="prospecting">⛏️ Prospecting</button>
+        </div>
+
+        <small class="poi-sub">
+          Click a POI marker on the map to set it as the meetup and recalc routes.
+        </small>
+      </div>
 
       <div id="routeSummary" class="route-summary"></div>
     </aside>
