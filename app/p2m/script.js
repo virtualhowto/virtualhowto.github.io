@@ -1,9 +1,14 @@
 // ==========================
 // CONFIG (NO PROXY)
 // ==========================
-// Public OSRM demo server (no key). Great for MVP.
-// If it rate-limits, you can self-host OSRM later.
 const OSRM_BASE = "https://router.project-osrm.org";
+
+// Multiple Overpass endpoints (fallback)
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.nchc.org.tw/api/interpreter"
+];
 
 // ==========================
 // National + NSW Hybrid Basemaps
@@ -22,39 +27,29 @@ const nswTransport = L.tileLayer('https://maps.six.nsw.gov.au/arcgis/rest/servic
 });
 
 const map = L.map('map', { center: [-25.0, 134.0], zoom: 5, zoomControl: true, layers: [osmLayer] });
-
-const baseMaps = {
+L.control.layers({
   "🌏 Australia (OSM)": osmLayer,
   "🗺️ NSW Topographic": nswTopo,
   "🛰️ NSW Imagery": nswImagery,
   "🚗 NSW Transport": nswTransport
-};
-L.control.layers(baseMaps, null, { position: 'topright', collapsed: false }).addTo(map);
+}, null, { position: 'topright', collapsed: false }).addTo(map);
 
 const nswBounds = { north: -28.15, south: -37.6, east: 153.65, west: 140.95 };
 function isInNSW(latlng) {
   return latlng.lat < nswBounds.north && latlng.lat > nswBounds.south && latlng.lng < nswBounds.east && latlng.lng > nswBounds.west;
 }
-
 let currentBaseLayer = osmLayer;
 map.on("baselayerchange", (e) => currentBaseLayer = e.layer);
-
 let lastInNSW = isInNSW(map.getCenter());
 map.on('moveend', () => {
   const inNSW = isInNSW(map.getCenter());
-
   if (inNSW && !lastInNSW && currentBaseLayer === osmLayer) {
-    map.removeLayer(osmLayer);
-    map.addLayer(nswTopo);
-    currentBaseLayer = nswTopo;
+    map.removeLayer(osmLayer); map.addLayer(nswTopo); currentBaseLayer = nswTopo;
   }
-
   if (!inNSW && lastInNSW && [nswTopo, nswImagery, nswTransport].includes(currentBaseLayer)) {
     map.eachLayer(l => { if ([nswTopo, nswImagery, nswTransport].includes(l)) map.removeLayer(l); });
-    map.addLayer(osmLayer);
-    currentBaseLayer = osmLayer;
+    map.addLayer(osmLayer); currentBaseLayer = osmLayer;
   }
-
   lastInNSW = inNSW;
 });
 
@@ -67,20 +62,28 @@ const locationsDiv = document.getElementById("locations");
 const drivingModeToggle = document.getElementById("drivingMode");
 const statusBar = document.getElementById("statusBar");
 const routeSummary = document.getElementById("routeSummary");
-const showRoutesBtn = document.getElementById("showRoutesBtn");
-const showAltBtn = document.getElementById("showAltBtn");
+const dimToggleBtn = document.getElementById("dimToggleBtn");
 
-let midpointMarker = null;
-let poiMarkers = [];
-let startMarkers = [];
-let routeLayers = []; // { idx, layer, color }
+const poiHint = document.getElementById("poiHint");
+const poiButtons = [...document.querySelectorAll(".poi-btn")];
+
+let midpointMarker = null;     // current chosen meetup marker (central or POI)
+let centerMarker = null;       // original central point marker
+let poiMarkers = [];           // POI markers
+let startMarkers = [];         // participant markers
+let routeLayers = [];          // { idx, layer }
 let dimOthers = false;
 let selectedIdx = null;
+
+let lastCoords = null;         // participants coords [ [lat,lon], ... ]
+let lastCenter = null;         // {lat,lon} central point
+let lastMeetup = null;         // {lat,lon,name,source} chosen meetup (POI or center)
+let lastDriving = false;
 
 const colors = ["#ff0000", "#00ff00", "#00b4ff", "#ffa500", "#ff00ff", "#a855f7", "#22c55e", "#f97316"];
 
 // ==========================
-// UI helpers
+// Helpers
 // ==========================
 function showLoading(msg="Loading...", sub="") {
   document.getElementById("loadingText").textContent = msg;
@@ -92,28 +95,12 @@ function setStatus(msg) { statusBar.textContent = msg; }
 
 function escapeHtml(str) {
   return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function clearRunLayers() {
-  [midpointMarker, ...poiMarkers, ...startMarkers].forEach(l => l && map.removeLayer(l));
-  midpointMarker = null;
-  poiMarkers = [];
-  startMarkers = [];
-
-  routeLayers.forEach(r => r.layer && map.removeLayer(r.layer));
-  routeLayers = [];
-
-  routeSummary.innerHTML = "";
-  selectedIdx = null;
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
 function metersToNice(m){
-  if (!m) return "—";
+  if (!m && m !== 0) return "—";
   return m >= 1000 ? `${(m/1000).toFixed(1)} km` : `${Math.round(m)} m`;
 }
 function secondsToNice(sec){
@@ -124,18 +111,49 @@ function secondsToNice(sec){
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+function clearRunLayers() {
+  [midpointMarker, centerMarker, ...poiMarkers, ...startMarkers].forEach(l => l && map.removeLayer(l));
+  midpointMarker = null;
+  centerMarker = null;
+  poiMarkers = [];
+  startMarkers = [];
+  routeLayers.forEach(r => r.layer && map.removeLayer(r.layer));
+  routeLayers = [];
+  routeSummary.innerHTML = "";
+  selectedIdx = null;
+  lastCoords = null;
+  lastCenter = null;
+  lastMeetup = null;
+  lastDriving = false;
+  setPoiEnabled(false);
+}
+
+function setPoiEnabled(enabled){
+  poiButtons.forEach(b => b.disabled = !enabled);
+  poiHint.textContent = enabled ? "Search around the central point." : "Find a central point first.";
+}
+
+function applyRouteHighlight(idx) {
+  selectedIdx = idx;
+  routeLayers.forEach(r => {
+    const isSel = (idx !== null && idx !== undefined) && r.idx === idx;
+    const opacity = dimOthers ? (isSel ? 0.95 : 0.15) : 0.9;
+    const weight  = dimOthers ? (isSel ? 7 : 4) : 5;
+    r.layer.setStyle({ opacity, weight });
+  });
+
+  document.querySelectorAll(".route-summary .item").forEach(el => {
+    const i = parseInt(el.dataset.idx, 10);
+    el.classList.toggle("active", idx === i);
+  });
+}
+
 // ==========================
-// Segmented buttons
+// Dim toggle
 // ==========================
-showRoutesBtn.addEventListener("click", () => {
-  showRoutesBtn.classList.add("active");
-  showAltBtn.classList.remove("active");
-  // nothing to toggle here; routes always visible when computed
-});
-showAltBtn.addEventListener("click", () => {
+dimToggleBtn.addEventListener("click", () => {
   dimOthers = !dimOthers;
-  showAltBtn.classList.toggle("active", dimOthers);
-  showRoutesBtn.classList.toggle("active", !dimOthers);
+  dimToggleBtn.classList.toggle("active", dimOthers);
   applyRouteHighlight(selectedIdx);
 });
 
@@ -160,23 +178,16 @@ function addLocationInput(value="") {
 // Nominatim geocode (cache + delay)
 // ==========================
 const GEO_CACHE_KEY = "pubmates_geocode_cache_v1";
-
-function loadGeoCache() {
-  try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || "{}"); }
-  catch { return {}; }
-}
-function saveGeoCache(cache) {
-  try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); } catch {}
-}
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function loadGeoCache(){ try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || "{}"); } catch { return {}; } }
+function saveGeoCache(cache){ try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); } catch {} }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 async function geocodeAddress(addr) {
   const cache = loadGeoCache();
   const key = addr.trim().toLowerCase();
   if (cache[key]) return cache[key];
 
-  await sleep(1100); // courtesy delay
-
+  await sleep(1100);
   const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`;
   const res = await fetch(url, { headers: { "Accept": "application/json" }});
   if (!res.ok) throw new Error(`Geocode failed (${res.status})`);
@@ -190,9 +201,8 @@ async function geocodeAddress(addr) {
 }
 
 // ==========================
-// OSRM: route + table
+// OSRM route + table
 // ==========================
-// OSRM expects lon,lat
 async function osrmRoute(startLat, startLon, endLat, endLon) {
   const coords = `${startLon},${startLat};${endLon},${endLat}`;
   const url = `${OSRM_BASE}/route/v1/driving/${coords}?overview=full&geometries=geojson&annotations=false`;
@@ -204,8 +214,6 @@ async function osrmRoute(startLat, startLon, endLat, endLon) {
 }
 
 async function osrmTable(sources, destinations) {
-  // sources/destinations: array of [lat,lon]
-  // build combined coordinates list; use source/destination indices
   const all = [...sources, ...destinations];
   const coordStr = all.map(([lat, lon]) => `${lon},${lat}`).join(";");
   const srcIdx = sources.map((_,i) => i).join(";");
@@ -216,23 +224,16 @@ async function osrmTable(sources, destinations) {
   if (!res.ok) throw new Error(`OSRM table error (${res.status})`);
   const data = await res.json();
   if (data.code !== "Ok" || !data.durations) throw new Error("No OSRM table");
-  return data.durations; // matrix [sources][destinations] durations in seconds
+  return data.durations;
 }
 
-// Pick meetup point: sample a grid around centroid and minimize worst travel time
 async function findBestMeetupPoint(coords) {
-  // centroid
-  let cLat = 0, cLon = 0;
-  coords.forEach(([lat,lon]) => { cLat += lat; cLon += lon; });
-  cLat /= coords.length; cLon /= coords.length;
-
-  // bounding box around points
+  // bbox
   const lats = coords.map(c => c[0]);
   const lons = coords.map(c => c[1]);
   const minLat = Math.min(...lats), maxLat = Math.max(...lats);
   const minLon = Math.min(...lons), maxLon = Math.max(...lons);
 
-  // sample grid (5x5) within bbox expanded a bit
   const padLat = (maxLat - minLat) * 0.15 || 0.08;
   const padLon = (maxLon - minLon) * 0.15 || 0.12;
 
@@ -249,12 +250,9 @@ async function findBestMeetupPoint(coords) {
     }
   }
 
-  showLoading("🚗 Finding best meetup...", "Calculating travel-time grid (OSRM table)");
-
-  // OSRM table: sources = participants, destinations = candidates
+  showLoading("🚗 Finding best central point...", "Calculating travel-time grid");
   const durations = await osrmTable(coords, candidates);
 
-  // For each candidate, compute worst duration among participants (minimax)
   let best = { idx: 0, worst: Infinity, sum: Infinity };
   for (let d=0; d<candidates.length; d++){
     let worst = 0;
@@ -265,63 +263,163 @@ async function findBestMeetupPoint(coords) {
       worst = Math.max(worst, t);
       sum += t;
     }
-    if (worst < best.worst || (worst === best.worst && sum < best.sum)) {
-      best = { idx: d, worst, sum };
-    }
+    if (worst < best.worst || (worst === best.worst && sum < best.sum)) best = { idx: d, worst, sum };
   }
 
-  const [mLat, mLon] = candidates[best.idx];
-  return { lat: mLat, lon: mLon, worst_s: best.worst, sum_s: best.sum, centroid: [cLat, cLon] };
+  const [lat, lon] = candidates[best.idx];
+  return { lat, lon, worst_s: best.worst, sum_s: best.sum };
 }
 
 // ==========================
-// Highlight / dim routes
+// ROUTING: draw from participants -> meetup
 // ==========================
-function applyRouteHighlight(idx) {
-  selectedIdx = idx;
+async function routeToMeetup(meetup) {
+  if (!lastCoords || !lastCoords.length) return;
 
-  routeLayers.forEach(r => {
-    const isSelected = (idx === null || idx === undefined) ? false : r.idx === idx;
+  // clear old routes
+  routeLayers.forEach(r => r.layer && map.removeLayer(r.layer));
+  routeLayers = [];
+  routeSummary.innerHTML = "";
+  selectedIdx = null;
 
-    // If dimOthers off, everything full opacity
-    const baseOpacity = dimOthers ? (isSelected ? 0.95 : 0.15) : 0.9;
-    const baseWeight  = dimOthers ? (isSelected ? 7 : 4) : 5;
+  showLoading("🧭 Drawing routes...", "Requesting OSRM routes");
+  const summary = [];
 
-    r.layer.setStyle({ opacity: baseOpacity, weight: baseWeight });
+  for (let i=0;i<lastCoords.length;i++){
+    const [sLat, sLon] = lastCoords[i];
+    showLoading("🧭 Drawing routes...", `Route ${i+1}/${lastCoords.length}`);
+    const route = await osrmRoute(sLat, sLon, meetup.lat, meetup.lon);
+    const color = colors[i % colors.length];
+
+    const geo = {
+      "type":"FeatureCollection",
+      "features":[{ "type":"Feature", "properties":{ "distance": route.distance, "duration": route.duration }, "geometry": route.geometry }]
+    };
+
+    const layer = L.geoJSON(geo, { style: { color, weight: 5, opacity: 0.9 } }).addTo(map);
+    routeLayers.push({ idx: i, layer, color });
+
+    summary.push({ idx: i, color, distance_m: route.distance, duration_s: route.duration });
+  }
+
+  // bounds
+  const bounds = L.latLngBounds(lastCoords.map(c => L.latLng(c[0], c[1])));
+  bounds.extend([meetup.lat, meetup.lon]);
+  map.fitBounds(bounds.pad(0.25));
+
+  // summary clickable
+  summary.sort((a,b) => (b.duration_s||0) - (a.duration_s||0));
+  routeSummary.innerHTML = summary.map(it => `
+    <div class="item" data-idx="${it.idx}">
+      <span class="dot" style="background:${it.color}"></span>
+      <div class="meta">
+        <b>Location ${it.idx + 1}</b>
+        <small>${metersToNice(it.distance_m)} • ${secondsToNice(it.duration_s)}</small>
+      </div>
+    </div>
+  `).join("");
+
+  routeSummary.querySelectorAll(".item").forEach(el => {
+    el.addEventListener("click", () => applyRouteHighlight(parseInt(el.dataset.idx, 10)));
   });
 
-  // Update summary active class
-  document.querySelectorAll(".route-summary .item").forEach(el => {
-    const i = parseInt(el.dataset.idx, 10);
-    el.classList.toggle("active", idx === i);
-  });
+  if (summary.length) applyRouteHighlight(summary[0].idx);
+
+  hideLoading();
+  setStatus(`✅ Routed to meetup • ${meetup.name ? meetup.name : "Selected point"}`);
 }
 
 // ==========================
-// Nearby POIs (Overpass) - optional (only used in non-driving mode midpoint popup)
+// POIs: Overpass with fallback + better queries
 // ==========================
-async function findNearbyPlaces(lat, lon, type) {
-  showLoading(`🔍 Searching nearby ${type}s...`, "Querying Overpass");
+function buildOverpassQuery(lat, lon, type, radius=6000) {
+  // Use nwr (node/way/relation) and out center for consistent coords
+  switch (type) {
+    case "pub":
+      return `
+[out:json][timeout:25];
+(
+  nwr["amenity"="pub"](around:${radius},${lat},${lon});
+  nwr["amenity"="bar"](around:${radius},${lat},${lon});
+);
+out center tags;`;
+    case "park":
+      return `
+[out:json][timeout:25];
+(
+  nwr["leisure"="park"](around:${radius},${lat},${lon});
+  nwr["boundary"="national_park"](around:${radius},${lat},${lon});
+);
+out center tags;`;
+    case "creek":
+      return `
+[out:json][timeout:25];
+(
+  nwr["waterway"="stream"](around:${radius},${lat},${lon});
+  nwr["waterway"="river"](around:${radius},${lat},${lon});
+);
+out center tags;`;
+    case "prospecting":
+      return `
+[out:json][timeout:25];
+(
+  nwr["man_made"="mine"](around:${radius},${lat},${lon});
+  nwr["landuse"="quarry"](around:${radius},${lat},${lon});
+  nwr["resource"="mineral"](around:${radius},${lat},${lon});
+);
+out center tags;`;
+    default:
+      return "";
+  }
+}
+
+async function overpassFetch(query) {
+  // Try endpoints until one works
+  let lastErr = null;
+  for (const ep of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(ep, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: query
+      });
+      if (!res.ok) throw new Error(`Overpass ${res.status}`);
+      const data = await res.json();
+      return data;
+    } catch (e) {
+      lastErr = e;
+      // try next
+    }
+  }
+  throw lastErr || new Error("Overpass failed");
+}
+
+function getElementLatLon(el) {
+  // nodes: el.lat/el.lon, ways/relations: el.center
+  if (typeof el.lat === "number" && typeof el.lon === "number") return { lat: el.lat, lon: el.lon };
+  if (el.center && typeof el.center.lat === "number" && typeof el.center.lon === "number") return { lat: el.center.lat, lon: el.center.lon };
+  return null;
+}
+
+async function searchPOIs(type) {
+  if (!lastCenter) return;
+
+  showLoading(`🔍 Searching ${type}...`, "Querying Overpass (with fallback)");
   poiMarkers.forEach(m => map.removeLayer(m));
   poiMarkers = [];
 
-  let query = "";
-  switch (type) {
-    case "pub": query = `[out:json];node["amenity"="pub"](around:6000,${lat},${lon});out body;`; break;
-    case "park": query = `[out:json];node["leisure"="park"](around:6000,${lat},${lon});out body;`; break;
-    case "creek": query = `[out:json];way["waterway"="stream"](around:6000,${lat},${lon});out center;`; break;
-    case "prospecting":
-      query = `[out:json];
-        (node["landuse"="quarry"](around:6000,${lat},${lon});
-         node["natural"="bare_rock"](around:6000,${lat},${lon});
-         node["man_made"="mine"](around:6000,${lat},${lon}););
-      out body;`; break;
-  }
+  const q = buildOverpassQuery(lastCenter.lat, lastCenter.lon, type, 6000);
 
   try {
-    const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: query });
-    const data = await res.json();
-    if (!data.elements.length) { alert(`No ${type}s found nearby.`); setStatus(`⚠️ No ${type}s found`); hideLoading(); return; }
+    const data = await overpassFetch(q);
+    const els = (data.elements || []).slice(0, 40);
+
+    if (!els.length) {
+      hideLoading();
+      setStatus(`⚠️ No ${type} found`);
+      alert(`No ${type} found near the central point.`);
+      return;
+    }
 
     const icons = {
       pub: "https://cdn-icons-png.flaticon.com/512/2935/2935416.png",
@@ -330,41 +428,63 @@ async function findNearbyPlaces(lat, lon, type) {
       prospecting: "https://cdn-icons-png.flaticon.com/512/5325/5325730.png"
     };
 
-    data.elements.slice(0, 25).forEach(p => {
-      const latP = p.lat || p.center?.lat, lonP = p.lon || p.center?.lon;
-      if (!latP || !lonP) return;
-      const name = p.tags?.name || `${type} spot`;
-      const m = L.marker([latP, lonP], { icon: L.icon({ iconUrl: icons[type], iconSize: [30, 30] }) })
-        .addTo(map)
-        .bindPopup(`<b>${escapeHtml(name)}</b><br><a target="_blank" rel="noreferrer" href="https://www.openstreetmap.org/?mlat=${latP}&mlon=${lonP}">View on Map</a>`);
+    els.forEach(el => {
+      const p = getElementLatLon(el);
+      if (!p) return;
+
+      const name = el.tags?.name || `${type} spot`;
+      const m = L.marker([p.lat, p.lon], {
+        icon: L.icon({ iconUrl: icons[type], iconSize: [30, 30] })
+      }).addTo(map);
+
+      // Click POI => set meetup => recalc routes
+      m.on("click", async () => {
+        const meetup = { lat: p.lat, lon: p.lon, name, source: "poi" };
+        setMeetupPoint(meetup);
+        if (lastDriving) await routeToMeetup(meetup);
+      });
+
+      m.bindPopup(
+        `<b>${escapeHtml(name)}</b><br>
+         <small>Click marker to set meetup</small><br>
+         <a target="_blank" rel="noreferrer" href="https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}">View on OSM</a>`
+      );
+
       poiMarkers.push(m);
     });
 
-    map.fitBounds(L.latLngBounds(poiMarkers.map(m => m.getLatLng())).pad(0.3));
-    setStatus(`✅ Found ${poiMarkers.length} nearby ${type}s`);
+    map.fitBounds(L.latLngBounds(poiMarkers.map(m => m.getLatLng())).pad(0.25));
+    setStatus(`✅ Found ${poiMarkers.length} POIs • click one to set meetup`);
+    hideLoading();
   } catch (err) {
     console.error(err);
-    alert("Error fetching nearby places: " + err.message);
-    setStatus("⚠️ Error fetching data");
+    hideLoading();
+    setStatus("⚠️ POI search failed");
+    alert("POI search failed (Overpass can be rate-limited). Try again in 30–60 seconds.");
   }
-  hideLoading();
 }
 
-// ==========================
-// Share link
-// ==========================
-function copyShareLink() {
-  const shareUrl = location.href;
-  navigator.clipboard.writeText(shareUrl).then(() => {
-    alert("✅ Meetup link copied to clipboard!");
-    setStatus("🔗 Meetup link copied");
-  }).catch(() => {
-    alert("Could not copy automatically — you can copy this URL:\n\n" + shareUrl);
-  });
+function setMeetupPoint(meetup) {
+  lastMeetup = meetup;
+
+  if (midpointMarker) map.removeLayer(midpointMarker);
+  midpointMarker = L.marker([meetup.lat, meetup.lon], {
+    icon: L.icon({ iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", iconSize: [36, 36] })
+  }).addTo(map);
+
+  midpointMarker.bindPopup(
+    `<b>📍 Meetup Place</b><br>${escapeHtml(meetup.name || "Selected point")}<br>
+     <small>${meetup.lat.toFixed(4)}, ${meetup.lon.toFixed(4)}</small>`
+  ).openPopup();
 }
 
+// Wire POI buttons
+poiButtons.forEach(btn => {
+  btn.addEventListener("click", () => searchPOIs(btn.dataset.type));
+});
+
 // ==========================
-// Main action
+// MAIN: Find central point
 // ==========================
 findBtn.addEventListener("click", async () => {
   try {
@@ -374,7 +494,7 @@ findBtn.addEventListener("click", async () => {
 
     clearRunLayers();
 
-    // Shareable URL (no double encoding)
+    // Shareable URL
     const params = new URLSearchParams();
     params.set("locations", JSON.stringify(addresses));
     params.set("driving", drivingModeToggle.checked ? "1" : "0");
@@ -389,118 +509,56 @@ findBtn.addEventListener("click", async () => {
     }
     if (coords.length < 2) { alert("Could not locate enough addresses."); hideLoading(); return; }
 
+    lastCoords = coords;
+    lastDriving = drivingModeToggle.checked;
+
     // Start markers
     coords.forEach((c, i) => {
       const m = L.marker(c, {
-        icon: L.icon({
-          iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-          iconSize: [28, 28]
-        })
+        icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [28, 28] })
       }).addTo(map).bindPopup(`📍 Location ${i + 1}<br><small style="color:${colors[i%colors.length]}">Route colour</small>`);
       startMarkers.push(m);
     });
 
-    // Midpoint: driving mode = travel-time optimized meetup
-    if (drivingModeToggle.checked) {
-      const best = await findBestMeetupPoint(coords);
-      const meetupLat = best.lat, meetupLon = best.lon;
-
-      midpointMarker = L.marker([meetupLat, meetupLon], {
-        icon: L.icon({ iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", iconSize: [36, 36] })
-      }).addTo(map);
-
-      midpointMarker.bindPopup(
-        `<b>🚗 Best Meetup Point</b><br>${meetupLat.toFixed(4)}, ${meetupLon.toFixed(4)}
-         <br><small>Minimizes the longest drive time</small>`
-      ).openPopup();
-
-      // Draw routes
-      showLoading("🧭 Drawing routes...", "Requesting OSRM routes");
-      const summary = [];
-
-      for (let i=0;i<coords.length;i++){
-        const [sLat, sLon] = coords[i];
-        showLoading("🧭 Drawing routes...", `Route ${i+1}/${coords.length}`);
-
-        const route = await osrmRoute(sLat, sLon, meetupLat, meetupLon);
-        const color = colors[i % colors.length];
-
-        const geo = {
-          "type":"FeatureCollection",
-          "features":[{ "type":"Feature", "properties":{ "distance": route.distance, "duration": route.duration }, "geometry": route.geometry }]
-        };
-
-        const layer = L.geoJSON(geo, { style: { color, weight: 5, opacity: 0.9 } }).addTo(map);
-        routeLayers.push({ idx: i, layer, color });
-
-        summary.push({ idx: i, color, distance_m: route.distance, duration_s: route.duration });
-      }
-
-      // Fit bounds: include routes + points + meetup
-      const bounds = L.latLngBounds(coords.map(c => L.latLng(c[0], c[1])));
-      bounds.extend([meetupLat, meetupLon]);
-      map.fitBounds(bounds.pad(0.25));
-
-      // Render clickable summary (sorted by longest duration)
-      summary.sort((a,b) => (b.duration_s||0) - (a.duration_s||0));
-      routeSummary.innerHTML = summary.map(it => `
-        <div class="item" data-idx="${it.idx}">
-          <span class="dot" style="background:${it.color}"></span>
-          <div class="meta">
-            <b>Location ${it.idx + 1}</b>
-            <small>${metersToNice(it.distance_m)} • ${secondsToNice(it.duration_s)}</small>
-          </div>
-        </div>
-      `).join("");
-
-      // Click to highlight
-      routeSummary.querySelectorAll(".item").forEach(el => {
-        el.addEventListener("click", () => {
-          const idx = parseInt(el.dataset.idx, 10);
-          applyRouteHighlight(idx);
-        });
-      });
-
-      // default highlight: longest
-      if (summary.length) applyRouteHighlight(summary[0].idx);
-
-      setStatus(`✅ Routes ready • worst drive ~ ${secondsToNice(best.worst_s)}`);
-      hideLoading();
-      return;
+    // Central point
+    let center;
+    if (lastDriving) {
+      center = await findBestMeetupPoint(coords);
+      setStatus(`✅ Central point found • worst drive ~ ${secondsToNice(center.worst_s)}`);
+    } else {
+      let lat = 0, lon = 0;
+      coords.forEach(c => { lat += c[0]; lon += c[1]; });
+      center = { lat: lat/coords.length, lon: lon/coords.length, worst_s: null };
+      setStatus("🧭 Geographic midpoint ready");
     }
 
-    // Non-driving: geographic midpoint
-    let lat = 0, lon = 0;
-    coords.forEach(c => { lat += c[0]; lon += c[1]; });
-    lat /= coords.length; lon /= coords.length;
+    lastCenter = { lat: center.lat, lon: center.lon };
 
-    map.fitBounds(L.latLngBounds(coords).pad(0.25));
-    midpointMarker = L.marker([lat, lon], {
-      icon: L.icon({ iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", iconSize: [36, 36] })
+    // Show central marker (separate from meetup marker)
+    centerMarker = L.circleMarker([center.lat, center.lon], {
+      radius: 10,
+      weight: 2,
+      color: "#ffffff",
+      fillColor: "#ffb300",
+      fillOpacity: 0.85
     }).addTo(map);
 
-    const popupHtml = `
-      <b>🧭 Central Point</b><br>(${lat.toFixed(4)}, ${lon.toFixed(4)})<br><br>
-      <div style="display:flex;justify-content:space-around;font-size:1.5em;gap:.35em;">
-        <span class="map-icon" data-type="pub">🍺</span>
-        <span class="map-icon" data-type="park">🌳</span>
-        <span class="map-icon" data-type="creek">💧</span>
-        <span class="map-icon" data-type="prospecting">⛏️</span>
-      </div>
-      <button id="shareBtn" style="margin-top:.6em;width:100%;padding:.6em;border-radius:12px;border:none;font-weight:800;cursor:pointer;background:linear-gradient(90deg,#ffb300,#ff6f00);color:#111;">🔗 Share Meetup</button>
-      <small style="opacity:.8;">Click an icon to search nearby.</small>
-    `;
-    midpointMarker.bindPopup(popupHtml).openPopup();
+    centerMarker.bindPopup(`<b>🧭 Central Point</b><br>${center.lat.toFixed(4)}, ${center.lon.toFixed(4)}<br><small>Use POI search to pick meetup</small>`).openPopup();
 
-    midpointMarker.on("popupopen", () => {
-      document.querySelectorAll(".map-icon").forEach(i =>
-        i.addEventListener("click", () => findNearbyPlaces(lat, lon, i.dataset.type))
-      );
-      const btn = document.getElementById("shareBtn");
-      if (btn) btn.addEventListener("click", copyShareLink);
-    });
+    // Default meetup = central point initially
+    setMeetupPoint({ lat: center.lat, lon: center.lon, name: "Central Point", source: "center" });
 
-    setStatus("🧭 Geographic midpoint ready");
+    // Fit bounds
+    const bounds = L.latLngBounds(coords.map(c => L.latLng(c[0], c[1])));
+    bounds.extend([center.lat, center.lon]);
+    map.fitBounds(bounds.pad(0.25));
+
+    // Enable POIs
+    setPoiEnabled(true);
+
+    // If driving mode, draw initial routes to central
+    if (lastDriving) await routeToMeetup(lastMeetup);
+
     hideLoading();
   } catch (err) {
     console.error(err);
@@ -519,9 +577,11 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
       const addresses = JSON.parse(params.get("locations"));
       const driving = params.get("driving") === "1";
+
       locationsDiv.innerHTML = "";
       addresses.forEach(a => addLocationInput(a));
       drivingModeToggle.checked = driving;
+
       findBtn.click();
       setStatus("🔗 Loaded shared meetup");
     } catch (e) {
