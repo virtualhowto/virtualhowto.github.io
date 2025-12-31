@@ -73,12 +73,10 @@ sheetGrab?.addEventListener("click", toggleSheet);
 sheetToggleBtn?.addEventListener("click", toggleSheet);
 fabPanel?.addEventListener("click", () => setSheetCollapsed(false));
 
-// default collapsed on mobile
 window.addEventListener("DOMContentLoaded", () => {
   if (isMobile()) setSheetCollapsed(true);
 });
 window.addEventListener("resize", () => {
-  // if switching between breakpoints, keep sane state
   if (!isMobile()) sidebar.classList.remove("collapsed");
 });
 
@@ -103,15 +101,13 @@ const calcHint = document.getElementById("calcHint");
 let centerMarker = null;
 let meetupMarker = null;
 let poiMarkers = [];
-let startMarkers = [];
-let routeLayers = [];     // { idx, layer, color }
+let startMarkers = [];   // { idx, marker }
+let routeLayers = [];    // { idx, layer, color }
 
 let selectedIdx = null;
-let dimOthers = false;
-
-let lastCoords = null;    // [ [lat,lon], ... ]
-let lastCenter = null;    // {lat,lon}
-let lastMeetup = null;    // {lat,lon,name,source}
+let lastCoords = null;   // [ [lat,lon], ... ]
+let lastCenter = null;   // {lat,lon}
+let lastMeetup = null;   // {lat,lon,name,source}
 let routesReady = false;
 
 const colors = ["#ff0000", "#00ff00", "#00b4ff", "#ffa500", "#ff00ff", "#a855f7", "#22c55e", "#f97316"];
@@ -161,13 +157,11 @@ function clearRoutesOnly() {
   routeSummary.innerHTML = "";
   selectedIdx = null;
   routesReady = false;
-  dimOthers = false;
-  highlightControl?.setActive(false);
-  highlightControl?.setVisible(false);
+  undimAll();
 }
 
 function clearAll() {
-  [centerMarker, meetupMarker, ...poiMarkers, ...startMarkers].forEach(l => l && map.removeLayer(l));
+  [centerMarker, meetupMarker, ...poiMarkers, ...startMarkers.map(o => o.marker)].forEach(l => l && map.removeLayer(l));
   poiMarkers = [];
   startMarkers = [];
   centerMarker = null;
@@ -183,61 +177,58 @@ function clearAll() {
   setCalcEnabled(false, "Select a meetup place first.");
 }
 
-// ==========================
-// Highlight My Route control (bottom-left)
-// ==========================
-function applyRouteHighlight(idx) {
-  selectedIdx = idx;
+function isIdxValid(idx){ return Number.isInteger(idx) && idx >= 0; }
 
+// ==========================
+// Dimming + Selection
+// ==========================
+function undimAll() {
+  // routes
   routeLayers.forEach(r => {
-    const isSel = (idx !== null && idx !== undefined) && r.idx === idx;
-    const opacity = dimOthers ? (isSel ? 0.95 : 0.15) : 0.9;
-    const weight  = dimOthers ? (isSel ? 7 : 4) : 5;
-    r.layer.setStyle({ opacity, weight });
+    r.layer.setStyle({ opacity: 0.9, weight: 5 });
   });
 
-  document.querySelectorAll(".route-summary .item").forEach(el => {
-    const i = parseInt(el.dataset.idx, 10);
-    el.classList.toggle("active", idx === i);
+  // markers
+  startMarkers.forEach(o => {
+    if (o.marker && o.marker.setOpacity) o.marker.setOpacity(1);
   });
+
+  // list
+  document.querySelectorAll(".route-summary .item").forEach(el => el.classList.remove("active"));
 }
 
-const HighlightControl = L.Control.extend({
-  options: { position: "bottomleft" },
-  onAdd: function() {
-    const container = L.DomUtil.create("div", "leaflet-control pmh-control");
-    const btn = L.DomUtil.create("button", "", container);
-    btn.type = "button";
-    btn.textContent = "🎯 Highlight My Route";
+function selectParticipant(idx, panTo=false) {
+  if (!routesReady || !isIdxValid(idx)) return;
+  selectedIdx = idx;
 
-    L.DomEvent.disableClickPropagation(container);
-    L.DomEvent.disableScrollPropagation(container);
-
-    btn.addEventListener("click", () => {
-      if (!routesReady || selectedIdx === null) return;
-      dimOthers = !dimOthers;
-      btn.classList.toggle("active", dimOthers);
-      applyRouteHighlight(selectedIdx);
+  // routes
+  routeLayers.forEach(r => {
+    const isSel = r.idx === idx;
+    r.layer.setStyle({
+      opacity: isSel ? 0.98 : 0.12,
+      weight: isSel ? 7 : 4
     });
+  });
 
-    this._container = container;
-    this._btn = btn;
+  // markers
+  startMarkers.forEach(o => {
+    const isSel = o.idx === idx;
+    if (o.marker && o.marker.setOpacity) o.marker.setOpacity(isSel ? 1 : 0.25);
+  });
 
-    this.setVisible(false);
-    return container;
-  },
-  setVisible: function(visible) {
-    if (!this._container) return;
-    this._container.style.display = visible ? "block" : "none";
-  },
-  setActive: function(active) {
-    if (!this._btn) return;
-    this._btn.classList.toggle("active", !!active);
+  // list
+  document.querySelectorAll(".route-summary .item").forEach(el => {
+    const i = parseInt(el.dataset.idx, 10);
+    el.classList.toggle("active", i === idx);
+  });
+
+  if (panTo) {
+    const m = startMarkers.find(o => o.idx === idx)?.marker;
+    if (m) map.panTo(m.getLatLng(), { animate: true });
   }
-});
 
-const highlightControl = new HighlightControl();
-map.addControl(highlightControl);
+  setStatus(`🎯 Highlighting Location ${idx + 1}`);
+}
 
 // ==========================
 // Address inputs
@@ -352,7 +343,6 @@ calcRoutesBtn.addEventListener("click", async () => {
     bounds.extend([lastMeetup.lat, lastMeetup.lon]);
     map.fitBounds(bounds.pad(0.25));
 
-    summary.sort((a,b) => (b.duration_s||0) - (a.duration_s||0));
     routeSummary.innerHTML = summary.map(it => `
       <div class="item" data-idx="${it.idx}">
         <span class="dot" style="background:${it.color}"></span>
@@ -363,20 +353,19 @@ calcRoutesBtn.addEventListener("click", async () => {
       </div>
     `).join("");
 
+    // click row => dim others
     routeSummary.querySelectorAll(".item").forEach(el => {
-      el.addEventListener("click", () => applyRouteHighlight(parseInt(el.dataset.idx, 10)));
+      el.addEventListener("click", () => selectParticipant(parseInt(el.dataset.idx, 10), true));
     });
 
-    if (summary.length) applyRouteHighlight(summary[0].idx);
-
     routesReady = true;
-    highlightControl.setVisible(true);
-    highlightControl.setActive(false);
-
     hideLoading();
-    setStatus("✅ Routes calculated • use bottom-left Highlight button");
+    setStatus("✅ Routes calculated • tap a location to focus");
 
-    // nice mobile behavior: collapse sheet so map is visible
+    // default: focus first (idx 0) for clarity
+    selectParticipant(0);
+
+    // mobile: collapse sheet so map is visible
     if (isMobile()) setSheetCollapsed(true);
 
   } catch (err){
@@ -504,7 +493,6 @@ async function searchPOIs(type) {
     hideLoading();
     setStatus(`✅ Found ${poiMarkers.length} POIs • click one to set meetup`);
 
-    // mobile nicety: collapse so user can see POIs on map
     if (isMobile()) setSheetCollapsed(true);
 
   } catch (err) {
@@ -535,12 +523,10 @@ findBtn.addEventListener("click", async () => {
 
     clearAll();
 
-    // Shareable URL
     const params = new URLSearchParams();
     params.set("locations", JSON.stringify(addresses));
     history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
 
-    // Geocode
     const coords = [];
     for (let i=0;i<addresses.length;i++){
       showLoading("Geocoding...", `Address ${i+1}/${addresses.length}`);
@@ -555,11 +541,13 @@ findBtn.addEventListener("click", async () => {
 
     lastCoords = coords;
 
+    // start markers (click => select)
     coords.forEach((c, i) => {
-      const m = L.marker(c, {
+      const marker = L.marker(c, {
         icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [28, 28] })
       }).addTo(map).bindPopup(`📍 Location ${i + 1}`);
-      startMarkers.push(m);
+      marker.on("click", () => selectParticipant(i));
+      startMarkers.push({ idx: i, marker });
     });
 
     let lat = 0, lon = 0;
@@ -588,7 +576,6 @@ findBtn.addEventListener("click", async () => {
     hideLoading();
     setStatus("✅ Central point found • pick a POI meetup");
 
-    // mobile: collapse so map is primary
     if (isMobile()) setSheetCollapsed(true);
 
   } catch (err) {
