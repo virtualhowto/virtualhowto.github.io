@@ -301,19 +301,6 @@ html, body{
 #loadingText{ margin:0; font-weight: 950; letter-spacing:.2px; }
 #loadingSubText{ opacity:.8; }
 
-/* Status Bar */
-#statusBar{
-  position:absolute;
-  right: 14px;
-  bottom: 12px;
-  z-index: 9998;
-  background: rgba(0,0,0,0.62);
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 12px;
-  padding: .55em .75em;
-  font-size: .92em;
-}
-
 /* Floating mobile "Panel" button */
 .fab-panel{
   display:none;
@@ -332,6 +319,44 @@ html, body{
   box-shadow: 0 16px 40px rgba(0,0,0,0.55);
 }
 .fab-panel:hover{ background: rgba(0,0,0,0.72); }
+
+/* =========================
+   Toast stack (top-right)
+   ========================= */
+.toast-stack{
+  position:absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 9998;
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 24px));
+  pointer-events: none; /* never block taps */
+}
+
+.toast{
+  pointer-events: none;
+  padding: .6em .8em;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.62);
+  color: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+  animation: toastIn .16s ease-out;
+}
+
+.toast small{
+  display:block;
+  margin-top: .18em;
+  color: rgba(255,255,255,0.72);
+}
+
+@keyframes toastIn{
+  from { transform: translateY(-6px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
 
 /* =========================
    Mobile Bottom Sheet
@@ -354,6 +379,7 @@ html, body{
     height: 72vh;
     transform: translateY(0);
     transition: transform .22s ease;
+    z-index: 9996; /* keep under toasts */
   }
 
   #sidebar.sheet.collapsed{
@@ -406,5 +432,10 @@ html, body{
   .fab-panel{ display:block; }
   #sidebar:not(.collapsed) ~ .fab-panel{ display:none; }
 
-  #statusBar{ bottom: 70px; }
+  /* tighten toast width on small phones */
+  .toast-stack{
+    top: 10px;
+    right: 10px;
+    max-width: min(340px, calc(100vw - 20px));
+  }
 }
