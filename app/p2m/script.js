@@ -81,12 +81,39 @@ window.addEventListener("resize", () => {
 });
 
 // ==========================
+// Toasts (top-right)
+// ==========================
+const toastStack = document.getElementById("toasts");
+let toastTimer = null;
+
+function toast(msg, sub = "", ttl = 2800) {
+  if (!toastStack) return;
+
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = sub
+    ? `<b>${escapeHtml(msg)}</b><small>${escapeHtml(sub)}</small>`
+    : `<b>${escapeHtml(msg)}</b>`;
+
+  toastStack.appendChild(el);
+
+  // keep stack small
+  while (toastStack.children.length > 4) {
+    toastStack.removeChild(toastStack.firstChild);
+  }
+
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    try { el.remove(); } catch {}
+  }, ttl);
+}
+
+// ==========================
 // UI
 // ==========================
 const addBtn = document.getElementById("addLocationBtn");
 const findBtn = document.getElementById("findBtn");
 const locationsDiv = document.getElementById("locations");
-const statusBar = document.getElementById("statusBar");
 const routeSummary = document.getElementById("routeSummary");
 
 const poiHint = document.getElementById("poiHint");
@@ -121,7 +148,6 @@ function showLoading(msg="Loading...", sub="") {
   document.getElementById("loading").classList.add("active");
 }
 function hideLoading() { document.getElementById("loading").classList.remove("active"); }
-function setStatus(msg) { statusBar.textContent = msg; }
 
 function escapeHtml(str) {
   return String(str)
@@ -183,17 +209,8 @@ function isIdxValid(idx){ return Number.isInteger(idx) && idx >= 0; }
 // Dimming + Selection
 // ==========================
 function undimAll() {
-  // routes
-  routeLayers.forEach(r => {
-    r.layer.setStyle({ opacity: 0.9, weight: 5 });
-  });
-
-  // markers
-  startMarkers.forEach(o => {
-    if (o.marker && o.marker.setOpacity) o.marker.setOpacity(1);
-  });
-
-  // list
+  routeLayers.forEach(r => r.layer.setStyle({ opacity: 0.9, weight: 5 }));
+  startMarkers.forEach(o => { if (o.marker?.setOpacity) o.marker.setOpacity(1); });
   document.querySelectorAll(".route-summary .item").forEach(el => el.classList.remove("active"));
 }
 
@@ -201,22 +218,16 @@ function selectParticipant(idx, panTo=false) {
   if (!routesReady || !isIdxValid(idx)) return;
   selectedIdx = idx;
 
-  // routes
   routeLayers.forEach(r => {
     const isSel = r.idx === idx;
-    r.layer.setStyle({
-      opacity: isSel ? 0.98 : 0.12,
-      weight: isSel ? 7 : 4
-    });
+    r.layer.setStyle({ opacity: isSel ? 0.98 : 0.12, weight: isSel ? 7 : 4 });
   });
 
-  // markers
   startMarkers.forEach(o => {
     const isSel = o.idx === idx;
-    if (o.marker && o.marker.setOpacity) o.marker.setOpacity(isSel ? 1 : 0.25);
+    if (o.marker?.setOpacity) o.marker.setOpacity(isSel ? 1 : 0.25);
   });
 
-  // list
   document.querySelectorAll(".route-summary .item").forEach(el => {
     const i = parseInt(el.dataset.idx, 10);
     el.classList.toggle("active", i === idx);
@@ -227,7 +238,7 @@ function selectParticipant(idx, panTo=false) {
     if (m) map.panTo(m.getLatLng(), { animate: true });
   }
 
-  setStatus(`🎯 Highlighting Location ${idx + 1}`);
+  toast(`Focused: Location ${idx + 1}`, "Other routes + pins dimmed");
 }
 
 // ==========================
@@ -292,7 +303,6 @@ async function osrmRoute(startLat, startLon, endLat, endLon) {
 function setMeetupPoint(meetup) {
   lastMeetup = meetup;
 
-  // Changing meetup invalidates routes
   clearRoutesOnly();
 
   if (meetupMarker) map.removeLayer(meetupMarker);
@@ -306,7 +316,7 @@ function setMeetupPoint(meetup) {
   ).openPopup();
 
   setCalcEnabled(true, "Meetup selected — click to calculate routes.");
-  setStatus(`📍 Meetup set: ${meetup.name || "Selected point"}`);
+  toast("Meetup set", meetup.name || "Selected point");
 }
 
 // ==========================
@@ -353,26 +363,23 @@ calcRoutesBtn.addEventListener("click", async () => {
       </div>
     `).join("");
 
-    // click row => dim others
     routeSummary.querySelectorAll(".item").forEach(el => {
       el.addEventListener("click", () => selectParticipant(parseInt(el.dataset.idx, 10), true));
     });
 
     routesReady = true;
     hideLoading();
-    setStatus("✅ Routes calculated • tap a location to focus");
 
-    // default: focus first (idx 0) for clarity
+    toast("Routes calculated", "Tap a location row or pin to focus");
     selectParticipant(0);
 
-    // mobile: collapse sheet so map is visible
     if (isMobile()) setSheetCollapsed(true);
 
   } catch (err){
     console.error(err);
     hideLoading();
     alert("Route calculation failed: " + (err?.message || err));
-    setStatus("⚠️ Route calc failed");
+    toast("Route calc failed", "Check OSRM availability");
   }
 });
 
@@ -457,8 +464,7 @@ async function searchPOIs(type) {
 
     if (!els.length) {
       hideLoading();
-      setStatus(`⚠️ No ${type} found`);
-      alert(`No ${type} found near the central point.`);
+      toast("No POIs found", `Type: ${type}`);
       return;
     }
 
@@ -491,14 +497,14 @@ async function searchPOIs(type) {
 
     map.fitBounds(L.latLngBounds(poiMarkers.map(m => m.getLatLng())).pad(0.25));
     hideLoading();
-    setStatus(`✅ Found ${poiMarkers.length} POIs • click one to set meetup`);
+    toast("POIs loaded", `Found ${poiMarkers.length} • tap one to set meetup`);
 
     if (isMobile()) setSheetCollapsed(true);
 
   } catch (err) {
     console.error(err);
     hideLoading();
-    setStatus("⚠️ POI search failed");
+    toast("POI search failed", "Overpass may be rate-limited");
     alert("POI search failed (Overpass can be rate-limited). Try again in 30–60 seconds.");
   }
 }
@@ -541,7 +547,6 @@ findBtn.addEventListener("click", async () => {
 
     lastCoords = coords;
 
-    // start markers (click => select)
     coords.forEach((c, i) => {
       const marker = L.marker(c, {
         icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [28, 28] })
@@ -563,7 +568,10 @@ findBtn.addEventListener("click", async () => {
       fillColor: "#ffb300",
       fillOpacity: 0.85
     }).addTo(map);
-    centerMarker.bindPopup(`<b>🧭 Central Point</b><br>${lat.toFixed(4)}, ${lon.toFixed(4)}<br><small>Now search POIs</small>`).openPopup();
+
+    centerMarker.bindPopup(
+      `<b>🧭 Central Point</b><br>${lat.toFixed(4)}, ${lon.toFixed(4)}<br><small>Now search POIs</small>`
+    ).openPopup();
 
     setMeetupPoint({ lat, lon, name: "Central Point", source: "center" });
     setPoiEnabled(true);
@@ -574,7 +582,7 @@ findBtn.addEventListener("click", async () => {
     map.fitBounds(bounds.pad(0.25));
 
     hideLoading();
-    setStatus("✅ Central point found • pick a POI meetup");
+    toast("Central point ready", "Pick a POI meetup or use the central point");
 
     if (isMobile()) setSheetCollapsed(true);
 
@@ -582,7 +590,7 @@ findBtn.addEventListener("click", async () => {
     console.error(err);
     hideLoading();
     alert("Error: " + (err?.message || err));
-    setStatus("⚠️ Error");
+    toast("Error", "Something went wrong");
   }
 });
 
@@ -597,9 +605,9 @@ window.addEventListener("DOMContentLoaded", () => {
       locationsDiv.innerHTML = "";
       addresses.forEach(a => addLocationInput(a));
       findBtn.click();
-      setStatus("🔗 Loaded shared meetup");
+      toast("Loaded shared meetup", "Rebuilding map…");
     } catch {
-      setStatus("⚠️ Invalid share link");
+      toast("Invalid share link", "Could not parse locations");
     }
   }
 });
