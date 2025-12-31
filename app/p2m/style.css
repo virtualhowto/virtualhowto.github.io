@@ -55,6 +55,16 @@ html, body{
   letter-spacing: .2px;
 }
 
+.byline{
+  color: var(--muted2);
+  margin-top: .25em;
+}
+.byline a{
+  color: var(--primary);
+  text-decoration: none;
+}
+.byline a:hover{ text-decoration: underline; }
+
 .subtext{
   margin: 0 0 .6em 0;
   opacity:.86;
@@ -75,7 +85,7 @@ html, body{
   line-height:1.25em;
 }
 
-/* Sheet header (desktop still fine) */
+/* Sheet header */
 .sheet-grab{ display:none; }
 .sheet-header{
   display:flex;
@@ -88,13 +98,7 @@ html, body{
   flex-direction:column;
   line-height:1.05em;
 }
-.sheet-header .brand small{
-  color: var(--muted2);
-  margin-top: .25em;
-}
-.sheet-toggle{
-  display:none;
-}
+.sheet-toggle{ display:none; }
 
 /* Locations list */
 #locations{
@@ -310,50 +314,12 @@ html, body{
   font-size: .92em;
 }
 
-/* Footer */
-footer{
-  position:absolute;
-  left:0; right:0; bottom:0;
-  z-index: 20;
-  background: rgba(0,0,0,0.42);
-  color: rgba(255,255,255,0.72);
-  text-align:center;
-  padding: .45em;
-  font-size: .9em;
-}
-footer a{ color: var(--primary); text-decoration:none; }
-footer a:hover{ text-decoration:underline; }
-
-/* Leaflet bottom-left highlight button */
-.leaflet-control.pmh-control button{
-  display:flex;
-  align-items:center;
-  gap:.4em;
-  padding: .55em .65em;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(0,0,0,0.62);
-  color: rgba(255,255,255,0.92);
-  cursor:pointer;
-  font-weight: 900;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 12px 34px rgba(0,0,0,0.45);
-}
-.leaflet-control.pmh-control button:hover{
-  background: rgba(0,0,0,0.72);
-}
-.leaflet-control.pmh-control button.active{
-  background: linear-gradient(90deg, rgba(255,179,0,0.92), rgba(255,111,0,0.92));
-  color: #111;
-  border-color: rgba(0,0,0,0.18);
-}
-
 /* Floating mobile "Panel" button */
 .fab-panel{
   display:none;
   position:absolute;
   right: 14px;
-  bottom: 64px;
+  bottom: 14px;
   z-index: 9997;
   border: 1px solid rgba(255,255,255,0.18);
   background: rgba(0,0,0,0.62);
@@ -385,15 +351,13 @@ footer a:hover{ text-decoration:underline; }
     box-shadow: 0 -14px 44px rgba(0,0,0,0.62);
 
     padding: .7em .9em .9em .9em;
-
-    /* bottom sheet */
     height: 72vh;
     transform: translateY(0);
     transition: transform .22s ease;
   }
 
   #sidebar.sheet.collapsed{
-    transform: translateY(calc(72vh - 92px)); /* leave header visible */
+    transform: translateY(calc(72vh - 92px));
   }
 
   .sheet-grab{
@@ -435,26 +399,12 @@ footer a:hover{ text-decoration:underline; }
   }
 
   #locations{ max-height: 22vh; }
-
   .route-summary{ max-height: 18vh; }
 
-  #map{
-    position:absolute;
-    inset:0;
-  }
+  #map{ position:absolute; inset:0; }
 
-  /* show FAB when collapsed */
   .fab-panel{ display:block; }
-  #sidebar:not(.collapsed) ~ .fab-panel{
-    display:none;
-  }
+  #sidebar:not(.collapsed) ~ .fab-panel{ display:none; }
 
-  /* keep leaflet controls away from footer a bit */
-  .leaflet-bottom.leaflet-left{
-    margin-bottom: 74px;
-  }
-
-  #statusBar{
-    bottom: 74px;
-  }
+  #statusBar{ bottom: 70px; }
 }
