@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NSW RF LOS + Elevation Profile + Repeater Planner</title>
+  <title>NSW Terrain Mesh RF Designer (LOS + Repeaters + Terrain + High Places)</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.29/"></script>
@@ -58,16 +58,16 @@
 
     .ledger{
       position:absolute; top:12px; right:12px; z-index:15;
-      width: 440px; max-width: calc(100% - 24px);
+      width: 500px; max-width: calc(100% - 24px);
       background: var(--panel-bg);
       border: var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       padding: 12px;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      max-height: calc(100% - 24px);
+      overflow:auto;
     }
-    .ledger.open{ transform: translateX(0); }
-
     .ledgerHeader{
       display:flex;
       align-items:flex-start;
@@ -90,15 +90,10 @@
     }
     button{ cursor:pointer; }
     button:disabled{ opacity:0.55; cursor:not-allowed; }
-
     .btnRow{ display:flex; gap:10px; margin-top: 10px; }
     .btnRow button{ flex:1; }
 
-    .sectionTitle{
-      margin-top: 12px;
-      font-weight: 900;
-      font-size: 12px;
-    }
+    .sectionTitle{ margin-top: 12px; font-weight: 900; font-size: 12px; }
 
     .stats{
       margin-top: 10px;
@@ -110,6 +105,7 @@
       line-height: 1.35;
     }
     .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .small{ font-size:11px; opacity:0.75; margin-top: 6px; line-height:1.25; }
 
     .profileBox{
       margin-top: 10px;
@@ -128,11 +124,10 @@
     .t1{ font-weight:900; font-size: 12px; }
     .t2{ font-size:11px; opacity:0.75; }
     canvas{ width:100%; height: 160px; display:block; border-radius: 10px; background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); }
-    .small{ font-size:11px; opacity:0.75; margin-top: 6px; line-height:1.25; }
 
     .pinsList{
       margin-top: 8px;
-      max-height: 220px;
+      max-height: 240px;
       overflow:auto;
       border: 1px solid rgba(0,0,0,0.06);
       background: rgba(0,0,0,0.02);
@@ -150,12 +145,7 @@
       border: 1px solid rgba(0,0,0,0.06);
       margin-bottom: 8px;
     }
-    .pinLeft{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      min-width: 0;
-    }
+    .pinLeft{ display:flex; gap:10px; align-items:flex-start; min-width: 0; }
     .swatch{
       width: 14px; height:14px;
       border-radius: 50%;
@@ -172,7 +162,7 @@
       white-space: nowrap;
       overflow:hidden;
       text-overflow: ellipsis;
-      max-width: 240px;
+      max-width: 300px;
     }
     .pinCoords{
       font-size: 11px;
@@ -182,7 +172,7 @@
       white-space: nowrap;
       overflow:hidden;
       text-overflow: ellipsis;
-      max-width: 300px;
+      max-width: 360px;
     }
     .pinActions{ display:flex; gap:8px; flex: 0 0 auto; }
     .miniBtn{
@@ -195,18 +185,10 @@
       font-weight:700;
     }
 
-    .pairRow{
-      display:flex;
-      gap:10px;
-      margin-top: 10px;
-    }
-    .pairRow select{ flex: 1; }
-    .pairRow button{ width: 120px; }
-
     .statusLine{
       margin-top: 8px;
       font-size: 12px;
-      opacity: 0.8;
+      opacity: 0.9;
       line-height: 1.3;
       border: 1px solid rgba(0,0,0,0.06);
       background: rgba(0,0,0,0.02);
@@ -219,7 +201,7 @@
         position: fixed;
         top: 0; right: 0;
         height: 100%;
-        width: min(92vw, 480px);
+        width: min(92vw, 520px);
         border-radius: 0;
         transform: translateX(105%);
         transition: transform 220ms ease;
@@ -239,8 +221,8 @@
   <div class="topbar" id="topbar">
     <button class="burger" id="burgerBtn" aria-label="Open ledger"><span></span></button>
     <div>
-      <div class="title">NSW RF LOS Planner</div>
-      <div class="subtitle">Pins • Mesh links • Profiles • Repeaters</div>
+      <div class="title">NSW Mesh RF Designer</div>
+      <div class="subtitle">Terrain LOS • Repeaters • Terrain • High Places</div>
     </div>
   </div>
 
@@ -249,8 +231,8 @@
   <div class="ledger" id="ledger">
     <div class="ledgerHeader">
       <div>
-        <div class="h1">NSW RF LOS Planner</div>
-        <div class="h2">Click the map to drop coloured pins. Links use NSW DEM. Repeater planner finds 1+ hop LOS routes.</div>
+        <div class="h1">NSW Terrain Mesh RF Designer</div>
+        <div class="h2">Terrain LOS from NSW 5m DEM. Add nodes, design mesh, show terrain overlay + high lookouts/parks.</div>
       </div>
       <div style="display:flex; gap:8px;">
         <button class="miniBtn" id="closeDrawerBtn" title="Close (mobile)" style="display:none;">×</button>
@@ -267,18 +249,65 @@
         </select>
       </div>
       <div>
-        <label>Link mode</label>
-        <select id="linkMode">
-          <option value="chain">Chain (A→B→C…)</option>
-          <option value="mesh" selected>Mesh (all-to-all)</option>
+        <label>Click mode</label>
+        <select id="clickMode">
+          <option value="required" selected>Add required node</option>
+          <option value="probe">Probe only</option>
         </select>
       </div>
     </div>
 
+    <div class="sectionTitle">Terrain overlay</div>
+    <div class="row">
+      <div>
+        <label>Overlay mode</label>
+        <select id="terrainOverlay">
+          <option value="off" selected>Off</option>
+          <option value="hillshade">Hillshade</option>
+        </select>
+      </div>
+      <div>
+        <label>Overlay opacity</label>
+        <input id="terrainOpacity" type="number" min="0" max="1" step="0.05" value="0.45" />
+      </div>
+    </div>
+
+    <div class="sectionTitle">High places overlay (lookouts + parks)</div>
+    <div class="row">
+      <div>
+        <label>Show high places</label>
+        <select id="showHighPlaces">
+          <option value="no" selected>No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
+      <div>
+        <label>Min elevation (m)</label>
+        <input id="poiMinElev" type="number" min="-100" step="50" value="600" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Max POIs</label>
+        <input id="poiMax" type="number" min="20" step="20" value="150" />
+      </div>
+      <div>
+        <label>Source</label>
+        <select id="poiSource">
+          <option value="osm" selected>OSM (Overpass)</option>
+        </select>
+      </div>
+    </div>
+    <div class="btnRow">
+      <button id="updatePOIBtn">Update High Places</button>
+      <button id="clearPOIBtn">Clear High Places</button>
+    </div>
+
+    <div class="sectionTitle">LOS settings</div>
     <div class="row">
       <div>
         <label>Sample spacing (m)</label>
-        <input id="spacing" type="number" min="5" step="5" value="20" />
+        <input id="spacing" type="number" min="5" step="5" value="25" />
       </div>
       <div>
         <label>Extra clearance (m)</label>
@@ -289,18 +318,18 @@
     <div class="row">
       <div>
         <label>Default antenna height (m)</label>
-        <input id="defaultHeight" type="number" min="0" step="0.5" value="5" />
+        <input id="defaultHeight" type="number" min="0" step="0.5" value="6" />
       </div>
       <div>
-        <label>Max mesh links</label>
-        <input id="maxLinks" type="number" min="1" max="5000" value="500" />
+        <label>Max hop distance (km)</label>
+        <input id="maxHopKm" type="number" min="1" step="1" value="40" />
       </div>
     </div>
 
     <div class="row">
       <div>
         <label>Frequency (GHz)</label>
-        <input id="freqGHz" type="number" min="0.05" step="0.05" value="2.4" />
+        <input id="freqGHz" type="number" min="0.05" step="0.001" value="0.915" />
       </div>
       <div>
         <label>Fresnel fraction</label>
@@ -313,111 +342,159 @@
       </div>
     </div>
 
+    <div class="sectionTitle">Mesh design settings</div>
+    <div class="row">
+      <div>
+        <label>Max repeaters</label>
+        <input id="maxRepeaters" type="number" min="0" step="1" value="6" />
+      </div>
+      <div>
+        <label>Candidate spacing (m)</label>
+        <input id="candSpacing" type="number" min="100" step="50" value="600" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Search buffer (km)</label>
+        <input id="bufferKm" type="number" min="1" step="1" value="6" />
+      </div>
+      <div>
+        <label>Keep top candidates</label>
+        <input id="candKeep" type="number" min="30" step="10" value="120" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Draw blocked links</label>
+        <select id="drawBlocked">
+          <option value="no" selected>No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
+      <div>
+        <label>Optimise for</label>
+        <select id="optimiseFor">
+          <option value="minRepeaters" selected>Min repeaters</option>
+          <option value="maxMargin">Max clearance margin</option>
+          <option value="minDistance">Min total distance</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sectionTitle">High mountains (peaks)</div>
+    <div class="row">
+      <div>
+        <label>Show peaks</label>
+        <select id="showPeaks">
+          <option value="yes" selected>Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+      <div>
+        <label>Peak threshold (m)</label>
+        <input id="peakThreshold" type="number" min="0" step="50" value="1000" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Peak scan spacing (m)</label>
+        <input id="peakScanSpacing" type="number" min="200" step="100" value="1200" />
+      </div>
+      <div>
+        <label>Max peak markers</label>
+        <input id="peakMax" type="number" min="10" step="10" value="80" />
+      </div>
+    </div>
+    <div class="btnRow">
+      <button id="updatePeaksBtn">Update Peaks</button>
+      <button id="clearPeaksBtn">Clear Peaks</button>
+    </div>
+
     <div class="btnRow">
       <button id="undoBtn">Undo</button>
       <button id="clearBtn">Clear</button>
-      <button id="recalcBtn">Recalc</button>
+      <button id="designBtn">Design Mesh</button>
     </div>
 
     <div class="stats">
-      <div><b>Points:</b> <span class="mono" id="ptCount">0</span></div>
-      <div><b>Links:</b> <span class="mono" id="lnCount">0</span></div>
-      <div><b>Clear:</b> <span class="mono" id="okCount">0</span> &nbsp; <b>Obstructed:</b> <span class="mono" id="badCount">0</span></div>
+      <div><b>Required:</b> <span class="mono" id="reqCount">0</span> &nbsp; <b>Repeaters:</b> <span class="mono" id="repCount">0</span></div>
+      <div><b>Connected components:</b> <span class="mono" id="compCount">0</span></div>
+      <div><b>Links drawn:</b> <span class="mono" id="lnCount">0</span> &nbsp; <b>Clear:</b> <span class="mono" id="okCount">0</span> &nbsp; <b>Blocked:</b> <span class="mono" id="badCount">0</span></div>
+      <div><b>Peaks shown:</b> <span class="mono" id="peakCount">0</span> &nbsp; <b>High places:</b> <span class="mono" id="poiCount">0</span></div>
       <div class="small">
-        LOS check = terrain DEM + extra clearance + (optional) Fresnel envelope.
+        Terrain overlay uses NSW 5m DEM hillshade. High places are from OSM (Overpass), then filtered by DEM elevation.
       </div>
     </div>
 
     <div class="profileBox">
       <div class="profileTitle">
         <div>
-          <div class="t1">Elevation profile (selected/last hop)</div>
-          <div class="t2" id="profileSubtitle">Drop 2+ pins to see a profile.</div>
+          <div class="t1">Elevation profile (last evaluated hop)</div>
+          <div class="t2" id="profileSubtitle">Drop nodes, then design mesh.</div>
         </div>
         <div style="text-align:right; font-size:11px; opacity:0.75;" id="profileMeta"></div>
       </div>
       <canvas id="profileCanvas" width="900" height="260"></canvas>
-      <div class="small">Grey fill = terrain • Red line = LOS • Red dots = blocking samples (incl Fresnel/clearance)</div>
+      <div class="small">Grey fill = terrain • Red line = LOS • Red dots = blocking samples</div>
     </div>
 
-    <div class="sectionTitle">Repeater planner</div>
-
-    <div class="pairRow">
-      <select id="endpointA"></select>
-      <select id="endpointB"></select>
-      <button id="swapBtn" title="Swap endpoints">Swap</button>
+    <div class="statusLine" id="status">
+      Add required nodes. Click <b>Design Mesh</b>. Optional: enable terrain overlay + high places.
     </div>
 
-    <div class="row">
-      <div>
-        <label>Max repeaters</label>
-        <select id="maxRepeaters">
-          <option value="0">0 (direct only)</option>
-          <option value="1" selected>1 repeater</option>
-          <option value="2">2 repeaters</option>
-          <option value="3">3 repeaters</option>
-        </select>
-      </div>
-      <div>
-        <label>Max hop distance (km)</label>
-        <input id="maxHopKm" type="number" min="1" step="1" value="60" />
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label>Candidate spacing (m)</label>
-        <input id="candSpacing" type="number" min="50" step="50" value="250" />
-      </div>
-      <div>
-        <label>Candidates (max)</label>
-        <input id="candMax" type="number" min="10" step="10" value="60" />
-      </div>
-    </div>
-
-    <div class="btnRow">
-      <button id="findRepeatersBtn">Find repeaters</button>
-      <button id="clearRepeatersBtn">Clear repeaters</button>
-    </div>
-
-    <div class="statusLine" id="plannerStatus">
-      Pick endpoints, then click <b>Find repeaters</b>. Result will draw hop links and add repeater pins.
-    </div>
-
-    <div class="sectionTitle">Pins ledger</div>
+    <div class="sectionTitle">Nodes ledger</div>
     <div class="pinsList" id="pinsList"></div>
 
     <div class="small">
-      Tip: mountains/ridges → keep sample spacing ~10–30m. For buildings/trees you’d need a DSM/surface model (LiDAR surface), not a terrain DEM.
+      Note: This is <b>terrain</b> LOS (DEM). Buildings/trees need DSM / LiDAR surface.
     </div>
   </div>
 
 <script>
 require([
-  "esri/Map",
-  "esri/views/MapView",
-  "esri/Graphic",
-  "esri/layers/GraphicsLayer",
-  "esri/geometry/Point",
-  "esri/geometry/Polyline",
-  "esri/geometry/Multipoint",
-  "esri/geometry/geometryEngine",
-  "esri/layers/ElevationLayer"
+  "esri/Map","esri/views/MapView","esri/Graphic","esri/layers/GraphicsLayer",
+  "esri/geometry/Point","esri/geometry/Polyline","esri/geometry/Multipoint",
+  "esri/geometry/geometryEngine","esri/layers/ElevationLayer",
+  "esri/layers/ImageryLayer","esri/layers/support/RasterFunction"
 ], function(
   Map, MapView, Graphic, GraphicsLayer,
-  Point, Polyline, Multipoint, geometryEngine, ElevationLayer
+  Point, Polyline, Multipoint,
+  geometryEngine, ElevationLayer,
+  ImageryLayer, RasterFunction
 ) {
 
+  // NSW 5m DEM service (used for both LOS sampling + hillshade overlay)
   const NSW_DEM_URL = "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_5M_Elevation/ImageServer";
   const dem = new ElevationLayer({ url: NSW_DEM_URL });
 
-  const pointsLayer = new GraphicsLayer();
-  const linksLayer  = new GraphicsLayer();
+  // Hillshade imagery overlay from the same ImageServer using raster function
+  const hillshadeFn = new RasterFunction({
+    functionName: "Hillshade",
+    functionArguments: {
+      Azimuth: 315,
+      Altitude: 45,
+      ModelShadows: 0
+    }
+  });
+
+  const hillshadeLayer = new ImageryLayer({
+    url: NSW_DEM_URL,
+    rasterFunction: hillshadeFn,
+    opacity: 0.45,
+    visible: false
+  });
+
+  const requiredLayer = new GraphicsLayer();
   const repeaterLayer = new GraphicsLayer();
+  const linkLayer = new GraphicsLayer();
+  const peaksLayer = new GraphicsLayer();
+  const poiLayer = new GraphicsLayer(); // High places (lookouts/parks)
 
   const map = new Map({
     basemap: "hybrid",
-    layers: [linksLayer, repeaterLayer, pointsLayer]
+    layers: [hillshadeLayer, linkLayer, poiLayer, peaksLayer, repeaterLayer, requiredLayer]
   });
 
   const view = new MapView({
@@ -434,39 +511,58 @@ require([
     closeDrawerBtn: document.getElementById("closeDrawerBtn"),
 
     basemapSelect: document.getElementById("basemapSelect"),
-    linkMode: document.getElementById("linkMode"),
+    clickMode: document.getElementById("clickMode"),
+
+    terrainOverlay: document.getElementById("terrainOverlay"),
+    terrainOpacity: document.getElementById("terrainOpacity"),
+
+    showHighPlaces: document.getElementById("showHighPlaces"),
+    poiMinElev: document.getElementById("poiMinElev"),
+    poiMax: document.getElementById("poiMax"),
+    poiSource: document.getElementById("poiSource"),
+    updatePOIBtn: document.getElementById("updatePOIBtn"),
+    clearPOIBtn: document.getElementById("clearPOIBtn"),
+    poiCount: document.getElementById("poiCount"),
+
     spacing: document.getElementById("spacing"),
     clearance: document.getElementById("clearance"),
     defaultHeight: document.getElementById("defaultHeight"),
-    maxLinks: document.getElementById("maxLinks"),
+    maxHopKm: document.getElementById("maxHopKm"),
     freqGHz: document.getElementById("freqGHz"),
     fresnelFrac: document.getElementById("fresnelFrac"),
 
+    maxRepeaters: document.getElementById("maxRepeaters"),
+    candSpacing: document.getElementById("candSpacing"),
+    bufferKm: document.getElementById("bufferKm"),
+    candKeep: document.getElementById("candKeep"),
+    drawBlocked: document.getElementById("drawBlocked"),
+    optimiseFor: document.getElementById("optimiseFor"),
+
+    showPeaks: document.getElementById("showPeaks"),
+    peakThreshold: document.getElementById("peakThreshold"),
+    peakScanSpacing: document.getElementById("peakScanSpacing"),
+    peakMax: document.getElementById("peakMax"),
+    updatePeaksBtn: document.getElementById("updatePeaksBtn"),
+    clearPeaksBtn: document.getElementById("clearPeaksBtn"),
+
     undoBtn: document.getElementById("undoBtn"),
     clearBtn: document.getElementById("clearBtn"),
-    recalcBtn: document.getElementById("recalcBtn"),
+    designBtn: document.getElementById("designBtn"),
 
-    ptCount: document.getElementById("ptCount"),
+    reqCount: document.getElementById("reqCount"),
+    repCount: document.getElementById("repCount"),
+    compCount: document.getElementById("compCount"),
     lnCount: document.getElementById("lnCount"),
     okCount: document.getElementById("okCount"),
     badCount: document.getElementById("badCount"),
-
-    pinsList: document.getElementById("pinsList"),
+    peakCount: document.getElementById("peakCount"),
 
     profileCanvas: document.getElementById("profileCanvas"),
     profileSubtitle: document.getElementById("profileSubtitle"),
     profileMeta: document.getElementById("profileMeta"),
 
-    endpointA: document.getElementById("endpointA"),
-    endpointB: document.getElementById("endpointB"),
-    swapBtn: document.getElementById("swapBtn"),
-    maxRepeaters: document.getElementById("maxRepeaters"),
-    maxHopKm: document.getElementById("maxHopKm"),
-    candSpacing: document.getElementById("candSpacing"),
-    candMax: document.getElementById("candMax"),
-    findRepeatersBtn: document.getElementById("findRepeatersBtn"),
-    clearRepeatersBtn: document.getElementById("clearRepeatersBtn"),
-    plannerStatus: document.getElementById("plannerStatus")
+    status: document.getElementById("status"),
+    pinsList: document.getElementById("pinsList"),
   };
 
   function isMobile(){ return window.matchMedia("(max-width: 900px)").matches; }
@@ -487,30 +583,6 @@ require([
 
   ui.basemapSelect.addEventListener("change", () => map.basemap = ui.basemapSelect.value);
 
-  const PALETTE = [
-    [0,120,255], [0,170,80], [255,140,0], [190,0,255], [230,0,50],
-    [0,180,190], [160,120,60], [255,0,180], [60,60,60]
-  ];
-
-  const state = {
-    pins: [],
-    repeaters: [],
-    computing: false,
-    lastProfile: null,
-    linkCache: new Map()
-  };
-
-  function ensureLinkCache(){
-    // Bulletproof against accidental overwrites / hot reload merges
-    if (!(state.linkCache instanceof Map)) {
-      state.linkCache = new Map();
-    }
-    return state.linkCache;
-  }
-  function resetLinkCache(){
-    state.linkCache = new Map();
-  }
-
   function clampNum(v, min, max, dflt){
     const n = Number(v);
     if (!Number.isFinite(n)) return dflt;
@@ -522,71 +594,92 @@ require([
     return Math.max(min, Math.min(max, n));
   }
 
-  function settings(){
+  function losSettings(){
     return {
-      mode: ui.linkMode.value,
-      spacing: clampNum(ui.spacing.value, 5, 2000, 20),
+      spacing: clampNum(ui.spacing.value, 5, 2000, 25),
       clearance: clampNum(ui.clearance.value, 0, 200, 1),
-      defaultHeight: clampNum(ui.defaultHeight.value, 0, 200, 5),
-      maxLinks: clampInt(ui.maxLinks.value, 1, 5000, 500),
-      freqGHz: clampNum(ui.freqGHz.value, 0.05, 60, 2.4),
-      fresnelFrac: clampNum(ui.fresnelFrac.value, 0, 1, 0.6)
+      height: clampNum(ui.defaultHeight.value, 0, 200, 6),
+      maxHopKm: clampNum(ui.maxHopKm.value, 1, 500, 40),
+      freqGHz: clampNum(ui.freqGHz.value, 0.05, 60, 0.915),
+      fresnelFrac: clampNum(ui.fresnelFrac.value, 0, 1, 0.6),
     };
   }
 
-  function plannerSettings(){
+  function meshSettings(){
     return {
-      maxRepeaters: clampInt(ui.maxRepeaters.value, 0, 8, 1),
-      maxHopKm: clampNum(ui.maxHopKm.value, 1, 500, 60),
-      candSpacing: clampNum(ui.candSpacing.value, 50, 5000, 250),
-      candMax: clampInt(ui.candMax.value, 10, 300, 60)
+      maxRepeaters: clampInt(ui.maxRepeaters.value, 0, 50, 6),
+      candSpacing: clampNum(ui.candSpacing.value, 100, 10000, 600),
+      bufferKm: clampNum(ui.bufferKm.value, 1, 50, 6),
+      candKeep: clampInt(ui.candKeep.value, 30, 1000, 120),
+      drawBlocked: ui.drawBlocked.value === "yes",
+      optimiseFor: ui.optimiseFor.value
     };
   }
 
+  function peakSettings(){
+    return {
+      enabled: ui.showPeaks.value === "yes",
+      thresholdM: clampNum(ui.peakThreshold.value, -500, 9000, 1000),
+      scanSpacingM: clampNum(ui.peakScanSpacing.value, 200, 20000, 1200),
+      peakMax: clampInt(ui.peakMax.value, 10, 400, 80)
+    };
+  }
+
+  function poiSettings(){
+    return {
+      enabled: ui.showHighPlaces.value === "yes",
+      minElev: clampNum(ui.poiMinElev.value, -200, 9000, 600),
+      max: clampInt(ui.poiMax.value, 20, 600, 150)
+    };
+  }
+
+  function updateTerrainOverlay(){
+    const mode = ui.terrainOverlay.value;
+    const op = clampNum(ui.terrainOpacity.value, 0, 1, 0.45);
+    hillshadeLayer.opacity = op;
+    hillshadeLayer.visible = (mode === "hillshade");
+  }
+
+  ui.terrainOverlay.addEventListener("change", updateTerrainOverlay);
+  ui.terrainOpacity.addEventListener("input", updateTerrainOverlay);
+
+  const PALETTE = [
+    [0,120,255],[0,170,80],[255,140,0],[190,0,255],[230,0,50],
+    [0,180,190],[160,120,60],[255,0,180],[60,60,60]
+  ];
+
+  const state = {
+    required: [],
+    repeaters: [],
+    lastProfile: null,
+    computing: false,
+    linkCache: new Map()
+  };
+
+  function resetCache(){ state.linkCache = new Map(); }
+  function makeId(prefix){
+    return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random())
+      .replace(/-/g,"").slice(0,18) + "_" + prefix;
+  }
   function fmtCoord(n){ return (Math.round(n * 100000) / 100000).toFixed(5); }
 
-  function updateStats(ok, bad){
-    ui.ptCount.textContent = (state.pins.length + state.repeaters.length).toString();
-    ui.lnCount.textContent = (ok + bad).toString();
+  function updateStats({links=0, ok=0, bad=0, comps=0} = {}){
+    ui.reqCount.textContent = state.required.length.toString();
+    ui.repCount.textContent = state.repeaters.length.toString();
+    ui.compCount.textContent = comps.toString();
+    ui.lnCount.textContent = links.toString();
     ui.okCount.textContent = ok.toString();
     ui.badCount.textContent = bad.toString();
+    ui.peakCount.textContent = peaksLayer.graphics.length.toString();
+    ui.poiCount.textContent = poiLayer.graphics.length.toString();
   }
 
-  function rebuildEndpointSelectors(){
-    const all = [...state.pins, ...state.repeaters];
-    const prevA = ui.endpointA.value;
-    const prevB = ui.endpointB.value;
-
-    ui.endpointA.innerHTML = "";
-    ui.endpointB.innerHTML = "";
-
-    for (const p of all){
-      const label = `${p.name}${p.isRepeater ? " (R)" : ""}`;
-      const optA = document.createElement("option");
-      optA.value = p.id;
-      optA.textContent = label;
-
-      const optB = document.createElement("option");
-      optB.value = p.id;
-      optB.textContent = label;
-
-      ui.endpointA.appendChild(optA);
-      ui.endpointB.appendChild(optB);
-    }
-
-    if (all.some(p => p.id === prevA)) ui.endpointA.value = prevA;
-    if (all.some(p => p.id === prevB)) ui.endpointB.value = prevB;
-
-    const basePins = state.pins;
-    if (basePins.length >= 2){
-      if (!ui.endpointA.value) ui.endpointA.value = basePins[basePins.length-2].id;
-      if (!ui.endpointB.value) ui.endpointB.value = basePins[basePins.length-1].id;
-    }
-  }
-
-  function renderPinsLedger(){
+  function renderLedger(){
     ui.pinsList.innerHTML = "";
-    const all = [...state.pins, ...state.repeaters];
+    const all = [
+      ...state.required.map(r => ({...r, kind:"required"})),
+      ...state.repeaters.map(r => ({...r, kind:"repeater"}))
+    ];
 
     all.forEach((p) => {
       const item = document.createElement("div");
@@ -604,7 +697,7 @@ require([
 
       const name = document.createElement("div");
       name.className = "pinName";
-      name.textContent = `${p.name}${p.isRepeater ? " • Repeater" : ""} • h=${p.heightM}m`;
+      name.textContent = `${p.name}${p.kind==="repeater" ? " • Repeater" : ""} • h=${p.heightM}m`;
 
       const coords = document.createElement("div");
       coords.className = "pinCoords";
@@ -621,29 +714,25 @@ require([
 
       const zoomBtn = document.createElement("button");
       zoomBtn.className = "miniBtn";
-      zoomBtn.title = "Zoom to pin";
+      zoomBtn.title = "Zoom to";
       zoomBtn.textContent = "◎";
-      zoomBtn.onclick = () => {
-        view.goTo({ target: p.point, zoom: Math.max(view.zoom, 14) });
-        if (isMobile()) closeDrawer();
-      };
+      zoomBtn.onclick = () => view.goTo({ target: p.point, zoom: Math.max(view.zoom, 14) });
 
       const delBtn = document.createElement("button");
       delBtn.className = "miniBtn";
-      delBtn.title = "Remove pin";
+      delBtn.title = "Remove";
       delBtn.textContent = "−";
       delBtn.onclick = () => {
-        if (p.isRepeater){
+        if (p.kind === "repeater"){
           repeaterLayer.remove(p.graphic);
           state.repeaters = state.repeaters.filter(x => x.id !== p.id);
         } else {
-          pointsLayer.remove(p.graphic);
-          state.pins = state.pins.filter(x => x.id !== p.id);
+          requiredLayer.remove(p.graphic);
+          state.required = state.required.filter(x => x.id !== p.id);
         }
-        resetLinkCache();
-        rebuildEndpointSelectors();
-        renderPinsLedger();
-        recomputeNetworkLinks();
+        resetCache();
+        linkLayer.removeAll();
+        renderLedger();
       };
 
       actions.appendChild(zoomBtn);
@@ -654,217 +743,18 @@ require([
       ui.pinsList.appendChild(item);
     });
 
-    rebuildEndpointSelectors();
-  }
-
-  function makeId(prefix){
-    return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random())
-      .replace(/-/g,"")
-      .slice(0,18) + "_" + prefix;
-  }
-
-  function addUserPin(mapPoint){
-    const { defaultHeight } = settings();
-    const idx = state.pins.length;
-    const color = PALETTE[idx % PALETTE.length];
-    const id = makeId("P");
-    const name = `Pin ${idx + 1}`;
-
-    const g = new Graphic({
-      geometry: mapPoint,
-      symbol: {
-        type: "simple-marker",
-        size: 11,
-        color: [color[0], color[1], color[2], 0.95],
-        outline: { color: [255,255,255,1], width: 1.5 }
-      }
-    });
-    pointsLayer.add(g);
-
-    state.pins.push({ id, name, colorRGB: color, heightM: defaultHeight, point: mapPoint, graphic: g, isRepeater:false });
-    renderPinsLedger();
-  }
-
-  function addRepeaterPin(mapPoint, label){
-    const id = makeId("R");
-    const color = [245, 190, 40];
-
-    const g = new Graphic({
-      geometry: mapPoint,
-      symbol: {
-        type: "simple-marker",
-        style: "triangle",
-        size: 13,
-        color: [color[0], color[1], color[2], 0.95],
-        outline: { color: [255,255,255,1], width: 1.5 }
-      }
-    });
-    repeaterLayer.add(g);
-
-    const { defaultHeight } = settings();
-    state.repeaters.push({ id, name: label, colorRGB: color, heightM: defaultHeight, point: mapPoint, graphic: g, isRepeater:true });
-
-    renderPinsLedger();
-    return state.repeaters[state.repeaters.length-1];
-  }
-
-  function clearAll(){
-    state.pins = [];
-    state.repeaters = [];
-    resetLinkCache();
-    pointsLayer.removeAll();
-    repeaterLayer.removeAll();
-    linksLayer.removeAll();
-    state.lastProfile = null;
-    drawProfile(null);
-    renderPinsLedger();
-    updateStats(0,0);
-    ui.plannerStatus.innerHTML = 'Pick endpoints, then click <b>Find repeaters</b>. Result will draw hop links and add repeater pins.';
-  }
-
-  function undoLast(){
-    if (state.pins.length){
-      const last = state.pins.pop();
-      pointsLayer.remove(last.graphic);
-      resetLinkCache();
-      renderPinsLedger();
-      recomputeNetworkLinks();
-    }
-  }
-
-  ui.clearBtn.addEventListener("click", clearAll);
-  ui.undoBtn.addEventListener("click", undoLast);
-  ui.recalcBtn.addEventListener("click", () => recomputeNetworkLinks());
-
-  ui.swapBtn.addEventListener("click", () => {
-    const a = ui.endpointA.value;
-    ui.endpointA.value = ui.endpointB.value;
-    ui.endpointB.value = a;
-  });
-
-  ui.clearRepeatersBtn.addEventListener("click", () => {
-    repeaterLayer.removeAll();
-    state.repeaters = [];
-    resetLinkCache();
-    renderPinsLedger();
-    recomputeNetworkLinks();
-    ui.plannerStatus.innerHTML = 'Repeaters cleared. Pick endpoints, then click <b>Find repeaters</b>.';
-  });
-
-  // Geometry / DEM helpers
-  function densifyLine(aPoint, bPoint, spacingMeters){
-    const base = new Polyline({
-      spatialReference: aPoint.spatialReference,
-      paths: [[[aPoint.x,aPoint.y],[bPoint.x,bPoint.y]]]
-    });
-    const dense = geometryEngine.geodesicDensify(base, spacingMeters, "meters");
-    const coords = dense.paths[0];
-    const pts = coords.map(xy => new Point({ x: xy[0], y: xy[1], spatialReference: aPoint.spatialReference }));
-    const lengthM = geometryEngine.geodesicLength(base, "meters");
-    return { base, pts, lengthM };
-  }
-
-  async function queryElevations(points){
-    const mp = new Multipoint({
-      spatialReference: points[0].spatialReference,
-      points: points.map(p => [p.x, p.y])
-    });
-    const res = await dem.queryElevation(mp, { demResolution: "finest-contiguous" });
-    return res.geometry.points.map(p => ({ x: p[0], y: p[1], z: p[2] }));
-  }
-
-  function fresnelRadiusMeters(d1km, d2km, Dkm, fGHz){
-    if (fGHz <= 0) return 0;
-    if (Dkm <= 0) return 0;
-    return 17.32 * Math.sqrt((d1km * d2km) / (fGHz * Dkm));
-  }
-
-  async function evaluateLink(nodeA, nodeB){
-    const { spacing, clearance, freqGHz, fresnelFrac } = settings();
-    ensureLinkCache();
-
-    const key = [
-      nodeA.id, nodeB.id, spacing, clearance, freqGHz.toFixed(3), fresnelFrac.toFixed(3), nodeA.heightM, nodeB.heightM
-    ].join("|");
-
-    if (state.linkCache.has(key)) return state.linkCache.get(key);
-
-    const { base, pts, lengthM } = densifyLine(nodeA.point, nodeB.point, spacing);
-
-    const MAX_SAMPLES = 800;
-    let samplePts = pts;
-    if (samplePts.length > MAX_SAMPLES){
-      const step = (samplePts.length - 1) / (MAX_SAMPLES - 1);
-      const reduced = [];
-      for (let k=0;k<MAX_SAMPLES;k++) reduced.push(samplePts[Math.round(k*step)]);
-      samplePts = reduced;
-    }
-
-    const samples = await queryElevations(samplePts);
-    const n = samples.length;
-    const lengthKm = lengthM / 1000;
-
-    const zA = samples[0].z + nodeA.heightM;
-    const zB = samples[n-1].z + nodeB.heightM;
-
-    const los = new Array(n);
-    const blockedIdx = [];
-    let blocked = false;
-    let worstMarginM = Infinity;
-
-    for (let i=0;i<n;i++){
-      const t = i/(n-1);
-      const zLine = zA + (zB - zA) * t;
-      los[i] = zLine;
-
-      if (i===0 || i===n-1) continue;
-
-      const d1km = (i/(n-1)) * lengthKm;
-      const d2km = lengthKm - d1km;
-      const fresnelM = fresnelFrac > 0 ? fresnelFrac * fresnelRadiusMeters(d1km, d2km, lengthKm, freqGHz) : 0;
-
-      const obstacleZ = samples[i].z + clearance + fresnelM;
-      const margin = zLine - obstacleZ;
-      worstMarginM = Math.min(worstMarginM, margin);
-
-      if (obstacleZ > zLine){
-        blocked = true;
-        blockedIdx.push(i);
-      }
-    }
-
-    const result = {
-      blocked,
-      blockedIdx,
-      los,
-      terrain: samples.map(s => s.z),
-      lengthKm,
-      polyline: base,
-      worstMarginM
-    };
-
-    state.linkCache.set(key, result);
-    return result;
-  }
-
-  function addLinkGraphic(polyline, blocked, width=3){
-    const color = blocked ? [200,0,0,0.85] : [0,170,80,0.85];
-    linksLayer.add(new Graphic({
-      geometry: polyline,
-      symbol: { type:"simple-line", color, width }
-    }));
+    updateStats({links: linkLayer.graphics.length});
   }
 
   function drawProfile(profile){
     const c = ui.profileCanvas;
     const ctx = c.getContext("2d");
     ctx.clearRect(0,0,c.width,c.height);
-
     ctx.fillStyle = "rgba(0,0,0,0.02)";
     ctx.fillRect(0,0,c.width,c.height);
 
     if (!profile){
-      ui.profileSubtitle.textContent = "Drop 2+ pins to see a profile.";
+      ui.profileSubtitle.textContent = "Drop nodes, then design mesh.";
       ui.profileMeta.textContent = "";
       ctx.fillStyle = "rgba(0,0,0,0.55)";
       ctx.font = "14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -872,8 +762,8 @@ require([
       return;
     }
 
-    const { terrain, los, blockedIdx, lengthKm, linkLabel } = profile;
-    ui.profileSubtitle.textContent = linkLabel;
+    const { terrain, los, blockedIdx, lengthKm, label } = profile;
+    ui.profileSubtitle.textContent = label;
     ui.profileMeta.textContent = `Distance: ${lengthKm.toFixed(2)} km`;
 
     const n = terrain.length;
@@ -894,7 +784,6 @@ require([
     ctx.strokeStyle = "rgba(0,0,0,0.08)";
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New'";
-    ctx.lineWidth = 1;
     for (let t=0;t<=4;t++){
       const z = minZ + (t/4)*(maxZ-minZ);
       const y = Y(z);
@@ -940,276 +829,796 @@ require([
     ctx.fillText(`${lengthKm.toFixed(2)} km`, x1-70, H-10);
   }
 
-  async function recomputeNetworkLinks(){
-    if (state.computing) return;
-    state.computing = true;
+  function addRequiredNode(point){
+    const { height } = losSettings();
+    const idx = state.required.length;
+    const color = PALETTE[idx % PALETTE.length];
+    const id = makeId("N");
+    const name = `Node ${idx+1}`;
 
-    linksLayer.removeAll();
-    state.lastProfile = null;
-
-    const all = [...state.pins, ...state.repeaters];
-    if (all.length < 2){
-      updateStats(0,0);
-      drawProfile(null);
-      state.computing = false;
-      return;
-    }
-
-    const { mode, maxLinks } = settings();
-
-    const segments = [];
-    if (mode === "chain"){
-      for (let i=0;i<all.length-1;i++){
-        segments.push({ a: all[i], b: all[i+1] });
+    const g = new Graphic({
+      geometry: point,
+      symbol: {
+        type: "simple-marker",
+        size: 11,
+        color: [color[0],color[1],color[2],0.95],
+        outline: { color:[255,255,255,1], width: 1.5 }
       }
-    } else {
-      let count=0;
-      for (let i=0;i<all.length;i++){
-        for (let j=i+1;j<all.length;j++){
-          segments.push({ a: all[i], b: all[j] });
-          count++;
-          if (count>=maxLinks) break;
-        }
-        if (count>=maxLinks) break;
-      }
-    }
+    });
+    requiredLayer.add(g);
 
-    let ok=0, bad=0;
-
-    for (const seg of segments){
-      try{
-        const res = await evaluateLink(seg.a, seg.b);
-        addLinkGraphic(res.polyline, res.blocked, 3);
-        if (res.blocked) bad++; else ok++;
-
-        state.lastProfile = {
-          terrain: res.terrain,
-          los: res.los,
-          blockedIdx: res.blockedIdx,
-          lengthKm: res.lengthKm,
-          linkLabel: `${seg.a.name} → ${seg.b.name}`
-        };
-        drawProfile(state.lastProfile);
-      } catch (e) {
-        const base = new Polyline({
-          spatialReference: seg.a.point.spatialReference,
-          paths: [[[seg.a.point.x, seg.a.point.y], [seg.b.point.x, seg.b.point.y]]]
-        });
-        linksLayer.add(new Graphic({
-          geometry: base,
-          symbol: { type:"simple-line", color:[120,120,120,0.8], width:2 }
-        }));
-      }
-    }
-
-    updateStats(ok,bad);
-    state.computing = false;
+    state.required.push({ id, name, colorRGB: color, heightM: height, point, graphic: g });
+    resetCache();
+    renderLedger();
+    drawProfile(null);
+    ui.status.innerHTML = `Added <b>${name}</b>. Add more nodes, then click <b>Design Mesh</b>.`;
   }
 
-  async function generateCandidatesOnLine(A, B){
-    const ps = plannerSettings();
-    const { candSpacing, candMax } = ps;
+  function addRepeater(point, label){
+    const { height } = losSettings();
+    const id = makeId("R");
+    const color = [245,190,40];
 
-    const { pts } = densifyLine(A.point, B.point, candSpacing);
+    const g = new Graphic({
+      geometry: point,
+      symbol: {
+        type: "simple-marker",
+        style: "triangle",
+        size: 13,
+        color: [color[0],color[1],color[2],0.95],
+        outline: { color:[255,255,255,1], width: 1.5 }
+      }
+    });
+    repeaterLayer.add(g);
 
-    const MAX = Math.max(20, candMax * 4);
+    const rep = { id, name: label, colorRGB: color, heightM: height, point, graphic: g, isRepeater:true };
+    state.repeaters.push(rep);
+    return rep;
+  }
+
+  function clearAll(){
+    state.required = [];
+    state.repeaters = [];
+    linkLayer.removeAll();
+    requiredLayer.removeAll();
+    repeaterLayer.removeAll();
+    peaksLayer.removeAll();
+    poiLayer.removeAll();
+    resetCache();
+    renderLedger();
+    updateStats({links:0, ok:0, bad:0, comps:0});
+    drawProfile(null);
+    ui.status.innerHTML = `Cleared. Add required nodes, then click <b>Design Mesh</b>.`;
+  }
+
+  function undo(){
+    if (state.required.length){
+      const last = state.required.pop();
+      requiredLayer.remove(last.graphic);
+      resetCache();
+      linkLayer.removeAll();
+      renderLedger();
+      ui.status.innerHTML = `Undid <b>${last.name}</b>.`;
+    }
+  }
+
+  ui.clearBtn.addEventListener("click", clearAll);
+  ui.undoBtn.addEventListener("click", undo);
+
+  // DEM helpers
+  function densifyLine(aPoint, bPoint, spacingMeters){
+    const base = new Polyline({
+      spatialReference: aPoint.spatialReference,
+      paths: [[[aPoint.x,aPoint.y],[bPoint.x,bPoint.y]]]
+    });
+    const dense = geometryEngine.geodesicDensify(base, spacingMeters, "meters");
+    const coords = dense.paths[0];
+    const pts = coords.map(xy => new Point({ x: xy[0], y: xy[1], spatialReference: aPoint.spatialReference }));
+    const lengthM = geometryEngine.geodesicLength(base, "meters");
+    return { base, pts, lengthM };
+  }
+
+  async function queryElevations(points){
+    const mp = new Multipoint({
+      spatialReference: points[0].spatialReference,
+      points: points.map(p => [p.x, p.y])
+    });
+    const res = await dem.queryElevation(mp, { demResolution: "finest-contiguous" });
+    return res.geometry.points.map(p => ({ x: p[0], y: p[1], z: p[2] }));
+  }
+
+  function fresnelRadiusMeters(d1km, d2km, Dkm, fGHz){
+    if (fGHz <= 0 || Dkm <= 0) return 0;
+    return 17.32 * Math.sqrt((d1km * d2km) / (fGHz * Dkm));
+  }
+
+  async function evaluateLOS(A, B){
+    const s = losSettings();
+    const key = [A.id,B.id,s.spacing,s.clearance,s.freqGHz.toFixed(3),s.fresnelFrac.toFixed(3),A.heightM,B.heightM].join("|");
+    if (state.linkCache.has(key)) return state.linkCache.get(key);
+
+    const { base, pts, lengthM } = densifyLine(A.point, B.point, s.spacing);
+
+    const MAX_SAMPLES = 700;
     let samplePts = pts;
-    if (samplePts.length > MAX){
-      const step = (samplePts.length - 1) / (MAX - 1);
+    if (samplePts.length > MAX_SAMPLES){
+      const step = (samplePts.length - 1) / (MAX_SAMPLES - 1);
       const reduced = [];
-      for (let k=0;k<MAX;k++) reduced.push(samplePts[Math.round(k*step)]);
+      for (let k=0;k<MAX_SAMPLES;k++) reduced.push(samplePts[Math.round(k*step)]);
       samplePts = reduced;
     }
 
     const samples = await queryElevations(samplePts);
+    const n = samples.length;
+    const lengthKm = lengthM / 1000;
 
-    const peaks = [];
-    for (let i=1;i<samples.length-1;i++){
-      const prev = samples[i-1].z, cur = samples[i].z, next = samples[i+1].z;
-      if (cur >= prev && cur >= next){
-        peaks.push({ i, z: cur, x: samples[i].x, y: samples[i].y });
+    const zA = samples[0].z + A.heightM;
+    const zB = samples[n-1].z + B.heightM;
+
+    const los = new Array(n);
+    const blockedIdx = [];
+    let blocked = false;
+    let worstMarginM = Infinity;
+
+    for (let i=0;i<n;i++){
+      const t = i/(n-1);
+      const zLine = zA + (zB - zA)*t;
+      los[i] = zLine;
+
+      if (i===0 || i===n-1) continue;
+
+      const d1km = (i/(n-1))*lengthKm;
+      const d2km = lengthKm - d1km;
+      const fresnelM = s.fresnelFrac > 0 ? s.fresnelFrac * fresnelRadiusMeters(d1km, d2km, lengthKm, s.freqGHz) : 0;
+
+      const obstacleZ = samples[i].z + s.clearance + fresnelM;
+      const margin = zLine - obstacleZ;
+      worstMarginM = Math.min(worstMarginM, margin);
+
+      if (obstacleZ > zLine){
+        blocked = true;
+        blockedIdx.push(i);
       }
     }
 
-    const pool = (peaks.length >= 10 ? peaks : samples.map((s,i)=>({i,z:s.z,x:s.x,y:s.y})));
-    pool.sort((a,b)=>b.z - a.z);
+    const res = {
+      blocked,
+      worstMarginM,
+      blockedIdx,
+      lengthKm,
+      polyline: base,
+      terrain: samples.map(x => x.z),
+      los
+    };
 
-    const picked = [];
-    const minSepMeters = candSpacing * 1.5;
+    state.linkCache.set(key, res);
+    return res;
+  }
+
+  function approxDistKm(p1, p2){
+    const line = new Polyline({ paths: [[[p1.x,p1.y],[p2.x,p2.y]]], spatialReference: p1.spatialReference });
+    return geometryEngine.geodesicLength(line, "kilometers");
+  }
+
+  function drawLink(polyline, blocked, width=3){
+    linkLayer.add(new Graphic({
+      geometry: polyline,
+      symbol: {
+        type: "simple-line",
+        color: blocked ? [200,0,0,0.85] : [0,170,80,0.85],
+        width
+      }
+    }));
+  }
+
+  function components(nodeIds, edges){
+    const parent = new Map();
+    const find = (x) => { while (parent.get(x) !== x) x = parent.get(x); return x; };
+    const union = (a,b) => { const ra=find(a), rb=find(b); if (ra!==rb) parent.set(ra, rb); };
+    nodeIds.forEach(id => parent.set(id,id));
+    edges.forEach(e => union(e.a, e.b));
+    const groups = new Map();
+    nodeIds.forEach(id => {
+      const r = find(id);
+      if (!groups.has(r)) groups.set(r, []);
+      groups.get(r).push(id);
+    });
+    return Array.from(groups.values());
+  }
+
+  async function generateCandidates(){
+    const ms = meshSettings();
+    const req = state.required;
+    if (req.length < 2) return [];
+
+    const mp = new Multipoint({
+      spatialReference: req[0].point.spatialReference,
+      points: req.map(n => [n.point.x, n.point.y])
+    });
+
+    const buffer = geometryEngine.geodesicBuffer(mp, ms.bufferKm, "kilometers");
+    const ext = buffer.extent;
+
+    const spacingM = ms.candSpacing;
+    const xMin = ext.xmin, xMax = ext.xmax, yMin = ext.ymin, yMax = ext.ymax;
+
+    const pts = [];
+    for (let x = xMin; x <= xMax; x += spacingM){
+      for (let y = yMin; y <= yMax; y += spacingM){
+        const p = new Point({ x, y, spatialReference: req[0].point.spatialReference });
+        if (geometryEngine.contains(buffer, p)) pts.push(p);
+      }
+    }
+    if (pts.length === 0) return [];
+
+    const MAX_RAW = Math.min(1800, pts.length);
+    const step = pts.length / MAX_RAW;
+    const sampled = [];
+    for (let i=0;i<MAX_RAW;i++) sampled.push(pts[Math.floor(i*step)]);
+
+    const elevs = await queryElevations(sampled);
+    elevs.sort((a,b) => b.z - a.z);
+
+    const keep = ms.candKeep;
+    const chosen = [];
+    const minSepM = ms.candSpacing * 1.2;
 
     function distMeters(ax, ay, bx, by){
-      const p1 = new Point({x:ax,y:ay,spatialReference: A.point.spatialReference});
-      const p2 = new Point({x:bx,y:by,spatialReference: A.point.spatialReference});
+      const p1 = new Point({x:ax,y:ay,spatialReference: req[0].point.spatialReference});
+      const p2 = new Point({x:bx,y:by,spatialReference: req[0].point.spatialReference});
       const line = new Polyline({paths:[[[p1.x,p1.y],[p2.x,p2.y]]], spatialReference: p1.spatialReference});
       return geometryEngine.geodesicLength(line, "meters");
     }
 
-    for (const c of pool){
-      if (picked.length >= candMax) break;
+    for (const e of elevs){
+      if (chosen.length >= keep) break;
       let tooClose = false;
-      for (const p of picked){
-        if (distMeters(c.x,c.y,p.x,p.y) < minSepMeters){ tooClose = true; break; }
+      for (const c of chosen){
+        if (distMeters(e.x,e.y,c.x,c.y) < minSepM){ tooClose = true; break; }
       }
       if (tooClose) continue;
-      picked.push(c);
+      chosen.push(e);
     }
 
-    return picked.map((c, idx) => {
-      const pt = new Point({ x: c.x, y: c.y, spatialReference: A.point.spatialReference });
-      return {
-        id: `CAND_${idx}_${Math.round(c.z)}`,
-        name: `Candidate ${idx+1}`,
-        point: pt,
-        heightM: settings().defaultHeight,
-        isCandidate: true
-      };
+    const { height } = losSettings();
+    return chosen.map((c, idx) => ({
+      id: `CAND_${idx}_${Math.round(c.z)}`,
+      name: `Cand ${idx+1}`,
+      point: new Point({ x: c.x, y: c.y, spatialReference: req[0].point.spatialReference }),
+      heightM: height,
+      z: c.z
+    }));
+  }
+
+  async function updatePeaks(){
+    const ps = peakSettings();
+    peaksLayer.removeAll();
+    if (!ps.enabled){
+      ui.status.innerHTML = `Peaks hidden.`;
+      updateStats({links: linkLayer.graphics.length});
+      return;
+    }
+
+    ui.updatePeaksBtn.disabled = true;
+    ui.status.innerHTML = `Scanning DEM in current view for peaks…`;
+
+    const ext = view.extent;
+    if (!ext){
+      ui.status.innerHTML = `No extent yet (try again).`;
+      ui.updatePeaksBtn.disabled = false;
+      return;
+    }
+
+    const spacingM = ps.scanSpacingM;
+
+    const pts = [];
+    for (let x = ext.xmin; x <= ext.xmax; x += spacingM){
+      for (let y = ext.ymin; y <= ext.ymax; y += spacingM){
+        pts.push(new Point({ x, y, spatialReference: ext.spatialReference }));
+      }
+    }
+
+    const MAX_RAW = 2500;
+    let sampled = pts;
+    if (sampled.length > MAX_RAW){
+      const step = sampled.length / MAX_RAW;
+      const reduced = [];
+      for (let i=0;i<MAX_RAW;i++) reduced.push(sampled[Math.floor(i*step)]);
+      sampled = reduced;
+    }
+
+    const elevs = await queryElevations(sampled);
+    const above = elevs.filter(e => e.z >= ps.thresholdM);
+    above.sort((a,b) => b.z - a.z);
+
+    const chosen = [];
+    const minSepM = spacingM * 1.4;
+
+    function distMeters(ax, ay, bx, by){
+      const p1 = new Point({x:ax,y:ay,spatialReference: ext.spatialReference});
+      const p2 = new Point({x:bx,y:by,spatialReference: ext.spatialReference});
+      const line = new Polyline({paths:[[[p1.x,p1.y],[p2.x,p2.y]]], spatialReference: p1.spatialReference});
+      return geometryEngine.geodesicLength(line, "meters");
+    }
+
+    for (const e of above){
+      if (chosen.length >= ps.peakMax) break;
+      let tooClose = false;
+      for (const c of chosen){
+        if (distMeters(e.x,e.y,c.x,c.y) < minSepM){ tooClose = true; break; }
+      }
+      if (tooClose) continue;
+      chosen.push(e);
+    }
+
+    for (const p of chosen){
+      const g = new Graphic({
+        geometry: new Point({ x: p.x, y: p.y, spatialReference: ext.spatialReference }),
+        attributes: { elev: p.z },
+        symbol: {
+          type: "text",
+          text: "⛰",
+          color: [70, 50, 30, 0.95],
+          font: { size: 16, family: "sans-serif", weight: "bold" },
+          haloColor: [255,255,255,0.9],
+          haloSize: 1
+        },
+        popupTemplate: {
+          title: "Peak",
+          content: `Elevation: <b>${Math.round(p.z)} m</b>`
+        }
+      });
+      peaksLayer.add(g);
+    }
+
+    ui.status.innerHTML = `Peaks updated: <b>${chosen.length}</b> shown (≥ ${ps.thresholdM}m).`;
+    ui.updatePeaksBtn.disabled = false;
+    updateStats({links: linkLayer.graphics.length});
+  }
+
+  ui.updatePeaksBtn.addEventListener("click", updatePeaks);
+  ui.clearPeaksBtn.addEventListener("click", () => {
+    peaksLayer.removeAll();
+    ui.status.innerHTML = `Peaks cleared.`;
+    updateStats({links: linkLayer.graphics.length});
+  });
+  ui.showPeaks.addEventListener("change", () => {
+    if (peakSettings().enabled) ui.status.innerHTML = `Peaks enabled. Click <b>Update Peaks</b>.`;
+    else { peaksLayer.removeAll(); ui.status.innerHTML = `Peaks disabled.`; }
+    updateStats({links: linkLayer.graphics.length});
+  });
+
+  // ---------------------------
+  // High places (Lookouts + Parks) via Overpass (OSM), then filter by DEM elevation
+  // ---------------------------
+  function extentToBBoxLatLon(ext){
+    // ArcGIS JS extent is in WebMercator/whatever basemap SR; easiest: use view.toMap but we need geographic.
+    // We can use view.toScreen + view.toMap? Better: create points from extent corners then use view.spatialReference conversions.
+    // MapView in 4.x supports .toMap and .toScreen, but for SR conversion use geometryEngine? Simpler: use view.toMap then use view.toMap? not conversion.
+    // Use built-in webMercatorUtils if available: require it? We'll do a lightweight approximation:
+    return null;
+  }
+
+  // We'll require webMercatorUtils lazily via window.require (same loader)
+  function wmToGeographic(point){
+    return new Promise((resolve, reject) => {
+      window.require(["esri/geometry/support/webMercatorUtils"], (webMercatorUtils) => {
+        try{
+          const g = webMercatorUtils.webMercatorToGeographic(point);
+          resolve(g);
+        }catch(e){ reject(e); }
+      });
     });
   }
 
-  async function findRepeaterPath(){
-    const all = [...state.pins, ...state.repeaters];
-    if (all.length < 2) {
-      ui.plannerStatus.textContent = "Add at least 2 pins.";
+  async function getViewBBoxLatLon(){
+    const ext = view.extent;
+    if (!ext) return null;
+
+    const p1 = new Point({ x: ext.xmin, y: ext.ymin, spatialReference: ext.spatialReference });
+    const p2 = new Point({ x: ext.xmax, y: ext.ymax, spatialReference: ext.spatialReference });
+
+    const g1 = await wmToGeographic(p1);
+    const g2 = await wmToGeographic(p2);
+
+    const south = Math.min(g1.latitude, g2.latitude);
+    const north = Math.max(g1.latitude, g2.latitude);
+    const west  = Math.min(g1.longitude, g2.longitude);
+    const east  = Math.max(g1.longitude, g2.longitude);
+
+    return { south, west, north, east };
+  }
+
+  function overpassQueryForBBox(bbox, maxResults){
+    // Overpass QL: find lookouts (tourism=viewpoint) and parks (leisure=park)
+    // We'll pull nodes + centroids for ways/relations (out center;)
+    return `
+      [out:json][timeout:25];
+      (
+        node["tourism"="viewpoint"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+        way["tourism"="viewpoint"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+        relation["tourism"="viewpoint"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+
+        node["leisure"="park"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+        way["leisure"="park"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+        relation["leisure"="park"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+      );
+      out center ${maxResults};
+    `.trim();
+  }
+
+  async function fetchOverpassPOIs(){
+    const bbox = await getViewBBoxLatLon();
+    if (!bbox) return [];
+
+    const ps = poiSettings();
+    const query = overpassQueryForBBox(bbox, ps.max);
+
+    const endpoint = "https://overpass-api.de/api/interpreter";
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: "data=" + encodeURIComponent(query)
+    });
+
+    if (!resp.ok){
+      throw new Error(`Overpass error ${resp.status}: ${await resp.text()}`);
+    }
+
+    const data = await resp.json();
+    const elements = Array.isArray(data.elements) ? data.elements : [];
+
+    const out = [];
+    for (const el of elements){
+      const tags = el.tags || {};
+      const name = tags.name || "(unnamed)";
+      const type =
+        tags.tourism === "viewpoint" ? "Lookout" :
+        tags.leisure === "park" ? "Park" : "POI";
+
+      let lat = el.lat, lon = el.lon;
+      if ((lat == null || lon == null) && el.center){
+        lat = el.center.lat; lon = el.center.lon;
+      }
+      if (lat == null || lon == null) continue;
+
+      out.push({
+        osmId: `${el.type}/${el.id}`,
+        name,
+        kind: type,
+        lat,
+        lon
+      });
+    }
+    return out;
+  }
+
+  async function updateHighPlaces(){
+    const ps = poiSettings();
+    poiLayer.removeAll();
+
+    if (!ps.enabled){
+      ui.status.innerHTML = `High places hidden.`;
+      updateStats({links: linkLayer.graphics.length});
       return;
     }
 
-    const aId = ui.endpointA.value;
-    const bId = ui.endpointB.value;
-    if (!aId || !bId || aId === bId){
-      ui.plannerStatus.textContent = "Select two different endpoints.";
+    ui.updatePOIBtn.disabled = true;
+    ui.status.innerHTML = `Loading lookouts + parks (OSM), then sampling DEM…`;
+
+    let pois = [];
+    try{
+      pois = await fetchOverpassPOIs();
+    }catch(e){
+      console.error(e);
+      ui.status.innerHTML = `High places failed: <b>${String(e)}</b>`;
+      ui.updatePOIBtn.disabled = false;
       return;
     }
 
-    const A = all.find(p => p.id === aId);
-    const B = all.find(p => p.id === bId);
-    if (!A || !B){
-      ui.plannerStatus.textContent = "Endpoints not found.";
+    // Cap for safety (we’ll sample elevation; big lists are slow)
+    const MAX_RAW = Math.min(ps.max, 250);
+    if (pois.length > MAX_RAW) pois = pois.slice(0, MAX_RAW);
+
+    // Convert to map points (WebMercator)
+    const mapPts = pois.map(p => new Point({ longitude: p.lon, latitude: p.lat, spatialReference: { wkid: 4326 } }));
+
+    // Project to view SR if needed via webMercatorUtils
+    const projected = await new Promise((resolve) => {
+      window.require(["esri/geometry/support/webMercatorUtils"], (webMercatorUtils) => {
+        const pts = mapPts.map(pt => webMercatorUtils.geographicToWebMercator(pt));
+        resolve(pts);
+      });
+    });
+
+    const elevs = await queryElevations(projected);
+
+    // Attach elevation and filter by min elev
+    const joined = pois.map((p, i) => ({...p, elev: elevs[i]?.z ?? null, point: projected[i]}))
+                       .filter(p => p.elev != null && p.elev >= ps.minElev);
+
+    // Sort high first
+    joined.sort((a,b) => (b.elev - a.elev));
+
+    // Render markers
+    for (const p of joined){
+      const sym = (p.kind === "Lookout")
+        ? {
+            type: "simple-marker",
+            style: "diamond",
+            size: 10,
+            color: [40, 120, 240, 0.95],
+            outline: { color:[255,255,255,1], width: 1.5 }
+          }
+        : {
+            type: "simple-marker",
+            style: "circle",
+            size: 9,
+            color: [0, 150, 90, 0.95],
+            outline: { color:[255,255,255,1], width: 1.5 }
+          };
+
+      poiLayer.add(new Graphic({
+        geometry: p.point,
+        symbol: sym,
+        attributes: { name: p.name, kind: p.kind, elev: p.elev, osmId: p.osmId },
+        popupTemplate: {
+          title: "{name}",
+          content: `
+            <div><b>Type:</b> {kind}</div>
+            <div><b>Elevation:</b> ${Math.round(p.elev)} m</div>
+            <div style="opacity:0.75;font-size:11px;margin-top:6px;">Source: OpenStreetMap (Overpass)</div>
+          `
+        }
+      }));
+    }
+
+    ui.status.innerHTML = `High places updated: <b>${joined.length}</b> shown (≥ ${ps.minElev}m).`;
+    ui.updatePOIBtn.disabled = false;
+    updateStats({links: linkLayer.graphics.length});
+  }
+
+  ui.updatePOIBtn.addEventListener("click", updateHighPlaces);
+  ui.clearPOIBtn.addEventListener("click", () => {
+    poiLayer.removeAll();
+    ui.status.innerHTML = `High places cleared.`;
+    updateStats({links: linkLayer.graphics.length});
+  });
+  ui.showHighPlaces.addEventListener("change", () => {
+    if (poiSettings().enabled) ui.status.innerHTML = `High places enabled. Click <b>Update High Places</b>.`;
+    else { poiLayer.removeAll(); ui.status.innerHTML = `High places disabled.`; }
+    updateStats({links: linkLayer.graphics.length});
+  });
+
+  // ---------------------------
+  // Mesh designer (same heuristic)
+  // ---------------------------
+  async function designMesh(){
+    if (state.computing) return;
+    if (state.required.length < 2){
+      ui.status.innerHTML = `Add at least <b>2 required nodes</b>.`;
       return;
     }
 
-    const ps = plannerSettings();
-    const maxRepeaters = ps.maxRepeaters;
-    const maxHopKm = ps.maxHopKm;
+    state.computing = true;
+    ui.designBtn.disabled = true;
+    ui.status.innerHTML = `Generating terrain candidate sites…`;
 
-    ui.findRepeatersBtn.disabled = true;
-    ui.plannerStatus.innerHTML = `Searching candidates along corridor…`;
+    linkLayer.removeAll();
+    repeaterLayer.removeAll();
+    state.repeaters = [];
+    resetCache();
+    renderLedger();
 
-    const direct = await evaluateLink(A,B);
-    if (!direct.blocked){
-      ui.plannerStatus.innerHTML = `<b>Direct LOS is clear</b> (worst margin: ${direct.worstMarginM.toFixed(1)} m). No repeater needed.`;
-      state.lastProfile = {
-        terrain: direct.terrain, los: direct.los, blockedIdx: direct.blockedIdx,
-        lengthKm: direct.lengthKm, linkLabel: `${A.name} → ${B.name}`
-      };
-      drawProfile(state.lastProfile);
-      ui.findRepeatersBtn.disabled = false;
-      return;
+    const ms = meshSettings();
+    const s = losSettings();
+
+    const candidates = await generateCandidates();
+    ui.status.innerHTML = `Candidates: <b>${candidates.length}</b>. Building required visibility…`;
+
+    const req = state.required.map(n => ({...n}));
+    const reqIds = req.map(n => n.id);
+
+    const requiredEdges = [];
+    for (let i=0;i<req.length;i++){
+      for (let j=i+1;j<req.length;j++){
+        const dKm = approxDistKm(req[i].point, req[j].point);
+        if (dKm > s.maxHopKm) continue;
+        const r = await evaluateLOS(req[i], req[j]);
+        if (!r.blocked){
+          requiredEdges.push({ a:req[i].id, b:req[j].id, distKm: r.lengthKm, res: r, A:req[i], B:req[j] });
+        }
+      }
     }
 
-    if (maxRepeaters === 0){
-      ui.plannerStatus.innerHTML = `<b>Direct link is blocked</b> and max repeaters is 0. Increase max repeaters.`;
-      state.lastProfile = {
-        terrain: direct.terrain, los: direct.los, blockedIdx: direct.blockedIdx,
-        lengthKm: direct.lengthKm, linkLabel: `${A.name} → ${B.name}`
-      };
-      drawProfile(state.lastProfile);
-      ui.findRepeatersBtn.disabled = false;
-      return;
-    }
+    let comps = components(reqIds, requiredEdges);
+    ui.status.innerHTML = `Required components: <b>${comps.length}</b>. Placing repeaters…`;
 
-    const candidates = await generateCandidatesOnLine(A,B);
-    ui.plannerStatus.innerHTML = `Testing LOS links… candidates: <b>${candidates.length}</b>`;
+    const chosenRepeaters = [];
+    const allEdges = [...requiredEdges];
+    let guard = 0;
 
-    if (maxRepeaters === 1){
+    while (comps.length > 1 && chosenRepeaters.length < ms.maxRepeaters && guard < ms.maxRepeaters + 4){
+      guard++;
       let best = null;
 
       for (const C of candidates){
-        const dAC = await evaluateLink(A, { ...C, id: C.id, heightM: settings().defaultHeight });
-        if (dAC.lengthKm > maxHopKm) continue;
-        const dCB = await evaluateLink({ ...C, id: C.id, heightM: settings().defaultHeight }, B);
-        if (dCB.lengthKm > maxHopKm) continue;
+        let near = false;
+        for (const R of chosenRepeaters){
+          if (approxDistKm(C.point, R.point) < (ms.candSpacing/1000)*0.7) { near = true; break; }
+        }
+        if (near) continue;
 
-        if (!dAC.blocked && !dCB.blocked){
-          const totalKm = dAC.lengthKm + dCB.lengthKm;
-          const worstMargin = Math.min(dAC.worstMarginM, dCB.worstMarginM);
-          const score = worstMargin * 1000 - totalKm;
+        const seenComps = new Set();
+        let worstMargin = Infinity;
+        let totalDist = 0;
 
-          if (!best || score > best.score){
-            best = { C, dAC, dCB, totalKm, worstMargin, score };
+        for (let ci=0; ci<comps.length; ci++){
+          const comp = comps[ci];
+
+          let bestNode = null;
+          let bestDKm = Infinity;
+          for (const nid of comp){
+            const node = req.find(x => x.id === nid) || chosenRepeaters.find(x => x.id === nid);
+            if (!node) continue;
+            const dKm = approxDistKm(C.point, node.point);
+            if (dKm < bestDKm){ bestDKm = dKm; bestNode = node; }
           }
+          if (!bestNode) continue;
+          if (bestDKm > s.maxHopKm) continue;
+
+          const r = await evaluateLOS({ ...C }, bestNode);
+          if (!r.blocked){
+            seenComps.add(ci);
+            worstMargin = Math.min(worstMargin, r.worstMarginM);
+            totalDist += r.lengthKm;
+          }
+        }
+
+        const coverage = seenComps.size;
+        if (coverage < 2) continue;
+
+        let score = 0;
+        if (ms.optimiseFor === "minRepeaters"){
+          score = coverage * 100000 + (Number.isFinite(worstMargin) ? worstMargin * 100 : 0) - totalDist;
+        } else if (ms.optimiseFor === "maxMargin"){
+          score = (Number.isFinite(worstMargin) ? worstMargin : -9999) * 1000 + coverage * 100 - totalDist;
+        } else {
+          score = coverage * 10000 - totalDist * 100 + (Number.isFinite(worstMargin) ? worstMargin : 0);
+        }
+
+        if (!best || score > best.score){
+          best = { C, coverage, worstMargin, totalDist, score };
         }
       }
 
-      if (!best){
-        ui.plannerStatus.innerHTML = `<b>No 1-repeater solution found</b>. Try: increase max hop distance, increase candidates, or allow 2+ repeaters.`;
-        ui.findRepeatersBtn.disabled = false;
-        return;
+      if (!best) break;
+
+      const label = `Repeater ${chosenRepeaters.length + 1}`;
+      const R = addRepeater(best.C.point, label);
+      chosenRepeaters.push(R);
+
+      const nodesNow = [...req, ...chosenRepeaters];
+      for (const N of nodesNow){
+        if (N.id === R.id) continue;
+        const dKm = approxDistKm(R.point, N.point);
+        if (dKm > s.maxHopKm) continue;
+        const r = await evaluateLOS(R, N);
+        if (!r.blocked){
+          allEdges.push({ a:R.id, b:N.id, distKm: r.lengthKm, res: r, A:R, B:N });
+        }
       }
 
-      ui.plannerStatus.innerHTML =
-        `<b>Best 1-repeater solution found</b><br>
-         Total distance: <b>${best.totalKm.toFixed(2)} km</b> • Worst margin: <b>${best.worstMargin.toFixed(1)} m</b>`;
-
-      repeaterLayer.removeAll();
-      state.repeaters = [];
-      resetLinkCache();
-      renderPinsLedger();
-
-      const R = addRepeaterPin(best.C.point, `Repeater 1`);
-
-      linksLayer.removeAll();
-      const hop1 = await evaluateLink(A,R);
-      const hop2 = await evaluateLink(R,B);
-      addLinkGraphic(hop1.polyline, hop1.blocked, 4);
-      addLinkGraphic(hop2.polyline, hop2.blocked, 4);
-
-      state.lastProfile = {
-        terrain: hop1.terrain, los: hop1.los, blockedIdx: hop1.blockedIdx,
-        lengthKm: hop1.lengthKm, linkLabel: `${A.name} → ${R.name}`
-      };
-      drawProfile(state.lastProfile);
-
-      ui.findRepeatersBtn.disabled = false;
-      return;
+      const allIds = [...req.map(x=>x.id), ...chosenRepeaters.map(x=>x.id)];
+      const compsAll = components(allIds, allEdges);
+      const compIndex = new Map();
+      compsAll.forEach((group, idx) => group.forEach(id => compIndex.set(id, idx)));
+      const reqGroups = new Map();
+      for (const nid of reqIds){
+        const idx = compIndex.get(nid);
+        if (idx === undefined) continue;
+        if (!reqGroups.has(idx)) reqGroups.set(idx, []);
+        reqGroups.get(idx).push(nid);
+      }
+      comps = Array.from(reqGroups.values());
+      ui.status.innerHTML = `Placed <b>${label}</b> (joined ${best.coverage} clusters). Remaining: <b>${comps.length}</b>…`;
     }
 
-    // Multi-repeater graph mode omitted here to keep this fix focused.
-    // (We can re-enable it once you confirm this build runs cleanly again.)
-    ui.plannerStatus.innerHTML = `<b>Multi-repeater solver temporarily disabled</b> in this hotfix build. Set max repeaters to 1 for now.`;
-    ui.findRepeatersBtn.disabled = false;
+    const selectedNodes = [...req, ...chosenRepeaters];
+    const selectedIds = selectedNodes.map(n => n.id);
+    const edges = allEdges.filter(e => selectedIds.includes(e.a) && selectedIds.includes(e.b));
+
+    const inTree = new Set([selectedIds[0]]);
+    const treeEdges = [];
+    while (inTree.size < selectedIds.length){
+      let bestEdge = null;
+      for (const e of edges){
+        const aIn = inTree.has(e.a), bIn = inTree.has(e.b);
+        if (aIn ^ bIn){
+          if (!bestEdge || e.distKm < bestEdge.distKm) bestEdge = e;
+        }
+      }
+      if (!bestEdge) break;
+      treeEdges.push(bestEdge);
+      inTree.add(bestEdge.a);
+      inTree.add(bestEdge.b);
+    }
+
+    linkLayer.removeAll();
+    let ok=0, bad=0;
+
+    for (const e of treeEdges){
+      drawLink(e.res.polyline, e.res.blocked, 4);
+      if (e.res.blocked) bad++; else ok++;
+
+      state.lastProfile = {
+        terrain: e.res.terrain,
+        los: e.res.los,
+        blockedIdx: e.res.blockedIdx,
+        lengthKm: e.res.lengthKm,
+        label: `${(e.A?.name || e.a)} → ${(e.B?.name || e.b)}`
+      };
+      drawProfile(state.lastProfile);
+    }
+
+    const finalEdges = treeEdges.map(e => ({a:e.a, b:e.b}));
+    const compsAllFinal = components(selectedIds, finalEdges);
+    const compIndexFinal = new Map();
+    compsAllFinal.forEach((group, idx) => group.forEach(id => compIndexFinal.set(id, idx)));
+    const reqIdsOnly = req.map(x=>x.id);
+    const reqGroupsFinal = new Map();
+    for (const nid of reqIdsOnly){
+      const idx = compIndexFinal.get(nid);
+      if (idx === undefined) continue;
+      if (!reqGroupsFinal.has(idx)) reqGroupsFinal.set(idx, []);
+      reqGroupsFinal.get(idx).push(nid);
+    }
+    const finalReqComps = Array.from(reqGroupsFinal.values());
+
+    renderLedger();
+    updateStats({links: treeEdges.length, ok, bad, comps: finalReqComps.length});
+
+    ui.status.innerHTML = (finalReqComps.length === 1)
+      ? `Mesh designed with <b>${chosenRepeaters.length}</b> repeater(s).`
+      : `Not fully connected. Components: <b>${finalReqComps.length}</b>. Try increasing max hop km / repeaters / buffer.`;
+
+    ui.designBtn.disabled = false;
+    state.computing = false;
+    if (isMobile()) closeDrawer();
   }
 
-  ui.findRepeatersBtn.addEventListener("click", async () => {
-    try{
-      await findRepeaterPath();
-      if (isMobile()) closeDrawer();
-    } catch (e){
+  ui.designBtn.addEventListener("click", async () => {
+    try { await designMesh(); }
+    catch (e){
       console.error(e);
-      ui.plannerStatus.innerHTML = `<b>Error:</b> ${String(e)}`;
-      ui.findRepeatersBtn.disabled = false;
+      ui.status.innerHTML = `ERROR: ${String(e)}`;
+      ui.designBtn.disabled = false;
+      state.computing = false;
     }
   });
 
   view.on("click", (ev) => {
     if (!ev.mapPoint) return;
-    addUserPin(ev.mapPoint);
-    resetLinkCache();
-    recomputeNetworkLinks();
-    if (isMobile()) closeDrawer();
+    if (ui.clickMode.value === "required"){
+      addRequiredNode(ev.mapPoint);
+      if (isMobile()) closeDrawer();
+    } else {
+      ui.status.innerHTML = `Probe mode: click adds no node. Switch to “Add required node”.`;
+    }
   });
 
-  // Any LOS setting change -> reset cache + recompute (this is where your error was coming from)
-  ["change","input"].forEach(evt => {
-    ui.linkMode.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
-    ui.spacing.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
-    ui.clearance.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
-    ui.maxLinks.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
-    ui.freqGHz.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
-    ui.fresnelFrac.addEventListener(evt, () => { resetLinkCache(); recomputeNetworkLinks(); });
+  // Reset cache on LOS setting changes
+  [ui.spacing, ui.clearance, ui.defaultHeight, ui.maxHopKm, ui.freqGHz, ui.fresnelFrac].forEach(el => {
+    ["change","input"].forEach(evt => el.addEventListener(evt, () => {
+      resetCache();
+      ui.status.innerHTML = `LOS settings changed. Re-run <b>Design Mesh</b>.`;
+    }));
   });
 
-  renderPinsLedger();
-  updateStats(0,0);
+  // init
+  updateTerrainOverlay();
+  renderLedger();
+  updateStats({links:0, ok:0, bad:0, comps:0});
   drawProfile(null);
 
 });
