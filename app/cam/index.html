@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Camera</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        #camera-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #video {
+            width: 100%;
+            flex: 1;
+            object-fit: cover;
+            background: #000;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 16px;
+            border: 2px solid #fff;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+
+        button:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        button.active {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
+
+        button.capture {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            padding: 0;
+            border-width: 4px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        button.capture:active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #4CAF50;
+        }
+
+        .value {
+            font-family: 'Courier New', monospace;
+        }
+
+        .photo-count {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(76, 175, 80, 0.9);
+            padding: 10px 15px;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(76, 175, 80, 0.95);
+            padding: 20px 40px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+
+        .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(244, 67, 54, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            color: #fff;
+            max-width: 80%;
+            text-align: center;
+            display: none;
+        }
+
+        .slider-control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-label {
+            color: #fff;
+            font-size: 14px;
+            min-width: 120px;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 30px;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -8px;
+        }
+
+        input[type="range"]::-moz-range-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            color: #fff;
+            font-size: 14px;
+            min-width: 60px;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="label">Exposure:</span>
+                <span class="value" id="exposure-value">0 EV</span>
+            </div>
+            <div class="info-row">
+                <span class="label">White Balance:</span>
+                <span class="value" id="wb-value">Auto</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Cycle Interval:</span>
+                <span class="value" id="interval-value">2.0s</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Status:</span>
+                <span class="value" id="status-value">Ready</span>
+            </div>
+        </div>
+
+        <div class="photo-count">📷 <span id="photo-count">0</span></div>
+
+        <div class="controls">
+            <div class="slider-control">
+                <div class="slider-row">
+                    <span class="slider-label">Cycle Speed</span>
+                    <input type="range" id="interval-slider" min="500" max="5000" step="100" value="2000">
+                    <span class="slider-value" id="interval-display">2.0s</span>
+                </div>
+            </div>
+
+            <div class="button-row">
+                <button id="start-cycle">Start Auto Cycle</button>
+                <button class="capture" id="capture">📸</button>
+                <button id="view-photos">View (<span id="count-btn">0</span>)</button>
+            </div>
+        </div>
+
+        <div class="notification" id="notification">Photo Saved!</div>
+        <div class="error" id="error">Camera access denied. Please allow camera permissions.</div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startCycleBtn = document.getElementById('start-cycle');
+        const captureBtn = document.getElementById('capture');
+        const viewPhotosBtn = document.getElementById('view-photos');
+        const notification = document.getElementById('notification');
+        const errorDiv = document.getElementById('error');
+        const intervalSlider = document.getElementById('interval-slider');
+        const intervalDisplay = document.getElementById('interval-display');
+
+        let stream = null;
+        let track = null;
+        let photos = [];
+        let isCycling = false;
+        let cycleInterval = null;
+        let currentExposureIndex = 0;
+        let currentWBIndex = 0;
+        let cycleSpeed = 2000;
+
+        // Pro camera settings
+        const exposureValues = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2];
+        const whiteBalancePresets = [
+            { name: 'Auto', temp: 5500 },
+            { name: 'Daylight', temp: 5500 },
+            { name: 'Cloudy', temp: 6500 },
+            { name: 'Tungsten', temp: 3200 },
+            { name: 'Fluorescent', temp: 4000 },
+            { name: 'Shade', temp: 7500 }
+        ];
+
+        // Initialize camera
+        async function initCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                track = stream.getVideoTracks()[0];
+
+                // Check for advanced capabilities
+                const capabilities = track.getCapabilities();
+                console.log('Camera capabilities:', capabilities);
+
+                updateDisplay();
+            } catch (err) {
+                console.error('Camera error:', err);
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Camera access denied. Please allow camera permissions and reload.';
+            }
+        }
+
+        // Apply camera settings
+        function applySettings() {
+            if (!track) return;
+
+            try {
+                const capabilities = track.getCapabilities();
+                const constraints = {};
+
+                // Apply exposure compensation if supported
+                if (capabilities.exposureCompensation) {
+                    const expValue = exposureValues[currentExposureIndex];
+                    const min = capabilities.exposureCompensation.min || -3;
+                    const max = capabilities.exposureCompensation.max || 3;
+                    const clampedValue = Math.max(min, Math.min(max, expValue));
+                    constraints.exposureCompensation = clampedValue;
+                }
+
+                // Apply white balance if supported
+                if (capabilities.whiteBalanceMode) {
+                    constraints.whiteBalanceMode = 'manual';
+                }
+                if (capabilities.colorTemperature) {
+                    const wbTemp = whiteBalancePresets[currentWBIndex].temp;
+                    const min = capabilities.colorTemperature.min || 2800;
+                    const max = capabilities.colorTemperature.max || 7000;
+                    const clampedTemp = Math.max(min, Math.min(max, wbTemp));
+                    constraints.colorTemperature = clampedTemp;
+                }
+
+                if (Object.keys(constraints).length > 0) {
+                    track.applyConstraints({ advanced: [constraints] });
+                }
+
+                updateDisplay();
+            } catch (err) {
+                console.error('Error applying settings:', err);
+            }
+        }
+
+        // Update display
+        function updateDisplay() {
+            document.getElementById('exposure-value').textContent = 
+                exposureValues[currentExposureIndex] >= 0 
+                    ? `+${exposureValues[currentExposureIndex]} EV` 
+                    : `${exposureValues[currentExposureIndex]} EV`;
+            
+            document.getElementById('wb-value').textContent = 
+                `${whiteBalancePresets[currentWBIndex].name} (${whiteBalancePresets[currentWBIndex].temp}K)`;
+            
+            document.getElementById('status-value').textContent = 
+                isCycling ? 'Auto Cycling...' : 'Ready';
+            
+            document.getElementById('photo-count').textContent = photos.length;
+            document.getElementById('count-btn').textContent = photos.length;
+        }
+
+        // Cycle through settings
+        function cycleSettings() {
+            currentExposureIndex = (currentExposureIndex + 1) % exposureValues.length;
+            
+            // Change WB every 3 exposure changes
+            if (currentExposureIndex % 3 === 0) {
+                currentWBIndex = (currentWBIndex + 1) % whiteBalancePresets.length;
+            }
+            
+            applySettings();
+            capturePhoto(true); // Auto capture during cycle
+        }
+
+        // Start/Stop auto cycle
+        function toggleCycle() {
+            if (!isCycling) {
+                isCycling = true;
+                startCycleBtn.textContent = 'Stop Auto Cycle';
+                startCycleBtn.classList.add('active');
+                
+                // Immediate first cycle
+                cycleSettings();
+                
+                // Then continue at interval
+                cycleInterval = setInterval(cycleSettings, cycleSpeed);
+            } else {
+                isCycling = false;
+                startCycleBtn.textContent = 'Start Auto Cycle';
+                startCycleBtn.classList.remove('active');
+                
+                if (cycleInterval) {
+                    clearInterval(cycleInterval);
+                    cycleInterval = null;
+                }
+            }
+            updateDisplay();
+        }
+
+        // Capture photo
+        function capturePhoto(isAutoCycle = false) {
+            if (!video.videoWidth) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+
+            canvas.toBlob((blob) => {
+                const photo = {
+                    blob: blob,
+                    url: URL.createObjectURL(blob),
+                    timestamp: new Date().toISOString(),
+                    exposure: exposureValues[currentExposureIndex],
+                    whiteBalance: whiteBalancePresets[currentWBIndex].name,
+                    whiteBalanceTemp: whiteBalancePresets[currentWBIndex].temp
+                };
+
+                photos.push(photo);
+                
+                // Show notification
+                notification.textContent = isAutoCycle 
+                    ? `Auto Captured #${photos.length}` 
+                    : 'Photo Saved!';
+                notification.classList.add('show');
+                setTimeout(() => notification.classList.remove('show'), 1000);
+                
+                updateDisplay();
+            }, 'image/jpeg', 0.95);
+        }
+
+        // View saved photos
+        function viewPhotos() {
+            if (photos.length === 0) {
+                alert('No photos saved yet!');
+                return;
+            }
+
+            // Stop cycling when viewing photos
+            if (isCycling) {
+                toggleCycle();
+            }
+
+            // Create a simple gallery
+            const gallery = window.open('', '_blank');
+            gallery.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Saved Photos</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            background: #000;
+                            color: #fff;
+                            padding: 20px;
+                        }
+                        h1 { margin-bottom: 20px; text-align: center; }
+                        .photo-grid { 
+                            display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                            gap: 20px;
+                            margin-bottom: 20px;
+                        }
+                        .photo-card {
+                            background: #222;
+                            border-radius: 10px;
+                            overflow: hidden;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                        }
+                        .photo-card img {
+                            width: 100%;
+                            height: 250px;
+                            object-fit: cover;
+                            display: block;
+                        }
+                        .photo-info {
+                            padding: 15px;
+                            font-size: 13px;
+                            line-height: 1.6;
+                        }
+                        .photo-info strong {
+                            color: #4CAF50;
+                        }
+                        .download-btn {
+                            width: 100%;
+                            padding: 10px;
+                            margin-top: 10px;
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+                        .download-btn:active {
+                            background: #45a049;
+                        }
+                        .download-all {
+                            position: sticky;
+                            top: 20px;
+                            padding: 15px;
+                            margin-bottom: 20px;
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            font-size: 16px;
+                            font-weight: 600;
+                            width: 100%;
+                            z-index: 10;
+                        }
+                        @media (max-width: 600px) {
+                            .photo-grid {
+                                grid-template-columns: 1fr;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>📷 Saved Photos (${photos.length})</h1>
+                    <button class="download-all" onclick="downloadAll()">Download All Photos</button>
+                    <div class="photo-grid" id="gallery"></div>
+                    <script>
+                        const photosData = ${JSON.stringify(photos.map(p => ({
+                            url: p.url,
+                            timestamp: p.timestamp,
+                            exposure: p.exposure,
+                            whiteBalance: p.whiteBalance,
+                            whiteBalanceTemp: p.whiteBalanceTemp
+                        })))};
+
+                        const galleryDiv = document.getElementById('gallery');
+                        
+                        photosData.forEach((photo, index) => {
+                            const card = document.createElement('div');
+                            card.className = 'photo-card';
+                            
+                            const date = new Date(photo.timestamp);
+                            const timeStr = date.toLocaleTimeString();
+                            
+                            card.innerHTML = \`
+                                <img src="\${photo.url}" alt="Photo \${index + 1}">
+                                <div class="photo-info">
+                                    <div><strong>Photo #\${index + 1}</strong></div>
+                                    <div>Time: \${timeStr}</div>
+                                    <div>Exposure: \${photo.exposure >= 0 ? '+' : ''}\${photo.exposure} EV</div>
+                                    <div>WB: \${photo.whiteBalance} (\${photo.whiteBalanceTemp}K)</div>
+                                    <button class="download-btn" onclick="downloadPhoto(\${index})">
+                                        Download Photo
+                                    </button>
+                                </div>
+                            \`;
+                            
+                            galleryDiv.appendChild(card);
+                        });
+
+                        function downloadPhoto(index) {
+                            const photo = photosData[index];
+                            const a = document.createElement('a');
+                            a.href = photo.url;
+                            a.download = \`pro_camera_\${index + 1}_\${Date.now()}.jpg\`;
+                            a.click();
+                        }
+
+                        function downloadAll() {
+                            photosData.forEach((photo, index) => {
+                                setTimeout(() => {
+                                    const a = document.createElement('a');
+                                    a.href = photo.url;
+                                    a.download = \`pro_camera_\${index + 1}_\${Date.now()}.jpg\`;
+                                    a.click();
+                                }, index * 200);
+                            });
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+        }
+
+        // Update cycle speed
+        intervalSlider.addEventListener('input', (e) => {
+            cycleSpeed = parseInt(e.target.value);
+            const seconds = (cycleSpeed / 1000).toFixed(1);
+            intervalDisplay.textContent = `${seconds}s`;
+            document.getElementById('interval-value').textContent = `${seconds}s`;
+            
+            // Update interval if currently cycling
+            if (isCycling) {
+                clearInterval(cycleInterval);
+                cycleInterval = setInterval(cycleSettings, cycleSpeed);
+            }
+        });
+
+        // Event listeners
+        startCycleBtn.addEventListener('click', toggleCycle);
+        captureBtn.addEventListener('click', () => capturePhoto(false));
+        viewPhotosBtn.addEventListener('click', viewPhotos);
+
+        // Initialize
+        initCamera();
+    </script>
+</body>
+</html>
