@@ -217,12 +217,16 @@
         }
 
         .shutter-timer {
-            font-size: 72px;
+            font-size: 64px;
             font-weight: 700;
             color: var(--vh-accent);
             font-family: 'Courier New', monospace;
             text-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
             animation: pulse 1s ease-in-out infinite;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .shutter-label {
@@ -575,7 +579,11 @@
             { name: '4s', value: 4 },
             { name: '8s', value: 8 },
             { name: '15s', value: 15 },
-            { name: '30s', value: 30 }
+            { name: '30s', value: 30 },
+            { name: '45s', value: 45 },
+            { name: '60s', value: 60 },
+            { name: '90s', value: 90 },
+            { name: '120s', value: 120 }
         ];
 
         const isoValues = [
@@ -889,7 +897,17 @@
                 const remaining = Math.max(0, exposureTime - elapsed);
                 const progress = (elapsed / exposureTime) * 100;
 
-                shutterTimer.textContent = `${remaining.toFixed(1)}s`;
+                // Format display based on time remaining
+                let displayTime;
+                if (remaining >= 60) {
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = Math.floor(remaining % 60);
+                    displayTime = `${minutes}m ${seconds}s`;
+                } else {
+                    displayTime = `${remaining.toFixed(1)}s`;
+                }
+
+                shutterTimer.textContent = displayTime;
                 shutterProgressBar.style.width = `${Math.min(100, progress)}%`;
 
                 if (now >= endTime) {
