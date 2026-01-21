@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Camera</title>
+    <title>Night Pro Camera</title>
     <style>
         * {
             margin: 0;
@@ -45,27 +45,30 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            padding: 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
 
         .button-row {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
         button {
-            padding: 15px 25px;
-            font-size: 16px;
+            padding: 12px 20px;
+            font-size: 14px;
             border: 2px solid #fff;
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
-            border-radius: 25px;
+            border-radius: 20px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
@@ -83,8 +86,8 @@
         }
 
         button.capture {
-            width: 70px;
-            height: 70px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             padding: 0;
             border-width: 4px;
@@ -95,23 +98,28 @@
             background: rgba(255, 255, 255, 0.5);
         }
 
+        button.small {
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
         .info-panel {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px;
             border-radius: 10px;
             color: #fff;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 12px;
+            line-height: 1.5;
         }
 
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .info-row:last-child {
@@ -129,14 +137,14 @@
 
         .photo-count {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             background: rgba(76, 175, 80, 0.9);
-            padding: 10px 15px;
-            border-radius: 20px;
+            padding: 8px 12px;
+            border-radius: 15px;
             color: #fff;
             font-weight: 600;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         .notification {
@@ -176,25 +184,25 @@
         .slider-control {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .slider-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .slider-label {
             color: #fff;
-            font-size: 14px;
-            min-width: 120px;
+            font-size: 12px;
+            min-width: 100px;
             font-weight: 600;
         }
 
         input[type="range"] {
             flex: 1;
-            height: 30px;
+            height: 25px;
             -webkit-appearance: none;
             background: transparent;
         }
@@ -207,12 +215,12 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             background: #4CAF50;
             border-radius: 50%;
             cursor: pointer;
-            margin-top: -8px;
+            margin-top: -7px;
         }
 
         input[type="range"]::-moz-range-track {
@@ -222,8 +230,8 @@
         }
 
         input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             background: #4CAF50;
             border-radius: 50%;
             cursor: pointer;
@@ -232,10 +240,72 @@
 
         .slider-value {
             color: #fff;
-            font-size: 14px;
-            min-width: 60px;
+            font-size: 12px;
+            min-width: 70px;
             text-align: right;
             font-family: 'Courier New', monospace;
+        }
+
+        .section-header {
+            color: #4CAF50;
+            font-size: 13px;
+            font-weight: 700;
+            margin: 8px 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #fff;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-label.checked {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+
+        select {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        select option {
+            background: #222;
+            color: #fff;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+            margin: 8px 0;
         }
     </style>
 </head>
@@ -246,16 +316,24 @@
         
         <div class="info-panel">
             <div class="info-row">
-                <span class="label">Exposure:</span>
-                <span class="value" id="exposure-value">0 EV</span>
+                <span class="label">Exposure Time:</span>
+                <span class="value" id="exposure-time-value">Auto</span>
+            </div>
+            <div class="info-row">
+                <span class="label">ISO:</span>
+                <span class="value" id="iso-value">Auto</span>
             </div>
             <div class="info-row">
                 <span class="label">White Balance:</span>
                 <span class="value" id="wb-value">Auto</span>
             </div>
             <div class="info-row">
-                <span class="label">Cycle Interval:</span>
+                <span class="label">Capture Interval:</span>
                 <span class="value" id="interval-value">2.0s</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Next Photo:</span>
+                <span class="value" id="countdown-value">--</span>
             </div>
             <div class="info-row">
                 <span class="label">Status:</span>
@@ -266,18 +344,53 @@
         <div class="photo-count">📷 <span id="photo-count">0</span></div>
 
         <div class="controls">
+            <div class="section-header">Cycle Parameters</div>
+            <div class="checkbox-group">
+                <label class="checkbox-label" id="cycle-exposure-label">
+                    <input type="checkbox" id="cycle-exposure" checked>
+                    <span>Exposure Time</span>
+                </label>
+                <label class="checkbox-label" id="cycle-iso-label">
+                    <input type="checkbox" id="cycle-iso" checked>
+                    <span>ISO</span>
+                </label>
+                <label class="checkbox-label" id="cycle-wb-label">
+                    <input type="checkbox" id="cycle-wb" checked>
+                    <span>White Balance</span>
+                </label>
+            </div>
+
+            <div class="divider"></div>
+
             <div class="slider-control">
                 <div class="slider-row">
-                    <span class="slider-label">Cycle Speed</span>
-                    <input type="range" id="interval-slider" min="500" max="5000" step="100" value="2000">
-                    <span class="slider-value" id="interval-display">2.0s</span>
+                    <span class="slider-label">Capture Every</span>
+                    <select id="interval-select">
+                        <option value="500">0.5 seconds</option>
+                        <option value="1000">1 second</option>
+                        <option value="2000" selected>2 seconds</option>
+                        <option value="5000">5 seconds</option>
+                        <option value="10000">10 seconds</option>
+                        <option value="15000">15 seconds</option>
+                        <option value="30000">30 seconds</option>
+                        <option value="60000">1 minute</option>
+                        <option value="120000">2 minutes</option>
+                        <option value="300000">5 minutes</option>
+                        <option value="600000">10 minutes</option>
+                        <option value="900000">15 minutes</option>
+                        <option value="1800000">30 minutes</option>
+                        <option value="3600000">60 minutes</option>
+                    </select>
                 </div>
             </div>
 
+            <div class="divider"></div>
+
             <div class="button-row">
-                <button id="start-cycle">Start Auto Cycle</button>
+                <button id="settings-btn" class="small">⚙️ Settings</button>
+                <button id="start-cycle">▶️ Start Cycle</button>
                 <button class="capture" id="capture">📸</button>
-                <button id="view-photos">View (<span id="count-btn">0</span>)</button>
+                <button id="view-photos" class="small">View (<span id="count-btn">0</span>)</button>
             </div>
         </div>
 
@@ -294,27 +407,68 @@
         const viewPhotosBtn = document.getElementById('view-photos');
         const notification = document.getElementById('notification');
         const errorDiv = document.getElementById('error');
-        const intervalSlider = document.getElementById('interval-slider');
-        const intervalDisplay = document.getElementById('interval-display');
+        const intervalSelect = document.getElementById('interval-select');
+        const settingsBtn = document.getElementById('settings-btn');
+
+        // Checkboxes
+        const cycleExposureCheckbox = document.getElementById('cycle-exposure');
+        const cycleIsoCheckbox = document.getElementById('cycle-iso');
+        const cycleWbCheckbox = document.getElementById('cycle-wb');
 
         let stream = null;
         let track = null;
         let photos = [];
         let isCycling = false;
-        let cycleInterval = null;
+        let cycleTimeout = null;
+        let countdownInterval = null;
         let currentExposureIndex = 0;
+        let currentIsoIndex = 0;
         let currentWBIndex = 0;
-        let cycleSpeed = 2000;
+        let captureIntervalMs = 2000;
+        let nextCaptureTime = null;
 
-        // Pro camera settings
-        const exposureValues = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2];
+        // Night photography settings with longer exposure times
+        const exposureTimes = [
+            { name: 'Auto', value: null },
+            { name: '1/1000s', value: 0.001 },
+            { name: '1/500s', value: 0.002 },
+            { name: '1/250s', value: 0.004 },
+            { name: '1/125s', value: 0.008 },
+            { name: '1/60s', value: 0.0167 },
+            { name: '1/30s', value: 0.0333 },
+            { name: '1/15s', value: 0.0667 },
+            { name: '1/8s', value: 0.125 },
+            { name: '1/4s', value: 0.25 },
+            { name: '1/2s', value: 0.5 },
+            { name: '1s', value: 1 },
+            { name: '2s', value: 2 },
+            { name: '4s', value: 4 },
+            { name: '8s', value: 8 },
+            { name: '15s', value: 15 },
+            { name: '30s', value: 30 }
+        ];
+
+        const isoValues = [
+            { name: 'Auto', value: null },
+            { name: 'ISO 100', value: 100 },
+            { name: 'ISO 200', value: 200 },
+            { name: 'ISO 400', value: 400 },
+            { name: 'ISO 800', value: 800 },
+            { name: 'ISO 1600', value: 1600 },
+            { name: 'ISO 3200', value: 3200 },
+            { name: 'ISO 6400', value: 6400 },
+            { name: 'ISO 12800', value: 12800 }
+        ];
+
         const whiteBalancePresets = [
-            { name: 'Auto', temp: 5500 },
-            { name: 'Daylight', temp: 5500 },
-            { name: 'Cloudy', temp: 6500 },
+            { name: 'Auto', temp: null },
             { name: 'Tungsten', temp: 3200 },
             { name: 'Fluorescent', temp: 4000 },
-            { name: 'Shade', temp: 7500 }
+            { name: 'Daylight', temp: 5500 },
+            { name: 'Cloudy', temp: 6500 },
+            { name: 'Shade', temp: 7500 },
+            { name: 'Cool White', temp: 4100 },
+            { name: 'Warm White', temp: 2700 }
         ];
 
         // Initialize camera
@@ -332,7 +486,6 @@
                 video.srcObject = stream;
                 track = stream.getVideoTracks()[0];
 
-                // Check for advanced capabilities
                 const capabilities = track.getCapabilities();
                 console.log('Camera capabilities:', capabilities);
 
@@ -345,27 +498,37 @@
         }
 
         // Apply camera settings
-        function applySettings() {
+        async function applySettings() {
             if (!track) return;
 
             try {
                 const capabilities = track.getCapabilities();
                 const constraints = {};
 
-                // Apply exposure compensation if supported
-                if (capabilities.exposureCompensation) {
-                    const expValue = exposureValues[currentExposureIndex];
-                    const min = capabilities.exposureCompensation.min || -3;
-                    const max = capabilities.exposureCompensation.max || 3;
-                    const clampedValue = Math.max(min, Math.min(max, expValue));
-                    constraints.exposureCompensation = clampedValue;
+                // Apply exposure time if supported and enabled
+                if (capabilities.exposureTime && exposureTimes[currentExposureIndex].value !== null) {
+                    const expTime = exposureTimes[currentExposureIndex].value * 1000; // Convert to ms
+                    const min = capabilities.exposureTime.min || 1;
+                    const max = capabilities.exposureTime.max || 1000;
+                    const clampedValue = Math.max(min, Math.min(max, expTime));
+                    constraints.exposureMode = 'manual';
+                    constraints.exposureTime = clampedValue;
                 }
 
-                // Apply white balance if supported
-                if (capabilities.whiteBalanceMode) {
+                // Apply ISO if supported and enabled
+                if (capabilities.iso && isoValues[currentIsoIndex].value !== null) {
+                    const isoValue = isoValues[currentIsoIndex].value;
+                    const min = capabilities.iso.min || 100;
+                    const max = capabilities.iso.max || 3200;
+                    const clampedIso = Math.max(min, Math.min(max, isoValue));
+                    constraints.iso = clampedIso;
+                }
+
+                // Apply white balance if supported and enabled
+                if (capabilities.whiteBalanceMode && whiteBalancePresets[currentWBIndex].temp !== null) {
                     constraints.whiteBalanceMode = 'manual';
                 }
-                if (capabilities.colorTemperature) {
+                if (capabilities.colorTemperature && whiteBalancePresets[currentWBIndex].temp !== null) {
                     const wbTemp = whiteBalancePresets[currentWBIndex].temp;
                     const min = capabilities.colorTemperature.min || 2800;
                     const max = capabilities.colorTemperature.max || 7000;
@@ -374,7 +537,7 @@
                 }
 
                 if (Object.keys(constraints).length > 0) {
-                    track.applyConstraints({ advanced: [constraints] });
+                    await track.applyConstraints({ advanced: [constraints] });
                 }
 
                 updateDisplay();
@@ -385,88 +548,163 @@
 
         // Update display
         function updateDisplay() {
-            document.getElementById('exposure-value').textContent = 
-                exposureValues[currentExposureIndex] >= 0 
-                    ? `+${exposureValues[currentExposureIndex]} EV` 
-                    : `${exposureValues[currentExposureIndex]} EV`;
+            document.getElementById('exposure-time-value').textContent = exposureTimes[currentExposureIndex].name;
+            document.getElementById('iso-value').textContent = isoValues[currentIsoIndex].name;
             
+            const wb = whiteBalancePresets[currentWBIndex];
             document.getElementById('wb-value').textContent = 
-                `${whiteBalancePresets[currentWBIndex].name} (${whiteBalancePresets[currentWBIndex].temp}K)`;
+                wb.temp ? `${wb.name} (${wb.temp}K)` : wb.name;
+            
+            const intervalSeconds = captureIntervalMs / 1000;
+            const intervalText = intervalSeconds >= 60 
+                ? `${(intervalSeconds / 60).toFixed(1)}m`
+                : intervalSeconds >= 1
+                    ? `${intervalSeconds.toFixed(1)}s`
+                    : `${intervalSeconds * 1000}ms`;
+            document.getElementById('interval-value').textContent = intervalText;
             
             document.getElementById('status-value').textContent = 
                 isCycling ? 'Auto Cycling...' : 'Ready';
             
             document.getElementById('photo-count').textContent = photos.length;
             document.getElementById('count-btn').textContent = photos.length;
+
+            // Update checkbox labels
+            updateCheckboxStyles();
+        }
+
+        // Update checkbox styles
+        function updateCheckboxStyles() {
+            const exposureLabel = document.getElementById('cycle-exposure-label');
+            const isoLabel = document.getElementById('cycle-iso-label');
+            const wbLabel = document.getElementById('cycle-wb-label');
+
+            exposureLabel.classList.toggle('checked', cycleExposureCheckbox.checked);
+            isoLabel.classList.toggle('checked', cycleIsoCheckbox.checked);
+            wbLabel.classList.toggle('checked', cycleWbCheckbox.checked);
+        }
+
+        // Update countdown display
+        function updateCountdown() {
+            if (!nextCaptureTime) {
+                document.getElementById('countdown-value').textContent = '--';
+                return;
+            }
+
+            const now = Date.now();
+            const remaining = Math.max(0, nextCaptureTime - now);
+            const seconds = (remaining / 1000).toFixed(1);
+            document.getElementById('countdown-value').textContent = `${seconds}s`;
         }
 
         // Cycle through settings
         function cycleSettings() {
-            currentExposureIndex = (currentExposureIndex + 1) % exposureValues.length;
+            // Cycle through enabled parameters
+            if (cycleExposureCheckbox.checked) {
+                currentExposureIndex = (currentExposureIndex + 1) % exposureTimes.length;
+            }
             
-            // Change WB every 3 exposure changes
-            if (currentExposureIndex % 3 === 0) {
+            // Cycle ISO less frequently (every 2 exposure changes)
+            if (cycleIsoCheckbox.checked && currentExposureIndex % 2 === 0) {
+                currentIsoIndex = (currentIsoIndex + 1) % isoValues.length;
+            }
+            
+            // Cycle WB even less frequently (every 3 exposure changes)
+            if (cycleWbCheckbox.checked && currentExposureIndex % 3 === 0) {
                 currentWBIndex = (currentWBIndex + 1) % whiteBalancePresets.length;
             }
             
             applySettings();
-            capturePhoto(true); // Auto capture during cycle
+        }
+
+        // Schedule next capture
+        function scheduleNextCapture() {
+            if (!isCycling) return;
+
+            nextCaptureTime = Date.now() + captureIntervalMs;
+            
+            cycleTimeout = setTimeout(async () => {
+                cycleSettings();
+                await capturePhoto(true);
+                scheduleNextCapture();
+            }, captureIntervalMs);
         }
 
         // Start/Stop auto cycle
-        function toggleCycle() {
+        async function toggleCycle() {
             if (!isCycling) {
+                // Check if at least one parameter is selected
+                if (!cycleExposureCheckbox.checked && !cycleIsoCheckbox.checked && !cycleWbCheckbox.checked) {
+                    alert('Please select at least one parameter to cycle (Exposure Time, ISO, or White Balance)');
+                    return;
+                }
+
                 isCycling = true;
-                startCycleBtn.textContent = 'Stop Auto Cycle';
+                startCycleBtn.textContent = '⏸ Stop Cycle';
                 startCycleBtn.classList.add('active');
                 
-                // Immediate first cycle
-                cycleSettings();
+                // Immediate first capture
+                await cycleSettings();
+                await capturePhoto(true);
                 
-                // Then continue at interval
-                cycleInterval = setInterval(cycleSettings, cycleSpeed);
+                // Schedule next captures
+                scheduleNextCapture();
+
+                // Start countdown display
+                countdownInterval = setInterval(updateCountdown, 100);
             } else {
                 isCycling = false;
-                startCycleBtn.textContent = 'Start Auto Cycle';
+                startCycleBtn.textContent = '▶️ Start Cycle';
                 startCycleBtn.classList.remove('active');
                 
-                if (cycleInterval) {
-                    clearInterval(cycleInterval);
-                    cycleInterval = null;
+                if (cycleTimeout) {
+                    clearTimeout(cycleTimeout);
+                    cycleTimeout = null;
                 }
+
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+
+                nextCaptureTime = null;
             }
             updateDisplay();
         }
 
         // Capture photo
-        function capturePhoto(isAutoCycle = false) {
+        async function capturePhoto(isAutoCycle = false) {
             if (!video.videoWidth) return;
 
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0);
 
-            canvas.toBlob((blob) => {
-                const photo = {
-                    blob: blob,
-                    url: URL.createObjectURL(blob),
-                    timestamp: new Date().toISOString(),
-                    exposure: exposureValues[currentExposureIndex],
-                    whiteBalance: whiteBalancePresets[currentWBIndex].name,
-                    whiteBalanceTemp: whiteBalancePresets[currentWBIndex].temp
-                };
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    const photo = {
+                        blob: blob,
+                        url: URL.createObjectURL(blob),
+                        timestamp: new Date().toISOString(),
+                        exposureTime: exposureTimes[currentExposureIndex].name,
+                        iso: isoValues[currentIsoIndex].name,
+                        whiteBalance: whiteBalancePresets[currentWBIndex].name,
+                        whiteBalanceTemp: whiteBalancePresets[currentWBIndex].temp
+                    };
 
-                photos.push(photo);
-                
-                // Show notification
-                notification.textContent = isAutoCycle 
-                    ? `Auto Captured #${photos.length}` 
-                    : 'Photo Saved!';
-                notification.classList.add('show');
-                setTimeout(() => notification.classList.remove('show'), 1000);
-                
-                updateDisplay();
-            }, 'image/jpeg', 0.95);
+                    photos.push(photo);
+                    
+                    // Show notification
+                    notification.textContent = isAutoCycle 
+                        ? `Auto Captured #${photos.length}` 
+                        : 'Photo Saved!';
+                    notification.classList.add('show');
+                    setTimeout(() => notification.classList.remove('show'), 1000);
+                    
+                    updateDisplay();
+                    resolve();
+                }, 'image/jpeg', 0.95);
+            });
         }
 
         // View saved photos
@@ -481,7 +719,7 @@
                 toggleCycle();
             }
 
-            // Create a simple gallery
+            // Create gallery
             const gallery = window.open('', '_blank');
             gallery.document.write(`
                 <!DOCTYPE html>
@@ -562,14 +800,15 @@
                     </style>
                 </head>
                 <body>
-                    <h1>📷 Saved Photos (${photos.length})</h1>
+                    <h1>🌙 Night Photos (${photos.length})</h1>
                     <button class="download-all" onclick="downloadAll()">Download All Photos</button>
                     <div class="photo-grid" id="gallery"></div>
                     <script>
                         const photosData = ${JSON.stringify(photos.map(p => ({
                             url: p.url,
                             timestamp: p.timestamp,
-                            exposure: p.exposure,
+                            exposureTime: p.exposureTime,
+                            iso: p.iso,
                             whiteBalance: p.whiteBalance,
                             whiteBalanceTemp: p.whiteBalanceTemp
                         })))};
@@ -588,8 +827,9 @@
                                 <div class="photo-info">
                                     <div><strong>Photo #\${index + 1}</strong></div>
                                     <div>Time: \${timeStr}</div>
-                                    <div>Exposure: \${photo.exposure >= 0 ? '+' : ''}\${photo.exposure} EV</div>
-                                    <div>WB: \${photo.whiteBalance} (\${photo.whiteBalanceTemp}K)</div>
+                                    <div>Exposure: \${photo.exposureTime}</div>
+                                    <div>ISO: \${photo.iso}</div>
+                                    <div>WB: \${photo.whiteBalance}\${photo.whiteBalanceTemp ? ' (' + photo.whiteBalanceTemp + 'K)' : ''}</div>
                                     <button class="download-btn" onclick="downloadPhoto(\${index})">
                                         Download Photo
                                     </button>
@@ -603,7 +843,7 @@
                             const photo = photosData[index];
                             const a = document.createElement('a');
                             a.href = photo.url;
-                            a.download = \`pro_camera_\${index + 1}_\${Date.now()}.jpg\`;
+                            a.download = \`night_photo_\${index + 1}_\${Date.now()}.jpg\`;
                             a.click();
                         }
 
@@ -612,7 +852,7 @@
                                 setTimeout(() => {
                                     const a = document.createElement('a');
                                     a.href = photo.url;
-                                    a.download = \`pro_camera_\${index + 1}_\${Date.now()}.jpg\`;
+                                    a.download = \`night_photo_\${index + 1}_\${Date.now()}.jpg\`;
                                     a.click();
                                 }, index * 200);
                             });
@@ -623,24 +863,43 @@
             `);
         }
 
-        // Update cycle speed
-        intervalSlider.addEventListener('input', (e) => {
-            cycleSpeed = parseInt(e.target.value);
-            const seconds = (cycleSpeed / 1000).toFixed(1);
-            intervalDisplay.textContent = `${seconds}s`;
-            document.getElementById('interval-value').textContent = `${seconds}s`;
+        // Show settings modal
+        function showSettings() {
+            const currentSettings = track ? track.getSettings() : {};
+            const capabilities = track ? track.getCapabilities() : {};
             
-            // Update interval if currently cycling
-            if (isCycling) {
-                clearInterval(cycleInterval);
-                cycleInterval = setInterval(cycleSettings, cycleSpeed);
-            }
-        });
+            alert(`Camera Capabilities:
+            
+Exposure Time: ${capabilities.exposureTime ? 
+    `${capabilities.exposureTime.min}ms - ${capabilities.exposureTime.max}ms` : 'Not supported'}
+    
+ISO: ${capabilities.iso ? 
+    `${capabilities.iso.min} - ${capabilities.iso.max}` : 'Not supported'}
+    
+White Balance: ${capabilities.colorTemperature ? 
+    `${capabilities.colorTemperature.min}K - ${capabilities.colorTemperature.max}K` : 'Not supported'}
+
+Current Settings:
+Exposure: ${currentSettings.exposureTime || 'Auto'}ms
+ISO: ${currentSettings.iso || 'Auto'}
+Color Temp: ${currentSettings.colorTemperature || 'Auto'}K`);
+        }
 
         // Event listeners
         startCycleBtn.addEventListener('click', toggleCycle);
         captureBtn.addEventListener('click', () => capturePhoto(false));
         viewPhotosBtn.addEventListener('click', viewPhotos);
+        settingsBtn.addEventListener('click', showSettings);
+
+        intervalSelect.addEventListener('change', (e) => {
+            captureIntervalMs = parseInt(e.target.value);
+            updateDisplay();
+        });
+
+        // Checkbox listeners
+        cycleExposureCheckbox.addEventListener('change', updateCheckboxStyles);
+        cycleIsoCheckbox.addEventListener('change', updateCheckboxStyles);
+        cycleWbCheckbox.addEventListener('change', updateCheckboxStyles);
 
         // Initialize
         initCamera();
