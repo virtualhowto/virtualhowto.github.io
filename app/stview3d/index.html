@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OSM Town → 3D Miniature (STL/GLB Export)</title>
+  <style>
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #ui {
+      position: absolute; top: 12px; left: 12px; z-index: 10;
+      background: rgba(20,20,20,.78); color: #fff;
+      padding: 12px; border-radius: 12px; width: 360px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+    }
+    #ui h1 { font-size: 14px; margin: 0 0 10px 0; font-weight: 700; letter-spacing:.2px; }
+    #ui label { font-size: 12px; opacity:.9; display:block; margin-top: 10px; }
+    #ui input, #ui select, #ui button, #ui textarea {
+      width: 100%; box-sizing: border-box;
+      margin-top: 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08); color:#fff; padding: 8px 10px;
+      outline: none;
+    }
+    #ui button { cursor:pointer; font-weight:700; }
+    #ui button.primary { background: rgba(0,170,255,.25); border-color: rgba(0,170,255,.5); }
+    #ui button.good { background: rgba(0,255,160,.18); border-color: rgba(0,255,160,.35); }
+    #ui button.warn { background: rgba(255,170,0,.18); border-color: rgba(255,170,0,.35); }
+    #ui .row { display:flex; gap:8px; }
+    #ui .row > * { flex: 1; }
+    #log {
+      margin-top: 10px;
+      font-size: 11px; line-height: 1.35;
+      max-height: 170px; overflow:auto;
+      padding: 8px; border-radius: 10px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.12);
+      white-space: pre-wrap;
+    }
+    #help { font-size: 11px; opacity:.85; margin-top:10px; line-height:1.35; }
+    #canvasWrap { position: absolute; inset: 0; }
+    a { color: #9be7ff; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <h1>OSM Town → 3D Miniature (Buildings + Roads) • Export STL/GLB</h1>
+
+    <label>Preset</label>
+    <select id="preset">
+      <option value="yenda">Yenda, NSW (default)</option>
+      <option value="custom">Custom BBox</option>
+    </select>
+
+    <label>Bounding Box (south, west, north, east)</label>
+    <input id="bbox" value="-34.2485,146.2050,-34.2285,146.2350" />
+
+    <div class="row">
+      <div>
+        <label>Plate size (mm)</label>
+        <input id="plateMM" type="number" value="300" min="50" max="1000" step="10" />
+      </div>
+      <div>
+        <label>Base thickness (mm)</label>
+        <input id="baseMM" type="number" value="6" min="1" max="30" step="1" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Building height scale</label>
+        <input id="bScale" type="number" value="1.0" min="0.1" max="5" step="0.1" />
+      </div>
+      <div>
+        <label>Road width (mm)</label>
+        <input id="roadW" type="number" value="2.2" min="0.5" max="10" step="0.1" />
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="primary" id="buildBtn">Build 3D Town</button>
+      <button class="warn" id="resetBtn">Reset Scene</button>
+    </div>
+
+    <div class="row">
+      <button class="good" id="exportStlBtn">Export STL</button>
+      <button class="good" id="exportGlbBtn">Export GLB</button>
+    </div>
+
+    <div id="help">
+      This loads <b>real OSM</b> buildings + roads via Overpass API and generates a print-friendly miniature.
+      Terrain is currently flat (no API key). If you want terrain, say the word and I’ll wire in DEM tiles.
+    </div>
+
+    <div id="log">Ready.</div>
+  </div>
+
+  <div id="canvasWrap"></div>
+
+  <!-- Three.js + helpers -->
+  <script type="module">
+    import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+    import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+    import { STLExporter } from "https://unpkg.com/three@0.160.0/examples/jsm/exporters/STLExporter.js";
+    import { GLTFExporter } from "https://unpkg.com/three@0.160.0/examples/jsm/exporters/GLTFExporter.js";
+
+    // ---------- UI ----------
+    const logEl = document.getElementById("log");
+    const presetEl = document.getElementById("preset");
+    const bboxEl = document.getElementById("bbox");
+    const plateEl = document.getElementById("plateMM");
+    const baseEl  = document.getElementById("baseMM");
+    const bScaleEl = document.getElementById("bScale");
+    const roadWEl = document.getElementById("roadW");
+
+    function log(msg) {
+      logEl.textContent = `${msg}\n\n` + logEl.textContent;
+    }
+
+    presetEl.addEventListener("change", () => {
+      if (presetEl.value === "yenda") {
+        bboxEl.value = "-34.2485,146.2050,-34.2285,146.2350";
+      }
+    });
+
+    // ---------- Three scene ----------
+    const container = document.getElementById("canvasWrap");
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f0f12);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 5000);
+    camera.position.set(0, 260, 360);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(300, 500, 200);
+    scene.add(dir);
+
+    // Grid helper (toggle-like look without UI)
+    const grid = new THREE.GridHelper(1000, 50, 0x333333, 0x222222);
+    grid.position.y = -0.01;
+    scene.add(grid);
+
+    // Main group that we rebuild
+    const townGroup = new THREE.Group();
+    scene.add(townGroup);
+
+    window.addEventListener("resize", () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ---------- Geo helpers ----------
+    // WebMercator projection -> meters (approx)
+    function lonLatToMeters(lon, lat) {
+      const originShift = 2 * Math.PI * 6378137 / 2.0;
+      const mx = lon * originShift / 180.0;
+      let my = Math.log(Math.tan((90 + lat) * Math.PI / 360.0)) / (Math.PI / 180.0);
+      my = my * originShift / 180.0;
+      return { x: mx, y: my };
+    }
+
+    function parseBBox(str) {
+      const parts = str.split(",").map(s => parseFloat(s.trim()));
+      if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) throw new Error("Invalid bbox");
+      const [south, west, north, east] = parts;
+      if (!(south < north && west < east)) throw new Error("BBox must be south,west,north,east with south<north and west<east");
+      return { south, west, north, east };
+    }
+
+    // ---------- Overpass ----------
+    async function fetchOSM(bbox) {
+      // Pull buildings + highways/roads/paths in bbox
+      // Note: Overpass can rate-limit; keep bbox modest.
+      const q = `
+        [out:json][timeout:60];
+        (
+          way["building"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+          relation["building"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+          way["highway"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+        );
+        (._;>;);
+        out body;
+      `;
+      const url = "https://overpass-api.de/api/interpreter";
+      log("Fetching OSM data from Overpass…");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: "data=" + encodeURIComponent(q)
+      });
+      if (!res.ok) throw new Error(`Overpass error: ${res.status} ${res.statusText}`);
+      return await res.json();
+    }
+
+    function indexOSM(osm) {
+      const nodes = new Map();
+      const ways = [];
+      const rels = [];
+      for (const el of osm.elements) {
+        if (el.type === "node") nodes.set(el.id, el);
+        else if (el.type === "way") ways.push(el);
+        else if (el.type === "relation") rels.push(el);
+      }
+      return { nodes, ways, rels };
+    }
+
+    function wayToCoords(way, nodes) {
+      const coords = [];
+      for (const nid of way.nodes || []) {
+        const n = nodes.get(nid);
+        if (!n) continue;
+        coords.push([n.lon, n.lat]);
+      }
+      return coords;
+    }
+
+    // ---------- Geometry building ----------
+    function clearTown() {
+      // dispose geometries/materials
+      townGroup.traverse(obj => {
+        if (obj.isMesh) {
+          obj.geometry?.dispose?.();
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+          else obj.material?.dispose?.();
+        }
+      });
+      while (townGroup.children.length) townGroup.remove(townGroup.children[0]);
+    }
+
+    function buildTownFromOSM(osm, bbox, opts) {
+      clearTown();
+
+      const { nodes, ways } = indexOSM(osm);
+
+      // Convert bbox corners to meters (mercator) to define local frame
+      const sw = lonLatToMeters(bbox.west, bbox.south);
+      const ne = lonLatToMeters(bbox.east, bbox.north);
+      const spanX = ne.x - sw.x;
+      const spanY = ne.y - sw.y;
+
+      const plateMM = opts.plateMM;
+      const baseMM  = opts.baseMM;
+
+      // Scale meters -> mm so the bbox fits plate
+      const s = plateMM / Math.max(spanX, spanY);
+
+      // Centering
+      const centerMx = (sw.x + ne.x) / 2;
+      const centerMy = (sw.y + ne.y) / 2;
+
+      function toLocalMM(lon, lat) {
+        const m = lonLatToMeters(lon, lat);
+        const x = (m.x - centerMx) * s;
+        const z = -(m.y - centerMy) * s; // flip to make north up
+        return { x, z };
+      }
+
+      // Base plate
+      const baseGeo = new THREE.BoxGeometry(plateMM, baseMM, plateMM);
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x2a2f36, metalness: 0.1, roughness: 0.95 });
+      const base = new THREE.Mesh(baseGeo, baseMat);
+      base.position.y = baseMM / 2;
+      townGroup.add(base);
+
+      // Roads
+      const roadW = opts.roadW;
+      const roadMat = new THREE.MeshStandardMaterial({ color: 0x3f4650, roughness: 0.9 });
+      const roadGroup = new THREE.Group();
+      roadGroup.name = "roads";
+      townGroup.add(roadGroup);
+
+      // Buildings
+      const bMat = new THREE.MeshStandardMaterial({ color: 0xd8dde6, roughness: 0.85 });
+      const bGroup = new THREE.Group();
+      bGroup.name = "buildings";
+      townGroup.add(bGroup);
+
+      let buildingCount = 0;
+      let roadCount = 0;
+
+      // A small helper: extrude a closed polygon
+      function extrudePolygon(points, height, yBase, mat) {
+        if (points.length < 3) return null;
+
+        // Ensure non-degenerate (remove duplicates)
+        const cleaned = [];
+        for (let i = 0; i < points.length; i++) {
+          const p = points[i];
+          const prev = cleaned[cleaned.length - 1];
+          if (!prev || Math.hypot(p.x - prev.x, p.z - prev.z) > 0.01) cleaned.push(p);
+        }
+        if (cleaned.length < 3) return null;
+
+        const shape = new THREE.Shape();
+        shape.moveTo(cleaned[0].x, cleaned[0].z);
+        for (let i = 1; i < cleaned.length; i++) shape.lineTo(cleaned[i].x, cleaned[i].z);
+
+        // Close
+        shape.lineTo(cleaned[0].x, cleaned[0].z);
+
+        const extrudeSettings = { depth: height, bevelEnabled: false };
+        const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+        // By default extrude is along +Z in shape's 2D plane. We want vertical Y.
+        geo.rotateX(-Math.PI / 2);
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.y = yBase;
+        return mesh;
+      }
+
+      // A helper: make a "thick polyline" road ribbon as a series of rectangles
+      function makeRoadRibbon(points, width, yBase) {
+        if (points.length < 2) return null;
+        const grp = new THREE.Group();
+
+        for (let i = 0; i < points.length - 1; i++) {
+          const a = points[i], b = points[i + 1];
+          const dx = b.x - a.x, dz = b.z - a.z;
+          const len = Math.hypot(dx, dz);
+          if (len < 0.5) continue;
+
+          const midx = (a.x + b.x) / 2;
+          const midz = (a.z + b.z) / 2;
+          const angle = Math.atan2(dz, dx);
+
+          const geo = new THREE.BoxGeometry(len, 0.6, width);
+          const mesh = new THREE.Mesh(geo, roadMat);
+          mesh.position.set(midx, yBase + 0.3, midz);
+          mesh.rotation.y = -angle;
+          grp.add(mesh);
+        }
+        return grp.children.length ? grp : null;
+      }
+
+      // Iterate ways
+      for (const w of ways) {
+        const tags = w.tags || {};
+        const coords = wayToCoords(w, nodes);
+        if (coords.length < 2) continue;
+
+        // BUILDINGS
+        if (tags.building) {
+          // Need closed polygon
+          const first = coords[0];
+          const last = coords[coords.length - 1];
+          const closed = (Math.abs(first[0] - last[0]) < 1e-6) && (Math.abs(first[1] - last[1]) < 1e-6);
+          if (!closed) continue;
+
+          const pts = coords.map(([lon, lat]) => toLocalMM(lon, lat)).map(p => ({ x: p.x, z: p.z }));
+
+          // Height inference
+          let h = 10; // mm default
+          if (tags.height) {
+            const m = parseFloat(String(tags.height).replace("m", "").trim());
+            if (!Number.isNaN(m)) h = Math.max(4, Math.min(80, m * 0.9)); // meters -> mm-ish (stylized)
+          } else if (tags["building:levels"]) {
+            const lv = parseFloat(tags["building:levels"]);
+            if (!Number.isNaN(lv)) h = Math.max(4, Math.min(80, lv * 3.2)); // ~3.2mm per level stylized
+          } else {
+            // gentle randomization
+            h = 7 + Math.random() * 18;
+          }
+          h *= opts.bScale;
+
+          const mesh = extrudePolygon(pts, h, opts.baseMM, bMat);
+          if (mesh) {
+            mesh.castShadow = false;
+            mesh.receiveShadow = false;
+            mesh.userData = { type: "building", tags };
+            bGroup.add(mesh);
+            buildingCount++;
+          }
+        }
+
+        // ROADS
+        if (tags.highway) {
+          // For road: polyline (not necessarily closed)
+          const pts = coords.map(([lon, lat]) => toLocalMM(lon, lat)).map(p => ({ x: p.x, z: p.z }));
+          const ribbon = makeRoadRibbon(pts, opts.roadW, opts.baseMM + 0.01);
+          if (ribbon) {
+            ribbon.userData = { type: "road", tags };
+            roadGroup.add(ribbon);
+            roadCount++;
+          }
+        }
+      }
+
+      // Recentre group (base already centered, but keep everything tidy)
+      townGroup.position.set(0, 0, 0);
+
+      // Improve camera framing
+      controls.target.set(0, baseMM, 0);
+      camera.position.set(0, plateMM * 0.9, plateMM * 1.2);
+      controls.update();
+
+      log(`Built: ${buildingCount} buildings, ${roadCount} road ways`);
+    }
+
+    // ---------- Export ----------
+    function downloadBlob(blob, filename) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 250);
+    }
+
+    function exportSTL() {
+      const exporter = new STLExporter();
+
+      // Export townGroup as a single mesh scene
+      const stlString = exporter.parse(townGroup, { binary: false });
+      const blob = new Blob([stlString], { type: "model/stl" });
+      downloadBlob(blob, "town.stl");
+      log("Exported STL: town.stl");
+    }
+
+    function exportGLB() {
+      const exporter = new GLTFExporter();
+      exporter.parse(
+        townGroup,
+        (gltf) => {
+          const blob = new Blob([gltf], { type: "model/gltf-binary" });
+          downloadBlob(blob, "town.glb");
+          log("Exported GLB: town.glb");
+        },
+        (err) => {
+          console.error(err);
+          log("GLB export failed — check console.");
+        },
+        { binary: true }
+      );
+    }
+
+    // ---------- Buttons ----------
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      clearTown();
+      log("Scene cleared.");
+    });
+
+    document.getElementById("exportStlBtn").addEventListener("click", () => exportSTL());
+    document.getElementById("exportGlbBtn").addEventListener("click", () => exportGLB());
+
+    document.getElementById("buildBtn").addEventListener("click", async () => {
+      try {
+        const bbox = parseBBox(bboxEl.value);
+        const opts = {
+          plateMM: parseFloat(plateEl.value),
+          baseMM: parseFloat(baseEl.value),
+          bScale: parseFloat(bScaleEl.value),
+          roadW: parseFloat(roadWEl.value),
+        };
+
+        // Guard: Overpass hates giant areas
+        const areaDeg = (bbox.north - bbox.south) * (bbox.east - bbox.west);
+        if (areaDeg > 0.01) {
+          log("⚠️ BBox looks large. Overpass may rate-limit. Consider a smaller area.");
+        }
+
+        const osm = await fetchOSM(bbox);
+        buildTownFromOSM(osm, bbox, opts);
+      } catch (e) {
+        console.error(e);
+        log("Error: " + (e?.message || e));
+      }
+    });
+
+    // Auto build on load for Yenda
+    setTimeout(() => document.getElementById("buildBtn").click(), 300);
+
+    // ---------- Terrain hook (not wired yet) ----------
+    // If you want *real* terrain:
+    // 1) Choose a DEM source (Mapbox terrain-rgb, Cesium, OpenTopography, AWS Terrain tiles, etc.)
+    // 2) Sample elevations into a grid
+    // 3) Displace a PlaneGeometry before adding roads/buildings
+    //
+    // I can add this next with whichever provider you prefer.
+  </script>
+</body>
+</html>
