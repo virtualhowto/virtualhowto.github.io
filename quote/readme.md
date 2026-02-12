@@ -1,5 +1,5 @@
 **Objective:**  
-Generate a **modern, responsive finance calculator web application** that allows users to **upload an Excel file**, **view the full table**, **select rows**, and **group them into bundles** with a **total cost calculation**. The app should include a **loading spinner** while processing the file and feature a **sleek, professional UI inspired by Atturra's website**.
+Generate a **modern, responsive finance calculator web application** that allows users to **upload an Excel file**, **view the full table**, **select rows**, and **group them into bundles** with a **total cost calculation**. The app should include a **loading spinner** while processing the file and feature a **sleek**.
 
 ---
 
