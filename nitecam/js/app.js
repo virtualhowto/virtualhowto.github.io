@@ -1,276 +1,212 @@
-import { CameraController } from './camera.js';
-import { CaptureController } from './capture.js';
-import { buildStarTrail, buildGif, downloadFramesZip } from './processing.js';
-import { downloadBlob, dataURLToBlob, fmtTime } from './utils.js';
-import { saveSession, loadSession, clearSession } from './storage.js';
+// ===== GLOBAL STATE =====
+let stream = null;
+let captureInterval = null;
+let captureEvery = 5;
+let frames = [];
 
-const els = {
-  video: document.getElementById('video'),
-  videoOverlay: document.getElementById('videoOverlay'),
-  captureCanvas: document.getElementById('captureCanvas'),
-  previewCanvas: document.getElementById('previewCanvas'),
-  installBtn: document.getElementById('installBtn'),
-  statusPill: document.getElementById('statusPill'),
-  captureBtn: document.getElementById('captureBtn'),
-  startBtn: document.getElementById('startBtn'),
-  stopBtn: document.getElementById('stopBtn'),
-  swapCameraBtn: document.getElementById('swapCameraBtn'),
-  captureEvery: document.getElementById('captureEvery'),
-  captureEveryLabel: document.getElementById('captureEveryLabel'),
-  quality: document.getElementById('quality'),
-  qualityLabel: document.getElementById('qualityLabel'),
-  maxFrames: document.getElementById('maxFrames'),
-  useRearCamera: document.getElementById('useRearCamera'),
-  torchToggle: document.getElementById('torchToggle'),
-  persistToggle: document.getElementById('persistToggle'),
-  frameCount: document.getElementById('frameCount'),
-  captureSpan: document.getElementById('captureSpan'),
-  gifFps: document.getElementById('gifFps'),
-  gifFpsLabel: document.getElementById('gifFpsLabel'),
-  trailOpacity: document.getElementById('trailOpacity'),
-  trailOpacityLabel: document.getElementById('trailOpacityLabel'),
-  buildTrailBtn: document.getElementById('buildTrailBtn'),
-  buildGifBtn: document.getElementById('buildGifBtn'),
-  downloadLastFrameBtn: document.getElementById('downloadLastFrameBtn'),
-  downloadZipBtn: document.getElementById('downloadZipBtn'),
-  clearBtn: document.getElementById('clearBtn'),
-  restoreBtn: document.getElementById('restoreBtn'),
-  gallery: document.getElementById('gallery'),
-  trailOutput: document.getElementById('trailOutput'),
-  downloadTrailBtn: document.getElementById('downloadTrailBtn'),
-  gifOutput: document.getElementById('gifOutput'),
-  downloadGifBtn: document.getElementById('downloadGifBtn')
+let lastCaptureTime = null;
+let nextCaptureIn = 0;
+let nightMode = false;
+
+// ===== INIT =====
+window.onload = () => {
+  setupUI();
+  startCamera();
 };
 
-const camera = new CameraController(els.video, els.videoOverlay);
-const capture = new CaptureController(els.video, els.captureCanvas);
-
-let frames = [];
-let running = false;
-let gifObjectUrl = '';
-let deferredPrompt = null;
-
-function setStatus(text) {
-  els.statusPill.textContent = text;
-}
-
-function syncLabels() {
-  els.captureEveryLabel.textContent = els.captureEvery.value;
-  els.qualityLabel.textContent = Number(els.quality.value).toFixed(2);
-  els.gifFpsLabel.textContent = els.gifFps.value;
-  els.trailOpacityLabel.textContent = els.trailOpacity.value;
-}
-
-function persistFramesIfEnabled() {
-  if (els.persistToggle.checked) saveSession(frames);
-}
-
-function renderGallery() {
-  els.frameCount.textContent = String(frames.length);
-  els.captureSpan.textContent = `${frames.length * Number(els.captureEvery.value)}s`;
-  if (!frames.length) {
-    els.gallery.className = 'gallery empty';
-    els.gallery.textContent = 'No frames yet. Start the camera and capture a few images.';
-    return;
-  }
-  els.gallery.className = 'gallery';
-  els.gallery.innerHTML = frames.map((frame, index) => `
-    <div class="thumb">
-      <img src="${frame.src}" alt="Frame ${index + 1}" />
-      <div class="meta">#${index + 1} · ${fmtTime(frame.ts)}</div>
-    </div>
-  `).join('');
-}
-
-function addFrame(frame) {
-  frames.push(frame);
-  const max = Math.max(10, Number(els.maxFrames.value) || 120);
-  if (frames.length > max) frames.shift();
-  setStatus(`Captured ${fmtTime(frame.ts)}`);
-  renderGallery();
-  persistFramesIfEnabled();
-}
-
-function clearOutputs() {
-  if (gifObjectUrl) URL.revokeObjectURL(gifObjectUrl);
-  gifObjectUrl = '';
-  els.trailOutput.src = '';
-  els.gifOutput.src = '';
-  els.trailOutput.classList.add('hidden');
-  els.downloadTrailBtn.classList.add('hidden');
-  els.gifOutput.classList.add('hidden');
-  els.downloadGifBtn.classList.add('hidden');
-}
-
+// ===== CAMERA =====
 async function startCamera() {
   try {
-    setStatus('Requesting camera access...');
-    const result = await camera.start(els.useRearCamera.checked);
-    els.torchToggle.disabled = !result.torchAvailable;
-    els.videoOverlay.classList.add('hidden');
-    setStatus('Camera ready');
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: false
+    });
+
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+    await video.play();
+
   } catch (err) {
+    alert("Camera access failed. Use HTTPS and allow permissions.");
     console.error(err);
-    els.videoOverlay.textContent = 'Could not access the camera. Use HTTPS, Android Chrome, and allow permission.';
-    els.videoOverlay.classList.remove('hidden');
-    setStatus('Camera unavailable');
   }
 }
 
-function stopInterval() {
-  capture.stopInterval();
-  running = false;
-  setStatus('Timelapse stopped');
+// ===== CAPTURE =====
+function captureFrame() {
+  const video = document.getElementById("video");
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  ctx.drawImage(video, 0, 0);
+
+  const data = canvas.toDataURL("image/jpeg", 0.9);
+
+  frames.push(data);
+
+  lastCaptureTime = Date.now();
+
+  renderGallery();
 }
 
-function startInterval() {
-  if (running) return;
-  running = true;
-  capture.startInterval((frame) => addFrame(frame), Number(els.captureEvery.value), Number(els.quality.value));
-  setStatus('Timelapse running');
+// ===== TIMELAPSE =====
+function startTimelapse() {
+  stopTimelapse();
+
+  captureFrame(); // instant first shot
+  lastCaptureTime = Date.now();
+
+  captureInterval = setInterval(() => {
+    captureFrame();
+  }, captureEvery * 1000);
 }
 
-async function captureNow() {
-  const frame = capture.captureFrame(Number(els.quality.value));
-  if (!frame) {
-    setStatus('Capture failed');
+function stopTimelapse() {
+  if (captureInterval) {
+    clearInterval(captureInterval);
+    captureInterval = null;
+  }
+}
+
+// ===== COUNTDOWN + PROGRESS =====
+setInterval(() => {
+  if (!lastCaptureTime) return;
+
+  const now = Date.now();
+  const elapsed = (now - lastCaptureTime) / 1000;
+  const remaining = Math.max(0, captureEvery - elapsed);
+
+  const countdownEl = document.getElementById("countdown");
+  if (countdownEl) {
+    countdownEl.innerText = `Next shot in: ${remaining.toFixed(1)}s`;
+  }
+
+  const progress = ((captureEvery - remaining) / captureEvery) * 100;
+
+  const bar = document.getElementById("progressBar");
+  if (bar) {
+    bar.style.width = progress + "%";
+  }
+
+}, 100);
+
+// ===== GALLERY =====
+function renderGallery() {
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML = "";
+
+  frames.slice(-50).forEach((src) => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.style.width = "60px";
+    img.style.margin = "2px";
+    gallery.appendChild(img);
+  });
+}
+
+// ===== STAR TRAIL =====
+async function buildStarTrail() {
+  if (frames.length < 2) {
+    alert("Need more frames");
     return;
   }
-  addFrame(frame);
+
+  const img = await loadImage(frames[0]);
+
+  const canvas = document.getElementById("outputCanvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = img.width;
+  canvas.height = img.height;
+
+  ctx.drawImage(img, 0, 0);
+
+  ctx.globalCompositeOperation = "lighten";
+
+  for (let i = 1; i < frames.length; i++) {
+    const frame = await loadImage(frames[i]);
+    ctx.drawImage(frame, 0, 0);
+  }
+
+  ctx.globalCompositeOperation = "source-over";
 }
 
-function restoreSavedSession() {
-  const restored = loadSession();
-  if (restored.length) {
-    frames = restored;
-    renderGallery();
-    setStatus(`Restored ${restored.length} frames`);
-  } else {
-    setStatus('No saved session found');
+// ===== GIF =====
+async function buildGIF() {
+  if (frames.length < 2) return;
+
+  const gif = new GIF({
+    workers: 2,
+    quality: 10
+  });
+
+  for (let src of frames) {
+    const img = await loadImage(src);
+    gif.addFrame(img, { delay: 200 });
+  }
+
+  gif.on("finished", (blob) => {
+    const url = URL.createObjectURL(blob);
+    window.open(url);
+  });
+
+  gif.render();
+}
+
+// ===== HELPERS =====
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.src = src;
+  });
+}
+
+// ===== NIGHT MODE =====
+function toggleNightMode() {
+  nightMode = !nightMode;
+
+  document.body.style.background = nightMode ? "#000" : "#111";
+  document.body.style.color = nightMode ? "#ffcc66" : "#fff";
+
+  const overlay = document.getElementById("nightOverlay");
+  if (overlay) {
+    overlay.style.display = nightMode ? "block" : "none";
   }
 }
 
-async function registerSW() {
-  if ('serviceWorker' in navigator) {
-    try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { console.warn('SW registration failed', e); }
-  }
+// ===== UI SETUP =====
+function setupUI() {
+  // Inject countdown UI
+  const controls = document.getElementById("controls");
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = `
+    <div style="margin-top:15px;">
+      <div id="countdown">Next shot in: 0s</div>
+      <div style="height:10px;background:#333;border-radius:5px;">
+        <div id="progressBar" style="height:10px;width:0%;background:white;border-radius:5px;"></div>
+      </div>
+    </div>
+
+    <button onclick="toggleNightMode()" style="margin-top:10px;">
+      Toggle Night Mode
+    </button>
+
+    <div id="nightOverlay" style="
+      display:none;
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(255,140,0,0.08);
+      pointer-events:none;
+    "></div>
+  `;
+
+  controls.appendChild(wrapper);
 }
-
-function setupInstallPrompt() {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    els.installBtn.classList.remove('hidden');
-  });
-
-  els.installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    els.installBtn.classList.add('hidden');
-  });
-}
-
-function bindEvents() {
-  syncLabels();
-  els.captureEvery.addEventListener('input', syncLabels);
-  els.quality.addEventListener('input', syncLabels);
-  els.gifFps.addEventListener('input', syncLabels);
-  els.trailOpacity.addEventListener('input', syncLabels);
-
-  els.captureBtn.addEventListener('click', captureNow);
-  els.startBtn.addEventListener('click', startInterval);
-  els.stopBtn.addEventListener('click', stopInterval);
-  els.swapCameraBtn.addEventListener('click', async () => {
-    stopInterval();
-    els.useRearCamera.checked = !els.useRearCamera.checked;
-    await startCamera();
-  });
-  els.torchToggle.addEventListener('change', async () => {
-    try {
-      await camera.setTorch(els.torchToggle.checked);
-    } catch (e) {
-      els.torchToggle.checked = false;
-      setStatus('Torch not supported');
-    }
-  });
-  els.clearBtn.addEventListener('click', async () => {
-    stopInterval();
-    frames = [];
-    clearOutputs();
-    clearSession();
-    renderGallery();
-    setStatus('Frames cleared');
-  });
-  els.restoreBtn.addEventListener('click', restoreSavedSession);
-
-  els.buildTrailBtn.addEventListener('click', async () => {
-    try {
-      setStatus('Building star trail...');
-      const url = await buildStarTrail(frames, els.previewCanvas, Number(els.trailOpacity.value));
-      els.trailOutput.src = url;
-      els.trailOutput.classList.remove('hidden');
-      els.downloadTrailBtn.classList.remove('hidden');
-      setStatus('Star trail ready');
-    } catch (e) {
-      console.error(e);
-      setStatus(e.message || 'Star trail build failed');
-    }
-  });
-
-  els.buildGifBtn.addEventListener('click', async () => {
-    try {
-      setStatus('Building GIF...');
-      const blob = await buildGif(frames, Number(els.gifFps.value));
-      if (gifObjectUrl) URL.revokeObjectURL(gifObjectUrl);
-      gifObjectUrl = URL.createObjectURL(blob);
-      els.gifOutput.src = gifObjectUrl;
-      els.gifOutput.classList.remove('hidden');
-      els.downloadGifBtn.classList.remove('hidden');
-      setStatus('GIF ready');
-    } catch (e) {
-      console.error(e);
-      setStatus(e.message || 'GIF build failed');
-    }
-  });
-
-  els.downloadTrailBtn.addEventListener('click', () => {
-    if (!els.trailOutput.src) return;
-    downloadBlob(dataURLToBlob(els.trailOutput.src), `star-trail-${Date.now()}.png`);
-  });
-
-  els.downloadGifBtn.addEventListener('click', async () => {
-    if (!gifObjectUrl) return;
-    const blob = await fetch(gifObjectUrl).then((r) => r.blob());
-    downloadBlob(blob, `timelapse-${Date.now()}.gif`);
-  });
-
-  els.downloadLastFrameBtn.addEventListener('click', () => {
-    if (!frames.length) return;
-    downloadBlob(dataURLToBlob(frames[frames.length - 1].src), `timelapse-frame-${frames.length}.jpg`);
-  });
-
-  els.downloadZipBtn.addEventListener('click', async () => {
-    try {
-      setStatus('Building ZIP...');
-      const blob = await downloadFramesZip(frames);
-      downloadBlob(blob, `timelapse-frames-${Date.now()}.zip`);
-      setStatus('ZIP ready');
-    } catch (e) {
-      console.error(e);
-      setStatus(e.message || 'ZIP export failed');
-    }
-  });
-}
-
-async function init() {
-  bindEvents();
-  setupInstallPrompt();
-  await registerSW();
-  restoreSavedSession();
-  await startCamera();
-}
-
-init();
-window.addEventListener('beforeunload', () => persistFramesIfEnabled());
