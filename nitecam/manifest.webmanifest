@@ -1,0 +1,22 @@
+{
+  "name": "Android Camera Timelapse Studio",
+  "short_name": "TimelapseCam",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "description": "Capture frames on Android, then build a GIF or star-trail style stacked image in the browser.",
+  "icons": [
+    {
+      "src": "./assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

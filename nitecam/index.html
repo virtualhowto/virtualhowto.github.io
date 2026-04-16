@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#020617" />
+  <meta name="description" content="Capture timelapse frames on Android, then build a GIF or star-trail style stacked image in the browser." />
+  <title>Android Camera Timelapse Studio</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Android Camera Timelapse Studio</h1>
+      <p>Capture frames every X seconds, then build a GIF or a stacked star-trail image.</p>
+    </div>
+    <div class="header-actions">
+      <button id="installBtn" class="secondary hidden">Install App</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel panel-wide">
+      <div class="panel-title-row">
+        <h2>Live Camera</h2>
+        <div id="statusPill" class="pill">Idle</div>
+      </div>
+
+      <div class="video-wrap">
+        <video id="video" playsinline autoplay muted></video>
+        <div id="videoOverlay" class="video-overlay">Allow camera access and use HTTPS.</div>
+      </div>
+
+      <div class="controls-grid">
+        <button id="captureBtn">Capture Now</button>
+        <button id="startBtn">Start Interval</button>
+        <button id="stopBtn" class="secondary">Stop</button>
+        <button id="swapCameraBtn" class="secondary">Swap Camera</button>
+      </div>
+
+      <div class="settings-grid">
+        <label class="field">
+          <span>Capture every <strong id="captureEveryLabel">5</strong> sec</span>
+          <input id="captureEvery" type="range" min="1" max="60" step="1" value="5" />
+        </label>
+
+        <label class="field">
+          <span>JPEG quality <strong id="qualityLabel">0.92</strong></span>
+          <input id="quality" type="range" min="0.5" max="1" step="0.01" value="0.92" />
+        </label>
+
+        <label class="field">
+          <span>Max stored frames</span>
+          <input id="maxFrames" type="number" min="10" step="1" value="120" />
+        </label>
+
+        <label class="field toggle-row">
+          <span>Prefer rear camera</span>
+          <input id="useRearCamera" type="checkbox" checked />
+        </label>
+
+        <label class="field toggle-row">
+          <span>Torch</span>
+          <input id="torchToggle" type="checkbox" disabled />
+        </label>
+
+        <label class="field toggle-row">
+          <span>Save session locally</span>
+          <input id="persistToggle" type="checkbox" checked />
+        </label>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric">Frames <strong id="frameCount">0</strong></div>
+        <div class="metric">Span <strong id="captureSpan">0s</strong></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>Processing</h2>
+
+      <label class="field">
+        <span>GIF FPS <strong id="gifFpsLabel">6</strong></span>
+        <input id="gifFps" type="range" min="1" max="20" step="1" value="6" />
+      </label>
+
+      <label class="field">
+        <span>Star trail opacity <strong id="trailOpacityLabel">70</strong>%</span>
+        <input id="trailOpacity" type="range" min="10" max="100" step="5" value="70" />
+      </label>
+
+      <div class="stack gap-sm">
+        <button id="buildTrailBtn">Build Star Trail</button>
+        <button id="buildGifBtn" class="secondary">Build GIF</button>
+        <button id="downloadLastFrameBtn" class="secondary">Download Last Frame</button>
+        <button id="downloadZipBtn" class="secondary">Download Frames ZIP</button>
+        <button id="clearBtn" class="danger">Clear Session</button>
+      </div>
+
+      <div class="output-section">
+        <h3>Star Trail Output</h3>
+        <img id="trailOutput" alt="Star trail output" class="hidden output-preview" />
+        <button id="downloadTrailBtn" class="secondary hidden">Download Star Trail</button>
+      </div>
+
+      <div class="output-section">
+        <h3>GIF Output</h3>
+        <img id="gifOutput" alt="GIF output" class="hidden output-preview" />
+        <button id="downloadGifBtn" class="secondary hidden">Download GIF</button>
+      </div>
+    </aside>
+
+    <section class="panel panel-wide full-width">
+      <div class="panel-title-row">
+        <h2>Captured Frames</h2>
+        <button id="restoreBtn" class="secondary">Restore Saved Session</button>
+      </div>
+      <div id="gallery" class="gallery empty">No frames yet. Start the camera and capture a few images.</div>
+    </section>
+  </main>
+
+  <canvas id="captureCanvas" hidden></canvas>
+  <canvas id="previewCanvas" hidden></canvas>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
