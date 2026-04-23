@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Holiday Cost Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>🌴 Holiday Cost Calculator</h1>
+
+  <div class="card">
+    <label>Trip Length (days)</label>
+    <input type="number" id="days" value="7">
+
+    <label>Number of People</label>
+    <input type="number" id="people" value="2">
+
+    <label>Currency</label>
+    <select id="currency">
+      <option value="$">$ (AUD/USD)</option>
+      <option value="€">€ (EUR)</option>
+      <option value="£">£ (GBP)</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <h2>Daily Costs</h2>
+
+    <label>Accommodation (per night)</label>
+    <input type="number" id="accom" value="150">
+
+    <label>Food (per day)</label>
+    <input type="number" id="food" value="60">
+
+    <label>Transport (per day)</label>
+    <input type="number" id="transport" value="30">
+
+    <label>Activities (per day)</label>
+    <input type="number" id="activities" value="40">
+
+    <label>Extras (per day)</label>
+    <input type="number" id="extras" value="20">
+  </div>
+
+  <div class="card result">
+    <h2>Total Cost</h2>
+    <p id="total">$0</p>
+
+    <h3>Per Person</h3>
+    <p id="perPerson">$0</p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
