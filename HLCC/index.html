@@ -1,59 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Holiday Cost Calculator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>AI Holiday Planner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
-  <h1>🌴 Holiday Cost Calculator</h1>
+  <h1>🌍 AI Holiday Planner</h1>
 
+  <!-- AI Planner -->
   <div class="card">
-    <label>Trip Length (days)</label>
+    <h2>🤖 Plan My Trip</h2>
+
+    <label>Destination</label>
+    <input type="text" id="destination" placeholder="e.g. Bali">
+
+    <label>Travel Style</label>
+    <select id="style">
+      <option value="budget">Budget</option>
+      <option value="mid">Mid-range</option>
+      <option value="luxury">Luxury</option>
+    </select>
+
+    <button onclick="generateTrip()">Generate Plan</button>
+  </div>
+
+  <!-- Trip Basics -->
+  <div class="card">
+    <label>Days</label>
     <input type="number" id="days" value="7">
 
-    <label>Number of People</label>
+    <label>People</label>
     <input type="number" id="people" value="2">
-
-    <label>Currency</label>
-    <select id="currency">
-      <option value="$">$ (AUD/USD)</option>
-      <option value="€">€ (EUR)</option>
-      <option value="£">£ (GBP)</option>
-    </select>
   </div>
 
+  <!-- Costs -->
   <div class="card">
     <h2>Daily Costs</h2>
-
-    <label>Accommodation (per night)</label>
-    <input type="number" id="accom" value="150">
-
-    <label>Food (per day)</label>
-    <input type="number" id="food" value="60">
-
-    <label>Transport (per day)</label>
-    <input type="number" id="transport" value="30">
-
-    <label>Activities (per day)</label>
-    <input type="number" id="activities" value="40">
-
-    <label>Extras (per day)</label>
-    <input type="number" id="extras" value="20">
+    <input type="number" id="accom" placeholder="Accommodation">
+    <input type="number" id="food" placeholder="Food">
+    <input type="number" id="transport" placeholder="Transport">
+    <input type="number" id="activities" placeholder="Activities">
+    <input type="number" id="extras" placeholder="Extras">
   </div>
 
+  <!-- Fuel Estimator -->
+  <div class="card">
+    <h2>⛽ Fuel Cost Estimator</h2>
+
+    <label>Distance (km)</label>
+    <input type="number" id="distance">
+
+    <label>Fuel Consumption (L/100km)</label>
+    <input type="number" id="consumption" value="8">
+
+    <label>Fuel Price ($/L)</label>
+    <input type="number" id="fuelPrice" value="2">
+
+    <button onclick="calcFuel()">Calculate Fuel</button>
+    <p id="fuelResult">$0</p>
+  </div>
+
+  <!-- Results -->
   <div class="card result">
-    <h2>Total Cost</h2>
+    <h2>Total Trip Cost</h2>
     <p id="total">$0</p>
 
     <h3>Per Person</h3>
     <p id="perPerson">$0</p>
   </div>
+
+  <!-- Plan Output -->
+  <div class="card">
+    <h2>🧳 Suggested Plan</h2>
+    <pre id="planOutput"></pre>
+  </div>
 </div>
 
+<script src="ai.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
