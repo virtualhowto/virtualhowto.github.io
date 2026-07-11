@@ -66,13 +66,22 @@
   #storm-badge.rough{color:var(--sand);border-color:rgba(228,179,99,.5)}
   #storm-badge.storm{color:var(--coral);border-color:rgba(239,111,108,.55)}
 
-  select,button{
+  select,button,input[type="datetime-local"]{
     font:inherit;color:var(--foam);background:rgba(234,244,244,.07);
     border:1px solid var(--line);border-radius:10px;padding:9px 12px;
   }
+  input[type="datetime-local"]{color-scheme:dark;font-size:13px}
+  .match-item{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:13px}
+  .match-item .when{font-weight:600}
+  .match-item .h{color:var(--tide)}
+  .match-item button{padding:6px 10px;font-size:12px;border-color:rgba(55,208,192,.45);color:var(--tide)}
   button{cursor:pointer}
   button:focus-visible,select:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .alarmrow{margin-top:14px}
+  .alarmrow button{font-size:12.5px;padding:8px 12px}
+  #alarm-btn{border-color:rgba(55,208,192,.45);color:var(--tide)}
   label{font-size:12px;color:var(--dim)}
 
   #status{font-size:13px;color:var(--dim);text-align:center;padding:26px 10px;line-height:1.6}
@@ -101,12 +110,35 @@
       <div><span class="lbl">Next high</span><b id="next-high" class="mono">–</b></div>
       <div><span class="lbl">Next low</span><b id="next-low" class="mono">–</b></div>
     </div>
+    <div class="row alarmrow" id="alarmrow" style="display:none">
+      <span style="font-size:12px;color:var(--dim)">Low-tide alarm:</span>
+      <button id="alarm-btn">⏰ Set phone alarm</button>
+      <button id="ics-btn">Add to calendar</button>
+      <button id="gcal-btn">Google Calendar</button>
+    </div>
   </section>
 
   <section class="card">
     <div class="eyebrow">Tide curve · next 24 h</div>
     <svg id="chart" viewBox="0 0 360 170" preserveAspectRatio="none" role="img" aria-label="Tide height over the next 24 hours"></svg>
     <div class="legend mono"><span id="t0"></span><span>+12 h</span><span id="t24"></span></div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Match tide</div>
+    <div style="font-size:12.5px;color:var(--dim);line-height:1.5;margin-bottom:10px">
+      Pick a moment (up to a week back) and find when the tide will be like that again.</div>
+    <div class="row">
+      <input type="datetime-local" id="ref-time">
+      <select id="match-mode">
+        <option value="same" selected>Same height</option>
+        <option value="higher">Higher</option>
+        <option value="lower">Lower</option>
+      </select>
+      <button id="match-btn">Find matches</button>
+    </div>
+    <div id="ref-readout" style="font-size:12px;color:var(--dim);margin-top:10px"></div>
+    <div id="match-results"></div>
   </section>
 
   <section class="card">
@@ -159,7 +191,7 @@ Sea level is relative to mean sea level. Sand movement is a model estimate (CERC
 (() => {
 "use strict";
 const $ = id => document.getElementById(id);
-let marine = null, weather = null, lat = null, lon = null;
+let marine = null, weather = null, lat = null, lon = null, nextLow = null;
 
 const fmtTime = iso => new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
 const compass = d => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];
@@ -195,7 +227,7 @@ async function load(){
 
     const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}`
       + `&hourly=sea_level_height_msl,wave_height,wave_direction,wave_period`
-      + `&timezone=auto&forecast_days=3&cell_selection=sea`;
+      + `&timezone=auto&forecast_days=7&past_days=7&cell_selection=sea`;
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
       + `&current=wind_speed_10m,wind_gusts_10m,surface_pressure,precipitation`
       + `&hourly=surface_pressure&past_hours=6&forecast_hours=1&timezone=auto`;
@@ -265,6 +297,9 @@ function render(){
   }
   $('next-high').textContent = nh ? `${fmtTime(h.time[nh])} · ${lvl[nh].toFixed(2)} m` : '–';
   $('next-low').textContent  = nl ? `${fmtTime(h.time[nl])} · ${lvl[nl].toFixed(2)} m` : '–';
+
+  nextLow = nl ? { time: new Date(h.time[nl]), height: lvl[nl] } : null;
+  $('alarmrow').style.display = nextLow ? 'flex' : 'none';
 
   drawChart(i);
   renderStorm(i);
@@ -405,6 +440,153 @@ function sprinkle(dir, mag, storm){
     if(grains.length) raf=requestAnimationFrame(step); };
   step();
 }
+
+/* --- low-tide alarm: .ics file (opens in your calendar with a reminder) or Google Calendar --- */
+const icsStamp = d => d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''); // UTC compact
+function eventBits(){
+  const start = nextLow.time;
+  const end = new Date(start.getTime() + 30*60000);
+  const title = `Low tide · ${nextLow.height.toFixed(2)} m`;
+  const placeName = document.querySelector('#place')?.childNodes[0]?.textContent?.trim() || 'Local beach';
+  return {start, end, title, placeName};
+}
+function downloadIcs(){
+  if(!nextLow) return;
+  const {start, end, title, placeName} = eventBits();
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Shoreline//EN','BEGIN:VEVENT',
+    'UID:'+Date.now()+'@shoreline',
+    'DTSTAMP:'+icsStamp(new Date()),
+    'DTSTART:'+icsStamp(start),
+    'DTEND:'+icsStamp(end),
+    'SUMMARY:'+title,
+    'LOCATION:'+placeName,
+    'DESCRIPTION:Low tide at your beach. Set by Shoreline.',
+    'BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY','DESCRIPTION:Low tide in 30 minutes','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const url = URL.createObjectURL(new Blob([ics], {type:'text/calendar'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'low-tide.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+}
+function openGcal(){
+  if(!nextLow) return;
+  const {start, end, title, placeName} = eventBits();
+  const u = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent(title)
+    + '&dates=' + icsStamp(start) + '/' + icsStamp(end)
+    + '&location=' + encodeURIComponent(placeName)
+    + '&details=' + encodeURIComponent('Low tide at your beach. Set by Shoreline.');
+  window.open(u, '_blank');
+}
+function phoneAlarmAt(t, msg){
+  const uri = 'intent:#Intent;action=android.intent.action.SET_ALARM;'
+    + 'i.android.intent.extra.alarm.HOUR=' + t.getHours() + ';'
+    + 'i.android.intent.extra.alarm.MINUTES=' + t.getMinutes() + ';'
+    + 'S.android.intent.extra.alarm.MESSAGE=' + encodeURIComponent(msg) + ';'
+    + 'b.android.intent.extra.alarm.SKIP_UI=true;'
+    + 'end';
+  window.location.href = uri;
+}
+function setPhoneAlarm(){
+  if(!nextLow) return;
+  // 30-minute lead time before the next low tide
+  const t = new Date(nextLow.time.getTime() - 30*60000);
+  const msg = `Low tide at ${nextLow.time.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})} (${nextLow.height.toFixed(2)} m)`;
+  phoneAlarmAt(t, msg);
+}
+/* --- Match tide: find future moments like a chosen reference --- */
+function heightAt(when){
+  const times = marine.hourly.time, lvl = marine.hourly.sea_level_height_msl;
+  const t = when.getTime();
+  let i = times.findIndex(x => new Date(x).getTime() > t) - 1;
+  if(i < 0 || i >= lvl.length-1 || lvl[i]==null || lvl[i+1]==null) return null;
+  const t0 = new Date(times[i]).getTime(), t1 = new Date(times[i+1]).getTime();
+  const f = (t - t0)/(t1 - t0);
+  return { h: lvl[i] + (lvl[i+1]-lvl[i])*f, rising: lvl[i+1] > lvl[i] };
+}
+const fmtDay = d => d.toLocaleDateString([], {weekday:'short', day:'numeric', month:'short'});
+
+function matchTide(){
+  if(!marine) return;
+  const out = $('match-results'), readout = $('ref-readout');
+  out.innerHTML = '';
+  const raw = $('ref-time').value;
+  if(!raw){ readout.textContent = 'Pick a date and time first.'; return; }
+  const refWhen = new Date(raw);
+  const ref = heightAt(refWhen);
+  if(!ref){ readout.textContent = 'That time is outside the data window (past 7 days to next 7 days).'; return; }
+  const mode = $('match-mode').value;
+  readout.textContent = `Reference: ${fmtDay(refWhen)} ${refWhen.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})} · ${ref.h.toFixed(2)} m ${ref.rising?'▲ rising':'▼ falling'}`;
+
+  const h = marine.hourly, lvl = h.sea_level_height_msl, times = h.time;
+  const start = nowIndex() + 1, TOL = 0.10;
+  const items = [];
+
+  if(mode === 'same'){
+    // find hours within tolerance; keep the best hit per crossing, prefer matching trend
+    let best = null;
+    for(let k = start; k < lvl.length && items.length < 6; k++){
+      if(lvl[k]==null) continue;
+      const diff = Math.abs(lvl[k] - ref.h);
+      if(diff <= TOL){
+        const rising = k+1 < lvl.length && lvl[k+1] > lvl[k];
+        if(!best || diff < best.diff) best = {k, diff, rising};
+      } else if(best){
+        items.push(best); best = null;
+      }
+    }
+    if(best && items.length < 6) items.push(best);
+    if(!items.length){ out.innerHTML = '<div class="match-item">No matching heights in the next 7 days.</div>'; return; }
+    for(const m of items){
+      const when = new Date(times[m.k]);
+      const row = document.createElement('div'); row.className = 'match-item';
+      row.innerHTML = `<span><span class="when">${fmtDay(when)} ${fmtTime(times[m.k])}</span><br>
+        <span class="h">${lvl[m.k].toFixed(2)} m ${m.rising?'▲':'▼'}${m.rising===ref.rising?'':' (opposite trend)'}</span></span>`;
+      const b = document.createElement('button'); b.textContent = '⏰';
+      b.setAttribute('aria-label','Set alarm 30 minutes before');
+      b.addEventListener('click', () => phoneAlarmAt(new Date(when.getTime()-30*60000),
+        `Tide match ${lvl[m.k].toFixed(2)} m at ${fmtTime(times[m.k])}`));
+      row.appendChild(b); out.appendChild(row);
+    }
+  } else {
+    // higher/lower: cluster consecutive qualifying hours into windows
+    const ok = k => lvl[k]!=null && (mode==='higher' ? lvl[k] >= ref.h + TOL : lvl[k] <= ref.h - TOL);
+    let winStart = null, extreme = null;
+    const windows = [];
+    for(let k = start; k <= lvl.length; k++){
+      if(k < lvl.length && ok(k)){
+        if(winStart===null){ winStart = k; extreme = lvl[k]; }
+        else extreme = mode==='higher' ? Math.max(extreme, lvl[k]) : Math.min(extreme, lvl[k]);
+      } else if(winStart!==null){
+        windows.push({a: winStart, b: k-1, extreme}); winStart = null;
+        if(windows.length >= 6) break;
+      }
+    }
+    if(!windows.length){ out.innerHTML = `<div class="match-item">No ${mode} tides than ${ref.h.toFixed(2)} m in the next 7 days.</div>`; return; }
+    for(const w of windows){
+      const wa = new Date(times[w.a]);
+      const row = document.createElement('div'); row.className = 'match-item';
+      row.innerHTML = `<span><span class="when">${fmtDay(wa)} ${fmtTime(times[w.a])} – ${fmtTime(times[w.b])}</span><br>
+        <span class="h">${mode==='higher'?'up to':'down to'} ${w.extreme.toFixed(2)} m</span></span>`;
+      const b = document.createElement('button'); b.textContent = '⏰';
+      b.setAttribute('aria-label','Set alarm 30 minutes before window opens');
+      b.addEventListener('click', () => phoneAlarmAt(new Date(wa.getTime()-30*60000),
+        `Tide ${mode} than ${ref.h.toFixed(2)} m from ${fmtTime(times[w.a])}`));
+      row.appendChild(b); out.appendChild(row);
+    }
+  }
+}
+$('match-btn').addEventListener('click', matchTide);
+// default the picker to right now (local time)
+(function(){
+  const n = new Date(); n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+  $('ref-time').value = n.toISOString().slice(0,16);
+})();
+
+$('alarm-btn').addEventListener('click', setPhoneAlarm);
+$('ics-btn').addEventListener('click', downloadIcs);
+$('gcal-btn').addEventListener('click', openGcal);
 
 $('facing').addEventListener('change',()=>marine&&render());
 $('refresh').addEventListener('click',()=>lat!=null?load():locate());
