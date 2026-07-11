@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Courtside — Netball Scorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --panel: rgba(10,14,24,.84);
+    --panel-soft: rgba(10,14,24,.6);
+    --ink:#F4F7FB;
+    --ink-dim:#9AA7B8;
+    --bib:#FFD447;          /* my-team bib yellow */
+    --bib-ink:#1A1400;
+    --opp:#EDF2F7;           /* opposition white bib */
+    --opp-ink:#101623;
+    --good:#2FD98B;
+    --bad:#FF5D73;
+    --line: rgba(255,255,255,.14);
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',system-ui,sans-serif;color:var(--ink);
+    background: radial-gradient(120% 90% at 50% 0%, #1E4D5C 0%, #10222E 55%, #0A121B 100%);
+    overflow:hidden;
+  }
+  #camWrap{position:fixed;inset:0;z-index:0;background:transparent}
+  #cam{width:100%;height:100%;object-fit:cover;display:none}
+  #courtLines{position:absolute;inset:0;opacity:.12;pointer-events:none}
+  .screen{position:fixed;inset:0;z-index:2;display:none;flex-direction:column;overflow-y:auto;padding:max(14px,env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom))}
+  .screen.on{display:flex}
+  .disp{font-family:'Barlow Condensed',sans-serif;letter-spacing:.02em}
+  h1.disp{font-size:44px;font-weight:800;line-height:.95;text-transform:uppercase}
+  h2.disp{font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .sub{color:var(--ink-dim);font-size:13.5px;line-height:1.45;margin-top:8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;backdrop-filter:blur(10px)}
+  .stack>*+*{margin-top:12px}
+  label.f{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px}
+  input[type=text],select{
+    width:100%;background:rgba(255,255,255,.07);border:1px solid var(--line);
+    border-radius:10px;color:var(--ink);font:600 16px 'Inter',sans-serif;padding:12px;outline:none;
+    -webkit-appearance:none;appearance:none;
+  }
+  input:focus,select:focus{border-color:var(--bib)}
+  select{background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
+    background-position:calc(100% - 18px) 55%,calc(100% - 13px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+  button{font-family:'Inter',sans-serif;border:none;cursor:pointer}
+  .btn{width:100%;padding:15px;border-radius:12px;font-weight:700;font-size:16px;background:var(--bib);color:var(--bib-ink)}
+  .btn.ghost{background:rgba(255,255,255,.08);color:var(--ink);border:1px solid var(--line)}
+  .btn:disabled{opacity:.35}
+  .btn:focus-visible,.tapbtn:focus-visible{outline:2px solid var(--bib);outline-offset:2px}
+  .row{display:flex;gap:10px;align-items:center}
+  .grow{flex:1}
+
+  /* Signature: bib chip */
+  .bibchip{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:44px;height:40px;border-radius:9px 9px 13px 13px;
+    font-family:'Barlow Condensed';font-weight:800;font-size:19px;
+    background:var(--bib);color:var(--bib-ink);flex:none;
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);
+  }
+  .bibchip.opp{background:var(--opp);color:var(--opp-ink)}
+  .bibchip.sm{width:34px;height:31px;font-size:15px;border-radius:7px 7px 10px 10px}
+
+  /* roster */
+  .plist{list-style:none}
+  .plist li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-weight:600}
+  .plist li:last-child{border:none}
+  .del{background:none;color:var(--ink-dim);font-size:20px;padding:4px 8px}
+
+  /* lineup */
+  .posrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .posrow:last-child{border:none}
+  .posname{width:118px;font-size:12px;color:var(--ink-dim);font-weight:600}
+
+  /* LIVE */
+  #live{padding:0;justify-content:space-between}
+  .topbar{margin:max(10px,env(safe-area-inset-top)) 10px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;backdrop-filter:blur(10px)}
+  .sb{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+  .teamName{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .score{font-family:'Barlow Condensed';font-weight:800;font-size:56px;line-height:1}
+  .mid{text-align:center}
+  .qtag{font-family:'Barlow Condensed';font-weight:700;font-size:18px;letter-spacing:.1em;color:var(--bib)}
+  .clock{font-family:'Barlow Condensed';font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+  .clock.low{color:var(--bad)}
+  .tR{text-align:right}
+  .ministrip{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+  .chipbtn{background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--ink);font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:999px}
+
+  .feed{margin:8px 10px;display:flex;flex-direction:column;gap:5px;max-height:26vh;overflow:hidden;justify-content:flex-end}
+  .ev{align-self:flex-start;background:var(--panel-soft);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;backdrop-filter:blur(6px)}
+  .ev b{color:var(--bib)}
+  .ev.opp{align-self:flex-end}
+  .ev.opp b{color:var(--opp)}
+  .ev.miss b{color:var(--bad)}
+
+  .pad{margin:0 10px calc(10px + env(safe-area-inset-bottom));background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;backdrop-filter:blur(10px)}
+  .padgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .col h3{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:8px;text-align:center}
+  .tapbtn{
+    width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;
+    background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--ink);
+    font-weight:700;font-size:15px;margin-bottom:8px;text-align:left;
+  }
+  .tapbtn:last-child{margin-bottom:0}
+  .tapbtn .who{flex:1;min-width:0}
+  .tapbtn .who small{display:block;font-weight:500;font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gm{display:flex;gap:6px}
+  .gm span{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;font-family:'Barlow Condensed';font-weight:800;font-size:17px}
+  .goal .gm .g{background:var(--good);color:#03210F}
+  .miss-ind{background:rgba(255,93,115,.2);color:var(--bad);border:1px solid rgba(255,93,115,.4)}
+  .padfoot{display:flex;gap:8px;margin-top:10px}
+  .padfoot .btn{padding:12px;font-size:14px}
+
+  /* stats */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);text-align:left;padding:6px 6px;border-bottom:1px solid var(--line)}
+  td{padding:8px 6px;border-bottom:1px solid var(--line);font-weight:500}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .big{font-family:'Barlow Condensed';font-weight:800;font-size:40px;line-height:1}
+  .final{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;text-align:center;gap:8px}
+  .banner{font-family:'Barlow Condensed';font-weight:700;font-size:16px;letter-spacing:.14em;text-transform:uppercase;color:var(--bib);text-align:center}
+  .note{font-size:11.5px;color:var(--ink-dim);line-height:1.5}
+  @media (prefers-reduced-motion:no-preference){
+    .ev{animation:pop .18s ease-out}
+    @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+  }
+</style>
+</head>
+<body>
+
+<div id="camWrap">
+  <video id="cam" autoplay playsinline muted></video>
+  <svg id="courtLines" viewBox="0 0 100 160" preserveAspectRatio="xMidYMid slice">
+    <g fill="none" stroke="#fff" stroke-width=".6">
+      <rect x="8" y="8" width="84" height="144"/>
+      <line x1="8" y1="56" x2="92" y2="56"/><line x1="8" y1="104" x2="92" y2="104"/>
+      <circle cx="50" cy="80" r="7"/><path d="M8 8 h84 M8 8 a30 30 0 0 0 84 0" transform="translate(0,0)"/>
+      <path d="M20 8 a30 30 0 0 0 60 0"/><path d="M20 152 a30 30 0 0 1 60 0"/>
+    </g>
+  </svg>
+</div>
+
+<!-- SETUP -->
+<section class="screen on" id="setup">
+  <div class="stack">
+    <div>
+      <h1 class="disp">Court<span style="color:var(--bib)">side</span></h1>
+      <p class="sub">Point your phone at the game. Score with one tap per goal, rotate bibs each quarter, and the stats build themselves.</p>
+    </div>
+    <div class="card stack">
+      <div><label class="f" for="tName">Your team</label><input type="text" id="tName" value="My Team" maxlength="18"></div>
+      <div><label class="f" for="oName">Opposition</label><input type="text" id="oName" value="Opposition" maxlength="18"></div>
+      <div><label class="f" for="qLen">Quarter length</label>
+        <select id="qLen"><option value="10">10 minutes</option><option value="12">12 minutes</option><option value="15" selected>15 minutes</option></select>
+      </div>
+    </div>
+    <div class="card">
+      <label class="f" for="pName">Squad (7–12 players)</label>
+      <div class="row"><input type="text" id="pName" class="grow" placeholder="Player name" maxlength="18"><button class="btn" style="width:auto;padding:12px 18px" id="addP">Add</button></div>
+      <ul class="plist" id="plist"></ul>
+    </div>
+    <button class="btn" id="toLineup" disabled>Set Q1 bibs</button>
+    <p class="note">Camera is used as a live viewfinder only — nothing is recorded or uploaded. Scores and stats are kept on this screen for the session.</p>
+  </div>
+</section>
+
+<!-- LINEUP -->
+<section class="screen" id="lineup">
+  <div class="stack">
+    <h2 class="disp" id="luTitle">Quarter 1 bibs</h2>
+    <p class="sub">Hand out the bibs, then match them here. Time in each position is tracked per quarter.</p>
+    <div class="card" id="posrows"></div>
+    <button class="btn" id="luGo">Start quarter</button>
+    <button class="btn ghost" id="luBack" style="display:none">Back to live</button>
+  </div>
+</section>
+
+<!-- LIVE -->
+<section class="screen" id="live">
+  <div class="topbar">
+    <div class="sb">
+      <div><div class="teamName" id="sbT"></div><div class="score" id="sbTS">0</div></div>
+      <div class="mid"><div class="qtag" id="sbQ">Q1</div><div class="clock" id="sbClock">15:00</div></div>
+      <div class="tR"><div class="teamName" id="sbO"></div><div class="score" id="sbOS">0</div></div>
+    </div>
+    <div class="ministrip">
+      <button class="chipbtn" id="timerBtn">Start clock</button>
+      <button class="chipbtn" id="bibsBtn">Bibs</button>
+      <button class="chipbtn" id="undoBtn">Undo</button>
+      <button class="chipbtn" id="endQBtn">End Q1</button>
+    </div>
+  </div>
+  <div class="feed" id="feed" aria-live="polite"></div>
+  <div class="pad">
+    <div class="padgrid">
+      <div class="col"><h3 id="padT">My team</h3><div id="myShooters"></div></div>
+      <div class="col"><h3 id="padO">Opposition</h3>
+        <button class="tapbtn goal" id="oppGoal"><span class="bibchip opp sm">GS</span><span class="who">Goal<small>either shooter</small></span><span class="gm"><span class="g">+1</span></span></button>
+        <button class="tapbtn" id="oppMiss"><span class="bibchip opp sm">GA</span><span class="who">Miss<small>attempt only</small></span><span class="gm"><span class="miss-ind">✕</span></span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="screen" id="stats">
+  <div class="stack">
+    <div class="banner" id="stBanner">Full time</div>
+    <div class="card final">
+      <div><div class="teamName" id="stT"></div><div class="big" id="stTS">0</div></div>
+      <div class="qtag" style="font-size:22px">—</div>
+      <div><div class="teamName" id="stO"></div><div class="big" id="stOS">0</div></div>
+    </div>
+    <div class="card"><h2 class="disp" style="margin-bottom:8px">Score by quarter</h2><table id="qTable"></table></div>
+    <div class="card"><h2 class="disp" style="margin-bottom:8px">Shooting</h2><table id="shootTable"></table></div>
+    <div class="card"><h2 class="disp" style="margin-bottom:8px">Court time</h2><table id="timeTable"></table>
+      <p class="note" style="margin-top:8px">Minutes are based on bib assignments per quarter.</p></div>
+    <button class="btn ghost" id="backLive">Back to game</button>
+    <button class="btn" id="newGame">New game</button>
+  </div>
+</section>
+
+<script>
+const POS=["GS","GA","WA","C","WD","GD","GK"];
+const POSNAME={GS:"Goal Shooter",GA:"Goal Attack",WA:"Wing Attack",C:"Centre",WD:"Wing Defence",GD:"Goal Defence",GK:"Goal Keeper"};
+const $=id=>document.getElementById(id);
+const S={players:[],teamName:"My Team",oppName:"Opposition",qLen:15,quarter:1,lineups:{},events:[],clock:0,running:false,tick:null,finished:false};
+
+/* camera */
+(async()=>{try{
+  const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+  const v=$("cam");v.srcObject=st;v.style.display="block";$("courtLines").style.opacity=".05";
+}catch(e){/* fallback court backdrop stays */}})();
+
+/* setup */
+function drawRoster(){
+  $("plist").innerHTML=S.players.map((p,i)=>`<li><span class="bibchip sm">${p.slice(0,2).toUpperCase()}</span><span class="grow">${esc(p)}</span><button class="del" data-i="${i}" aria-label="Remove ${esc(p)}">✕</button></li>`).join("");
+  $("toLineup").disabled=S.players.length<7;
+  $("toLineup").textContent=S.players.length<7?`Set Q1 bibs (${S.players.length}/7 players)`:"Set Q1 bibs";
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+$("addP").onclick=()=>{const v=$("pName").value.trim();if(!v||S.players.length>=12)return;S.players.push(v);$("pName").value="";drawRoster();$("pName").focus()};
+$("pName").addEventListener("keydown",e=>{if(e.key==="Enter")$("addP").click()});
+$("plist").onclick=e=>{const b=e.target.closest(".del");if(b){S.players.splice(+b.dataset.i,1);drawRoster()}};
+drawRoster();
+$("toLineup").onclick=()=>{
+  S.teamName=$("tName").value.trim()||"My Team";S.oppName=$("oName").value.trim()||"Opposition";
+  S.qLen=+$("qLen").value;S.clock=S.qLen*60;openLineup(false);
+};
+
+/* lineup */
+function openLineup(fromLive){
+  $("luTitle").textContent=`Quarter ${S.quarter} bibs`;
+  $("luBack").style.display=fromLive?"block":"none";
+  $("luGo").textContent=fromLive?"Update bibs":"Start quarter";
+  const prev=S.lineups[S.quarter]||S.lineups[S.quarter-1]||{};
+  $("posrows").innerHTML=POS.map(p=>`
+    <div class="posrow"><span class="bibchip">${p}</span><span class="posname">${POSNAME[p]}</span>
+    <select class="grow" data-pos="${p}"><option value="">— off court —</option>
+    ${S.players.map((pl,i)=>`<option value="${i}" ${prev[p]===i?"selected":""}>${esc(pl)}</option>`).join("")}</select></div>`).join("");
+  show("lineup");
+}
+$("luGo").onclick=()=>{
+  const lu={};let used=new Set(),dup=false;
+  document.querySelectorAll("#posrows select").forEach(s=>{if(s.value!==""){const i=+s.value;if(used.has(i))dup=true;used.add(i);lu[s.dataset.pos]=i}});
+  if(dup){alert("One player is in two positions — check the bibs.");return}
+  S.lineups[S.quarter]=lu;drawLive();show("live");
+};
+$("luBack").onclick=()=>show("live");
+$("bibsBtn").onclick=()=>openLineup(true);
+
+/* live */
+function myScore(){return S.events.filter(e=>e.team==="my"&&e.goal).length}
+function oppScore(){return S.events.filter(e=>e.team==="opp"&&e.goal).length}
+function fmt(t){return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`}
+function drawLive(){
+  $("sbT").textContent=S.teamName;$("sbO").textContent=S.oppName;
+  $("padT").textContent=S.teamName;$("padO").textContent=S.oppName;
+  $("sbTS").textContent=myScore();$("sbOS").textContent=oppScore();
+  $("sbQ").textContent="Q"+S.quarter;$("endQBtn").textContent=S.quarter<4?`End Q${S.quarter}`:"Full time";
+  const c=$("sbClock");c.textContent=fmt(S.clock);c.classList.toggle("low",S.clock<=60&&S.clock>0);
+  $("timerBtn").textContent=S.running?"Pause":(S.clock===S.qLen*60?"Start clock":"Resume");
+  const lu=S.lineups[S.quarter]||{};
+  $("myShooters").innerHTML=["GS","GA"].map(p=>{
+    const pl=lu[p]!==undefined?S.players[lu[p]]:null;
+    return `<button class="tapbtn goal" data-pos="${p}" data-r="goal" ${pl?"":"disabled"}>
+      <span class="bibchip sm">${p}</span><span class="who">Goal<small>${pl?esc(pl):"no player"}</small></span>
+      <span class="gm"><span class="g">+1</span></span></button>
+    <button class="tapbtn" data-pos="${p}" data-r="miss" ${pl?"":"disabled"}>
+      <span class="bibchip sm">${p}</span><span class="who">Miss<small>${pl?esc(pl):"no player"}</small></span>
+      <span class="gm"><span class="miss-ind">✕</span></span></button>`;
+  }).join("");
+}
+$("myShooters").onclick=e=>{
+  const b=e.target.closest(".tapbtn");if(!b||b.disabled)return;
+  const pos=b.dataset.pos,goal=b.dataset.r==="goal",lu=S.lineups[S.quarter];
+  addEvent({team:"my",pos,player:lu[pos],goal,q:S.quarter,t:S.qLen*60-S.clock});
+};
+$("oppGoal").onclick=()=>addEvent({team:"opp",goal:true,q:S.quarter,t:S.qLen*60-S.clock});
+$("oppMiss").onclick=()=>addEvent({team:"opp",goal:false,q:S.quarter,t:S.qLen*60-S.clock});
+function addEvent(ev){
+  S.events.push(ev);
+  const who=ev.team==="my"?`${ev.pos} ${esc(S.players[ev.player]||"")}`:S.oppName;
+  const el=document.createElement("div");
+  el.className="ev"+(ev.team==="opp"?" opp":"")+(ev.goal?"":" miss");
+  el.innerHTML=`<b>${ev.goal?"GOAL":"Miss"}</b> · ${who} · Q${ev.q} ${fmt(ev.t)}`;
+  $("feed").appendChild(el);
+  while($("feed").children.length>6)$("feed").firstChild.remove();
+  drawLive();
+}
+$("undoBtn").onclick=()=>{if(S.events.length){S.events.pop();if($("feed").lastChild)$("feed").lastChild.remove();drawLive()}};
+$("timerBtn").onclick=()=>{
+  if(S.running){clearInterval(S.tick);S.running=false}
+  else{S.running=true;S.tick=setInterval(()=>{if(S.clock>0){S.clock--;drawLive()}else{clearInterval(S.tick);S.running=false;drawLive()}},1000)}
+  drawLive();
+};
+$("endQBtn").onclick=()=>{
+  clearInterval(S.tick);S.running=false;
+  if(S.quarter<4){
+    if(!confirm(`End quarter ${S.quarter}?`))return;
+    S.quarter++;S.clock=S.qLen*60;openLineup(false);
+  }else{
+    if(!confirm("Call full time?"))return;
+    S.finished=true;drawStats(true);show("stats");
+  }
+};
+
+/* stats */
+function drawStats(final){
+  $("stBanner").textContent=final?"Full time":`In progress — Q${S.quarter}`;
+  $("stT").textContent=S.teamName;$("stO").textContent=S.oppName;
+  $("stTS").textContent=myScore();$("stOS").textContent=oppScore();
+  let rows=`<tr><th></th>${[1,2,3,4].map(q=>`<th class="num">Q${q}</th>`).join("")}<th class="num">Tot</th></tr>`;
+  for(const side of["my","opp"]){
+    const name=side==="my"?S.teamName:S.oppName;
+    const per=[1,2,3,4].map(q=>S.events.filter(e=>e.team===side&&e.goal&&e.q===q).length);
+    rows+=`<tr><td>${esc(name)}</td>${per.map(n=>`<td class="num">${n}</td>`).join("")}<td class="num"><b>${per.reduce((a,b)=>a+b,0)}</b></td></tr>`;
+  }
+  $("qTable").innerHTML=rows;
+  // shooting
+  const sh={};
+  S.events.filter(e=>e.team==="my").forEach(e=>{
+    const k=e.player;sh[k]=sh[k]||{g:0,a:0};sh[k].a++;if(e.goal)sh[k].g++;
+  });
+  let st=`<tr><th>Player</th><th class="num">Goals</th><th class="num">Att</th><th class="num">%</th></tr>`;
+  const keys=Object.keys(sh).sort((a,b)=>sh[b].g-sh[a].g);
+  st+=keys.length?keys.map(k=>`<tr><td>${esc(S.players[k])}</td><td class="num">${sh[k].g}</td><td class="num">${sh[k].a}</td><td class="num">${Math.round(100*sh[k].g/sh[k].a)}%</td></tr>`).join(""):`<tr><td colspan="4" class="note">No shots recorded yet.</td></tr>`;
+  $("shootTable").innerHTML=st;
+  // court time
+  const tm=S.players.map(()=>({min:0,pos:{}}));
+  for(let q=1;q<=4;q++){const lu=S.lineups[q];if(!lu)continue;
+    for(const p of POS){if(lu[p]!==undefined){tm[lu[p]].min+=S.qLen;tm[lu[p]].pos[p]=(tm[lu[p]].pos[p]||0)+1}}}
+  let tt=`<tr><th>Player</th><th>Positions (qtrs)</th><th class="num">Min</th></tr>`;
+  tt+=S.players.map((p,i)=>{
+    const ps=Object.entries(tm[i].pos).map(([k,v])=>`${k}×${v}`).join(" · ")||"—";
+    return `<tr><td>${esc(p)}</td><td>${ps}</td><td class="num">${tm[i].min}</td></tr>`;
+  }).join("");
+  $("timeTable").innerHTML=tt;
+  $("backLive").style.display=final?"none":"block";
+}
+$("backLive").onclick=()=>show("live");
+$("newGame").onclick=()=>{if(confirm("Start a new game? This clears the current one.")){location.reload()}};
+
+/* nav + long-press score to open stats */
+$("sbQ").parentElement.addEventListener("dblclick",()=>{drawStats(S.finished);show("stats")});
+let hold;document.querySelector(".topbar").addEventListener("touchstart",()=>{hold=setTimeout(()=>{drawStats(S.finished);show("stats")},700)},{passive:true});
+document.querySelector(".topbar").addEventListener("touchend",()=>clearTimeout(hold));
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$(id).classList.add("on")}
+</script>
+</body>
+</html>
