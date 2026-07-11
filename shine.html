@@ -29,7 +29,8 @@
   header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:14px}
   h1{font-size:17px;font-weight:700;letter-spacing:.02em}
   h1 span{color:var(--tide)}
-  #place{font-size:12px;color:var(--dim);text-align:right;max-width:55%;line-height:1.35}
+  #place{font-size:13px;text-align:right;max-width:58%;line-height:1.35}
+  #place small{display:block;font-size:10.5px;color:var(--dim)}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
   .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 
@@ -53,8 +54,18 @@
   #drift-sub{font-size:12.5px;color:var(--dim);margin-top:4px;line-height:1.5}
   .meter{height:6px;border-radius:3px;background:var(--line);margin-top:10px;overflow:hidden}
   .meter i{display:block;height:100%;width:0;background:var(--sand);border-radius:3px;transition:width .6s}
+  .meter i.storm{background:var(--coral)}
+  .erosion{display:none;margin-top:10px;padding:10px 12px;border:1px solid rgba(239,111,108,.45);
+    border-radius:12px;font-size:12.5px;line-height:1.5;color:#ffd9d8;background:rgba(239,111,108,.08)}
+  .erosion.show{display:block}
 
-  /* orientation control */
+  /* storm card */
+  #storm-badge{display:inline-block;font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;
+    border:1px solid var(--line);margin-bottom:12px}
+  #storm-badge.calm{color:var(--tide);border-color:rgba(55,208,192,.4)}
+  #storm-badge.rough{color:var(--sand);border-color:rgba(228,179,99,.5)}
+  #storm-badge.storm{color:var(--coral);border-color:rgba(239,111,108,.55)}
+
   select,button{
     font:inherit;color:var(--foam);background:rgba(234,244,244,.07);
     border:1px solid var(--line);border-radius:10px;padding:9px 12px;
@@ -68,16 +79,15 @@
   #status.err{color:var(--coral)}
   .wavegrid{display:flex;gap:10px;margin-top:2px}
   .wavegrid div{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-  .wavegrid b{display:block;font-size:16px;margin-top:2px}
-  .wavegrid .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .wavegrid b{display:block;font-size:15px;margin-top:2px}
+  .wavegrid .lbl{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
   footer{font-size:10.5px;color:var(--dim);text-align:center;margin-top:16px;line-height:1.6}
-  @media (prefers-reduced-motion: reduce){ .grain{animation:none!important} }
 </style>
 </head>
 <body>
 <header>
   <h1>Shore<span>line</span></h1>
-  <div id="place" class="mono">locating…</div>
+  <div id="place"><small class="mono">locating…</small></div>
 </header>
 
 <div id="status">Requesting your location…<br>Allow location access to load your local beach.</div>
@@ -100,11 +110,12 @@
   </section>
 
   <section class="card">
-    <div class="eyebrow">Sand movement · longshore drift</div>
+    <div class="eyebrow">Sand movement</div>
     <svg id="beach" viewBox="0 0 360 150" preserveAspectRatio="none" aria-hidden="true"></svg>
     <div id="drift-label">–</div>
     <div class="meter"><i id="drift-meter"></i></div>
     <div id="drift-sub">Estimated from wave height, period and approach angle.</div>
+    <div class="erosion" id="erosion">⚠ Storm-energy waves are pulling sand <b>offshore</b> — expect the beach to narrow and steepen until conditions ease.</div>
     <div class="row" style="margin-top:14px">
       <label for="facing">My beach faces</label>
       <select id="facing">
@@ -114,6 +125,17 @@
         <option value="270" selected>West</option><option value="315">North-west</option>
       </select>
     </div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Storm watch</div>
+    <span id="storm-badge" class="calm">–</span>
+    <div class="wavegrid">
+      <div><span class="lbl">Wind</span><b id="wind" class="mono">–</b></div>
+      <div><span class="lbl">Gusts</span><b id="gusts" class="mono">–</b></div>
+      <div><span class="lbl">Pressure</span><b id="pressure" class="mono">–</b></div>
+    </div>
+    <div id="storm-sub" style="font-size:12.5px;color:var(--dim);margin-top:10px;line-height:1.5"></div>
   </section>
 
   <section class="card">
@@ -130,14 +152,14 @@
   </div>
 </div>
 
-<footer>Data: Open-Meteo Marine API. Sea level is relative to mean sea level.<br>
-Sand drift is a model estimate (CERC-type), not a survey measurement.</footer>
+<footer>Data: Open-Meteo Marine &amp; Weather APIs · Place names: BigDataCloud.<br>
+Sea level is relative to mean sea level. Sand movement is a model estimate (CERC-type), not a survey measurement.</footer>
 
 <script>
 (() => {
 "use strict";
 const $ = id => document.getElementById(id);
-let data = null, lat = null, lon = null;
+let marine = null, weather = null, lat = null, lon = null;
 
 const fmtTime = iso => new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
 const compass = d => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];
@@ -153,21 +175,40 @@ async function locate(){
   );
 }
 
+async function reverseGeocode(){
+  try{
+    const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+    if(!r.ok) throw 0;
+    const g = await r.json();
+    const name = g.locality || g.city || g.principalSubdivision || '';
+    $('place').innerHTML = (name ? name : 'Your coast')
+      + `<small class="mono">${lat.toFixed(3)}°, ${lon.toFixed(3)}°</small>`;
+  }catch(e){
+    $('place').innerHTML = `Your coast<small class="mono">${lat.toFixed(3)}°, ${lon.toFixed(3)}°</small>`;
+  }
+}
+
 async function load(){
   try{
     $('status').className=''; $('status').style.display='block';
-    $('status').textContent = 'Loading tide and wave data…';
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}`
+    $('status').textContent = 'Loading tide, wave and storm data…';
+
+    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}`
       + `&hourly=sea_level_height_msl,wave_height,wave_direction,wave_period`
       + `&timezone=auto&forecast_days=3&cell_selection=sea`;
-    const r = await fetch(url);
-    if(!r.ok) throw new Error('API '+r.status);
-    data = await r.json();
-    if(!data.hourly || !data.hourly.sea_level_height_msl || data.hourly.sea_level_height_msl.every(v=>v==null)){
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + `&current=wind_speed_10m,wind_gusts_10m,surface_pressure,precipitation`
+      + `&hourly=surface_pressure&past_hours=6&forecast_hours=1&timezone=auto`;
+
+    const [mr, wr] = await Promise.all([fetch(marineUrl), fetch(weatherUrl)]);
+    if(!mr.ok) throw new Error('marine '+mr.status);
+    marine = await mr.json();
+    weather = wr.ok ? await wr.json() : null;
+    reverseGeocode(); // fills in place name asynchronously
+
+    if(!marine.hourly || !marine.hourly.sea_level_height_msl || marine.hourly.sea_level_height_msl.every(v=>v==null)){
       return fail('No tide data for this spot — it may be too far inland.<br>Try again from (or nearer to) the coast.');
     }
-    // reverse-geocode-ish label: just coords
-    $('place').textContent = `${lat.toFixed(3)}°, ${lon.toFixed(3)}°`;
     render();
     $('status').style.display='none';
     $('app').style.display='block';
@@ -177,17 +218,34 @@ async function load(){
 }
 
 function nowIndex(){
-  const times = data.hourly.time;
+  const times = marine.hourly.time;
   const now = Date.now();
   let i = times.findIndex(t => new Date(t).getTime() > now) - 1;
   return Math.max(0, i);
 }
 
+/* Storm index 0..1 from gusts, sustained wind and wave height */
+function stormState(i){
+  const wh = marine.hourly.wave_height[i] || 0;
+  const wind = weather?.current?.wind_speed_10m ?? 0;   // km/h
+  const gust = weather?.current?.wind_gusts_10m ?? 0;   // km/h
+  const s = Math.min(1, (gust/85)*0.45 + (wind/60)*0.25 + (wh/4)*0.30 + Math.max(0,(wh-2.5)/4)*0.3);
+  const level = s>0.62 ? 'storm' : s>0.35 ? 'rough' : 'calm';
+  return {s, level, wind, gust, wh};
+}
+
+function pressureTrend(){
+  const hp = weather?.hourly?.surface_pressure;
+  if(!hp || hp.length<2) return null;
+  const d = hp[hp.length-1] - hp[0];          // change over ~6 h
+  return d;
+}
+
 function render(){
-  const h = data.hourly, i = nowIndex();
+  const h = marine.hourly, i = nowIndex();
   const lvl = h.sea_level_height_msl;
 
-  // interpolate current height
+  // interpolate current height between hourly points
   const t0 = new Date(h.time[i]).getTime(), t1 = new Date(h.time[i+1]).getTime();
   const f = Math.min(1, Math.max(0, (Date.now()-t0)/(t1-t0)));
   const cur = lvl[i] + (lvl[i+1]-lvl[i])*f;
@@ -198,7 +256,7 @@ function render(){
   tr.textContent = rising ? '▲ Rising' : '▼ Falling';
   tr.className = rising ? '' : 'falling';
 
-  // next high / low: local extrema after now
+  // next high / low
   let nh=null, nl=null;
   for(let k=i+1;k<lvl.length-1;k++){
     if(nh===null && lvl[k]>=lvl[k-1] && lvl[k]>lvl[k+1]) nh=k;
@@ -209,6 +267,7 @@ function render(){
   $('next-low').textContent  = nl ? `${fmtTime(h.time[nl])} · ${lvl[nl].toFixed(2)} m` : '–';
 
   drawChart(i);
+  renderStorm(i);
   drawDrift(i);
 
   const wh=h.wave_height[i], wp=h.wave_period[i], wd=h.wave_direction[i];
@@ -217,8 +276,32 @@ function render(){
   $('wd').textContent = wd!=null ? compass(wd)+' '+Math.round(wd)+'°' : '–';
 }
 
+function renderStorm(i){
+  const st = stormState(i);
+  const badge = $('storm-badge');
+  const names = {calm:'Calm conditions', rough:'Rough conditions', storm:'Storm conditions'};
+  badge.textContent = names[st.level];
+  badge.className = st.level;
+
+  $('wind').textContent  = weather?.current ? Math.round(st.wind)+' km/h'  : '–';
+  $('gusts').textContent = weather?.current ? Math.round(st.gust)+' km/h' : '–';
+
+  const p = weather?.current?.surface_pressure;
+  const dp = pressureTrend();
+  let ptxt = p!=null ? Math.round(p)+' hPa' : '–';
+  if(dp!=null && p!=null) ptxt += dp<=-2 ? ' ↓' : dp>=2 ? ' ↑' : ' →';
+  $('pressure').textContent = ptxt;
+
+  let sub = '';
+  if(st.level==='storm') sub = 'High wind and wave energy. Expect surge on top of the tide and rapid beach change.';
+  else if(st.level==='rough') sub = 'Elevated wind and waves — more sand on the move than usual.';
+  else sub = 'Low storm energy. Sand movement is driven mainly by everyday wave angle.';
+  if(dp!=null && dp<=-3) sub += ' Pressure is falling — conditions may deteriorate over the next hours.';
+  $('storm-sub').textContent = sub;
+}
+
 function drawChart(i){
-  const h=data.hourly, lvl=h.sea_level_height_msl;
+  const h=marine.hourly, lvl=h.sea_level_height_msl;
   const N=25, W=360, H=170, pad=14;
   const seg = lvl.slice(i, i+N);
   const min=Math.min(...seg), max=Math.max(...seg), span=(max-min)||1;
@@ -241,51 +324,52 @@ function drawChart(i){
 }
 
 function drawDrift(i){
-  const h=data.hourly;
+  const h=marine.hourly;
   const wh=h.wave_height[i], wp=h.wave_period[i]||8, wd=h.wave_direction[i];
-  const facing = parseFloat($('facing').value);       // direction beach faces (toward sea)
+  const facing = parseFloat($('facing').value);
   const label=$('drift-label'), sub=$('drift-sub'), meter=$('drift-meter');
+  const st = stormState(i);
 
   if(wh==null || wd==null){
     label.textContent='No wave data here';
-    sub.textContent='Sand drift can’t be estimated without wave data.';
-    meter.style.width='0'; sprinkle(0,0); return;
+    sub.textContent='Sand drift can\u2019t be estimated without wave data.';
+    meter.style.width='0'; $('erosion').className='erosion'; sprinkle(0,0); return;
   }
-  // angle between wave approach (coming FROM wd, travelling wd+180) and shore-normal (facing)
-  let alpha = ((wd - facing + 540) % 360) - 180;      // -180..180; sign = which side waves arrive from
+  let alpha = ((wd - facing + 540) % 360) - 180;
   const a = Math.max(-90, Math.min(90, alpha));
-  // CERC-type relative transport: Q ∝ H^2.5 · sin(2α); period nudges energy
-  const q = Math.pow(wh,2.5) * Math.sin(2*a*Math.PI/180) * (wp/8);
-  const mag = Math.min(1, Math.abs(q)/6);             // normalise to 0..1
-  // Facing the sea: waves from your LEFT push sand RIGHT along the beach
+  // CERC-type relative transport, amplified by storm energy
+  const q = Math.pow(wh,2.5) * Math.sin(2*a*Math.PI/180) * (wp/8) * (1 + st.s);
+  const mag = Math.min(1, Math.abs(q)/6);
   const dirRight = a > 0 ? false : true;
-  // translate to compass along-shore direction
   const alongBearing = (facing + (dirRight ? 90 : -90) + 360) % 360;
 
   const strength = mag<0.08 ? 'minimal' : mag<0.3 ? 'light' : mag<0.6 ? 'moderate' : 'strong';
-  if(mag<0.08){
+  if(st.level==='storm' && mag<0.08){
+    label.textContent='Sand moving offshore — storm';
+    sub.textContent='Head-on storm waves: little sideways drift, but heavy cross-shore erosion.';
+  }else if(mag<0.08){
     label.textContent='Sand holding steady';
     sub.textContent='Waves are arriving nearly head-on — little sideways transport today.';
   }else{
     label.textContent=`Sand drifting ${compass(alongBearing)} — ${strength}`;
     sub.textContent=`Waves from ${compass(wd)} strike the beach at ~${Math.abs(Math.round(a))}°, pushing sand ${dirRight?'to your right':'to your left'} as you face the water.`;
   }
-  meter.style.width=(mag*100).toFixed(0)+'%';
-  sprinkle(dirRight?1:-1, mag);
+  meter.className=''; meter.style.width=(Math.max(mag, st.level==='storm'?0.85:0)*100).toFixed(0)+'%';
+  if(st.level==='storm') meter.classList.add('storm');
+  $('erosion').className = 'erosion' + (st.level==='storm' ? ' show' : '');
+  sprinkle(dirRight?1:-1, mag, st.level==='storm');
 }
 
-/* signature: animated sand grains drifting along the shoreline */
+/* animated sand grains drifting along the shoreline; storms also pull grains seaward */
 let grains=[], raf=null;
-function sprinkle(dir, mag){
+function sprinkle(dir, mag, storm){
   const svg=$('beach'); svg.innerHTML='';
   cancelAnimationFrame(raf);
-  // shoreline
   const shore=document.createElementNS('http://www.w3.org/2000/svg','path');
   shore.setAttribute('d','M0 82 Q90 74 180 82 T360 82');
   shore.setAttribute('stroke','#eaf4f4'); shore.setAttribute('stroke-opacity','.6');
   shore.setAttribute('fill','none'); shore.setAttribute('stroke-width','2');
   svg.appendChild(shore);
-  // arrow
   if(mag>0.05){
     const y=118, len=40+mag*90, x0=180-dir*len/2, x1=180+dir*len/2;
     const ar=document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -294,22 +378,35 @@ function sprinkle(dir, mag){
     ar.setAttribute('fill','none'); ar.setAttribute('stroke-linecap','round');
     svg.appendChild(ar);
   }
+  if(storm){
+    const off=document.createElementNS('http://www.w3.org/2000/svg','path');
+    off.setAttribute('d','M180 100 L180 34 M180 34 l-7 10 M180 34 l7 10');
+    off.setAttribute('stroke','#ef6f6c'); off.setAttribute('stroke-width','4');
+    off.setAttribute('fill','none'); off.setAttribute('stroke-linecap','round');
+    svg.appendChild(off);
+  }
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   grains=[];
-  const n = reduced?0:Math.round(10+mag*30);
+  const n = reduced?0:Math.round(10+mag*30+(storm?14:0));
   for(let k=0;k<n;k++){
     const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
     c.setAttribute('r',(1+Math.random()*1.6).toFixed(1));
     c.setAttribute('fill','#f3dcae'); c.setAttribute('fill-opacity','.8');
     svg.appendChild(c);
-    grains.push({el:c,x:Math.random()*360,y:92+Math.random()*48,v:(0.3+Math.random())*dir*(0.5+mag*2)});
+    const seaward = storm && Math.random()<0.4;
+    grains.push({el:c, x:Math.random()*360, y:92+Math.random()*48,
+      vx:(0.3+Math.random())*dir*(0.5+mag*2), vy: seaward ? -(0.3+Math.random()*0.6) : 0});
   }
-  const step=()=>{ for(const g of grains){ g.x+=g.v; if(g.x>364)g.x=-4; if(g.x<-4)g.x=364;
-      g.el.setAttribute('cx',g.x); g.el.setAttribute('cy',g.y);} if(grains.length) raf=requestAnimationFrame(step); };
+  const step=()=>{ for(const g of grains){
+      g.x+=g.vx; g.y+=g.vy;
+      if(g.x>364)g.x=-4; if(g.x<-4)g.x=364;
+      if(g.y<20){ g.y=92+Math.random()*48; g.x=Math.random()*360; }
+      g.el.setAttribute('cx',g.x); g.el.setAttribute('cy',g.y);}
+    if(grains.length) raf=requestAnimationFrame(step); };
   step();
 }
 
-$('facing').addEventListener('change',()=>data&&render());
+$('facing').addEventListener('change',()=>marine&&render());
 $('refresh').addEventListener('click',()=>lat!=null?load():locate());
 locate();
 })();
