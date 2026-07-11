@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#071a2b">
+<title>Shoreline — Tides &amp; Sand Drift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --deep:#071a2b; --sea:#0b2239; --line:rgba(234,244,244,.12);
+    --foam:#eaf4f4; --dim:#8fa8b5;
+    --tide:#37d0c0; --sand:#e4b363; --coral:#ef6f6c;
+    --card:rgba(234,244,244,.045);
+    --r:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Sora',system-ui,sans-serif;
+    background:linear-gradient(180deg,var(--deep) 0%,var(--sea) 60%,#0d2a42 100%);
+    color:var(--foam); min-height:100dvh;
+    padding:max(14px,env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+    max-width:520px;margin:0 auto;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:14px}
+  h1{font-size:17px;font-weight:700;letter-spacing:.02em}
+  h1 span{color:var(--tide)}
+  #place{font-size:12px;color:var(--dim);text-align:right;max-width:55%;line-height:1.35}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+
+  /* hero */
+  #now-height{font-size:52px;font-weight:700;line-height:1;letter-spacing:-.02em}
+  #now-height small{font-size:18px;font-weight:400;color:var(--dim)}
+  #trend{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--tide)}
+  #trend.falling{color:var(--sand)}
+  .hilo{display:flex;gap:10px;margin-top:14px}
+  .hilo div{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .hilo b{display:block;font-size:16px;margin-top:2px}
+  .hilo .lbl{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+
+  /* chart */
+  #chart{width:100%;height:170px;display:block}
+  .legend{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:6px}
+
+  /* drift */
+  #beach{width:100%;height:150px;display:block;border-radius:12px;background:linear-gradient(180deg,#0e3350 0%,#0e3350 55%,#caa15f 55%,#b78d4d 100%)}
+  #drift-label{margin-top:12px;font-size:15px;font-weight:600}
+  #drift-sub{font-size:12.5px;color:var(--dim);margin-top:4px;line-height:1.5}
+  .meter{height:6px;border-radius:3px;background:var(--line);margin-top:10px;overflow:hidden}
+  .meter i{display:block;height:100%;width:0;background:var(--sand);border-radius:3px;transition:width .6s}
+
+  /* orientation control */
+  select,button{
+    font:inherit;color:var(--foam);background:rgba(234,244,244,.07);
+    border:1px solid var(--line);border-radius:10px;padding:9px 12px;
+  }
+  button{cursor:pointer}
+  button:focus-visible,select:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  label{font-size:12px;color:var(--dim)}
+
+  #status{font-size:13px;color:var(--dim);text-align:center;padding:26px 10px;line-height:1.6}
+  #status.err{color:var(--coral)}
+  .wavegrid{display:flex;gap:10px;margin-top:2px}
+  .wavegrid div{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .wavegrid b{display:block;font-size:16px;margin-top:2px}
+  .wavegrid .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  footer{font-size:10.5px;color:var(--dim);text-align:center;margin-top:16px;line-height:1.6}
+  @media (prefers-reduced-motion: reduce){ .grain{animation:none!important} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Shore<span>line</span></h1>
+  <div id="place" class="mono">locating…</div>
+</header>
+
+<div id="status">Requesting your location…<br>Allow location access to load your local beach.</div>
+
+<div id="app" style="display:none">
+  <section class="card" id="hero">
+    <div class="eyebrow">Tide now</div>
+    <div id="now-height">–<small> m</small></div>
+    <div id="trend">—</div>
+    <div class="hilo">
+      <div><span class="lbl">Next high</span><b id="next-high" class="mono">–</b></div>
+      <div><span class="lbl">Next low</span><b id="next-low" class="mono">–</b></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Tide curve · next 24 h</div>
+    <svg id="chart" viewBox="0 0 360 170" preserveAspectRatio="none" role="img" aria-label="Tide height over the next 24 hours"></svg>
+    <div class="legend mono"><span id="t0"></span><span>+12 h</span><span id="t24"></span></div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Sand movement · longshore drift</div>
+    <svg id="beach" viewBox="0 0 360 150" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div id="drift-label">–</div>
+    <div class="meter"><i id="drift-meter"></i></div>
+    <div id="drift-sub">Estimated from wave height, period and approach angle.</div>
+    <div class="row" style="margin-top:14px">
+      <label for="facing">My beach faces</label>
+      <select id="facing">
+        <option value="0">North</option><option value="45">North-east</option>
+        <option value="90">East</option><option value="135">South-east</option>
+        <option value="180">South</option><option value="225">South-west</option>
+        <option value="270" selected>West</option><option value="315">North-west</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Waves now</div>
+    <div class="wavegrid">
+      <div><span class="lbl">Height</span><b id="wh" class="mono">–</b></div>
+      <div><span class="lbl">Period</span><b id="wp" class="mono">–</b></div>
+      <div><span class="lbl">From</span><b id="wd" class="mono">–</b></div>
+    </div>
+  </section>
+
+  <div class="row" style="justify-content:center">
+    <button id="refresh">Refresh data</button>
+  </div>
+</div>
+
+<footer>Data: Open-Meteo Marine API. Sea level is relative to mean sea level.<br>
+Sand drift is a model estimate (CERC-type), not a survey measurement.</footer>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+let data = null, lat = null, lon = null;
+
+const fmtTime = iso => new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+const compass = d => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];
+
+function fail(msg){ const s=$('status'); s.style.display='block'; s.className='err'; s.innerHTML=msg; }
+
+async function locate(){
+  if(!navigator.geolocation){ return fail('Location is not available in this browser.'); }
+  navigator.geolocation.getCurrentPosition(
+    p => { lat = p.coords.latitude; lon = p.coords.longitude; load(); },
+    () => fail('Location was denied.<br>Enable location for this site in your browser settings, then reload.'),
+    { enableHighAccuracy:true, timeout:15000 }
+  );
+}
+
+async function load(){
+  try{
+    $('status').className=''; $('status').style.display='block';
+    $('status').textContent = 'Loading tide and wave data…';
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}`
+      + `&hourly=sea_level_height_msl,wave_height,wave_direction,wave_period`
+      + `&timezone=auto&forecast_days=3&cell_selection=sea`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('API '+r.status);
+    data = await r.json();
+    if(!data.hourly || !data.hourly.sea_level_height_msl || data.hourly.sea_level_height_msl.every(v=>v==null)){
+      return fail('No tide data for this spot — it may be too far inland.<br>Try again from (or nearer to) the coast.');
+    }
+    // reverse-geocode-ish label: just coords
+    $('place').textContent = `${lat.toFixed(3)}°, ${lon.toFixed(3)}°`;
+    render();
+    $('status').style.display='none';
+    $('app').style.display='block';
+  }catch(e){
+    fail('Could not load data. Check your connection and tap Refresh.');
+  }
+}
+
+function nowIndex(){
+  const times = data.hourly.time;
+  const now = Date.now();
+  let i = times.findIndex(t => new Date(t).getTime() > now) - 1;
+  return Math.max(0, i);
+}
+
+function render(){
+  const h = data.hourly, i = nowIndex();
+  const lvl = h.sea_level_height_msl;
+
+  // interpolate current height
+  const t0 = new Date(h.time[i]).getTime(), t1 = new Date(h.time[i+1]).getTime();
+  const f = Math.min(1, Math.max(0, (Date.now()-t0)/(t1-t0)));
+  const cur = lvl[i] + (lvl[i+1]-lvl[i])*f;
+  $('now-height').innerHTML = cur.toFixed(2) + '<small> m</small>';
+
+  const rising = lvl[i+1] > lvl[i];
+  const tr = $('trend');
+  tr.textContent = rising ? '▲ Rising' : '▼ Falling';
+  tr.className = rising ? '' : 'falling';
+
+  // next high / low: local extrema after now
+  let nh=null, nl=null;
+  for(let k=i+1;k<lvl.length-1;k++){
+    if(nh===null && lvl[k]>=lvl[k-1] && lvl[k]>lvl[k+1]) nh=k;
+    if(nl===null && lvl[k]<=lvl[k-1] && lvl[k]<lvl[k+1]) nl=k;
+    if(nh!==null && nl!==null) break;
+  }
+  $('next-high').textContent = nh ? `${fmtTime(h.time[nh])} · ${lvl[nh].toFixed(2)} m` : '–';
+  $('next-low').textContent  = nl ? `${fmtTime(h.time[nl])} · ${lvl[nl].toFixed(2)} m` : '–';
+
+  drawChart(i);
+  drawDrift(i);
+
+  const wh=h.wave_height[i], wp=h.wave_period[i], wd=h.wave_direction[i];
+  $('wh').textContent = wh!=null ? wh.toFixed(1)+' m' : '–';
+  $('wp').textContent = wp!=null ? wp.toFixed(0)+' s' : '–';
+  $('wd').textContent = wd!=null ? compass(wd)+' '+Math.round(wd)+'°' : '–';
+}
+
+function drawChart(i){
+  const h=data.hourly, lvl=h.sea_level_height_msl;
+  const N=25, W=360, H=170, pad=14;
+  const seg = lvl.slice(i, i+N);
+  const min=Math.min(...seg), max=Math.max(...seg), span=(max-min)||1;
+  const X=k=>pad+(W-2*pad)*k/(N-1);
+  const Y=v=>H-pad-(H-2*pad)*(v-min)/span;
+  let d='M'+X(0)+' '+Y(seg[0]);
+  for(let k=1;k<N;k++) d+=' L'+X(k)+' '+Y(seg[k]);
+  const area=d+` L${X(N-1)} ${H} L${X(0)} ${H} Z`;
+  const nowX=X(0), svg=$('chart');
+  svg.innerHTML =
+   `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#37d0c0" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#37d0c0" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#g)"/>
+    <path d="${d}" fill="none" stroke="#37d0c0" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="${nowX}" y1="8" x2="${nowX}" y2="${H-8}" stroke="#eaf4f4" stroke-opacity=".5" stroke-dasharray="3 4"/>
+    <circle cx="${nowX}" cy="${Y(seg[0])}" r="4.5" fill="#eaf4f4"/>`;
+  $('t0').textContent='now';
+  $('t24').textContent=fmtTime(h.time[i+N-1]);
+}
+
+function drawDrift(i){
+  const h=data.hourly;
+  const wh=h.wave_height[i], wp=h.wave_period[i]||8, wd=h.wave_direction[i];
+  const facing = parseFloat($('facing').value);       // direction beach faces (toward sea)
+  const label=$('drift-label'), sub=$('drift-sub'), meter=$('drift-meter');
+
+  if(wh==null || wd==null){
+    label.textContent='No wave data here';
+    sub.textContent='Sand drift can’t be estimated without wave data.';
+    meter.style.width='0'; sprinkle(0,0); return;
+  }
+  // angle between wave approach (coming FROM wd, travelling wd+180) and shore-normal (facing)
+  let alpha = ((wd - facing + 540) % 360) - 180;      // -180..180; sign = which side waves arrive from
+  const a = Math.max(-90, Math.min(90, alpha));
+  // CERC-type relative transport: Q ∝ H^2.5 · sin(2α); period nudges energy
+  const q = Math.pow(wh,2.5) * Math.sin(2*a*Math.PI/180) * (wp/8);
+  const mag = Math.min(1, Math.abs(q)/6);             // normalise to 0..1
+  // Facing the sea: waves from your LEFT push sand RIGHT along the beach
+  const dirRight = a > 0 ? false : true;
+  // translate to compass along-shore direction
+  const alongBearing = (facing + (dirRight ? 90 : -90) + 360) % 360;
+
+  const strength = mag<0.08 ? 'minimal' : mag<0.3 ? 'light' : mag<0.6 ? 'moderate' : 'strong';
+  if(mag<0.08){
+    label.textContent='Sand holding steady';
+    sub.textContent='Waves are arriving nearly head-on — little sideways transport today.';
+  }else{
+    label.textContent=`Sand drifting ${compass(alongBearing)} — ${strength}`;
+    sub.textContent=`Waves from ${compass(wd)} strike the beach at ~${Math.abs(Math.round(a))}°, pushing sand ${dirRight?'to your right':'to your left'} as you face the water.`;
+  }
+  meter.style.width=(mag*100).toFixed(0)+'%';
+  sprinkle(dirRight?1:-1, mag);
+}
+
+/* signature: animated sand grains drifting along the shoreline */
+let grains=[], raf=null;
+function sprinkle(dir, mag){
+  const svg=$('beach'); svg.innerHTML='';
+  cancelAnimationFrame(raf);
+  // shoreline
+  const shore=document.createElementNS('http://www.w3.org/2000/svg','path');
+  shore.setAttribute('d','M0 82 Q90 74 180 82 T360 82');
+  shore.setAttribute('stroke','#eaf4f4'); shore.setAttribute('stroke-opacity','.6');
+  shore.setAttribute('fill','none'); shore.setAttribute('stroke-width','2');
+  svg.appendChild(shore);
+  // arrow
+  if(mag>0.05){
+    const y=118, len=40+mag*90, x0=180-dir*len/2, x1=180+dir*len/2;
+    const ar=document.createElementNS('http://www.w3.org/2000/svg','path');
+    ar.setAttribute('d',`M${x0} ${y} L${x1} ${y} M${x1} ${y} l${-dir*10} -6 M${x1} ${y} l${-dir*10} 6`);
+    ar.setAttribute('stroke','#5a4526'); ar.setAttribute('stroke-width','4');
+    ar.setAttribute('fill','none'); ar.setAttribute('stroke-linecap','round');
+    svg.appendChild(ar);
+  }
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  grains=[];
+  const n = reduced?0:Math.round(10+mag*30);
+  for(let k=0;k<n;k++){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r',(1+Math.random()*1.6).toFixed(1));
+    c.setAttribute('fill','#f3dcae'); c.setAttribute('fill-opacity','.8');
+    svg.appendChild(c);
+    grains.push({el:c,x:Math.random()*360,y:92+Math.random()*48,v:(0.3+Math.random())*dir*(0.5+mag*2)});
+  }
+  const step=()=>{ for(const g of grains){ g.x+=g.v; if(g.x>364)g.x=-4; if(g.x<-4)g.x=364;
+      g.el.setAttribute('cx',g.x); g.el.setAttribute('cy',g.y);} if(grains.length) raf=requestAnimationFrame(step); };
+  step();
+}
+
+$('facing').addEventListener('change',()=>data&&render());
+$('refresh').addEventListener('click',()=>lat!=null?load():locate());
+locate();
+})();
+</script>
+</body>
+</html>
