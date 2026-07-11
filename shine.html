@@ -156,6 +156,7 @@
         <option value="180">South</option><option value="225">South-west</option>
         <option value="270" selected>West</option><option value="315">North-west</option>
       </select>
+      <span id="facing-auto" style="font-size:11px;color:var(--tide)"></span>
     </div>
   </section>
 
@@ -176,6 +177,7 @@
       <div><span class="lbl">Height</span><b id="wh" class="mono">–</b></div>
       <div><span class="lbl">Period</span><b id="wp" class="mono">–</b></div>
       <div><span class="lbl">From</span><b id="wd" class="mono">–</b></div>
+      <div><span class="lbl">Water</span><b id="wt" class="mono">–</b></div>
     </div>
   </section>
 
@@ -226,17 +228,19 @@ async function load(){
     $('status').textContent = 'Loading tide, wave and storm data…';
 
     const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}`
-      + `&hourly=sea_level_height_msl,wave_height,wave_direction,wave_period`
+      + `&hourly=sea_level_height_msl,wave_height,wave_direction,wave_period,sea_surface_temperature`
       + `&timezone=auto&forecast_days=7&past_days=7&cell_selection=sea`;
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
       + `&current=wind_speed_10m,wind_gusts_10m,surface_pressure,precipitation`
-      + `&hourly=surface_pressure&past_hours=6&forecast_hours=1&timezone=auto`;
+      + `&hourly=surface_pressure&past_hours=6&forecast_hours=1`
+      + `&daily=sunrise,sunset&forecast_days=3&timezone=auto`;
 
     const [mr, wr] = await Promise.all([fetch(marineUrl), fetch(weatherUrl)]);
     if(!mr.ok) throw new Error('marine '+mr.status);
     marine = await mr.json();
     weather = wr.ok ? await wr.json() : null;
-    reverseGeocode(); // fills in place name asynchronously
+    reverseGeocode();      // fills in place name asynchronously
+    autoOrientation();     // detects which way the beach faces asynchronously
 
     if(!marine.hourly || !marine.hourly.sea_level_height_msl || marine.hourly.sea_level_height_msl.every(v=>v==null)){
       return fail('No tide data for this spot — it may be too far inland.<br>Try again from (or nearer to) the coast.');
@@ -273,6 +277,18 @@ function pressureTrend(){
   return d;
 }
 
+/* Refine an hourly extremum to minute precision with a parabolic fit */
+function refineExt(k){
+  const lvl = marine.hourly.sea_level_height_msl, times = marine.hourly.time;
+  const y0 = lvl[k-1], y1 = lvl[k], y2 = lvl[k+1];
+  const denom = y0 - 2*y1 + y2;
+  const off = denom ? Math.max(-1, Math.min(1, 0.5*(y0 - y2)/denom)) : 0;   // hours
+  return {
+    time: new Date(new Date(times[k]).getTime() + off*3600e3),
+    height: y1 - 0.25*(y0 - y2)*off
+  };
+}
+
 function render(){
   const h = marine.hourly, i = nowIndex();
   const lvl = h.sea_level_height_msl;
@@ -295,20 +311,22 @@ function render(){
     if(nl===null && lvl[k]<=lvl[k-1] && lvl[k]<lvl[k+1]) nl=k;
     if(nh!==null && nl!==null) break;
   }
-  $('next-high').textContent = nh ? `${fmtTime(h.time[nh])} · ${lvl[nh].toFixed(2)} m` : '–';
-  $('next-low').textContent  = nl ? `${fmtTime(h.time[nl])} · ${lvl[nl].toFixed(2)} m` : '–';
+  const rh = nh ? refineExt(nh) : null, rl = nl ? refineExt(nl) : null;
+  $('next-high').textContent = rh ? `${rh.time.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})} · ${rh.height.toFixed(2)} m` : '–';
+  $('next-low').textContent  = rl ? `${rl.time.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})} · ${rl.height.toFixed(2)} m` : '–';
 
-  nextLow = nl ? { time: new Date(h.time[nl]), height: lvl[nl] } : null;
+  nextLow = rl;
   $('alarmrow').style.display = nextLow ? 'flex' : 'none';
 
   drawChart(i);
   renderStorm(i);
   drawDrift(i);
 
-  const wh=h.wave_height[i], wp=h.wave_period[i], wd=h.wave_direction[i];
+  const wh=h.wave_height[i], wp=h.wave_period[i], wd=h.wave_direction[i], wt=h.sea_surface_temperature?.[i];
   $('wh').textContent = wh!=null ? wh.toFixed(1)+' m' : '–';
   $('wp').textContent = wp!=null ? wp.toFixed(0)+' s' : '–';
   $('wd').textContent = wd!=null ? compass(wd)+' '+Math.round(wd)+'°' : '–';
+  $('wt').textContent = wt!=null ? wt.toFixed(1)+'°C' : '–';
 }
 
 function renderStorm(i){
@@ -342,6 +360,24 @@ function drawChart(i){
   const min=Math.min(...seg), max=Math.max(...seg), span=(max-min)||1;
   const X=k=>pad+(W-2*pad)*k/(N-1);
   const Y=v=>H-pad-(H-2*pad)*(v-min)/span;
+
+  // night shading: hours outside sunrise–sunset
+  let night='';
+  const sr = weather?.daily?.sunrise?.map(t=>new Date(t).getTime());
+  const ss = weather?.daily?.sunset?.map(t=>new Date(t).getTime());
+  if(sr && ss){
+    const isDay = t => sr.some((r,d)=> t>=r && t<=ss[d]);
+    let a=null;
+    for(let k=0;k<=N;k++){
+      const dark = k<N && !isDay(new Date(h.time[i+k]).getTime());
+      if(dark && a===null) a=k;
+      if(!dark && a!==null){
+        night += `<rect x="${X(a)}" y="0" width="${X(k-1)-X(a)+ (k-1>a?0:6)}" height="${H}" fill="#000" opacity=".28"/>`;
+        a=null;
+      }
+    }
+  }
+
   let d='M'+X(0)+' '+Y(seg[0]);
   for(let k=1;k<N;k++) d+=' L'+X(k)+' '+Y(seg[k]);
   const area=d+` L${X(N-1)} ${H} L${X(0)} ${H} Z`;
@@ -350,6 +386,7 @@ function drawChart(i){
    `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#37d0c0" stop-opacity=".35"/>
       <stop offset="1" stop-color="#37d0c0" stop-opacity="0"/></linearGradient></defs>
+    ${night}
     <path d="${area}" fill="url(#g)"/>
     <path d="${d}" fill="none" stroke="#37d0c0" stroke-width="2.5" stroke-linecap="round"/>
     <line x1="${nowX}" y1="8" x2="${nowX}" y2="${H-8}" stroke="#eaf4f4" stroke-opacity=".5" stroke-dasharray="3 4"/>
@@ -588,7 +625,38 @@ $('alarm-btn').addEventListener('click', setPhoneAlarm);
 $('ics-btn').addEventListener('click', downloadIcs);
 $('gcal-btn').addEventListener('click', openGcal);
 
-$('facing').addEventListener('change',()=>marine&&render());
+/* Auto-detect which way the beach faces: sample elevation ~2 km out in 8 directions.
+   Directions at sea level are seaward; their average bearing is the beach's facing. */
+let userSetFacing = false;
+async function autoOrientation(){
+  try{
+    const dist = 2000, R = 111320;
+    const lats = [], lons = [], bearings = [0,45,90,135,180,225,270,315];
+    for(const b of bearings){
+      const rad = b*Math.PI/180;
+      lats.push((lat + (dist*Math.cos(rad))/R).toFixed(5));
+      lons.push((lon + (dist*Math.sin(rad))/(R*Math.cos(lat*Math.PI/180))).toFixed(5));
+    }
+    const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lons.join(',')}`);
+    if(!r.ok) return;
+    const {elevation} = await r.json();
+    let vx=0, vy=0, seaCount=0;
+    elevation.forEach((e,idx)=>{
+      if(e!=null && e <= 0.5){                       // at or below sea level → open water
+        const rad = bearings[idx]*Math.PI/180;
+        vx += Math.sin(rad); vy += Math.cos(rad); seaCount++;
+      }
+    });
+    if(!seaCount || userSetFacing) return;
+    const bearing = (Math.atan2(vx, vy)*180/Math.PI + 360) % 360;
+    const snapped = (Math.round(bearing/45)*45) % 360;
+    $('facing').value = String(snapped);
+    $('facing-auto').textContent = '(auto-detected)';
+    if(marine) render();
+  }catch(e){ /* keep manual selection */ }
+}
+
+$('facing').addEventListener('change',()=>{ userSetFacing = true; $('facing-auto').textContent=''; marine&&render(); });
 $('refresh').addEventListener('click',()=>lat!=null?load():locate());
 locate();
 })();
