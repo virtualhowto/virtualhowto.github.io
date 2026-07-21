@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#0e1116" />
 
   <!-- Leaflet + Esri-Leaflet + Leaflet.draw -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -234,9 +234,10 @@
     // Base path for GitHub Pages (adjust if hosted at root or different subpath)
     const BASE_PATH = '/app/MDWC/'; // Set to '' if hosted at root (e.g., username.github.io)
 
-    // How far Leaflet will let you zoom in. Tiles beyond a layer's maxNativeZoom
-    // are upscaled (blurry but tighter) so you can place markers precisely.
-    const MAX_ZOOM = 22;
+    // How far Leaflet will let you zoom in. NSW imagery has real detail to ~zoom 23;
+    // past that, tiles are upscaled (enlarged, softer) so you can still push in for
+    // precise marker placement — same as the official SIX Maps / Spatial viewer.
+    const MAX_ZOOM = 26;
 
     // ---------- Map init ----------
     const map = L.map('map', {
@@ -257,7 +258,7 @@
           const l = L.esri.tiledMapLayer({
             url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
             attribution: 'Imagery © NSW Spatial Services',
-            maxNativeZoom: 21,
+            maxNativeZoom: 23,
             maxZoom: MAX_ZOOM
           });
           l.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch (_) {} });
