@@ -247,36 +247,42 @@
     });
 
     let baseLayer;                 // currently active base layer instance
-    let currentBaseSource = 'nsw'; // 'nsw' | 'esri' | 'osm' (saved in JSON)
+    let currentBaseSource = 'nsw'; // 'nsw' | 'nswhd' | 'esri' | 'osm' (saved in JSON)
 
     // maxNativeZoom = deepest REAL tiles for that source; anything past it upscales.
     // If you ever see grey tiles at maximum zoom, lower that source's maxNativeZoom by 1.
     const LAYER_CONFIG = {
       nsw: {
         name: 'NSW Imagery',
-        build: () => {
-          const l = L.esri.tiledMapLayer({
-            url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
-            attribution: 'Imagery © NSW Spatial Services',
-            maxNativeZoom: 23,
-            maxZoom: MAX_ZOOM
-          });
-          l.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch (_) {} });
-          return l;
-        }
+        // Plain L.tileLayer, NOT L.esri.tiledMapLayer: esri-leaflet blanks the map
+        // past the native zoom instead of upscaling, which is why zoom felt capped.
+        // Plain tiles enlarge correctly past maxNativeZoom. (ArcGIS uses z/y/x order.)
+        build: () => L.tileLayer('https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Imagery © NSW Spatial Services',
+          crossOrigin: 'anonymous',
+          maxNativeZoom: 23,   // NSW cache serves real tiles to ~23 (same depth as SIX Maps)
+          maxZoom: MAX_ZOOM    // keep zooming past that, upscaled
+        })
+      },
+      nswhd: {
+        // On-the-fly render (ArcGIS "export") — same NSW imagery, but drawn to fit
+        // the current view like the official Spatial viewer, instead of pre-cut tiles.
+        name: 'NSW Imagery (HD render)',
+        build: () => L.esri.dynamicMapLayer({
+          url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+          attribution: 'Imagery © NSW Spatial Services',
+          useCors: true,   // keeps the rendered image exportable (PNG/PDF)
+          format: 'jpg'
+        })
       },
       esri: {
         name: 'Esri World Imagery',
-        build: () => {
-          const l = L.esri.tiledMapLayer({
-            url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
-            attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
-            maxNativeZoom: 19,
-            maxZoom: MAX_ZOOM
-          });
-          l.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch (_) {} });
-          return l;
-        }
+        build: () => L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
+          crossOrigin: 'anonymous',
+          maxNativeZoom: 19,
+          maxZoom: MAX_ZOOM
+        })
       },
       osm: {
         name: 'OpenStreetMap',
@@ -312,8 +318,15 @@
 
     function ensureTilesLoaded() {
       return new Promise(resolve => {
-        if (!baseLayer || !baseLayer._loading) return resolve();
-        baseLayer.once('load', () => setTimeout(resolve, 100));
+        if (baseLayer && baseLayer._loading) {
+          // Tiled layer still fetching tiles
+          baseLayer.once('load', () => setTimeout(resolve, 100));
+        } else if (L.esri.DynamicMapLayer && baseLayer instanceof L.esri.DynamicMapLayer) {
+          // Dynamic (export) layer — give the rendered image a moment to settle
+          setTimeout(resolve, 350);
+        } else {
+          resolve();
+        }
       });
     }
 
