@@ -70,6 +70,11 @@
     .leaflet-draw-toolbar .draw-controls { display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #1a1f29; border: 1px solid var(--border); border-radius: 8px; padding: 8px; z-index: 1000; flex-direction: column; gap: 6px; }
     .leaflet-draw-toolbar .leaflet-draw-draw-polygon.active ~ .draw-controls { display: flex; }
 
+    /* Base-layer switcher styled to match the dark theme (panel shows when expanded) */
+    .leaflet-control-layers-expanded{background:var(--panel);color:var(--ink);border:1px solid var(--border);border-radius:8px}
+    .leaflet-control-layers-expanded label{color:var(--ink);font-size:13px;margin:3px 0}
+    .leaflet-control-layers-separator{border-top-color:var(--border)}
+
     /* Toolbar scroll hints */
     #toolbarWrap{position:relative}
     .tfade{position:absolute;top:0;bottom:0;width:34px;display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:20px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:5}
@@ -131,15 +136,12 @@
           <button id="menuJsonExport">Export JSON</button>
           <button id="menuJsonImport">Import JSON</button>
           <button id="menuLogo" class="mobile-only">Upload Logo</button>
-          <button id="menuOSM" class="mobile-only">Use OpenStreetMap: Off</button>
         </div>
       </div>
       <input type="file" id="importJsonFile" accept="application/json" style="display:none"/>
       <input type="file" id="logoFile" accept="image/*" style="display:none"/>
       <button class="btn desktop-only" id="logoBtn">Upload Logo</button>
-      <label class="desktop-only" style="display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;">
-        <input type="checkbox" id="useOSM" /> Use OpenStreetMap (CORS-safe)
-      </label>
+      <span class="desktop-only" style="color:var(--muted);font-size:12px;">Switch imagery with the layers button on the map ↗</span>
     </div>
   </header>
 
@@ -232,38 +234,97 @@
     // Base path for GitHub Pages (adjust if hosted at root or different subpath)
     const BASE_PATH = '/app/MDWC/'; // Set to '' if hosted at root (e.g., username.github.io)
 
+    // How far Leaflet will let you zoom in. Tiles beyond a layer's maxNativeZoom
+    // are upscaled (blurry but tighter) so you can place markers precisely.
+    const MAX_ZOOM = 22;
+
     // ---------- Map init ----------
     const map = L.map('map', {
       attributionControl: false,
-      renderer: L.svg()
+      renderer: L.svg(),
+      maxZoom: MAX_ZOOM
     });
-    let baseLayer;
 
-    function setBaseLayer(useOSM) {
-      if (baseLayer) map.removeLayer(baseLayer);
-      if (useOSM) {
-        baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    let baseLayer;                 // currently active base layer instance
+    let currentBaseSource = 'nsw'; // 'nsw' | 'esri' | 'osm' (saved in JSON)
+
+    // maxNativeZoom = deepest REAL tiles for that source; anything past it upscales.
+    // If you ever see grey tiles at maximum zoom, lower that source's maxNativeZoom by 1.
+    const LAYER_CONFIG = {
+      nsw: {
+        name: 'NSW Imagery',
+        build: () => {
+          const l = L.esri.tiledMapLayer({
+            url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
+            attribution: 'Imagery © NSW Spatial Services',
+            maxNativeZoom: 21,
+            maxZoom: MAX_ZOOM
+          });
+          l.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch (_) {} });
+          return l;
+        }
+      },
+      esri: {
+        name: 'Esri World Imagery',
+        build: () => {
+          const l = L.esri.tiledMapLayer({
+            url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
+            attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
+            maxNativeZoom: 19,
+            maxZoom: MAX_ZOOM
+          });
+          l.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch (_) {} });
+          return l;
+        }
+      },
+      osm: {
+        name: 'OpenStreetMap',
+        build: () => L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
-          crossOrigin: 'anonymous'
-        }).addTo(map);
-      } else {
-        baseLayer = L.esri.tiledMapLayer({
-          url: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer',
-          attribution: 'Imagery © NSW Spatial Services'
-        }).addTo(map);
-        baseLayer.on('tileloadstart', e => { try { e.tile.crossOrigin = 'anonymous'; } catch(e) {} });
+          crossOrigin: 'anonymous',
+          maxNativeZoom: 19,
+          maxZoom: MAX_ZOOM
+        })
       }
+    };
+
+    // One instance per source, wired into the on-map layer switcher.
+    const layerInstances = {}; // { displayName: layerInstance }
+    const sourceByName = {};   // { displayName: 'nsw' | 'esri' | 'osm' }
+    Object.entries(LAYER_CONFIG).forEach(([source, cfg]) => {
+      const lyr = cfg.build();
+      layerInstances[cfg.name] = lyr;
+      sourceByName[cfg.name] = source;
+    });
+
+    // Programmatically switch the active base layer (used on load + JSON import).
+    function setBaseLayer(source) {
+      const cfg = LAYER_CONFIG[source] || LAYER_CONFIG.nsw;
+      const target = layerInstances[cfg.name];
+      Object.values(layerInstances).forEach(lyr => {
+        if (lyr === target) { if (!map.hasLayer(lyr)) map.addLayer(lyr); }
+        else if (map.hasLayer(lyr)) map.removeLayer(lyr);
+      });
+      baseLayer = target;
+      currentBaseSource = LAYER_CONFIG[source] ? source : 'nsw';
     }
 
     function ensureTilesLoaded() {
       return new Promise(resolve => {
-        if (!baseLayer._loading) return resolve();
+        if (!baseLayer || !baseLayer._loading) return resolve();
         baseLayer.once('load', () => setTimeout(resolve, 100));
       });
     }
 
-    setBaseLayer(false);
-    document.getElementById('useOSM').addEventListener('change', e => setBaseLayer(e.target.checked));
+    // Default imagery (NSW is usually the sharpest for NSW sites)
+    setBaseLayer('nsw');
+
+    // On-map layer switcher (top-right, sits above the compass)
+    L.control.layers(layerInstances, {}, { position: 'topright' }).addTo(map);
+    map.on('baselayerchange', e => {
+      baseLayer = e.layer;
+      currentBaseSource = sourceByName[e.name] || 'nsw';
+    });
 
     const SOFALA_CENTER = [-33.083, 149.689], SOFALA_ZOOM = 15;
     function centerOnUser({ silent = false } = {}) {
@@ -557,13 +618,6 @@
     document.getElementById('menuJsonExport').onclick = () => { toggleMenu(false); doExportJSON(); };
     document.getElementById('menuJsonImport').onclick = () => { toggleMenu(false); document.getElementById('importJsonFile').click(); };
     document.getElementById('menuLogo').onclick = () => { toggleMenu(false); document.getElementById('logoFile').click(); };
-    document.getElementById('menuOSM').onclick = () => {
-      const cb = document.getElementById('useOSM');
-      cb.checked = !cb.checked;
-      setBaseLayer(cb.checked);
-      document.getElementById('menuOSM').textContent = 'Use OpenStreetMap: ' + (cb.checked ? 'On' : 'Off');
-      toggleMenu(false);
-    };
 
     // ---------- Touch detection + text input dialog ----------
     const IS_TOUCH = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -1286,13 +1340,16 @@
         }
       });
 
-      // Hide UI controls (zoom and draw) during capture
+      // Hide UI controls (zoom, draw, layers switcher) during capture
       const zoomControl = document.querySelector('.leaflet-control-zoom');
       const drawControlEl = document.querySelector('.leaflet-draw');
+      const layersControlEl = document.querySelector('.leaflet-control-layers');
       const prevZoomDisplay = zoomControl ? zoomControl.style.display : null;
       const prevDrawDisplay = drawControlEl ? drawControlEl.style.display : null;
+      const prevLayersDisplay = layersControlEl ? layersControlEl.style.display : null;
       if (zoomControl) zoomControl.style.display = 'none';
       if (drawControlEl) drawControlEl.style.display = 'none';
+      if (layersControlEl) layersControlEl.style.display = 'none';
 
       const imgUrls = [];
       markers.forEach(m => { if (m.myMeta && m.myMeta.imgSrc) imgUrls.push(m.myMeta.imgSrc); });
@@ -1310,7 +1367,8 @@
         });
         if (zoomControl && prevZoomDisplay !== null) zoomControl.style.display = prevZoomDisplay;
         if (drawControlEl && prevDrawDisplay !== null) drawControlEl.style.display = prevDrawDisplay;
-        throw new Error('Failed to load one or more images. Try enabling OpenStreetMap or ensuring all images are accessible.');
+        if (layersControlEl && prevLayersDisplay !== null) layersControlEl.style.display = prevLayersDisplay;
+        throw new Error('Failed to load one or more images. Try switching to OpenStreetMap or ensuring all images are accessible.');
       }
 
       const mapWrap = document.getElementById('mapWrap');
@@ -1345,6 +1403,7 @@
       // Restore UI controls
       if (zoomControl && prevZoomDisplay !== null) zoomControl.style.display = prevZoomDisplay;
       if (drawControlEl && prevDrawDisplay !== null) drawControlEl.style.display = prevDrawDisplay;
+      if (layersControlEl && prevLayersDisplay !== null) layersControlEl.style.display = prevLayersDisplay;
 
       // Now manually draw overlays on the clean canvas
       await drawPolygonsToCanvas(ctx, canvas, map);
@@ -1468,14 +1527,14 @@
       } : null;
 
       return {
-        version: 6,
+        version: 7,
         createdAt: new Date().toISOString(),
         view: { center: map.getCenter(), zoom: map.getZoom() },
         markers: savedMarkers,
         polygons: savedPolys,
         legend: savedLegend,
         watermark: wmData,
-        useOSM: document.getElementById('useOSM').checked
+        baseSource: currentBaseSource
       };
     }
 
@@ -1578,13 +1637,10 @@
         });
       }
 
-      // Restore map layer
-      if (typeof data.useOSM === 'boolean') {
-        document.getElementById('useOSM').checked = data.useOSM;
-        setBaseLayer(data.useOSM);
-        const osmMenuBtn = document.getElementById('menuOSM');
-        if (osmMenuBtn) osmMenuBtn.textContent = 'Use OpenStreetMap: ' + (data.useOSM ? 'On' : 'Off');
-      }
+      // Restore base imagery (baseSource for v7+, falls back to old useOSM boolean)
+      let restoreSource = data.baseSource;
+      if (!restoreSource && typeof data.useOSM === 'boolean') restoreSource = data.useOSM ? 'osm' : 'nsw';
+      if (restoreSource && LAYER_CONFIG[restoreSource]) setBaseLayer(restoreSource);
 
       suppressUndo = false;
       updateToolbarFades();
