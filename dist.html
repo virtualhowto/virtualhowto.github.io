@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+
+  <meta name="theme-color" content="#0b2341" />
+
+  <title>GPS Distance Meter</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --navy: #0b2341;
+      --navy-light: #173d6b;
+      --gold: #c79321;
+      --background: #f3f5f7;
+      --card: #ffffff;
+      --text: #17202a;
+      --muted: #667085;
+      --border: #e4e7ec;
+      --danger: #a61b1b;
+      --success: #1f7a3f;
+      --shadow: 0 12px 30px rgba(11, 35, 65, 0.12);
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      background: var(--background);
+      color: var(--text);
+    }
+
+    body {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    header {
+      padding: 28px 20px 38px;
+      color: white;
+      background:
+        linear-gradient(
+          135deg,
+          var(--navy),
+          var(--navy-light)
+        );
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 7vw, 3rem);
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: #f0c85d;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+    }
+
+    .subtitle {
+      max-width: 680px;
+      margin: 10px 0 0;
+      line-height: 1.5;
+      opacity: 0.9;
+    }
+
+    main {
+      width: min(760px, 100%);
+      margin: -20px auto 0;
+      padding: 0 16px 30px;
+    }
+
+    section {
+      margin-bottom: 14px;
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .status-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 12px;
+      border-radius: 50%;
+      background: #98a2b3;
+      box-shadow: 0 0 0 5px rgba(152, 162, 179, 0.15);
+    }
+
+    .status-dot.good {
+      background: var(--success);
+      box-shadow: 0 0 0 5px rgba(31, 122, 63, 0.15);
+    }
+
+    .status-dot.bad {
+      background: var(--danger);
+      box-shadow: 0 0 0 5px rgba(166, 27, 27, 0.15);
+    }
+
+    .accuracy {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .distance-card {
+      padding: 25px 20px;
+      text-align: center;
+    }
+
+    .label {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .distance {
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+      gap: 9px;
+      margin: 12px 0 24px;
+    }
+
+    #distanceValue {
+      color: var(--navy);
+      font-size: clamp(4rem, 18vw, 7rem);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    #distanceUnit {
+      color: var(--gold);
+      font-size: 1.7rem;
+      font-weight: 800;
+    }
+
+    .details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .details div {
+      padding: 13px;
+      background: #f7f8fa;
+      border-radius: 12px;
+    }
+
+    .details span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 14px;
+    }
+
+    button {
+      min-height: 52px;
+      padding: 14px 12px;
+      border: 0;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .primary {
+      color: white;
+      background: var(--navy);
+    }
+
+    .accent {
+      color: #17130a;
+      background: var(--gold);
+    }
+
+    .danger {
+      color: var(--danger);
+      background: #fbe7e7;
+    }
+
+    .point-card,
+    .tips-card {
+      padding: 18px;
+    }
+
+    h2 {
+      margin: 0 0 13px;
+      font-size: 1.08rem;
+    }
+
+    dl {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+    }
+
+    dl div {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    dt {
+      color: var(--muted);
+    }
+
+    dd {
+      margin: 0;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      word-break: break-word;
+    }
+
+    .tips-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    footer {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 16px 28px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-align: center;
+    }
+
+    @media (max-width: 560px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .status-card {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <p class="eyebrow">FIELD TOOL</p>
+
+    <h1>GPS Distance Meter</h1>
+
+    <p class="subtitle">
+      Mark your current location, walk to the target point and measure the
+      straight-line GPS distance.
+    </p>
+  </header>
+
+  <main>
+    <section class="status-card">
+      <div class="status-row">
+        <span id="statusDot" class="status-dot"></span>
+        <strong id="gpsStatus">GPS has not been started</strong>
+      </div>
+
+      <div class="accuracy">
+        Accuracy:
+        <strong id="accuracy">—</strong>
+      </div>
+    </section>
+
+    <section class="distance-card">
+      <p class="label">Distance from marked point</p>
+
+      <div class="distance">
+        <span id="distanceValue">—</span>
+        <span id="distanceUnit">m</span>
+      </div>
+
+      <div class="details">
+        <div>
+          <span>Bearing</span>
+          <strong id="bearing">—</strong>
+        </div>
+
+        <div>
+          <span>Distance walked</span>
+          <strong id="travelled">—</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <button id="startGpsButton" class="primary">
+        Start GPS
+      </button>
+
+      <button id="markButton" class="accent" disabled>
+        Mark start point
+      </button>
+
+      <button id="clearButton" class="danger" disabled>
+        Clear point
+      </button>
+    </section>
+
+    <section class="point-card">
+      <h2>Location details</h2>
+
+      <dl>
+        <div>
+          <dt>Marked latitude</dt>
+          <dd id="markedLatitude">—</dd>
+        </div>
+
+        <div>
+          <dt>Marked longitude</dt>
+          <dd id="markedLongitude">—</dd>
+        </div>
+
+        <div>
+          <dt>Marked accuracy</dt>
+          <dd id="markedAccuracy">—</dd>
+        </div>
+
+        <div>
+          <dt>Current location</dt>
+          <dd id="currentCoordinates">—</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="tips-card">
+      <h2>Getting the best result</h2>
+
+      <p>
+        Use the app outdoors with a clear view of the sky. Stand still for
+        around 10 to 20 seconds before marking the start point. Phone GPS is
+        suitable for approximate field measurements but is not survey-grade.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <span>No location data is uploaded</span>
+    <span>•</span>
+    <span>Your marked point stays on this device</span>
+  </footer>
+
+  <script>
+    const elements = {
+      startButton: document.getElementById("startGpsButton"),
+      markButton: document.getElementById("markButton"),
+      clearButton: document.getElementById("clearButton"),
+      gpsStatus: document.getElementById("gpsStatus"),
+      statusDot: document.getElementById("statusDot"),
+      accuracy: document.getElementById("accuracy"),
+      distanceValue: document.getElementById("distanceValue"),
+      distanceUnit: document.getElementById("distanceUnit"),
+      bearing: document.getElementById("bearing"),
+      travelled: document.getElementById("travelled"),
+      markedLatitude: document.getElementById("markedLatitude"),
+      markedLongitude: document.getElementById("markedLongitude"),
+      markedAccuracy: document.getElementById("markedAccuracy"),
+      currentCoordinates: document.getElementById("currentCoordinates")
+    };
+
+    let currentPosition = null;
+    let previousPosition = null;
+    let travelledMetres = 0;
+    let gpsWatchId = null;
+
+    let markedPosition = JSON.parse(
+      localStorage.getItem("gpsDistanceMarkedPoint") || "null"
+    );
+
+    function degreesToRadians(degrees) {
+      return degrees * Math.PI / 180;
+    }
+
+    function radiansToDegrees(radians) {
+      return radians * 180 / Math.PI;
+    }
+
+    function calculateDistance(pointA, pointB) {
+      const earthRadiusMetres = 6371000;
+
+      const latitudeDifference = degreesToRadians(
+        pointB.latitude - pointA.latitude
+      );
+
+      const longitudeDifference = degreesToRadians(
+        pointB.longitude - pointA.longitude
+      );
+
+      const latitudeA = degreesToRadians(pointA.latitude);
+      const latitudeB = degreesToRadians(pointB.latitude);
+
+      const haversine =
+        Math.sin(latitudeDifference / 2) ** 2 +
+        Math.cos(latitudeA) *
+        Math.cos(latitudeB) *
+        Math.sin(longitudeDifference / 2) ** 2;
+
+      return (
+        2 *
+        earthRadiusMetres *
+        Math.asin(Math.sqrt(haversine))
+      );
+    }
+
+    function calculateBearing(pointA, pointB) {
+      const latitudeA = degreesToRadians(pointA.latitude);
+      const latitudeB = degreesToRadians(pointB.latitude);
+
+      const longitudeDifference = degreesToRadians(
+        pointB.longitude - pointA.longitude
+      );
+
+      const y =
+        Math.sin(longitudeDifference) *
+        Math.cos(latitudeB);
+
+      const x =
+        Math.cos(latitudeA) *
+        Math.sin(latitudeB) -
+        Math.sin(latitudeA) *
+        Math.cos(latitudeB) *
+        Math.cos(longitudeDifference);
+
+      return (
+        radiansToDegrees(Math.atan2(y, x)) + 360
+      ) % 360;
+    }
+
+    function getCompassDirection(degrees) {
+      const directions = [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ];
+
+      return directions[
+        Math.round(degrees / 45) % 8
+      ];
+    }
+
+    function formatDistance(distanceMetres) {
+      if (distanceMetres < 1000) {
+        return {
+          value:
+            distanceMetres < 100
+              ? distanceMetres.toFixed(1)
+              : Math.round(distanceMetres),
+          unit: "m"
+        };
+      }
+
+      return {
+        value: (distanceMetres / 1000).toFixed(2),
+        unit: "km"
+      };
+    }
+
+    function updateMarkedPointDisplay() {
+      if (!markedPosition) {
+        elements.markedLatitude.textContent = "—";
+        elements.markedLongitude.textContent = "—";
+        elements.markedAccuracy.textContent = "—";
+        elements.clearButton.disabled = true;
+        return;
+      }
+
+      elements.markedLatitude.textContent =
+        markedPosition.latitude.toFixed(7);
+
+      elements.markedLongitude.textContent =
+        markedPosition.longitude.toFixed(7);
+
+      elements.markedAccuracy.textContent =
+        "±" + Math.round(markedPosition.accuracy) + " m";
+
+      elements.clearButton.disabled = false;
+    }
+
+    function updateDisplay() {
+      updateMarkedPointDisplay();
+
+      if (!currentPosition) {
+        return;
+      }
+
+      elements.accuracy.textContent =
+        "±" + Math.round(currentPosition.accuracy) + " m";
+
+      elements.currentCoordinates.textContent =
+        currentPosition.latitude.toFixed(7) +
+        ", " +
+        currentPosition.longitude.toFixed(7);
+
+      const travelledDisplay =
+        formatDistance(travelledMetres);
+
+      elements.travelled.textContent =
+        travelledDisplay.value +
+        " " +
+        travelledDisplay.unit;
+
+      if (!markedPosition) {
+        elements.distanceValue.textContent = "—";
+        elements.distanceUnit.textContent = "m";
+        elements.bearing.textContent = "—";
+        return;
+      }
+
+      const distanceMetres = calculateDistance(
+        markedPosition,
+        currentPosition
+      );
+
+      const distanceDisplay =
+        formatDistance(distanceMetres);
+
+      elements.distanceValue.textContent =
+        distanceDisplay.value;
+
+      elements.distanceUnit.textContent =
+        distanceDisplay.unit;
+
+      const bearingDegrees = calculateBearing(
+        markedPosition,
+        currentPosition
+      );
+
+      elements.bearing.textContent =
+        Math.round(bearingDegrees) +
+        "° " +
+        getCompassDirection(bearingDegrees);
+    }
+
+    function handleGpsPosition(position) {
+      const newPosition = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: position.timestamp
+      };
+
+      if (currentPosition) {
+        const movement = calculateDistance(
+          currentPosition,
+          newPosition
+        );
+
+        const noiseThreshold = Math.max(
+          2,
+          Math.min(
+            currentPosition.accuracy,
+            newPosition.accuracy
+          ) * 0.35
+        );
+
+        if (
+          movement >= noiseThreshold &&
+          movement < 250
+        ) {
+          travelledMetres += movement;
+        }
+      }
+
+      previousPosition = currentPosition;
+      currentPosition = newPosition;
+
+      elements.gpsStatus.textContent = "GPS active";
+      elements.statusDot.className = "status-dot good";
+
+      elements.markButton.disabled = false;
+      elements.startButton.disabled = true;
+      elements.startButton.textContent = "GPS running";
+
+      updateDisplay();
+    }
+
+    function handleGpsError(error) {
+      const errorMessages = {
+        1: "Location permission was denied",
+        2: "GPS position is unavailable",
+        3: "GPS request timed out"
+      };
+
+      elements.gpsStatus.textContent =
+        errorMessages[error.code] ||
+        "Unable to access GPS";
+
+      elements.statusDot.className = "status-dot bad";
+
+      elements.startButton.disabled = false;
+      elements.startButton.textContent = "Try GPS again";
+    }
+
+    function startGps() {
+      if (!navigator.geolocation) {
+        elements.gpsStatus.textContent =
+          "This browser does not support GPS";
+
+        elements.statusDot.className =
+          "status-dot bad";
+
+        return;
+      }
+
+      elements.gpsStatus.textContent =
+        "Acquiring GPS signal…";
+
+      elements.startButton.disabled = true;
+
+      gpsWatchId = navigator.geolocation.watchPosition(
+        handleGpsPosition,
+        handleGpsError,
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 20000
+        }
+      );
+    }
+
+    function markStartPoint() {
+      if (!currentPosition) {
+        return;
+      }
+
+      markedPosition = {
+        ...currentPosition
+      };
+
+      localStorage.setItem(
+        "gpsDistanceMarkedPoint",
+        JSON.stringify(markedPosition)
+      );
+
+      travelledMetres = 0;
+      previousPosition = currentPosition;
+
+      elements.gpsStatus.textContent =
+        "Start point marked";
+
+      updateDisplay();
+    }
+
+    function clearMarkedPoint() {
+      markedPosition = null;
+      travelledMetres = 0;
+
+      localStorage.removeItem(
+        "gpsDistanceMarkedPoint"
+      );
+
+      elements.gpsStatus.textContent =
+        "Marked point cleared";
+
+      updateDisplay();
+    }
+
+    elements.startButton.addEventListener(
+      "click",
+      startGps
+    );
+
+    elements.markButton.addEventListener(
+      "click",
+      markStartPoint
+    );
+
+    elements.clearButton.addEventListener(
+      "click",
+      clearMarkedPoint
+    );
+
+    updateMarkedPointDisplay();
+  </script>
+</body>
+</html>
