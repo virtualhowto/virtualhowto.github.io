@@ -14,15 +14,27 @@
       "raffles": [
         {
           "name": "Super Sunday Raffle",
-          "days": ["Sunday"],
+          "days": [
+            "Sunday"
+          ],
           "time": "14:00",
-          "details": "Large Sunday raffle; current prize list should be confirmed on the venue site."
+          "details": "60 prizes including meat trays, fruit and veg vouchers, Coles Myer Gift Cards, Ming Dragon Gift cards, Reward Points, variety bags, Woolworths Wish Gift Cards, and free raffle tickets. Members' special: Buy $20 worth of tickets, get $10 worth free.",
+          "source_url": "https://www.mingara.com.au/whats-on/"
         }
       ],
       "specials": [],
       "last_checked": "2026-08-08",
       "needs_review": false,
-      "location_accuracy": "verified"
+      "location_accuracy": "verified",
+      "source_pages": [
+        "https://www.mingara.com.au/",
+        "https://www.mingara.com.au/eat-drink/hadleys/hadleys-food-menu/",
+        "https://www.mingara.com.au/eat-drink/ming-dragon/food-menu/",
+        "https://www.mingara.com.au/whats-on/",
+        "https://www.mingara.com.au/whats-on/bingo/",
+        "https://www.mingara.com.au/whats-on/car-cash/",
+        "https://www.mingara.com.au/whats-on/members-jackpot/"
+      ]
     },
     {
       "name": "Bateau Bay Bowling Club",
@@ -33,13 +45,87 @@
       "website": "https://bateaubaybowlo.com.au/",
       "phone": "02 4332 1365",
       "raffles": [
-        {"name": "Sunday Raffle", "days": ["Sunday"], "time": "18:00", "details": "Weekly club raffle; verify current ticket and draw times."},
-        {"name": "Friday Raffle", "days": ["Friday"], "time": "18:00", "details": "Weekly club raffle; verify current schedule."}
+        {
+          "name": "Weekly Raffles",
+          "days": [
+            "Thursday",
+            "Sunday"
+          ],
+          "time": "18:30",
+          "details": "Raffle Tickets on sale from 5:30pm on Thursday and from 5:00pm on Sunday.",
+          "source_url": "https://bateaubaybowlo.com.au/whats-on/"
+        },
+        {
+          "name": "Bowler's Raffle",
+          "days": [
+            "Friday"
+          ],
+          "time": "18:30",
+          "details": "Tickets on sale from 5:30pm.",
+          "source_url": "https://bateaubaybowlo.com.au/whats-on/"
+        }
       ],
-      "specials": [],
+      "specials": [
+        {
+          "title": "Lunch Special",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "meal": "lunch",
+          "price": "$16",
+          "source_url": "https://bateaubaybowlo.com.au/dining/"
+        },
+        {
+          "title": "Loaded Schnitty Night",
+          "days": [
+            "Monday"
+          ],
+          "meal": "dinner",
+          "price": "$19",
+          "source_url": "https://bateaubaybowlo.com.au/dining/"
+        },
+        {
+          "title": "Asian Night",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "dinner",
+          "price": "Variety from selected menu",
+          "source_url": "https://bateaubaybowlo.com.au/dining/"
+        },
+        {
+          "title": "Surf & Turf",
+          "days": [
+            "Wednesday"
+          ],
+          "meal": "dinner",
+          "price": "$26",
+          "source_url": "https://bateaubaybowlo.com.au/dining/"
+        },
+        {
+          "title": "Ribs & Wings",
+          "days": [
+            "Thursday"
+          ],
+          "meal": "dinner",
+          "price": "$28",
+          "source_url": "https://bateaubaybowlo.com.au/dining/"
+        }
+      ],
       "last_checked": "2026-08-08",
-      "needs_review": true,
-      "location_accuracy": "approximate"
+      "needs_review": false,
+      "location_accuracy": "approximate",
+      "source_pages": [
+        "https://bateaubaybowlo.com.au/",
+        "https://bateaubaybowlo.com.au/whats-happening/",
+        "https://bateaubaybowlo.com.au/dining/",
+        "https://bateaubaybowlo.com.au/whats-on/",
+        "https://bateaubaybowlo.com.au/entertainment/"
+      ]
     },
     {
       "name": "The Greens The Entrance",
@@ -50,13 +136,28 @@
       "website": "https://thegreenstheentrance.com.au/",
       "phone": "02 4332 5955",
       "raffles": [
-        {"name": "Sunday Meat Raffle", "days": ["Sunday"], "time": "15:00", "details": "Meat-tray raffle; verify current draw time."},
-        {"name": "Friday Meat Raffle", "days": ["Friday"], "time": "18:30", "details": "Weekly meat-tray raffle; verify before travelling."}
+        {
+          "name": "Great Raffle",
+          "days": [
+            "Friday",
+            "Sunday"
+          ],
+          "time": "19:00",
+          "details": "Join us every Friday evening and Sunday arvo to win fresh meat trays and support The Entrance Seahawks. There are 10 small meat trays and 1 large meat tray up for grabs at every raffle. Friday Tickets on sale from 5.30pm, raffle starts at 7pm. Sunday Tickets on sale from 12:30pm, raffle starts at 2pm.",
+          "source_url": "https://thegreenstheentrance.com.au/event/great-raffle-fridays-and-sundays/"
+        }
       ],
       "specials": [],
       "last_checked": "2026-08-08",
-      "needs_review": true,
-      "location_accuracy": "approximate"
+      "needs_review": false,
+      "location_accuracy": "approximate",
+      "source_pages": [
+        "https://thegreenstheentrance.com.au/",
+        "https://thegreenstheentrance.com.au/food-menu/",
+        "https://thegreenstheentrance.com.au/barefootbowlspackages/",
+        "https://thegreenstheentrance.com.au/whats-on/",
+        "https://thegreenstheentrance.com.au/event/great-raffle-fridays-and-sundays/"
+      ]
     },
     {
       "name": "The Entrance Leagues Club",
@@ -67,12 +168,86 @@
       "website": "https://telclub.com.au/",
       "phone": null,
       "raffles": [
-        {"name": "Weekly Raffle", "days": ["Wednesday", "Friday", "Sunday"], "time": "18:00", "details": "Regular weekly raffle; exact draw details are refreshed by the updater when available."}
+        {
+          "name": "Weekly Raffles",
+          "days": [
+            "Wednesday",
+            "Friday",
+            "Sunday"
+          ],
+          "time": "19:00",
+          "details": "Join us for our weekly raffles with great prizes!",
+          "source_url": "https://telclub.com.au/whats-on/"
+        }
       ],
-      "specials": [],
+      "specials": [
+        {
+          "title": "Tuesday Steak Night",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/whats-on/"
+        },
+        {
+          "title": "Monday Barra Night",
+          "days": [
+            "Monday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/whats-on/"
+        },
+        {
+          "title": "Wednesday Schnitzel",
+          "days": [
+            "Wednesday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/whats-on/"
+        },
+        {
+          "title": "Thursday Special – Pasta",
+          "days": [
+            "Thursday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/whats-on/"
+        },
+        {
+          "title": "Sunday Roast Night",
+          "days": [
+            "Sunday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/whats-on/"
+        },
+        {
+          "title": "Friday Burger Night",
+          "days": [
+            "Friday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/whats-on/"
+        }
+      ],
       "last_checked": "2026-08-08",
-      "needs_review": true,
-      "location_accuracy": "approximate"
+      "needs_review": false,
+      "location_accuracy": "approximate",
+      "source_pages": [
+        "https://telclub.com.au/",
+        "https://telclub.com.au/eats/dinner-specials/",
+        "https://telclub.com.au/whats-on/",
+        "https://telclub.com.au/whats-on/entertainment/",
+        "https://telclub.com.au/whats-on/weekly/",
+        "https://telclub.com.au/whats-on/upcoming/",
+        "https://telclub.com.au/whats-on/nrl-tipping-comp-2026/"
+      ]
     },
     {
       "name": "Central Coast Leagues Club",
@@ -83,41 +258,2080 @@
       "website": "https://cclc.com.au/",
       "phone": "02 4325 9888",
       "raffles": [
-        {"name": "Weekly Raffle", "days": ["Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "time": "19:00", "details": "Regular raffle program with multiple prizes; check venue site for current details."}
+        {
+          "name": "Weekly Raffles",
+          "days": [
+            "Wednesday"
+          ],
+          "time": "19:00",
+          "details": "Meat trays, breakfast packs and Club food vouchers to be won every week!",
+          "source_url": "https://cclc.com.au/"
+        },
+        {
+          "name": "Gold and Cash Raffle",
+          "days": [
+            "August"
+          ],
+          "time": "TBD",
+          "details": "You can win an ounce of gold and 9 other members can win $1000 cash!",
+          "source_url": "https://cclc.com.au/"
+        }
+      ],
+      "specials": [
+        {
+          "title": "Members' Discount Day",
+          "days": [
+            "Wednesday"
+          ],
+          "meal": "both",
+          "price": "20% off",
+          "source_url": "https://cclc.com.au/"
+        },
+        {
+          "title": "Buffet Breakfast",
+          "days": [
+            "Friday"
+          ],
+          "meal": "breakfast",
+          "price": "$TBD",
+          "source_url": "https://cclc.com.au/"
+        }
+      ],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "location_accuracy": "verified",
+      "source_pages": [
+        "https://cclc.com.au/",
+        "https://cclc.com.au/dining/",
+        "https://cclc.com.au/dining/wildwood-dining/",
+        "https://cclc.com.au/dining/seed-vine/",
+        "https://cclc.com.au/dining/georgianas/",
+        "https://cclc.com.au/dining/arena-sports-lounge/",
+        "https://cclc.com.au/dining/peking-garden/"
+      ]
+    },
+    {
+      "name": "Avoca Beach Bowling Club",
+      "club_type": "bowling club",
+      "address": "362-364 Avoca Dr, Kincumber NSW 2251",
+      "lat": -33.468,
+      "lng": 151.433,
+      "website": null,
+      "phone": "02 4356 2200",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Breakers Country Club",
+      "club_type": "country / bowling / golf club",
+      "address": "64 Dover Rd, Wamberal NSW 2260",
+      "lat": -33.4128,
+      "lng": 151.448,
+      "website": "https://www.breakerscc.com/",
+      "phone": "02 4384 2661",
+      "raffles": [
+        {
+          "name": "Meat & Seafood Raffles",
+          "days": [
+            "Thursday",
+            "Sunday"
+          ],
+          "time": "18:00",
+          "details": "Tickets on sale from 6.00pm | Drawn from 7.00pm on Thursdays and 2.00pm on Sundays.",
+          "source_url": "https://www.breakerscc.com/entertainment-events"
+        }
+      ],
+      "specials": [
+        {
+          "title": "$15 Lunch Special Menu",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "meal": "lunch",
+          "price": "$15",
+          "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
+        },
+        {
+          "title": "$16 Steak Night",
+          "days": [
+            "Monday",
+            "Thursday"
+          ],
+          "meal": "dinner",
+          "price": "$16",
+          "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
+        },
+        {
+          "title": "Kids Eat Free",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "dinner",
+          "price": "Free",
+          "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
+        },
+        {
+          "title": "$16 Schnitzel Night",
+          "days": [
+            "Wednesday"
+          ],
+          "meal": "dinner",
+          "price": "$16",
+          "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
+        }
+      ],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "location_accuracy": "approximate",
+      "source_pages": [
+        "https://www.breakerscc.com/",
+        "https://www.breakerscc.com/cosy-cash",
+        "https://www.breakerscc.com/entertainment-events",
+        "https://www.breakerscc.com/dining-and-bars",
+        "https://www.breakerscc.com/whats-on/dining-deals",
+        "https://www.breakerscc.com/whats-on/dining-deals",
+        "https://www.breakerscc.com/whats-on/your-guide"
+      ]
+    },
+    {
+      "name": "Canton Beach Sports Club",
+      "club_type": "bowling club",
+      "address": "11 Hibbard St, Toukley NSW 2263",
+      "lat": -33.2806,
+      "lng": 151.548,
+      "website": null,
+      "phone": "02 4393 7290",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Davistown RSL Club",
+      "club_type": "RSL club",
+      "address": "19 Murna Rd, Davistown NSW 2251",
+      "lat": -33.485,
+      "lng": 151.363,
+      "website": "https://www.davistownrsl.com.au/",
+      "phone": "02 4363 0199",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Ettalong Memorial Bowling Club",
+      "club_type": "bowling club",
+      "address": "103 Springwood St, Ettalong Beach NSW 2257",
+      "lat": -33.5126,
+      "lng": 151.3294,
+      "website": null,
+      "phone": "02 4341 0087",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Everglades Country Club",
+      "club_type": "country / golf / bowling club",
+      "address": "9-13 Dunban Rd, Woy Woy NSW 2256",
+      "lat": -33.493,
+      "lng": 151.318,
+      "website": null,
+      "phone": "02 4341 1866",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Gwandalan Bowling Club",
+      "club_type": "bowling club",
+      "address": "Gamban Rd, Gwandalan NSW 2259",
+      "lat": -33.1355,
+      "lng": 151.586,
+      "website": null,
+      "phone": "02 4976 1204",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Halekulani Bowling Club",
+      "club_type": "bowling club",
+      "address": "50 Natuna Ave, Budgewoi NSW 2262",
+      "lat": -33.2342,
+      "lng": 151.5546,
+      "website": null,
+      "phone": "02 4390 6400",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Munmorah United Bowling Club",
+      "club_type": "bowling club",
+      "address": "Acacia Ave, Lake Munmorah NSW 2259",
+      "lat": -33.1893,
+      "lng": 151.582,
+      "website": null,
+      "phone": "02 4358 8519",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Norah Head Bowling & Sports Club",
+      "club_type": "bowling / sports club",
+      "address": "Victoria St, Norah Head NSW 2263",
+      "lat": -33.282,
+      "lng": 151.566,
+      "website": null,
+      "phone": "02 4396 6477",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Ourimbah Lisarow RSL Club",
+      "club_type": "RSL / bowling club",
+      "address": "20 Pacific Hwy, Ourimbah NSW 2258",
+      "lat": -33.3575,
+      "lng": 151.369,
+      "website": null,
+      "phone": "02 4362 1104",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Club Terrigal",
+      "club_type": "bowling club",
+      "address": "Wilson Rd, Terrigal NSW 2260",
+      "lat": -33.44,
+      "lng": 151.439,
+      "website": null,
+      "phone": "02 4384 1403",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Club Umina",
+      "club_type": "bowling club",
+      "address": "Melbourne Ave, Umina Beach NSW 2257",
+      "lat": -33.526,
+      "lng": 151.31,
+      "website": null,
+      "phone": "02 4343 9999",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Club Riverside Wyong",
+      "club_type": "bowling club",
+      "address": "3 Panonia Rd, Wyong NSW 2259",
+      "lat": -33.282,
+      "lng": 151.421,
+      "website": null,
+      "phone": "02 4356 2260",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Club Wyong RSL",
+      "club_type": "RSL club",
+      "address": "Margaret St, Wyong NSW 2259",
+      "lat": -33.2828,
+      "lng": 151.423,
+      "website": null,
+      "phone": "02 4353 1877",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Gosford RSL Club",
+      "club_type": "RSL club",
+      "address": "26 Central Coast Hwy, West Gosford NSW 2250",
+      "lat": -33.429,
+      "lng": 151.322,
+      "website": null,
+      "phone": "02 4323 2311",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Doyalson Wyee RSL Club (The Doylo)",
+      "club_type": "RSL club",
+      "address": "Pacific Hwy, Doyalson NSW 2262",
+      "lat": -33.195,
+      "lng": 151.526,
+      "website": null,
+      "phone": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Wallarah Bay Recreation Club",
+      "club_type": "recreation club",
+      "address": "40 Wallarah Rd, Gorokan NSW 2263",
+      "lat": -33.258,
+      "lng": 151.508,
+      "website": "https://wallarahbay.com.au/",
+      "phone": "02 4356 2222",
+      "raffles": [
+        {
+          "name": "Weekly Raffles",
+          "days": [
+            "Tuesday",
+            "Friday",
+            "Sunday"
+          ],
+          "time": "18:30",
+          "details": "Raffle Tickets on sale from 5:45pm on Tuesday and Friday, drawn at 6:30pm. Sunday tickets on sale from 2:00pm, drawn at 3:00pm.",
+          "source_url": "https://wallarahbay.com.au/whats-on/"
+        },
+        {
+          "name": "Marine Rescue Raffle",
+          "days": [
+            "Friday"
+          ],
+          "time": "18:30",
+          "details": "Tickets on sale from 5:30pm, drawn at 6:30pm.",
+          "source_url": "https://wallarahbay.com.au/whats-on/"
+        },
+        {
+          "name": "Wallarah Bay Social Golf Club Raffle",
+          "days": [
+            "Sunday"
+          ],
+          "time": "14:00",
+          "details": "Every 2nd Sunday - Tickets on sale from 1:00pm, drawn at 2:00pm.",
+          "source_url": "https://wallarahbay.com.au/whats-on/"
+        }
+      ],
+      "specials": [
+        {
+          "title": "Monday Dinner Special",
+          "days": [
+            "Monday"
+          ],
+          "meal": "dinner",
+          "price": "From a selected menu",
+          "source_url": "https://wallarahbay.com.au/dining/"
+        },
+        {
+          "title": "Tuesday Dinner Special",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "dinner",
+          "price": "$25 Surf & turf w/ chips & salad, $20 Chicken parmigiana w/ chips, salad & sauce",
+          "source_url": "https://wallarahbay.com.au/dining/"
+        },
+        {
+          "title": "Wednesday Stone Grill Specials",
+          "days": [
+            "Wednesday"
+          ],
+          "meal": "dinner",
+          "price": "Starting from $22",
+          "source_url": "https://wallarahbay.com.au/dining/"
+        },
+        {
+          "title": "Kids Eat Free",
+          "days": [
+            "Thursday"
+          ],
+          "meal": "dinner",
+          "price": "Free with purchase of adult meal",
+          "source_url": "https://wallarahbay.com.au/dining/"
+        }
+      ],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "location_accuracy": "approximate",
+      "source_pages": [
+        "https://wallarahbay.com.au/",
+        "https://wallarahbay.com.au/whats-happening/",
+        "https://wallarahbay.com.au/dining/",
+        "https://wallarahbay.com.au/entertainment/",
+        "https://wallarahbay.com.au/whats-on/",
+        "https://wallarahbay.com.au/dining/"
+      ]
+    },
+    {
+      "name": "The Ary Toukley",
+      "club_type": "RSL club",
+      "address": "Holmes Ave, Toukley NSW 2259",
+      "lat": -33.264,
+      "lng": 151.54,
+      "website": null,
+      "phone": "02 4396 4855",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Ettalong Diggers",
+      "club_type": "RSL / community club",
+      "address": "51-52 The Esplanade, Ettalong Beach NSW 2257",
+      "lat": -33.5148,
+      "lng": 151.338,
+      "website": null,
+      "phone": "02 4343 0111",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Erina Leagues Club",
+      "club_type": "leagues club",
+      "address": "Ilya Ave, Erina NSW 2250",
+      "lat": -33.438,
+      "lng": 151.392,
+      "website": "https://erinaleagues.com.au/",
+      "phone": "02 4365 2233",
+      "raffles": [
+        {
+          "name": "Sunday Fuel Frenzy Mega Raffle",
+          "days": [
+            "Sunday"
+          ],
+          "time": "19:00",
+          "details": "Join us for the Sunday Fuel Frenzy Mega Raffle.",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        }
+      ],
+      "specials": [
+        {
+          "title": "Kids Eat Free",
+          "days": [
+            "Sunday"
+          ],
+          "meal": "lunch",
+          "price": "Free",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "$10 All American Beef",
+          "days": [
+            "Monday"
+          ],
+          "meal": "dinner",
+          "price": "$10",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "$25 Ribs & Rumps Night",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "dinner",
+          "price": "$25",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "$17 Rump Steak Night",
+          "days": [
+            "Wednesday"
+          ],
+          "meal": "dinner",
+          "price": "$17",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "$15 Schnitzel Night",
+          "days": [
+            "Thursday"
+          ],
+          "meal": "dinner",
+          "price": "$15",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "Happy Hour",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "meal": "both",
+          "price": "3pm - 6pm",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "Saturday Happy Hour",
+          "days": [
+            "Saturday"
+          ],
+          "meal": "both",
+          "price": "12pm - 5pm",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        }
+      ],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "location_accuracy": "approximate",
+      "source_pages": [
+        "https://erinaleagues.com.au/",
+        "https://erinaleagues.com.au/dining/",
+        "https://erinaleagues.com.au/whats-on/",
+        "https://erinaleagues.com.au/whats-on/special-events/",
+        "https://erinaleagues.com.au/promotions/",
+        "https://erinaleagues.com.au/whats-on/entertainment/",
+        "https://erinaleagues.com.au/road-to-the-footy-grand-final-promotion/"
+      ]
+    },
+    {
+      "name": "Toukley Golf Club",
+      "club_type": "golf club",
+      "address": "54 Ninth Ave, Toukley NSW 2263",
+      "lat": -33.267,
+      "lng": 151.554,
+      "website": null,
+      "phone": "02 4396 5811",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Wyong Golf Club",
+      "club_type": "golf club",
+      "address": "319 Pacific Hwy, Wyong NSW 2259",
+      "lat": -33.274,
+      "lng": 151.425,
+      "website": null,
+      "phone": "02 4352 1361",
+      "raffles": [
+        {
+          "name": "Weekend raffles",
+          "days": [
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "time": null,
+          "details": "Golf NSW notes weekend raffles and promotions; exact current times need verification."
+        }
+      ],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Shelly Beach Golf Club",
+      "club_type": "golf club",
+      "address": "Shelly Beach Rd, Shelly Beach NSW 2261",
+      "lat": -33.365,
+      "lng": 151.485,
+      "website": null,
+      "phone": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Kooindah Waters Golf Club",
+      "club_type": "golf club",
+      "address": "Kooindah Blvd, Wyong NSW 2259",
+      "lat": -33.286,
+      "lng": 151.414,
+      "website": null,
+      "phone": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Magenta Shores Golf & Country Club",
+      "club_type": "golf / country club",
+      "address": "Magenta Dr, Magenta NSW 2261",
+      "lat": -33.31,
+      "lng": 151.526,
+      "website": null,
+      "phone": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Gosford Golf Club",
+      "club_type": "golf club",
+      "address": "Racecourse Rd, Gosford NSW 2250",
+      "lat": -33.419,
+      "lng": 151.34,
+      "website": null,
+      "phone": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "The Springs Golf Club",
+      "club_type": "golf / country club",
+      "address": "1080 Peats Ridge Rd, Peats Ridge NSW 2250",
+      "lat": -33.329,
+      "lng": 151.236,
+      "website": null,
+      "phone": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Mangrove Mountain Memorial Club & Golf Course",
+      "club_type": "golf / memorial club",
+      "address": "Mangrove Mountain NSW 2250",
+      "lat": -33.299,
+      "lng": 151.195,
+      "website": null,
+      "phone": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true,
+      "location_accuracy": "approximate"
+    },
+    {
+      "name": "Woy Woy Hotel",
+      "lat": -33.4842516,
+      "lng": 151.325634,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Beachcomber Hotel & Resort",
+      "lat": -33.2631476,
+      "lng": 151.5353965,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Grange Hotel",
+      "lat": -33.4042105,
+      "lng": 151.3517026,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Sporties",
+      "lat": -33.4856336,
+      "lng": 151.3350558,
+      "address": "North Burge Road 2256",
+      "website": "http://www.thesporties.net.au",
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Valley Tavern",
+      "lat": -33.3828222,
+      "lng": 151.3532347,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Wyong Leagues Club",
+      "lat": -33.2521856,
+      "lng": 151.4959552,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Florida Beach Bar",
+      "lat": -33.44772,
+      "lng": 151.445184,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Junior Motorcycle Club",
+      "lat": -33.3987201,
+      "lng": 151.2958106,
+      "address": "",
+      "website": "https://www.ccjuniormotorcycleclub.org.au",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.ccjuniormotorcycleclub.org.au/"
+      ]
+    },
+    {
+      "name": "Wyong Milk Factory Tavern",
+      "lat": -33.2769722,
+      "lng": 151.4064307,
+      "address": "",
+      "website": "https://wyongmilkfactorytavern.com.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Lakes Hotel",
+      "lat": -33.3440927,
+      "lng": 151.4966238,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Chittaway Bay Tavern",
+      "lat": -33.3276008,
+      "lng": 151.4290156,
+      "address": "100 Chittaway Road Chittaway Bay NSW 2261",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "311 Sqn AAFC",
+      "lat": -33.4381039,
+      "lng": 151.3774692,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Shim Jang Taekwondo",
+      "lat": -33.2515548,
+      "lng": 151.4677953,
+      "address": "",
+      "website": "https://www.shimjang.com/classes/Hamlyn-Terrace-New%20South%20Wales-taekwondo-classes-66.html",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.shimjang.com/classes/Hamlyn-Terrace-New%20South%20Wales-taekwondo-classes-66.html",
+        "https://www.shimjang.com/events/",
+        "https://www.shimjang.com/classes/events/"
+      ]
+    },
+    {
+      "name": "Shallows Bar",
+      "lat": -33.3107895,
+      "lng": 151.5226902,
+      "address": "1 Magenta Drive Magenta NSW 2261",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Model Areo Club",
+      "lat": -33.1797283,
+      "lng": 151.5450253,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Doyalson Youth Club",
+      "lat": -33.1969192,
+      "lng": 151.5270424,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Toukley Lions Centre",
+      "lat": -33.2667971,
+      "lng": 151.5480655,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Ourimbah Girl Guides",
+      "lat": -33.3491144,
+      "lng": 151.3683227,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Toukley Girl Guides",
+      "lat": -33.2685161,
+      "lng": 151.5537961,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "East Gosford Guides",
+      "lat": -33.4351315,
+      "lng": 151.3569631,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Northern Power Cricket Club",
+      "lat": -33.2686687,
+      "lng": 151.5483491,
+      "address": "Crossingham Street Toukley NSW 2263",
+      "website": "http://northernpowercc.nsw.cricket.com.au",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://play.cricket.com.au/"
+      ]
+    },
+    {
+      "name": "Terrigal Tennis Club",
+      "lat": -33.4421661,
+      "lng": 151.4251252,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Tuggerah Lakes Memorial Shooting Club",
+      "lat": -33.3980107,
+      "lng": 151.4564198,
+      "address": "",
+      "website": "https://www.tlmpc.d2g.com",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.tlmpc.d2g.com/"
+      ]
+    },
+    {
+      "name": "Mangrove Mountain Memorial Club",
+      "lat": -33.2910661,
+      "lng": 151.2377822,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Mumbo Jumbo",
+      "lat": -33.4462432,
+      "lng": 151.4437856,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Rotary Brisbane Water Street Library",
+      "lat": -33.514784,
+      "lng": 151.3368856,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Budgewoi Hotel",
+      "lat": -33.2374511,
+      "lng": 151.5636243,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Pocket",
+      "lat": -33.4468183,
+      "lng": 151.4444063,
+      "address": "",
+      "website": "https://www.houseofpocket.com.au/bars/pocket-bar-terrigal/venue-details/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.houseofpocket.com.au/pocket-bar",
+        "https://www.houseofpocket.com.au/events"
+      ]
+    },
+    {
+      "name": "Chop N Grind",
+      "lat": -33.4461138,
+      "lng": 151.4435826,
+      "address": "",
+      "website": "https://www.chopngrind.com.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Kincumber Hotel",
+      "lat": -33.4692947,
+      "lng": 151.3825705,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Lost Souls",
+      "lat": -33.4471136,
+      "lng": 151.4447032,
+      "address": "56 Terrigal Esplanade",
+      "website": "http://www.lostsoulsterrigal.com",
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Void",
+      "lat": -33.447115,
+      "lng": 151.4432074,
+      "address": "Church Street 2260",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Lakes Surf Life Saving Club",
+      "lat": -33.2544005,
+      "lng": 151.5623388,
+      "address": "Budgewoi Road Budgewoi NSW 2262",
+      "website": "https://www.thelakesslsc.com.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.thelakesslsc.com.au/",
+        "https://www.thelakesslsc.com.au/whats-on"
+      ]
+    },
+    {
+      "name": "Copacobana Surf Life Saving Club",
+      "lat": -33.4905895,
+      "lng": 151.4318683,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Hotel Gosford",
+      "lat": -33.4248145,
+      "lng": 151.3425396,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Killarney Vale Australian Football Club",
+      "lat": -33.3581887,
+      "lng": 151.44898,
+      "address": "",
+      "website": "https://www.kvbombers.com/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.ccbombers.com/"
+      ]
+    },
+    {
+      "name": "Wyong RSL Club",
+      "lat": -33.2821219,
+      "lng": 151.4236241,
+      "address": "",
+      "website": "https://www.wyongrsl.com.au/",
+      "raffles": [
+        {
+          "name": "Weekly Meat Raffles",
+          "days": [
+            "Wednesday",
+            "Friday",
+            "Sunday"
+          ],
+          "time": "17:30",
+          "details": "Join us for your chance to win a selection of prizes with our Club Wyong raffle. Cost: Buy $20 worth of tickets to get $20 free!",
+          "source_url": "https://www.wyongrsl.com.au/whats-on/weekly-activities"
+        },
+        {
+          "name": "$1,200 Points Raffle",
+          "days": [
+            "Thursday"
+          ],
+          "time": "18:30",
+          "details": "Tickets on sale from 6.00pm. Drawn from 6.30pm.",
+          "source_url": "https://www.wyongrsl.com.au/monthly-major-raffle"
+        }
       ],
       "specials": [],
       "last_checked": "2026-08-08",
       "needs_review": false,
-      "location_accuracy": "verified"
+      "source_pages": [
+        "https://www.wyongrsl.com.au/",
+        "https://www.wyongrsl.com.au/cosy-cash",
+        "https://www.wyongrsl.com.au/whats-on/weekly-activities",
+        "https://www.wyongrsl.com.au/monthly-major-raffle",
+        "https://www.wyongrsl.com.au/",
+        "https://www.wyongrsl.com.au/dining-bars/spinners-restaurant",
+        "https://www.wyongrsl.com.au/dining-bars/spinners-cafe"
+      ]
     },
-    {"name":"Avoca Beach Bowling Club","club_type":"bowling club","address":"362-364 Avoca Dr, Kincumber NSW 2251","lat":-33.468,"lng":151.433,"website":null,"phone":"02 4356 2200","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Breakers Country Club","club_type":"country / bowling / golf club","address":"64 Dover Rd, Wamberal NSW 2260","lat":-33.4128,"lng":151.448,"website":"https://www.breakerscc.com/","phone":"02 4384 2661","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Canton Beach Sports Club","club_type":"bowling club","address":"11 Hibbard St, Toukley NSW 2263","lat":-33.2806,"lng":151.548,"website":null,"phone":"02 4393 7290","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Davistown RSL Club","club_type":"RSL club","address":"19 Murna Rd, Davistown NSW 2251","lat":-33.485,"lng":151.363,"website":"https://www.davistownrsl.com.au/","phone":"02 4363 0199","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Ettalong Memorial Bowling Club","club_type":"bowling club","address":"103 Springwood St, Ettalong Beach NSW 2257","lat":-33.5126,"lng":151.3294,"website":null,"phone":"02 4341 0087","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Everglades Country Club","club_type":"country / golf / bowling club","address":"9-13 Dunban Rd, Woy Woy NSW 2256","lat":-33.493,"lng":151.318,"website":null,"phone":"02 4341 1866","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Gwandalan Bowling Club","club_type":"bowling club","address":"Gamban Rd, Gwandalan NSW 2259","lat":-33.1355,"lng":151.586,"website":null,"phone":"02 4976 1204","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Halekulani Bowling Club","club_type":"bowling club","address":"50 Natuna Ave, Budgewoi NSW 2262","lat":-33.2342,"lng":151.5546,"website":null,"phone":"02 4390 6400","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Munmorah United Bowling Club","club_type":"bowling club","address":"Acacia Ave, Lake Munmorah NSW 2259","lat":-33.1893,"lng":151.582,"website":null,"phone":"02 4358 8519","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Norah Head Bowling & Sports Club","club_type":"bowling / sports club","address":"Victoria St, Norah Head NSW 2263","lat":-33.282,"lng":151.566,"website":null,"phone":"02 4396 6477","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Ourimbah Lisarow RSL Club","club_type":"RSL / bowling club","address":"20 Pacific Hwy, Ourimbah NSW 2258","lat":-33.3575,"lng":151.369,"website":null,"phone":"02 4362 1104","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Club Terrigal","club_type":"bowling club","address":"Wilson Rd, Terrigal NSW 2260","lat":-33.44,"lng":151.439,"website":null,"phone":"02 4384 1403","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Club Umina","club_type":"bowling club","address":"Melbourne Ave, Umina Beach NSW 2257","lat":-33.526,"lng":151.31,"website":null,"phone":"02 4343 9999","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Club Riverside Wyong","club_type":"bowling club","address":"3 Panonia Rd, Wyong NSW 2259","lat":-33.282,"lng":151.421,"website":null,"phone":"02 4356 2260","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Club Wyong RSL","club_type":"RSL club","address":"Margaret St, Wyong NSW 2259","lat":-33.2828,"lng":151.423,"website":null,"phone":"02 4353 1877","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Gosford RSL Club","club_type":"RSL club","address":"26 Central Coast Hwy, West Gosford NSW 2250","lat":-33.429,"lng":151.322,"website":null,"phone":"02 4323 2311","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Doyalson Wyee RSL Club (The Doylo)","club_type":"RSL club","address":"Pacific Hwy, Doyalson NSW 2262","lat":-33.195,"lng":151.526,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Wallarah Bay Recreation Club","club_type":"recreation club","address":"40 Wallarah Rd, Gorokan NSW 2263","lat":-33.258,"lng":151.508,"website":"https://wallarahbay.com.au/","phone":"02 4356 2222","raffles":[],"specials":[{"title":"Dish Restaurant dining specials","meal":"dinner","days":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],"price":null,"details":"Venue advertises a range of dining specials; updater should extract current offers."}],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"The Ary Toukley","club_type":"RSL club","address":"Holmes Ave, Toukley NSW 2259","lat":-33.264,"lng":151.54,"website":null,"phone":"02 4396 4855","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Ettalong Diggers","club_type":"RSL / community club","address":"51-52 The Esplanade, Ettalong Beach NSW 2257","lat":-33.5148,"lng":151.338,"website":null,"phone":"02 4343 0111","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Erina Leagues Club","club_type":"leagues club","address":"Ilya Ave, Erina NSW 2250","lat":-33.438,"lng":151.392,"website":"https://erinaleagues.com.au/","phone":"02 4365 2233","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Toukley Golf Club","club_type":"golf club","address":"54 Ninth Ave, Toukley NSW 2263","lat":-33.267,"lng":151.554,"website":null,"phone":"02 4396 5811","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Wyong Golf Club","club_type":"golf club","address":"319 Pacific Hwy, Wyong NSW 2259","lat":-33.274,"lng":151.425,"website":null,"phone":"02 4352 1361","raffles":[{"name":"Weekend raffles","days":["Friday","Saturday","Sunday"],"time":null,"details":"Golf NSW notes weekend raffles and promotions; exact current times need verification."}],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Shelly Beach Golf Club","club_type":"golf club","address":"Shelly Beach Rd, Shelly Beach NSW 2261","lat":-33.365,"lng":151.485,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Kooindah Waters Golf Club","club_type":"golf club","address":"Kooindah Blvd, Wyong NSW 2259","lat":-33.286,"lng":151.414,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Magenta Shores Golf & Country Club","club_type":"golf / country club","address":"Magenta Dr, Magenta NSW 2261","lat":-33.31,"lng":151.526,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Gosford Golf Club","club_type":"golf club","address":"Racecourse Rd, Gosford NSW 2250","lat":-33.419,"lng":151.34,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"The Springs Golf Club","club_type":"golf / country club","address":"1080 Peats Ridge Rd, Peats Ridge NSW 2250","lat":-33.329,"lng":151.236,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
-    {"name":"Mangrove Mountain Memorial Club & Golf Course","club_type":"golf / memorial club","address":"Mangrove Mountain NSW 2250","lat":-33.299,"lng":151.195,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"}
-  ]
+    {
+      "name": "Shelly Beach Surf Lifesaving Club",
+      "lat": -33.3729831,
+      "lng": 151.4871247,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Umina Beach Hotel",
+      "lat": -33.5214917,
+      "lng": 151.3212801,
+      "address": "247 West Street Umina Beach NSW 2257",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Doylo RSL",
+      "lat": -33.1975656,
+      "lng": 151.5257538,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Wamberal Surf Lifesaving Club",
+      "lat": -33.4302998,
+      "lng": 151.4467224,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "MacMasters Beach Surf Life Saving Club",
+      "lat": -33.5008193,
+      "lng": 151.4249559,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Tall Timbers Hotel",
+      "lat": -33.3634352,
+      "lng": 151.370647,
+      "address": "15 Pacific Highway Ourimbah NSW 2258",
+      "website": "https://www.thetallies.com.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.thetallies.com.au/",
+        "https://www.thetallies.com.au/whats-on/",
+        "https://www.thetallies.com.au/",
+        "https://www.thetallies.com.au/bistro/",
+        "https://www.thetallies.com.au/book-now/"
+      ]
+    },
+    {
+      "name": "Central Coast Soaring Club",
+      "lat": -33.2854669,
+      "lng": 151.2119831,
+      "address": "",
+      "website": "https://www.ccsoaring.com.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.ccsoaring.com.au/",
+        "https://www.ccsoaring.com.au/upcoming-events-list"
+      ]
+    },
+    {
+      "name": "1st Woy Woy Sea Scouts",
+      "lat": -33.48531,
+      "lng": 151.3361211,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Northlakes Tavern",
+      "lat": -33.2161603,
+      "lng": 151.5099533,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Ocean Beach Surf Life Saving Club",
+      "lat": -33.524382,
+      "lng": 151.3211708,
+      "address": "176 The Esplanade Umina Beach NSW 2257",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Tall Timbers Pony Club",
+      "lat": -33.3507845,
+      "lng": 151.3704467,
+      "address": "38-48 Pacific Highway Ourimbah NSW 2258",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Lapidary Club",
+      "lat": -33.3491421,
+      "lng": 151.3680771,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Ourimbah Scout Hall",
+      "lat": -33.3491616,
+      "lng": 151.368491,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "1st Narara Scout Group Hall",
+      "lat": -33.3828018,
+      "lng": 151.3509841,
+      "address": "209 Narara Valley Drive Niagara Park NSW 2250",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Niagara Park Girl Guides Hall",
+      "lat": -33.3829305,
+      "lng": 151.3512753,
+      "address": "209 Narara Valley Drive Niagara Park NSW 2250",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Woodport Hotel",
+      "lat": -33.4355544,
+      "lng": 151.3842638,
+      "address": "207 The Entrance Road Erina NSW 2250",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Elanora Hotel",
+      "lat": -33.4385602,
+      "lng": 151.3546997,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "1st East Gosford Scout Hall",
+      "lat": -33.4353378,
+      "lng": 151.3565879,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Rams HQ",
+      "lat": -33.4352131,
+      "lng": 151.356429,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Gosford Sailing Club",
+      "lat": -33.4368629,
+      "lng": 151.3417008,
+      "address": "28 Masons Parade Gosford 2250",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Gosford Sea Scouts",
+      "lat": -33.4384407,
+      "lng": 151.3412287,
+      "address": "",
+      "website": "https://www.nsw.scouts.com.au/campsitesandhalls/component/k2/item/10365-1stgosfordscouthall",
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Family History Society",
+      "lat": -33.4385537,
+      "lng": 151.3494913,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Potters Society",
+      "lat": -33.4383906,
+      "lng": 151.3497718,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Handweavers, Spinners and Textile Arts Guild",
+      "lat": -33.4380644,
+      "lng": 151.3496418,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Wyong Bowling Club",
+      "lat": -33.2914263,
+      "lng": 151.4275447,
+      "address": "3 Panonia Road Wyong",
+      "website": "https://wyongbowling.com.au/",
+      "raffles": [
+        {
+          "name": "Men's Bowls Raffle",
+          "days": [
+            "Thursday"
+          ],
+          "time": "18:30",
+          "details": "Tickets on sale from 6:00pm.",
+          "source_url": "https://wyongbowling.com.au/whats-happening/"
+        },
+        {
+          "name": "Friday Raffle",
+          "days": [
+            "Friday"
+          ],
+          "time": "18:30",
+          "details": "Tickets on sale from 5:30pm.",
+          "source_url": "https://wyongbowling.com.au/whats-happening/"
+        },
+        {
+          "name": "Sunday Raffle",
+          "days": [
+            "Sunday"
+          ],
+          "time": "16:00",
+          "details": "Tickets on sale from 3:00pm.",
+          "source_url": "https://wyongbowling.com.au/whats-happening/"
+        }
+      ],
+      "specials": [
+        {
+          "title": "$10 Members Lunch Special",
+          "days": [
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "meal": "lunch",
+          "price": "$10",
+          "source_url": "https://wyongbowling.com.au/dining/"
+        },
+        {
+          "title": "$10 Members Schnitty Night",
+          "days": [
+            "Tuesday",
+            "Thursday"
+          ],
+          "meal": "dinner",
+          "price": "$10",
+          "source_url": "https://wyongbowling.com.au/dining/"
+        }
+      ],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://wyongbowling.com.au/",
+        "https://wyongbowling.com.au/whats-happening/",
+        "https://wyongbowling.com.au/dining/",
+        "https://wyongbowling.com.au/whats-on/"
+      ]
+    },
+    {
+      "name": "The Ettalong",
+      "lat": -33.5140536,
+      "lng": 151.336521,
+      "address": "384 Ocean View Road Ettalong Beach NSW 2257",
+      "website": "https://www.theettalong.com.au/",
+      "raffles": [],
+      "specials": [
+        {
+          "title": "$15 Lunch Specials",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "meal": "lunch",
+          "price": "$15",
+          "source_url": "https://www.theettalong.com.au/whats-on/lunch-specials"
+        },
+        {
+          "title": "Weekly Dinner Specials",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday"
+          ],
+          "meal": "dinner",
+          "price": "$15 - $19",
+          "source_url": "https://www.theettalong.com.au/whats-on/dinner-specials"
+        }
+      ],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.theettalong.com.au/",
+        "https://www.theettalong.com.au/whats-on",
+        "https://www.theettalong.com.au/whats-on/karaoke",
+        "https://www.theettalong.com.au/whats-on/dinner-specials",
+        "https://www.theettalong.com.au/whats-on/lunch-specials",
+        "https://www.theettalong.com.au/whats-on/sunset-blues"
+      ]
+    },
+    {
+      "name": "Umina Surf Life Saving Club",
+      "lat": -33.5270979,
+      "lng": 151.3153532,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Killcare Surf Life Saving Club",
+      "lat": -33.5324679,
+      "lng": 151.3588271,
+      "address": "",
+      "website": "https://www.killcaresurfclub.com.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.killcaresurfclub.com.au/"
+      ]
+    },
+    {
+      "name": "Avoca Beach Surf Lifesaving Club",
+      "lat": -33.4707327,
+      "lng": 151.4370526,
+      "address": "10 Vine Street Avoca Beach 2251",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Gosford City Aeromodellers Club",
+      "lat": -33.3769262,
+      "lng": 151.3349792,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "1st Budgewoi Scout Hall",
+      "lat": -33.2304088,
+      "lng": 151.5374048,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Budgewoi Soccer Club",
+      "lat": -33.2260725,
+      "lng": 151.5348801,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Soldiers Beach Surf Lifesaving Club",
+      "lat": -33.2894046,
+      "lng": 151.5661615,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "North Avoca Surf Life Saving Club",
+      "lat": -33.4577487,
+      "lng": 151.4393305,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Wyong RSL Bowling Club",
+      "lat": -33.2810968,
+      "lng": 151.4223415,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Kariong Taven",
+      "lat": -33.4390707,
+      "lng": 151.2935882,
+      "address": "10 Langford Drive Kariong NSW 2250",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Amateur Radio Club",
+      "lat": -33.4394954,
+      "lng": 151.2971083,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Taffy’s",
+      "lat": -33.3398432,
+      "lng": 151.4985132,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Settler's Taven",
+      "lat": -33.4261566,
+      "lng": 151.3296438,
+      "address": "2 Hely Street West Gosford NSW 2250",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Wyong Senior Citizens Club",
+      "lat": -33.2845837,
+      "lng": 151.4226236,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Motel Mezza",
+      "lat": -33.2846734,
+      "lng": 151.4245887,
+      "address": "98 Pacific Highway Wyong",
+      "website": "https://www.motelmezza.com.au/",
+      "raffles": [],
+      "specials": [
+        {
+          "title": "Local’s Night Banquet",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "dinner",
+          "price": "$48 per person",
+          "source_url": "https://www.motelmezza.com.au/events"
+        },
+        {
+          "title": "Social Hour",
+          "days": [
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday"
+          ],
+          "meal": "both",
+          "price": "$15 Social Hour cocktails",
+          "source_url": "https://www.motelmezza.com.au/events"
+        }
+      ],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.motelmezza.com.au/",
+        "https://www.motelmezza.com.au/events"
+      ]
+    },
+    {
+      "name": "1st Tuggerah Lakes Scouts",
+      "lat": -33.3560958,
+      "lng": 151.4930046,
+      "address": "",
+      "website": "https://www.nsw.scouts.com.au/groups/1st-tuggerah-lakes-scout-group/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Wyoming Guide Cabin",
+      "lat": -33.400701,
+      "lng": 151.3558012,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Bayview Hotel",
+      "lat": -33.4839368,
+      "lng": 151.3247394,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Terrigal Surf Life Saving Club",
+      "lat": -33.4463636,
+      "lng": 151.4443896,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Ourimbah University Football Club",
+      "lat": -33.3555569,
+      "lng": 151.3710521,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Entrance Surf Life Saving Club",
+      "lat": -33.3478832,
+      "lng": 151.5027579,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Avoca Beach Tennis Club",
+      "lat": -33.4644636,
+      "lng": 151.4324921,
+      "address": "183 Avoca Drive Avoca Beach NSW 2251",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Shark Pool",
+      "lat": -33.4641074,
+      "lng": 151.4324373,
+      "address": "183 Avoca Drive Avoca Beach NSW 2251",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Dragon Boat Club",
+      "lat": -33.2591917,
+      "lng": 151.5425565,
+      "address": "",
+      "website": "https://www.ccdragons.org.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.ccdragons.org.au/"
+      ]
+    },
+    {
+      "name": "Toukley Rugby League Football Club",
+      "lat": -33.2759951,
+      "lng": 151.5515802,
+      "address": "Evans Road Noraville NSW 2263",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "North Entrance Surf Life Saving Club",
+      "lat": -33.3341585,
+      "lng": 151.5060932,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Mangrove Mountain Computer Club",
+      "lat": -33.3006541,
+      "lng": 151.191853,
+      "address": "6 Waratah Road Mangrove Mountain NSW 2250",
+      "website": "https://www.mmcc.ctcmm.net/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.mmcc.ctcmm.net/"
+      ]
+    },
+    {
+      "name": "Central Coast Croquet Club",
+      "lat": -33.3755871,
+      "lng": 151.4770184,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "1st Terrigal Scouts",
+      "lat": -33.4396896,
+      "lng": 151.4377786,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "1st Wyong Scout Group",
+      "lat": -33.2852405,
+      "lng": 151.4267885,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "diggers@the entrance",
+      "lat": -33.3521748,
+      "lng": 151.4893306,
+      "address": "315 The Entrance Road",
+      "website": "https://www.diggersattheentrance.com.au/",
+      "raffles": [],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false,
+      "source_pages": [
+        "https://www.diggers.club/",
+        "https://www.diggers.club/whats-on/",
+        "https://www.diggers.club/special-events/",
+        "https://www.diggers.club/dining/"
+      ]
+    },
+    {
+      "name": "Tuggerah Lakes Potters",
+      "lat": -33.3537181,
+      "lng": 151.4921539,
+      "address": "9 Sutton Avenue Long Jetty NSW 2261",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "San Remo BMX Club",
+      "lat": -33.21334,
+      "lng": 151.5289314,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Bateau Bay Hotel",
+      "lat": -33.3911594,
+      "lng": 151.4719851,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Kincumber Golf and Sports Club",
+      "lat": -33.474298,
+      "lng": 151.3884083,
+      "address": "2 Bilinga Road Kincumber NSW 2251",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Long Jetty Hotel",
+      "lat": -33.3580838,
+      "lng": 151.4849153,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Pretty Beach Baths",
+      "lat": -33.5260221,
+      "lng": 151.3493213,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Broken Bay (Ettalong) Scout Hall",
+      "lat": -33.5091731,
+      "lng": 151.3374765,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Toowoon Bay Surf Life Saving Club",
+      "lat": -33.3622493,
+      "lng": 151.4998126,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "The Dam Hotel",
+      "lat": -33.2617703,
+      "lng": 151.4641805,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Void Bar",
+      "lat": -33.4472622,
+      "lng": 151.4432946,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Terrigal Hotel",
+      "lat": -33.4414319,
+      "lng": 151.4395014,
+      "address": "176 Terrigal Drive Terrigal NSW 2260",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Blackwall Girl Guide Hall",
+      "lat": -33.5098404,
+      "lng": 151.3333928,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    },
+    {
+      "name": "Toukley Golf Course Clubhouse",
+      "lat": -33.2538099,
+      "lng": 151.5500328,
+      "address": "",
+      "website": null,
+      "raffles": [],
+      "specials": [],
+      "last_checked": null,
+      "needs_review": true
+    }
+  ],
+  "automation": {
+    "openrouter_enabled": true,
+    "model": "openai/gpt-4o-mini",
+    "discovery": "OpenStreetMap Overpass",
+    "crawler": "homepage + relevant same-site pages"
+  }
 }
