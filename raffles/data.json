@@ -1,73 +1,123 @@
 {
   "updated": "2026-08-08",
   "region": "Central Coast NSW",
+  "coverage_note": "Licensed community clubs relevant to raffles, dining and social visits. Includes major RSL, leagues, bowling, recreation, country and golf clubs identified from Central Coast Bowls, Golf Central Coast, council and current venue sources. Entries marked needs_review require current raffle/special verification.",
   "venues": [
     {
       "name": "Mingara Recreation Club",
+      "club_type": "recreation club",
       "address": "12-14 Mingara Dr, Tumbi Umbi NSW 2261",
       "lat": -33.3637,
       "lng": 151.4413,
       "website": "https://www.mingara.com.au/",
+      "phone": "02 4349 7799",
       "raffles": [
-        {"name":"Super Sunday Raffle","days":["Sunday"],"time":"14:00","details":"Large Sunday raffle; confirm current prize list on venue site."}
+        {
+          "name": "Super Sunday Raffle",
+          "days": ["Sunday"],
+          "time": "14:00",
+          "details": "Large Sunday raffle; current prize list should be confirmed on the venue site."
+        }
       ],
       "specials": [],
       "last_checked": "2026-08-08",
-      "needs_review": false
+      "needs_review": false,
+      "location_accuracy": "verified"
     },
     {
       "name": "Bateau Bay Bowling Club",
+      "club_type": "bowling club",
       "address": "5 Bias Ave, Bateau Bay NSW 2261",
       "lat": -33.3835,
-      "lng": 151.4780,
+      "lng": 151.478,
       "website": "https://bateaubaybowlo.com.au/",
+      "phone": "02 4332 1365",
       "raffles": [
-        {"name":"Sunday Raffle","days":["Sunday"],"time":"18:00","details":"Tickets generally available before the draw; verify current schedule."},
-        {"name":"Friday Raffle","days":["Friday"],"time":"18:00","details":"Weekly club raffle; verify current schedule."}
+        {"name": "Sunday Raffle", "days": ["Sunday"], "time": "18:00", "details": "Weekly club raffle; verify current ticket and draw times."},
+        {"name": "Friday Raffle", "days": ["Friday"], "time": "18:00", "details": "Weekly club raffle; verify current schedule."}
       ],
       "specials": [],
       "last_checked": "2026-08-08",
-      "needs_review": true
+      "needs_review": true,
+      "location_accuracy": "approximate"
     },
     {
       "name": "The Greens The Entrance",
-      "address": "2 Norberta St, The Entrance NSW 2261",
+      "club_type": "bowling club",
+      "address": "10 Warrigal St, The Entrance NSW 2261",
       "lat": -33.3473,
       "lng": 151.4958,
       "website": "https://thegreenstheentrance.com.au/",
+      "phone": "02 4332 5955",
       "raffles": [
-        {"name":"Sunday Meat Raffle","days":["Sunday"],"time":"15:00","details":"Meat-tray raffle; exact draw time should be verified."},
-        {"name":"Friday Meat Raffle","days":["Friday"],"time":"18:30","details":"Weekly meat-tray raffle; verify before travelling."}
+        {"name": "Sunday Meat Raffle", "days": ["Sunday"], "time": "15:00", "details": "Meat-tray raffle; verify current draw time."},
+        {"name": "Friday Meat Raffle", "days": ["Friday"], "time": "18:30", "details": "Weekly meat-tray raffle; verify before travelling."}
       ],
       "specials": [],
       "last_checked": "2026-08-08",
-      "needs_review": true
+      "needs_review": true,
+      "location_accuracy": "approximate"
     },
     {
       "name": "The Entrance Leagues Club",
+      "club_type": "leagues club",
       "address": "3 Bay Village Rd, Bateau Bay NSW 2261",
       "lat": -33.3822,
       "lng": 151.4744,
       "website": "https://telclub.com.au/",
+      "phone": null,
       "raffles": [
-        {"name":"Weekly Raffle","days":["Wednesday","Friday","Sunday"],"time":"18:00","details":"Regular weekly raffle; exact draw details are refreshed by the updater when available."}
+        {"name": "Weekly Raffle", "days": ["Wednesday", "Friday", "Sunday"], "time": "18:00", "details": "Regular weekly raffle; exact draw details are refreshed by the updater when available."}
       ],
       "specials": [],
       "last_checked": "2026-08-08",
-      "needs_review": true
+      "needs_review": true,
+      "location_accuracy": "approximate"
     },
     {
       "name": "Central Coast Leagues Club",
+      "club_type": "leagues club",
       "address": "1 Dane Dr, Gosford NSW 2250",
       "lat": -33.4268,
       "lng": 151.3419,
       "website": "https://cclc.com.au/",
+      "phone": "02 4325 9888",
       "raffles": [
-        {"name":"Weekly Raffle","days":["Wednesday","Thursday","Friday","Saturday","Sunday"],"time":"19:00","details":"Regular raffle program with multiple prizes; check venue site for current details."}
+        {"name": "Weekly Raffle", "days": ["Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "time": "19:00", "details": "Regular raffle program with multiple prizes; check venue site for current details."}
       ],
       "specials": [],
       "last_checked": "2026-08-08",
-      "needs_review": false
-    }
+      "needs_review": false,
+      "location_accuracy": "verified"
+    },
+    {"name":"Avoca Beach Bowling Club","club_type":"bowling club","address":"362-364 Avoca Dr, Kincumber NSW 2251","lat":-33.468,"lng":151.433,"website":null,"phone":"02 4356 2200","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Breakers Country Club","club_type":"country / bowling / golf club","address":"64 Dover Rd, Wamberal NSW 2260","lat":-33.4128,"lng":151.448,"website":"https://www.breakerscc.com/","phone":"02 4384 2661","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Canton Beach Sports Club","club_type":"bowling club","address":"11 Hibbard St, Toukley NSW 2263","lat":-33.2806,"lng":151.548,"website":null,"phone":"02 4393 7290","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Davistown RSL Club","club_type":"RSL club","address":"19 Murna Rd, Davistown NSW 2251","lat":-33.485,"lng":151.363,"website":"https://www.davistownrsl.com.au/","phone":"02 4363 0199","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Ettalong Memorial Bowling Club","club_type":"bowling club","address":"103 Springwood St, Ettalong Beach NSW 2257","lat":-33.5126,"lng":151.3294,"website":null,"phone":"02 4341 0087","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Everglades Country Club","club_type":"country / golf / bowling club","address":"9-13 Dunban Rd, Woy Woy NSW 2256","lat":-33.493,"lng":151.318,"website":null,"phone":"02 4341 1866","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Gwandalan Bowling Club","club_type":"bowling club","address":"Gamban Rd, Gwandalan NSW 2259","lat":-33.1355,"lng":151.586,"website":null,"phone":"02 4976 1204","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Halekulani Bowling Club","club_type":"bowling club","address":"50 Natuna Ave, Budgewoi NSW 2262","lat":-33.2342,"lng":151.5546,"website":null,"phone":"02 4390 6400","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Munmorah United Bowling Club","club_type":"bowling club","address":"Acacia Ave, Lake Munmorah NSW 2259","lat":-33.1893,"lng":151.582,"website":null,"phone":"02 4358 8519","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Norah Head Bowling & Sports Club","club_type":"bowling / sports club","address":"Victoria St, Norah Head NSW 2263","lat":-33.282,"lng":151.566,"website":null,"phone":"02 4396 6477","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Ourimbah Lisarow RSL Club","club_type":"RSL / bowling club","address":"20 Pacific Hwy, Ourimbah NSW 2258","lat":-33.3575,"lng":151.369,"website":null,"phone":"02 4362 1104","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Club Terrigal","club_type":"bowling club","address":"Wilson Rd, Terrigal NSW 2260","lat":-33.44,"lng":151.439,"website":null,"phone":"02 4384 1403","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Club Umina","club_type":"bowling club","address":"Melbourne Ave, Umina Beach NSW 2257","lat":-33.526,"lng":151.31,"website":null,"phone":"02 4343 9999","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Club Riverside Wyong","club_type":"bowling club","address":"3 Panonia Rd, Wyong NSW 2259","lat":-33.282,"lng":151.421,"website":null,"phone":"02 4356 2260","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Club Wyong RSL","club_type":"RSL club","address":"Margaret St, Wyong NSW 2259","lat":-33.2828,"lng":151.423,"website":null,"phone":"02 4353 1877","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Gosford RSL Club","club_type":"RSL club","address":"26 Central Coast Hwy, West Gosford NSW 2250","lat":-33.429,"lng":151.322,"website":null,"phone":"02 4323 2311","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Doyalson Wyee RSL Club (The Doylo)","club_type":"RSL club","address":"Pacific Hwy, Doyalson NSW 2262","lat":-33.195,"lng":151.526,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Wallarah Bay Recreation Club","club_type":"recreation club","address":"40 Wallarah Rd, Gorokan NSW 2263","lat":-33.258,"lng":151.508,"website":"https://wallarahbay.com.au/","phone":"02 4356 2222","raffles":[],"specials":[{"title":"Dish Restaurant dining specials","meal":"dinner","days":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],"price":null,"details":"Venue advertises a range of dining specials; updater should extract current offers."}],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"The Ary Toukley","club_type":"RSL club","address":"Holmes Ave, Toukley NSW 2259","lat":-33.264,"lng":151.54,"website":null,"phone":"02 4396 4855","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Ettalong Diggers","club_type":"RSL / community club","address":"51-52 The Esplanade, Ettalong Beach NSW 2257","lat":-33.5148,"lng":151.338,"website":null,"phone":"02 4343 0111","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Erina Leagues Club","club_type":"leagues club","address":"Ilya Ave, Erina NSW 2250","lat":-33.438,"lng":151.392,"website":"https://erinaleagues.com.au/","phone":"02 4365 2233","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Toukley Golf Club","club_type":"golf club","address":"54 Ninth Ave, Toukley NSW 2263","lat":-33.267,"lng":151.554,"website":null,"phone":"02 4396 5811","raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Wyong Golf Club","club_type":"golf club","address":"319 Pacific Hwy, Wyong NSW 2259","lat":-33.274,"lng":151.425,"website":null,"phone":"02 4352 1361","raffles":[{"name":"Weekend raffles","days":["Friday","Saturday","Sunday"],"time":null,"details":"Golf NSW notes weekend raffles and promotions; exact current times need verification."}],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Shelly Beach Golf Club","club_type":"golf club","address":"Shelly Beach Rd, Shelly Beach NSW 2261","lat":-33.365,"lng":151.485,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Kooindah Waters Golf Club","club_type":"golf club","address":"Kooindah Blvd, Wyong NSW 2259","lat":-33.286,"lng":151.414,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Magenta Shores Golf & Country Club","club_type":"golf / country club","address":"Magenta Dr, Magenta NSW 2261","lat":-33.31,"lng":151.526,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Gosford Golf Club","club_type":"golf club","address":"Racecourse Rd, Gosford NSW 2250","lat":-33.419,"lng":151.34,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"The Springs Golf Club","club_type":"golf / country club","address":"1080 Peats Ridge Rd, Peats Ridge NSW 2250","lat":-33.329,"lng":151.236,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"},
+    {"name":"Mangrove Mountain Memorial Club & Golf Course","club_type":"golf / memorial club","address":"Mangrove Mountain NSW 2250","lat":-33.299,"lng":151.195,"website":null,"phone":null,"raffles":[],"specials":[],"last_checked":"2026-08-08","needs_review":true,"location_accuracy":"approximate"}
   ]
 }
