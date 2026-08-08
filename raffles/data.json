@@ -1,0 +1,73 @@
+{
+  "updated": "2026-08-08",
+  "region": "Central Coast NSW",
+  "venues": [
+    {
+      "name": "Mingara Recreation Club",
+      "address": "12-14 Mingara Dr, Tumbi Umbi NSW 2261",
+      "lat": -33.3637,
+      "lng": 151.4413,
+      "website": "https://www.mingara.com.au/",
+      "raffles": [
+        {"name":"Super Sunday Raffle","days":["Sunday"],"time":"14:00","details":"Large Sunday raffle; confirm current prize list on venue site."}
+      ],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false
+    },
+    {
+      "name": "Bateau Bay Bowling Club",
+      "address": "5 Bias Ave, Bateau Bay NSW 2261",
+      "lat": -33.3835,
+      "lng": 151.4780,
+      "website": "https://bateaubaybowlo.com.au/",
+      "raffles": [
+        {"name":"Sunday Raffle","days":["Sunday"],"time":"18:00","details":"Tickets generally available before the draw; verify current schedule."},
+        {"name":"Friday Raffle","days":["Friday"],"time":"18:00","details":"Weekly club raffle; verify current schedule."}
+      ],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true
+    },
+    {
+      "name": "The Greens The Entrance",
+      "address": "2 Norberta St, The Entrance NSW 2261",
+      "lat": -33.3473,
+      "lng": 151.4958,
+      "website": "https://thegreenstheentrance.com.au/",
+      "raffles": [
+        {"name":"Sunday Meat Raffle","days":["Sunday"],"time":"15:00","details":"Meat-tray raffle; exact draw time should be verified."},
+        {"name":"Friday Meat Raffle","days":["Friday"],"time":"18:30","details":"Weekly meat-tray raffle; verify before travelling."}
+      ],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true
+    },
+    {
+      "name": "The Entrance Leagues Club",
+      "address": "3 Bay Village Rd, Bateau Bay NSW 2261",
+      "lat": -33.3822,
+      "lng": 151.4744,
+      "website": "https://telclub.com.au/",
+      "raffles": [
+        {"name":"Weekly Raffle","days":["Wednesday","Friday","Sunday"],"time":"18:00","details":"Regular weekly raffle; exact draw details are refreshed by the updater when available."}
+      ],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": true
+    },
+    {
+      "name": "Central Coast Leagues Club",
+      "address": "1 Dane Dr, Gosford NSW 2250",
+      "lat": -33.4268,
+      "lng": 151.3419,
+      "website": "https://cclc.com.au/",
+      "raffles": [
+        {"name":"Weekly Raffle","days":["Wednesday","Thursday","Friday","Saturday","Sunday"],"time":"19:00","details":"Regular raffle program with multiple prizes; check venue site for current details."}
+      ],
+      "specials": [],
+      "last_checked": "2026-08-08",
+      "needs_review": false
+    }
+  ]
+}
