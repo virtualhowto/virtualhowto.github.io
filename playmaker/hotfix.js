@@ -1,7 +1,7 @@
 // Touch/drag + movement recording/playback for Playmaker.
 (() => {
   const board=document.getElementById('courtBoard'); if(!board)return;
-  let activeToken=null,pointerId=null,recording=false,recordStartedAt=0,movement=[],recordedLines=[],initialPositions={},initialLines=[],playbackFrame=null,playbackStartedAt=0,playbackDurationMs=0,playbackRunning=false,recordTicker=null,lastLineCount=0;
+  let activeToken=null,pointerId=null,recording=false,recordStartedAt=0,movement=[],passEvents=[],initialPositions={},designLines=[],playbackFrame=null,playbackStartedAt=0,playbackDurationMs=0,playbackRunning=false,recordTicker=null,lastLineCount=0;
   const PASS_MS=480;
   const passBall=document.createElement('div');passBall.className='pass-ball';passBall.setAttribute('aria-hidden','true');board.appendChild(passBall);
   const recordBtn=document.getElementById('recordMovement'),playBtn=document.getElementById('playMovement'),resetBtn=document.getElementById('resetMovement'),status=document.getElementById('recordStatus'),recordTime=document.getElementById('recordTime'),playbackBar=document.getElementById('playbackBar'),scrub=document.getElementById('playbackScrub'),durationLabel=document.getElementById('playbackDuration');
@@ -11,33 +11,55 @@
   const snapshot=()=>{const o={};board.querySelectorAll('.token').forEach(t=>o[t.dataset.player]={x:parseFloat(t.style.left),y:parseFloat(t.style.top)});return o};
   const clone=v=>JSON.parse(JSON.stringify(v||[]));
   const apply=pos=>Object.entries(pos||{}).forEach(([id,p])=>{const t=tokenById(id);if(!t)return;t.style.left=`${p.x}%`;t.style.top=`${p.y}%`;state.tokenPositions[id]={x:p.x,y:p.y}});
-  function captureNewLines(){if(!recording)return;while(lastLineCount<state.lines.length){recordedLines.push({t:Math.round(performance.now()-recordStartedAt),line:clone([state.lines[lastLineCount]])[0]});lastLineCount++}}
-  function linesAt(ms){return [...clone(initialLines),...recordedLines.filter(e=>e.t<=ms).map(e=>clone([e.line])[0])]}
-  function applyLines(ms){state.lines=linesAt(ms);if(typeof drawLines==='function')drawLines()}
+
+  // Lines are always design annotations. While recording, newly created PASS lines also
+  // generate a timed pass event, but the line itself is never part of the recording timeline.
+  function captureNewPasses(){
+    if(!recording)return;
+    while(lastLineCount<state.lines.length){
+      const line=state.lines[lastLineCount];
+      if(line?.type==='pass') passEvents.push({t:Math.round(performance.now()-recordStartedAt),a:clone([line.a])[0],b:clone([line.b])[0]});
+      lastLineCount++;
+    }
+  }
+
   function renderPassBall(ms){
-    const passes=recordedLines.filter(e=>e.line?.type==='pass'&&ms>=e.t&&ms<=e.t+PASS_MS);
-    const event=passes[passes.length-1];
+    const active=passEvents.filter(e=>ms>=e.t&&ms<=e.t+PASS_MS);
+    const event=active[active.length-1];
     if(!event){passBall.style.display='none';return;}
     const f=Math.max(0,Math.min(1,(ms-event.t)/PASS_MS));
-    const a=event.line.a,b=event.line.b;
     const eased=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
-    const x=a.x+(b.x-a.x)*eased,y=a.y+(b.y-a.y)*eased;
+    const x=event.a.x+(event.b.x-event.a.x)*eased;
+    const y=event.a.y+(event.b.y-event.a.y)*eased;
     passBall.style.left=`${x}%`;passBall.style.top=`${y}%`;passBall.style.display='block';
   }
+
   function stopPlayback(){playbackRunning=false;if(playbackFrame)cancelAnimationFrame(playbackFrame);playbackFrame=null;passBall.style.display='none';if(playBtn){playBtn.classList.remove('playing');playBtn.querySelector('b').textContent='Play';playBtn.querySelector('span').textContent='▶'}}
-  function stopRecording(){if(!recording)return;captureNewLines();recording=false;clearInterval(recordTicker);recordTicker=null;playbackDurationMs=Math.max(movement.reduce((m,p)=>Math.max(m,p.t),0),recordedLines.reduce((m,p)=>Math.max(m,p.t+(p.line?.type==='pass'?PASS_MS:0)),0));recordBtn?.classList.remove('recording');if(recordBtn)recordBtn.querySelector('b').textContent='Record';if(status)status.hidden=true;if(playbackBar)playbackBar.hidden=!(movement.length||recordedLines.length);if(durationLabel)durationLabel.textContent=fmt(playbackDurationMs);if(scrub)scrub.value='0';setHint((movement.length||recordedLines.length)?`Recorded movement, passes and leads — press Play`:'No movement recorded')}
-  function startRecording(){stopPlayback();movement=[];recordedLines=[];initialPositions=snapshot();initialLines=clone(state.lines);lastLineCount=state.lines.length;recordStartedAt=performance.now();recording=true;playbackDurationMs=0;if(recordBtn){recordBtn.classList.add('recording');recordBtn.querySelector('b').textContent='Stop'}if(status)status.hidden=false;if(playbackBar)playbackBar.hidden=true;recordTicker=setInterval(()=>{captureNewLines();if(recordTime)recordTime.textContent=`${((performance.now()-recordStartedAt)/1000).toFixed(1)}s`},60);setHint('Recording — move players and add Pass/Lead actions in sequence')}
+  function stopRecording(){
+    if(!recording)return;
+    captureNewPasses();recording=false;clearInterval(recordTicker);recordTicker=null;
+    playbackDurationMs=Math.max(movement.reduce((m,p)=>Math.max(m,p.t),0),passEvents.reduce((m,p)=>Math.max(m,p.t+PASS_MS),0));
+    recordBtn?.classList.remove('recording');if(recordBtn)recordBtn.querySelector('b').textContent='Record';if(status)status.hidden=true;
+    if(playbackBar)playbackBar.hidden=!(movement.length||passEvents.length);if(durationLabel)durationLabel.textContent=fmt(playbackDurationMs);if(scrub)scrub.value='0';
+    setHint((movement.length||passEvents.length)?'Recorded player movement and timed passes — design lines remain static':'No movement recorded');
+  }
+  function startRecording(){
+    stopPlayback();movement=[];passEvents=[];initialPositions=snapshot();designLines=clone(state.lines);lastLineCount=state.lines.length;recordStartedAt=performance.now();recording=true;playbackDurationMs=0;
+    if(recordBtn){recordBtn.classList.add('recording');recordBtn.querySelector('b').textContent='Stop'}if(status)status.hidden=false;if(playbackBar)playbackBar.hidden=true;
+    recordTicker=setInterval(()=>{captureNewPasses();if(recordTime)recordTime.textContent=`${((performance.now()-recordStartedAt)/1000).toFixed(1)}s`},60);
+    setHint('Recording — move players; Pass actions become timed ball events. Lines stay as design notes.');
+  }
   function recordPoint(token,x,y){if(!recording)return;const t=Math.round(performance.now()-recordStartedAt),last=movement[movement.length-1];if(last&&last.player===token.dataset.player&&t-last.t<30)return;movement.push({player:token.dataset.player,x,y,t})}
   function positionsAt(ms){const pos=JSON.parse(JSON.stringify(initialPositions||{})),groups={};movement.forEach(p=>(groups[p.player]??=[]).push(p));Object.entries(groups).forEach(([id,pts])=>{let prev={...(initialPositions[id]||{x:pts[0].x,y:pts[0].y}),t:0},next=null;for(const p of pts){if(p.t<=ms)prev=p;else{next=p;break}}if(!next)pos[id]={x:prev.x,y:prev.y};else{const f=Math.max(0,Math.min(1,(ms-prev.t)/Math.max(1,next.t-prev.t)));pos[id]={x:prev.x+(next.x-prev.x)*f,y:prev.y+(next.y-prev.y)*f}}});return pos}
-  function renderPlayback(ms){apply(positionsAt(ms));applyLines(ms);renderPassBall(ms);if(scrub&&playbackDurationMs)scrub.value=String(Math.round(ms/playbackDurationMs*1000))}
-  function startPlayback(fromMs=0){if(!(movement.length||recordedLines.length)){setHint('Record player movement, passes or leads first');return}stopRecording();stopPlayback();playbackRunning=true;playbackStartedAt=performance.now()-fromMs;if(playBtn){playBtn.classList.add('playing');playBtn.querySelector('b').textContent='Pause';playBtn.querySelector('span').textContent='❚❚'}const tick=()=>{if(!playbackRunning)return;const e=Math.min(playbackDurationMs,performance.now()-playbackStartedAt);renderPlayback(e);if(e>=playbackDurationMs){stopPlayback();setHint('Playback finished');return}playbackFrame=requestAnimationFrame(tick)};playbackFrame=requestAnimationFrame(tick)}
+  function renderPlayback(ms){apply(positionsAt(ms));renderPassBall(ms);if(scrub&&playbackDurationMs)scrub.value=String(Math.round(ms/playbackDurationMs*1000))}
+  function startPlayback(fromMs=0){if(!(movement.length||passEvents.length)){setHint('Record player movement or timed passes first');return}stopRecording();stopPlayback();playbackRunning=true;playbackStartedAt=performance.now()-fromMs;if(playBtn){playBtn.classList.add('playing');playBtn.querySelector('b').textContent='Pause';playBtn.querySelector('span').textContent='❚❚'}const tick=()=>{if(!playbackRunning)return;const e=Math.min(playbackDurationMs,performance.now()-playbackStartedAt);renderPlayback(e);if(e>=playbackDurationMs){stopPlayback();setHint('Playback finished');return}playbackFrame=requestAnimationFrame(tick)};playbackFrame=requestAnimationFrame(tick)}
   document.querySelectorAll('.tool[data-tool]').forEach(btn=>btn.addEventListener('click',()=>{state.tool=btn.dataset.tool;document.querySelectorAll('.tool[data-tool]').forEach(x=>x.classList.toggle('active',x===btn));if(state.tool==='move')setHint('Drag any player to reposition them')}));
   board.addEventListener('pointerdown',e=>{const token=e.target.closest('.token');if(!token||state.tool!=='move'||playbackRunning)return;e.preventDefault();activeToken=token;pointerId=e.pointerId;token.classList.add('selected');try{token.setPointerCapture(pointerId)}catch(_){}recordPoint(token,parseFloat(token.style.left),parseFloat(token.style.top))},{passive:false,capture:true});
   board.addEventListener('pointermove',e=>{if(!activeToken||state.tool!=='move'||playbackRunning||(pointerId!==null&&e.pointerId!==pointerId))return;e.preventDefault();const r=board.getBoundingClientRect(),x=Math.max(4,Math.min(96,((e.clientX-r.left)/r.width)*100)),y=Math.max(4,Math.min(96,((e.clientY-r.top)/r.height)*100));activeToken.style.left=`${x}%`;activeToken.style.top=`${y}%`;state.tokenPositions[activeToken.dataset.player]={x,y};recordPoint(activeToken,x,y)},{passive:false,capture:true});
   const finish=e=>{if(!activeToken)return;if(pointerId!==null&&e.pointerId!==undefined&&e.pointerId!==pointerId)return;activeToken.classList.remove('selected');activeToken=null;pointerId=null};board.addEventListener('pointerup',finish,true);board.addEventListener('pointercancel',finish,true);
   recordBtn?.addEventListener('click',()=>recording?stopRecording():startRecording());
   playBtn?.addEventListener('click',()=>playbackRunning?stopPlayback():startPlayback(scrub&&playbackDurationMs?Number(scrub.value)/1000*playbackDurationMs:0));
-  resetBtn?.addEventListener('click',()=>{stopRecording();stopPlayback();if(Object.keys(initialPositions).length)apply(initialPositions);state.lines=clone(initialLines);if(typeof drawLines==='function')drawLines();if(scrub)scrub.value='0';setHint('Recording reset to start')});
-  scrub?.addEventListener('input',()=>{if(!(movement.length||recordedLines.length))return;stopPlayback();renderPlayback(Number(scrub.value)/1000*playbackDurationMs)});
-  document.getElementById('savePlay')?.addEventListener('click',()=>{setTimeout(()=>{if(!state.plays.length)return;state.plays[0].movement={initial:initialPositions,points:movement,duration:playbackDurationMs,initialLines:clone(initialLines),lineEvents:clone(recordedLines)};localStorage.setItem('pm_plays',JSON.stringify(state.plays))},0)});
+  resetBtn?.addEventListener('click',()=>{stopRecording();stopPlayback();if(Object.keys(initialPositions).length)apply(initialPositions);if(scrub)scrub.value='0';setHint('Recording reset to start — design lines unchanged')});
+  scrub?.addEventListener('input',()=>{if(!(movement.length||passEvents.length))return;stopPlayback();renderPlayback(Number(scrub.value)/1000*playbackDurationMs)});
+  document.getElementById('savePlay')?.addEventListener('click',()=>{setTimeout(()=>{if(!state.plays.length)return;state.plays[0].movement={initial:initialPositions,points:movement,duration:playbackDurationMs,passes:clone(passEvents)};localStorage.setItem('pm_plays',JSON.stringify(state.plays))},0)});
 })();
