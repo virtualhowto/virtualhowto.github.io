@@ -4,40 +4,52 @@
   if (!board) return;
   const DEF_POS = ['GK','GD','WD','C','WA','GA','GS'];
   let defenders = [], simRunning = false, frame = null, startAt = 0, lastAt = 0, mode = 'man', ballOwner = null, metrics = {pressure:0,space:0,entries:0,frames:0};
+  let ourAttackEnd = 'left';
   const attackTokens = () => [...board.querySelectorAll('.token:not(.defender-token)')].slice(0,7);
   const pct = el => ({x:parseFloat(el.style.left)||50,y:parseFloat(el.style.top)||50});
   const dist = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   function portrait(){return matchMedia('(orientation:portrait)').matches && matchMedia('(max-width:520px)').matches}
+  function inferAttackEnd(){
+    const gs=attackTokens()[0];
+    if(!gs)return 'left';
+    const p=pct(gs);
+    return portrait() ? (p.y<50?'top':'bottom') : (p.x<50?'left':'right');
+  }
+  function axisRangeFor(pos){
+    // Ranges are from the opponent defender's perspective. Their GK/GD/WD defend
+    // the same end our GS attacks; their WA/GA/GS attack the opposite end.
+    const nearLow = ourAttackEnd==='left'||ourAttackEnd==='top';
+    const defensiveThird = nearLow ? [4,33] : [67,96];
+    const defensiveTwo = nearLow ? [4,66] : [34,96];
+    const attackingTwo = nearLow ? [34,96] : [4,66];
+    const attackingThird = nearLow ? [67,96] : [4,33];
+    if(pos==='GK') return defensiveThird;
+    if(pos==='GD'||pos==='WD') return defensiveTwo;
+    if(pos==='C') return [4,96];
+    if(pos==='WA'||pos==='GA') return attackingTwo;
+    if(pos==='GS') return attackingThird;
+    return [4,96];
+  }
   function legalise(pos, dpos){
-    // Approximate netball positional restrictions by thirds.
-    if(portrait()){
-      if(dpos==='GK') pos.y=clamp(pos.y,67,96);
-      if(dpos==='GD') pos.y=clamp(pos.y,34,96);
-      if(dpos==='WD') pos.y=clamp(pos.y,34,66);
-      if(dpos==='C') pos.y=clamp(pos.y,5,95);
-      if(dpos==='WA') pos.y=clamp(pos.y,34,66);
-      if(dpos==='GA') pos.y=clamp(pos.y,5,66);
-      if(dpos==='GS') pos.y=clamp(pos.y,5,33);
-    } else {
-      if(dpos==='GK') pos.x=clamp(pos.x,67,96);
-      if(dpos==='GD') pos.x=clamp(pos.x,34,96);
-      if(dpos==='WD') pos.x=clamp(pos.x,34,66);
-      if(dpos==='C') pos.x=clamp(pos.x,5,95);
-      if(dpos==='WA') pos.x=clamp(pos.x,34,66);
-      if(dpos==='GA') pos.x=clamp(pos.x,5,66);
-      if(dpos==='GS') pos.x=clamp(pos.x,5,33);
-    }
+    const range=axisRangeFor(dpos);
+    if(portrait()) pos.y=clamp(pos.y,range[0],range[1]);
+    else pos.x=clamp(pos.x,range[0],range[1]);
     pos.x=clamp(pos.x,4,96);pos.y=clamp(pos.y,4,96);return pos;
   }
   function createDefenders(){
     clearDefenders();
+    ourAttackEnd=inferAttackEnd();
     const attackers=attackTokens();
     attackers.forEach((a,i)=>{
       const ap=pct(a), el=document.createElement('div');
       el.className='token defender-token';el.textContent=DEF_POS[i];el.dataset.name=`AI ${DEF_POS[i]}`;
-      const offset=portrait()?{x:(i%2?5:-5),y:4}:{x:4,y:(i%2?5:-5)};
-      const p=legalise({x:ap.x+offset.x,y:ap.y+offset.y},DEF_POS[i]);
+      // Start goal-side of the direct matchup, not on an arbitrary mirrored spot.
+      const goal=portrait()
+        ? {x:50,y:(ourAttackEnd==='top'?4:96)}
+        : {x:(ourAttackEnd==='left'?4:96),y:50};
+      const vx=goal.x-ap.x,vy=goal.y-ap.y,len=Math.hypot(vx,vy)||1;
+      const p=legalise({x:ap.x+vx/len*3.5,y:ap.y+vy/len*3.5},DEF_POS[i]);
       el.style.left=`${p.x}%`;el.style.top=`${p.y}%`;board.appendChild(el);
       defenders.push({el,pos:DEF_POS[i],target:i,velocity:{x:0,y:0}});
     });
@@ -47,13 +59,17 @@
     if(!attackers.length)return {x:50,y:50};
     if(mode==='man') return pct(attackers[d.target%attackers.length]);
     if(mode==='zone'){
-      const zones=portrait()?[[50,84],[34,69],[66,69],[50,50],[34,31],[66,31],[50,16]]:[[84,50],[69,34],[69,66],[50,50],[31,34],[31,66],[16,50]];
-      const z=zones[DEF_POS.indexOf(d.pos)]||{x:50,y:50};
+      const low=ourAttackEnd==='left'||ourAttackEnd==='top';
+      const zones=portrait()
+        ? (low?[[50,16],[34,31],[66,31],[50,50],[34,69],[66,69],[50,84]]:[[50,84],[34,69],[66,69],[50,50],[34,31],[66,31],[50,16]])
+        : (low?[[16,50],[31,34],[31,66],[50,50],[69,34],[69,66],[84,50]]:[[84,50],[69,34],[69,66],[50,50],[31,34],[31,66],[16,50]]);
+      const z=zones[DEF_POS.indexOf(d.pos)]||[50,50];
       let nearest=pct(attackers[0]),best=999;attackers.forEach(a=>{const ap=pct(a),dd=dist(ap,{x:z[0],y:z[1]});if(dd<best){best=dd;nearest=ap}});
       return {x:z[0]*.55+nearest.x*.45,y:z[1]*.55+nearest.y*.45};
     }
-    // circle pressure: GK/GD collapse to likely shooting circle, others pressure ball/nearest attacker.
-    if(d.pos==='GK'||d.pos==='GD') return portrait()?{x:50,y:84}:{x:84,y:50};
+    if(d.pos==='GK'||d.pos==='GD'){
+      return portrait()?{x:50,y:(ourAttackEnd==='top'?16:84)}:{x:(ourAttackEnd==='left'?16:84),y:50};
+    }
     if(ballOwner) return pct(ballOwner);
     return pct(attackers[d.target%attackers.length]);
   }
@@ -63,10 +79,12 @@
     const attackers=attackTokens();
     defenders.forEach(d=>{
       let t=targetFor(d,attackers),p=pct(d.el);
-      // defender stays slightly goal-side rather than exactly overlapping attacker
       if(mode==='man'){
-        const goal=portrait()?{x:50,y:96}:{x:96,y:50};
-        const vx=goal.x-t.x,vy=goal.y-t.y,len=Math.hypot(vx,vy)||1;t={x:t.x+vx/len*3.3,y:t.y+vy/len*3.3};
+        const goal=portrait()
+          ? {x:50,y:(ourAttackEnd==='top'?4:96)}
+          : {x:(ourAttackEnd==='left'?4:96),y:50};
+        const vx=goal.x-t.x,vy=goal.y-t.y,len=Math.hypot(vx,vy)||1;
+        t={x:t.x+vx/len*3.3,y:t.y+vy/len*3.3};
       }
       const reaction=mode==='zone'?.075:mode==='circle'?.105:.09;
       const n=legalise({x:p.x+(t.x-p.x)*reaction*dt,y:p.y+(t.y-p.y)*reaction*dt},d.pos);
@@ -95,9 +113,8 @@
     mode=document.getElementById('defenceStyle')?.value||'man';createDefenders();resetMetrics();simRunning=true;startAt=lastAt=performance.now();
     const b=document.getElementById('simulatePlay');if(b){b.classList.add('sim-active');b.querySelector('b').textContent='Stop AI'}
     document.getElementById('simResult').hidden=true;
-    document.getElementById('courtHint').textContent='AI defence is reacting — play or record your attacking movement';
+    document.getElementById('courtHint').textContent=`AI defence set: GK→GS, GD→GA, WD→WA`;
     frame=requestAnimationFrame(step);
-    // If a recorded playback exists, trigger it so attack and defence run together.
     const play=document.getElementById('playMovement'); if(play && !play.classList.contains('playing')) play.click();
   }
   function stop(){
