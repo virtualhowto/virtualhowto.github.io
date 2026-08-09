@@ -1,0 +1,11 @@
+{
+  "name": "Playmaker",
+  "short_name": "Playmaker",
+  "description": "Mobile-first netball coaching, play planning and game-day app.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0f172a",
+  "icons": []
+}
