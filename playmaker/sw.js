@@ -1,4 +1,4 @@
-const CACHE = 'playmaker-v12';
+const CACHE = 'playmaker-v13';
 const BASE = new URL('./', self.location).pathname;
 const ASSETS = [BASE,`${BASE}index.html`,`${BASE}styles.css`,`${BASE}landscape.css`,`${BASE}simulation.css`,`${BASE}line-tools.css`,`${BASE}demo-game.css`,`${BASE}ux-fix.css`,`${BASE}app.js`,`${BASE}hotfix.js`,`${BASE}simulation.js`,`${BASE}line-tools.js`,`${BASE}demo-game.js`,`${BASE}ux-fix.js`,`${BASE}manifest.webmanifest`];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))));self.clients.claim()});self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const u=new URL(event.request.url);if(u.origin!==self.location.origin)return;event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request).then(cached=>cached||caches.match(`${BASE}index.html`))))});
