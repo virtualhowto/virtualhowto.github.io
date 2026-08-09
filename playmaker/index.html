@@ -7,48 +7,24 @@
   <title>Playmaker — Netball Coach</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="landscape.css" />
 </head>
 <body>
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand"><div class="brand-mark">P</div><div><strong>Playmaker</strong><span>Netball coach</span></div></div>
-      <button id="installBtn" class="icon-btn" hidden>Install</button>
-    </header>
+    <header class="topbar"><div class="brand"><div class="brand-mark">P</div><div><strong>Playmaker</strong><span>Netball coach</span></div></div><button id="installBtn" class="icon-btn" hidden>Install</button></header>
     <main>
       <section id="court" class="view active court-view">
         <div class="court-header"><div><span class="eyebrow">PLAY DESIGNER</span><h1>Build the play on court.</h1></div><button id="savePlay" class="primary">Save play</button></div>
-        <div class="workspace">
-          <div class="court-stage">
-            <div class="court-toolbar" aria-label="Court tools">
-              <button class="tool active" data-tool="move"><span>✋</span><b>Move</b></button>
-              <button class="tool" data-tool="pass"><span>➜</span><b>Pass</b></button>
-              <button class="tool" data-tool="lead"><span>↝</span><b>Lead</b></button>
-              <button id="recordMovement" class="tool record-tool"><span>●</span><b>Record</b></button>
-              <button id="playMovement" class="tool"><span>▶</span><b>Play</b></button>
-              <button id="resetMovement" class="tool"><span>↺</span><b>Reset</b></button>
-              <button id="clearLines" class="tool"><span>⌫</span><b>Clear</b></button>
-            </div>
-            <div id="recordStatus" class="record-status" hidden><span class="record-dot"></span><strong>Recording player movement</strong><span id="recordTime">0.0s</span></div>
-            <div class="court-frame">
-              <div id="courtBoard" class="court-board" aria-label="Bird's eye netball court">
-                <svg id="courtLines" class="court-lines"></svg>
-                <div class="court-third third-one"></div><div class="court-third third-two"></div><div class="center-circle"></div>
-                <div class="goal-third goal-left"><div class="goal-circle"></div></div><div class="goal-third goal-right"><div class="goal-circle"></div></div>
-                <div class="goal-post post-left"></div><div class="goal-post post-right"></div>
-              </div>
-            </div>
-            <div class="playback-bar" id="playbackBar" hidden><span>0:00</span><input id="playbackScrub" type="range" min="0" max="1000" value="0" /><span id="playbackDuration">0:00</span></div>
-            <div class="court-hint"><span class="pulse-dot"></span><span id="courtHint">Drag players to position them</span></div>
+        <div class="workspace"><div class="court-stage">
+          <div class="court-toolbar" aria-label="Court tools">
+            <button class="tool active" data-tool="move"><span>✋</span><b>Move</b></button><button class="tool" data-tool="pass"><span>➜</span><b>Pass</b></button><button class="tool" data-tool="lead"><span>↝</span><b>Lead</b></button><button id="recordMovement" class="tool record-tool"><span>●</span><b>Record</b></button><button id="playMovement" class="tool"><span>▶</span><b>Play</b></button><button id="resetMovement" class="tool"><span>↺</span><b>Reset</b></button><button id="clearLines" class="tool"><span>⌫</span><b>Clear</b></button>
           </div>
-          <aside class="coach-panel">
-            <div class="panel-title"><span>PLAY DETAILS</span><button id="collapsePanel" class="panel-toggle">⌄</button></div>
-            <div class="panel-body">
-              <label>Play name<input id="playName" placeholder="Centre pass — split lead" /></label>
-              <label>Coaching note<textarea id="playNote" placeholder="What are the triggers, timing and options?"></textarea></label>
-              <div class="mini-note"><b>Movement:</b> press Record, drag one or more players through the play, then press Stop. Use Play to replay the movement in real time.</div>
-            </div>
-          </aside>
+          <div id="recordStatus" class="record-status" hidden><span class="record-dot"></span><strong>Recording player movement</strong><span id="recordTime">0.0s</span></div>
+          <div class="court-frame"><div id="courtBoard" class="court-board" aria-label="Bird's eye netball court"><svg id="courtLines" class="court-lines"></svg><div class="court-third third-one"></div><div class="court-third third-two"></div><div class="center-circle"></div><div class="goal-third goal-left"><div class="goal-circle"></div></div><div class="goal-third goal-right"><div class="goal-circle"></div></div><div class="goal-post post-left"></div><div class="goal-post post-right"></div></div></div>
+          <div class="playback-bar" id="playbackBar" hidden><span>0:00</span><input id="playbackScrub" type="range" min="0" max="1000" value="0" /><span id="playbackDuration">0:00</span></div>
+          <div class="court-hint"><span class="pulse-dot"></span><span id="courtHint">Drag players to position them</span></div>
         </div>
+        <aside class="coach-panel"><div class="panel-title"><span>PLAY DETAILS</span><button id="collapsePanel" class="panel-toggle">⌄</button></div><div class="panel-body"><label>Play name<input id="playName" placeholder="Centre pass — split lead" /></label><label>Coaching note<textarea id="playNote" placeholder="What are the triggers, timing and options?"></textarea></label><div class="mini-note"><b>Movement:</b> press Record, drag one or more players through the play, then press Stop. Use Play to replay the movement in real time.</div></div></aside></div>
       </section>
       <section id="team" class="view"><div class="page-head"><div><span class="eyebrow">TEAM</span><h2>Squad</h2><p>Players available to your match plans.</p></div><button id="addPlayer" class="primary">+ Player</button></div><div id="playerList" class="player-list"></div></section>
       <section id="playbook" class="view"><div class="page-head"><div><span class="eyebrow">PLAYBOOK</span><h2>Saved plays</h2><p>Your reusable centre passes, sideline plays and structures.</p></div></div><div id="playList" class="play-list"></div></section>
@@ -56,7 +32,5 @@
       <section id="game" class="view"><div class="page-head game-head"><div><span class="eyebrow">GAME DAY</span><h2>Courtside</h2></div><span id="periodLabel" class="period-pill">Q1</span></div><div class="scoreboard"><button id="oppMinus" class="score-control">−</button><button id="oppScore" class="score-team"><span>OPP</span><strong>0</strong><small>tap score to add</small></button><div class="game-clock"><strong id="timer">15:00</strong><button id="timerToggle" class="primary small">Start</button></div><button id="ourScore" class="score-team"><span>US</span><strong>0</strong><small>tap score to add</small></button><button id="ourPlus" class="score-control">+</button></div><div class="game-card"><h3>On court</h3><div id="gameLineup" class="lineup"></div></div><div class="game-card"><label>Quick notes<textarea id="gameNotes" placeholder="Matchups, adjustments, reminders..."></textarea></label></div></section>
     </main>
     <nav class="bottom-nav"><button data-nav="court" class="active"><span class="nav-icon">▱</span><span>Court</span></button><button data-nav="team"><span class="nav-icon">●</span><span>Team</span></button><button data-nav="playbook"><span class="nav-icon">▤</span><span>Plays</span></button><button data-nav="rotations"><span class="nav-icon">↻</span><span>Rotate</span></button><button data-nav="game"><span class="nav-icon">⚑</span><span>Game</span></button></nav>
-  </div>
-  <script src="app.js"></script><script src="hotfix.js"></script>
-</body>
-</html>
+  </div><script src="app.js"></script><script src="hotfix.js"></script>
+</body></html>
