@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Playmaker</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar"><div><div class="eyebrow">NETBALL COACHING</div><h1>Playmaker</h1></div><button id="installBtn" class="ghost" hidden>Install</button></header>
+    <main>
+      <section id="home" class="view active"><div class="hero card"><div><span class="badge">Game day ready</span><h2>Plan smarter. Coach faster.</h2><p>Build plays, manage rotations and keep your team organised from training to the final whistle.</p></div><button class="primary" data-nav="court">Open court</button></div><div class="grid stats"><div class="card stat"><strong id="teamCount">1</strong><span>Teams</span></div><div class="card stat"><strong id="playCount">0</strong><span>Saved plays</span></div><div class="card stat"><strong id="playerCount">10</strong><span>Players</span></div></div><div class="card"><div class="section-head"><div><span class="eyebrow">NEXT STEP</span><h3>Build your match plan</h3></div></div><div class="quick-grid"><button data-nav="team">Manage squad</button><button data-nav="court">Design a play</button><button data-nav="rotations">Plan rotations</button><button data-nav="game">Start game day</button></div></div></section>
+      <section id="team" class="view"><div class="section-head"><div><span class="eyebrow">TEAM HUB</span><h2>Squad</h2></div><button id="addPlayer" class="primary small">+ Player</button></div><div id="playerList" class="player-list"></div></section>
+      <section id="court" class="view"><div class="section-head"><div><span class="eyebrow">COURT DESIGNER</span><h2>Play builder</h2></div><button id="savePlay" class="primary small">Save play</button></div><div class="toolbar card"><button class="tool active" data-tool="move">Move</button><button class="tool" data-tool="pass">Pass</button><button class="tool" data-tool="lead">Lead</button><button id="clearLines" class="tool">Clear lines</button></div><div class="court-wrap card"><div id="courtBoard" class="court-board"><svg id="courtLines" class="court-lines"></svg><div class="third t1"></div><div class="third t2"></div><div class="circle center-circle"></div><div class="goal-circle left"></div><div class="goal-circle right"></div></div></div><div class="card"><label>Play name<input id="playName" placeholder="e.g. Centre pass - split lead" /></label><label>Coaching note<textarea id="playNote" placeholder="What should players look for?"></textarea></label></div></section>
+      <section id="playbook" class="view"><div class="section-head"><div><span class="eyebrow">PLAYBOOK</span><h2>Saved plays</h2></div></div><div id="playList" class="play-list"></div></section>
+      <section id="rotations" class="view"><div class="section-head"><div><span class="eyebrow">ROTATIONS</span><h2>Match planner</h2></div><button id="autoRotate" class="primary small">Auto plan</button></div><div class="card"><label>Format<select id="matchFormat"><option value="4">4 quarters</option><option value="2">2 halves</option></select></label></div><div id="rotationGrid" class="rotation-grid"></div></section>
+      <section id="game" class="view"><div class="section-head"><div><span class="eyebrow">GAME DAY</span><h2>Courtside</h2></div><span id="periodLabel" class="badge">Q1</span></div><div class="game-score card"><button id="oppMinus">−</button><div><span>OPP</span><strong id="oppScore">0</strong></div><div class="timer"><strong id="timer">15:00</strong><button id="timerToggle" class="primary small">Start</button></div><div><span>US</span><strong id="ourScore">0</strong></div><button id="ourPlus">+</button></div><div class="card"><h3>On court</h3><div id="gameLineup" class="lineup"></div></div><div class="card"><label>Quick notes<textarea id="gameNotes" placeholder="Matchups, adjustments, reminders..."></textarea></label></div></section>
+    </main>
+    <nav class="bottom-nav"><button data-nav="home" class="active">⌂<span>Home</span></button><button data-nav="team">◉<span>Team</span></button><button data-nav="court">▱<span>Court</span></button><button data-nav="playbook">▤<span>Plays</span></button><button data-nav="game">⚑<span>Game</span></button></nav>
+  </div><script src="app.js"></script>
+</body></html>
