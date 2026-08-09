@@ -1,66 +1,50 @@
-// Select and delete individual pass/lead lines on the Playmaker court.
+// Select/delete lead lines. Passes are timed ball events and are not drawn as persistent lines.
 (() => {
   const svg = document.getElementById('courtLines');
   const deleteBtn = document.getElementById('deleteLine');
-  if (!svg || !deleteBtn || typeof drawLines !== 'function') return;
+  if (!svg || !deleteBtn) return;
 
-  let selectedIndex = null;
-  const originalDrawLines = drawLines;
+  let selectedStateIndex = null;
 
   function setHint(text) {
     const hint = document.getElementById('courtHint');
     if (hint) hint.textContent = text;
   }
 
-  function decorateLines() {
-    [...svg.querySelectorAll('line')].forEach((line, index) => {
-      line.dataset.lineIndex = String(index);
-      line.classList.add('editable-line');
-      if (index === selectedIndex) line.classList.add('selected-line');
-      line.addEventListener('pointerdown', event => {
-        event.preventDefault();
-        event.stopPropagation();
-        selectedIndex = index;
-        decorateLines();
-        deleteBtn.disabled = false;
-        deleteBtn.classList.add('active-delete');
-        const item = state.lines[index];
-        setHint(`${item?.type === 'pass' ? 'Pass' : 'Lead'} selected — tap Delete to remove it`);
-      });
-    });
-  }
-
   drawLines = function () {
-    originalDrawLines();
-    if (selectedIndex !== null && selectedIndex >= state.lines.length) selectedIndex = null;
-    decorateLines();
-    deleteBtn.disabled = selectedIndex === null;
-    deleteBtn.classList.toggle('active-delete', selectedIndex !== null);
+    svg.innerHTML='';
+    const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+    defs.innerHTML='<marker id="arrowDark" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#172554"/></marker>';
+    svg.appendChild(defs);
+
+    state.lines.forEach((item, stateIndex) => {
+      if (item.type === 'pass') return;
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',item.a.x+'%');line.setAttribute('y1',item.a.y+'%');
+      line.setAttribute('x2',item.b.x+'%');line.setAttribute('y2',item.b.y+'%');
+      line.setAttribute('stroke','#172554');line.setAttribute('stroke-width','3');
+      line.setAttribute('stroke-dasharray','8 6');line.setAttribute('marker-end','url(#arrowDark)');
+      line.dataset.lineIndex=String(stateIndex);line.classList.add('editable-line');
+      if(stateIndex===selectedStateIndex)line.classList.add('selected-line');
+      line.addEventListener('pointerdown',event=>{
+        event.preventDefault();event.stopPropagation();
+        selectedStateIndex=stateIndex;drawLines();
+        setHint('Lead selected — tap Delete to remove it');
+      });
+      svg.appendChild(line);
+    });
+
+    if(selectedStateIndex!==null && (!state.lines[selectedStateIndex] || state.lines[selectedStateIndex].type==='pass')) selectedStateIndex=null;
+    deleteBtn.disabled=selectedStateIndex===null;
+    deleteBtn.classList.toggle('active-delete',selectedStateIndex!==null);
   };
 
-  deleteBtn.addEventListener('click', () => {
-    if (selectedIndex === null || !state.lines[selectedIndex]) {
-      setHint('Tap a pass or lead line first');
-      return;
-    }
-    state.lines.splice(selectedIndex, 1);
-    selectedIndex = null;
-    drawLines();
-    setHint('Selected line deleted');
+  deleteBtn.addEventListener('click',()=>{
+    if(selectedStateIndex===null || !state.lines[selectedStateIndex]){setHint('Tap a lead line first');return;}
+    state.lines.splice(selectedStateIndex,1);selectedStateIndex=null;drawLines();setHint('Selected lead deleted');
   });
 
-  document.getElementById('clearLines')?.addEventListener('click', () => {
-    selectedIndex = null;
-    deleteBtn.disabled = true;
-    deleteBtn.classList.remove('active-delete');
-  });
-
-  document.querySelectorAll('[data-tool]').forEach(button => {
-    button.addEventListener('click', () => {
-      selectedIndex = null;
-      drawLines();
-    });
-  });
-
+  document.getElementById('clearLines')?.addEventListener('click',()=>{selectedStateIndex=null;deleteBtn.disabled=true;deleteBtn.classList.remove('active-delete');});
+  document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',()=>{selectedStateIndex=null;drawLines();}));
   drawLines();
 })();
