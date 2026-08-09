@@ -1,0 +1,18 @@
+/* Netball-specific court geometry + always-visible player location tags */
+.center-circle{width:2.95%!important;height:5.9%!important;aspect-ratio:auto!important;left:48.525%!important;top:47.05%!important}
+.goal-circle{top:17.85%!important;height:64.3%!important;width:96.5%!important}
+.goal-left .goal-circle{left:-48.25%!important}
+.goal-right .goal-circle{right:-48.25%!important}
+.token{overflow:visible!important}
+.token::after{content:attr(data-tag)!important;opacity:1!important;top:46px!important;background:rgba(11,18,32,.94)!important;border:1px solid rgba(255,255,255,.7)!important;color:#fff!important;padding:4px 7px!important;border-radius:8px!important;font-size:9px!important;font-weight:800!important;letter-spacing:.01em!important;box-shadow:0 3px 10px rgba(0,0,0,.22)!important;pointer-events:none!important}
+.token.bench::after{opacity:.9!important}
+@media(max-width:520px){
+  .center-circle{width:5.9%!important;height:2.95%!important;left:47.05%!important;top:48.525%!important}
+  .goal-circle{left:17.85%!important;right:auto!important;width:64.3%!important;height:96.5%!important}
+  .goal-left .goal-circle{top:-48.25%!important}
+  .goal-right .goal-circle{top:auto!important;bottom:-48.25%!important}
+  .token::after{top:44px!important;font-size:8px!important;padding:3px 6px!important}
+}
+@media(orientation:landscape) and (max-height:700px){
+  .token::after{top:45px!important;font-size:9px!important}
+}
