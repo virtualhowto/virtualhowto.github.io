@@ -1,4 +1,4 @@
-const CACHE = 'playmaker-v6';
+const CACHE = 'playmaker-v7';
 const BASE = new URL('./', self.location).pathname;
 const ASSETS = [BASE,`${BASE}index.html`,`${BASE}styles.css`,`${BASE}landscape.css`,`${BASE}simulation.css`,`${BASE}line-tools.css`,`${BASE}app.js`,`${BASE}hotfix.js`,`${BASE}simulation.js`,`${BASE}line-tools.js`,`${BASE}manifest.webmanifest`];
 self.addEventListener('install', event => {event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));self.skipWaiting();});
