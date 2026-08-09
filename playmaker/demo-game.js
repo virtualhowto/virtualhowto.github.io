@@ -1,103 +1,16 @@
-// AI Demo Game: cycles through standard netball attacking patterns against the existing defence engine.
-(() => {
-  const board=document.getElementById('courtBoard');
-  const startBtn=document.getElementById('demoGame');
-  const nextBtn=document.getElementById('nextDemoPlay');
-  const panel=document.getElementById('demoPanel');
-  const title=document.getElementById('demoTitle');
-  const note=document.getElementById('demoNote');
-  if(!board||!startBtn||!panel)return;
-
-  const POS=['GS','GA','WA','C','WD','GD','GK'];
-  let running=false,raf=null,playIndex=0,startedAt=0,lastPassIndex=-1,scoreUs=0,scoreAI=0;
-  const passBall=document.createElement('div');passBall.className='demo-ball';board.appendChild(passBall);
-  const tokens=()=>[...board.querySelectorAll('.token:not(.defender-token)')].slice(0,7);
-  const portrait=()=>matchMedia('(orientation:portrait)').matches&&matchMedia('(max-width:520px)').matches;
-  const mix=(a,b,f)=>a+(b-a)*f;
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-
-  // Keyframes are authored landscape left-to-right, then transformed for portrait.
-  const plays=[
-    {name:'Centre Pass — Split Lead',note:'WA and GA split away from centre, creating two first-pass options before C drives through the middle.',dur:6200,
-      frames:[
-        [[12,50],[26,38],[36,68],[50,50],[62,32],[75,68],[88,50]],
-        [[12,50],[28,30],[41,77],[52,51],[63,31],[75,68],[88,50]],
-        [[14,50],[38,28],[48,72],[60,49],[65,31],[76,67],[88,50]],
-        [[18,48],[48,33],[58,64],[69,48],[67,32],[78,66],[88,50]],
-        [[24,48],[59,39],[69,58],[78,49],[68,31],[80,64],[88,50]]],
-      passes:[[800,3,2],[2450,2,1],[4100,1,0]]},
-    {name:'Centre Pass — Front Cut',note:'GA shows short, then cuts across the face while WA holds width. The second receiver becomes available behind the first lead.',dur:6000,
-      frames:[
-        [[12,50],[27,50],[38,25],[50,50],[63,72],[76,34],[88,50]],
-        [[13,50],[34,42],[41,26],[51,50],[63,72],[76,34],[88,50]],
-        [[17,50],[45,35],[48,28],[59,51],[63,72],[76,34],[88,50]],
-        [[23,50],[56,32],[58,31],[68,52],[64,70],[77,34],[88,50]],
-        [[30,50],[67,37],[69,35],[77,51],[66,68],[79,35],[88,50]]],
-      passes:[[700,3,1],[2300,1,2],[3900,2,0]]},
-    {name:'Transition — Wide Reset',note:'If the middle is blocked, the ball resets wide through WA before C and GA re-time their drives into the attacking third.',dur:6500,
-      frames:[
-        [[16,50],[31,42],[41,28],[50,50],[62,72],[75,38],[87,50]],
-        [[17,50],[33,43],[48,22],[55,52],[63,72],[75,38],[87,50]],
-        [[20,50],[40,44],[58,20],[63,55],[64,70],[76,39],[87,50]],
-        [[25,50],[51,43],[67,29],[72,52],[66,66],[78,41],[87,50]],
-        [[31,50],[65,42],[77,39],[80,50],[67,64],[80,43],[87,50]]],
-      passes:[[700,3,2],[2400,2,3],[4100,3,1],[5200,1,0]]},
-    {name:'Circle Entry — Double Lead',note:'GS presents then clears while GA drives the opposite channel, forcing GK and GD to choose before the final circle feed.',dur:6200,
-      frames:[
-        [[70,50],[62,36],[51,62],[44,50],[35,31],[25,68],[15,50]],
-        [[73,45],[66,42],[55,61],[49,50],[36,31],[25,68],[15,50]],
-        [[77,37],[71,49],[62,58],[57,51],[38,31],[25,68],[15,50]],
-        [[81,42],[76,58],[70,55],[66,50],[40,31],[25,68],[15,50]],
-        [[86,50],[80,65],[76,53],[72,49],[42,31],[25,68],[15,50]]],
-      passes:[[900,3,2],[2600,2,1],[4450,1,0]]}
-  ];
-
-  function transform(p){
-    if(!portrait())return {x:p[0],y:p[1]};
-    return {x:p[1],y:p[0]};
-  }
-  function setPositions(frame){tokens().forEach((t,i)=>{const p=transform(frame[i]);t.style.left=`${p.x}%`;t.style.top=`${p.y}%`;if(window.state?.tokenPositions)state.tokenPositions[t.dataset.player]={x:p.x,y:p.y}})}
-  function animateBall(pass,elapsed,frameNow){
-    const [pt,from,to]=pass,window=520;
-    if(elapsed<pt||elapsed>pt+window){passBall.style.display='none';return false}
-    const a=transform(frameNow[from]),b=transform(frameNow[to]),f=clamp((elapsed-pt)/window,0,1),e=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
-    passBall.style.left=`${mix(a.x,b.x,e)}%`;passBall.style.top=`${mix(a.y,b.y,e)}%`;passBall.style.display='block';return true;
-  }
-  function frameAt(play,elapsed){
-    const seg=(play.dur)/(play.frames.length-1),idx=Math.min(play.frames.length-2,Math.floor(elapsed/seg)),f=clamp((elapsed-idx*seg)/seg,0,1);
-    return play.frames[idx].map((p,i)=>[mix(p[0],play.frames[idx+1][i][0],f),mix(p[1],play.frames[idx+1][i][1],f)]);
-  }
-  function startDefence(){
-    const style=document.getElementById('defenceStyle'); if(style)style.value=['man','zone','circle'][playIndex%3];
-    const sim=document.getElementById('simulatePlay');
-    if(sim&&!sim.classList.contains('sim-active')) sim.click();
-  }
-  function stopDefence(){const sim=document.getElementById('simulatePlay');if(sim?.classList.contains('sim-active'))sim.click()}
-  function showPlay(){const p=plays[playIndex];title.textContent=p.name;note.textContent=p.note;panel.hidden=false;startBtn.querySelector('b').textContent=running?'Stop Demo':'Demo Game'}
-  function startPlay(){
-    cancelAnimationFrame(raf);lastPassIndex=-1;startedAt=performance.now();setPositions(plays[playIndex].frames[0]);showPlay();startDefence();raf=requestAnimationFrame(tick);
-  }
-  function finishPlay(){
-    stopDefence();passBall.style.display='none';
-    // Deliberately simple outcome model for demonstration mode.
-    const success=Math.random()>.33;
-    if(success)scoreUs++; else scoreAI++;
-    const result=document.getElementById('demoScore');if(result)result.textContent=`Attack ${scoreUs} · Defence ${scoreAI}`;
-    if(!running)return;
-    playIndex=(playIndex+1)%plays.length;
-    setTimeout(()=>{if(running)startPlay()},900);
-  }
-  function tick(now){
-    if(!running)return;const play=plays[playIndex],elapsed=now-startedAt;
-    if(elapsed>=play.dur){finishPlay();return}
-    const f=frameAt(play,elapsed);setPositions(f);
-    let active=false;play.passes.forEach(pass=>{if(!active)active=animateBall(pass,elapsed,f)});if(!active)passBall.style.display='none';
-    raf=requestAnimationFrame(tick);
-  }
-  startBtn.addEventListener('click',()=>{
-    running=!running;
-    if(running){scoreUs=0;scoreAI=0;playIndex=0;startPlay();}
-    else{cancelAnimationFrame(raf);stopDefence();passBall.style.display='none';startBtn.querySelector('b').textContent='Demo Game';note.textContent='Demo stopped.';}
-  });
-  nextBtn?.addEventListener('click',()=>{playIndex=(playIndex+1)%plays.length;if(running)startPlay();else{setPositions(plays[playIndex].frames[0]);showPlay()}});
+// Playmaker Standard Library — 10 coachable patterns with Watch + Step mode.
+(()=>{const board=document.getElementById('courtBoard'),watch=document.getElementById('demoGame'),next=document.getElementById('nextDemoPlay'),back=document.getElementById('prevDemoStep'),step=document.getElementById('nextDemoStep'),select=document.getElementById('demoPlaySelect'),panel=document.getElementById('demoPanel'),title=document.getElementById('demoTitle'),note=document.getElementById('demoNote'),stepLabel=document.getElementById('demoStep');if(!board||!watch)return;
+const names=['Split','Stack','Switch','Diamond','Clear','Baseline','Triangle','Slingshot','Wave','Reset'];
+const notes=['WA and GA split to opposite channels to create two first-pass options.','WA and GA start together then break apart, forcing defenders to choose.','Show one channel, then cross and attack the opposite channel.','Maintain four connected passing options around the ball carrier.','GA clears space to release GS into the primary scoring lane.','GS clears across the circle while GA attacks the baseline-side space.','GS, GA and WA rotate as a three-point passing shape around the circle.','Move wide, switch quickly through centre, then accelerate into attack.','Sequential leads: present, clear and replace so the next receiver arrives on time.','Release pressure backwards or sideways, restore spacing, then rebuild.'];
+const base=[[12,50],[27,38],[38,66],[50,50],[62,32],[75,68],[88,50]];
+const end=[
+[[25,50],[58,34],[70,62],[79,49],[66,30],[80,66],[88,50]],[[24,50],[61,39],[69,58],[78,48],[67,31],[80,65],[88,50]],[[25,50],[64,60],[70,32],[79,50],[67,30],[80,66],[88,50]],[[25,50],[58,35],[67,65],[76,50],[62,29],[79,68],[88,50]],[[87,50],[72,68],[65,43],[57,50],[45,30],[30,67],[15,50]],[[84,65],[76,36],[68,55],[58,49],[45,31],[30,67],[15,50]],[[84,50],[76,67],[70,31],[61,50],[47,31],[31,67],[15,50]],[[28,50],[65,41],[77,24],[81,50],[67,69],[80,66],[88,50]],[[28,50],[63,40],[72,63],[81,49],[68,30],[80,66],[88,50]],[[28,50],[58,40],[70,62],[78,49],[60,28],[78,67],[88,50]]];
+const passSets=[[[1,3,2],[2,2,1],[3,1,0]],[[1,3,2],[2,2,1],[3,1,0]],[[1,3,1],[2,1,2],[3,2,0]],[[1,3,2],[2,2,1],[3,1,0]],[[1,3,2],[2,2,1],[3,1,0]],[[1,3,2],[2,2,1],[3,1,0]],[[1,3,2],[2,2,1],[3,1,0]],[[1,3,2],[2,2,3],[3,3,1],[4,1,0]],[[1,3,2],[2,2,1],[3,1,0]],[[1,3,2],[2,2,3],[3,3,1],[4,1,0]]];
+const plays=names.map((name,i)=>{const frames=[];for(let s=0;s<5;s++){const f=s/4;frames.push(base.map((p,j)=>[p[0]+(end[i][j][0]-p[0])*f,p[1]+(end[i][j][1]-p[1])*f]))}return{name:`${String(i+1).padStart(2,'0')} · ${name}`,note:notes[i],frames,passes:passSets[i],dur:6000}});
+let pi=0,si=0,running=false,raf=null,startAt=0;const ball=document.createElement('div');ball.className='demo-ball';board.appendChild(ball);const tokens=()=>[...board.querySelectorAll('.token:not(.defender-token)')].slice(0,7),portrait=()=>matchMedia('(orientation:portrait)').matches&&matchMedia('(max-width:520px)').matches,tx=p=>portrait()?{x:p[1],y:p[0]}:{x:p[0],y:p[1]},mix=(a,b,f)=>a+(b-a)*f;
+plays.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.name;select?.appendChild(o)});
+function setFrame(idx){const p=plays[pi],fr=p.frames[idx];tokens().forEach((t,i)=>{const q=tx(fr[i]);t.style.left=q.x+'%';t.style.top=q.y+'%'});si=idx;panel.hidden=false;title.textContent=p.name;note.textContent=p.note;stepLabel.textContent=`Step ${idx+1} of ${p.frames.length} · ${idx===0?'Starting shape':idx===p.frames.length-1?'Finish / scoring option':'Developing phase'}`;ball.style.display='none'}
+function animate(now){if(!running)return;const p=plays[pi],e=now-startAt;if(e>=p.dur){running=false;watch.querySelector('b').textContent='Watch';setFrame(p.frames.length-1);return}const span=p.dur/(p.frames.length-1),idx=Math.min(3,Math.floor(e/span)),f=(e-idx*span)/span,a=p.frames[idx],b=p.frames[idx+1];tokens().forEach((t,i)=>{const q=tx([mix(a[i][0],b[i][0],f),mix(a[i][1],b[i][1],f)]);t.style.left=q.x+'%';t.style.top=q.y+'%'});stepLabel.textContent=`Playing · phase ${idx+1}/${p.frames.length-1}`;let shown=false;p.passes.forEach(([phase,from,to])=>{const pt=phase*span-350,d=500;if(e>=pt&&e<=pt+d&&!shown){const aa=tx(a[from]),bb=tx(b[to]),pf=(e-pt)/d;ball.style.left=mix(aa.x,bb.x,pf)+'%';ball.style.top=mix(aa.y,bb.y,pf)+'%';ball.style.display='block';shown=true}});if(!shown)ball.style.display='none';raf=requestAnimationFrame(animate)}
+function stop(){running=false;if(raf)cancelAnimationFrame(raf);ball.style.display='none';watch.querySelector('b').textContent='Watch'}function choose(i){stop();pi=(i+plays.length)%plays.length;si=0;if(select)select.value=pi;setFrame(0)}
+select?.addEventListener('change',()=>choose(Number(select.value)));watch.addEventListener('click',()=>{if(running){stop();return}running=true;startAt=performance.now();watch.querySelector('b').textContent='Pause';panel.hidden=false;title.textContent=plays[pi].name;note.textContent=plays[pi].note;raf=requestAnimationFrame(animate)});step?.addEventListener('click',()=>{stop();setFrame(Math.min(plays[pi].frames.length-1,si+1))});back?.addEventListener('click',()=>{stop();setFrame(Math.max(0,si-1))});next?.addEventListener('click',()=>choose(pi+1));choose(0);
 })();
