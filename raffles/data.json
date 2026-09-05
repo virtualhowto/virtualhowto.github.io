@@ -143,11 +143,21 @@
             "Sunday"
           ],
           "time": "19:00",
-          "details": "Win fresh meat trays and support The Entrance Seahawks. There are 10 small meat trays and 1 large meat tray up for grabs at every raffle. Tickets on sale from 5.30pm on Fridays and from 12:30pm on Sundays.",
+          "details": "Win fresh meat trays and support The Entrance Seahawks. 10 small meat trays and 1 large meat tray up for grabs at every raffle.",
           "source_url": "https://thegreenstheentrance.com.au/event/great-raffle-fridays-and-sundays/"
         }
       ],
-      "specials": [],
+      "specials": [
+        {
+          "title": "Father's Day Specials",
+          "days": [
+            "Sunday"
+          ],
+          "meal": "both",
+          "price": "$42.80 members // $45.80 non members for Sirloin, $35.90 members // $38.90 non members for Barramundi",
+          "source_url": "https://thegreenstheentrance.com.au/event/fathers-day-specials/"
+        }
+      ],
       "last_checked": "2026-09-05",
       "needs_review": false,
       "location_accuracy": "approximate",
@@ -188,7 +198,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+          "source_url": "https://telclub.com.au/whats-on/"
         },
         {
           "title": "Tuesday Steak Night",
@@ -197,7 +207,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+          "source_url": "https://telclub.com.au/whats-on/"
         },
         {
           "title": "Wednesday Schnitzel",
@@ -206,7 +216,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+          "source_url": "https://telclub.com.au/whats-on/"
         },
         {
           "title": "Thursday Special – Pasta",
@@ -215,7 +225,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+          "source_url": "https://telclub.com.au/whats-on/"
         },
         {
           "title": "Friday Burger Night",
@@ -224,7 +234,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+          "source_url": "https://telclub.com.au/whats-on/"
         },
         {
           "title": "Sunday Roast Night",
@@ -233,7 +243,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+          "source_url": "https://telclub.com.au/whats-on/"
         }
       ],
       "last_checked": "2026-09-05",
@@ -374,6 +384,51 @@
           ],
           "meal": "dinner",
           "price": "$16",
+          "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
+        },
+        {
+          "title": "$6.30 Tooheys New Schooners",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "meal": "both",
+          "price": "$6.30",
+          "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
+        },
+        {
+          "title": "$8.00 Stone & Wood Schooners",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "meal": "both",
+          "price": "$8.00",
+          "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
+        },
+        {
+          "title": "$4.60 House White Wine Glasses",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "meal": "both",
+          "price": "$4.60",
           "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
         }
       ],
@@ -654,7 +709,7 @@
             "Sunday"
           ],
           "time": "18:30",
-          "details": "Raffle Tickets on sale from 5:45pm on Tuesday and Friday, drawn at 6:30pm. Sunday raffle tickets on sale from 2:00pm, drawn at 3:00pm.",
+          "details": "Raffle Tickets on sale from 5:45pm on Tuesday and Friday, drawn at 6:30pm. Sunday tickets on sale from 2:00pm, drawn at 3:00pm.",
           "source_url": "https://wallarahbay.com.au/whats-on/"
         },
         {
@@ -683,7 +738,7 @@
             "Monday"
           ],
           "meal": "dinner",
-          "price": "Varies",
+          "price": "From a selected menu",
           "source_url": "https://wallarahbay.com.au/dining/"
         },
         {
@@ -710,7 +765,7 @@
             "Thursday"
           ],
           "meal": "dinner",
-          "price": "Free with purchase of adult meal",
+          "price": "Includes kids drink & dessert",
           "source_url": "https://wallarahbay.com.au/dining/"
         }
       ],
@@ -782,21 +837,13 @@
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
-          "name": "Friday Raffle",
+          "name": "Bingo",
           "days": [
+            "Tuesday",
             "Friday"
           ],
-          "time": "19:00",
-          "details": "Join us for the Friday Raffle.",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "name": "Members Badge Draw",
-          "days": [
-            "Friday"
-          ],
-          "time": "18:00, 19:00, 20:00",
-          "details": "Members Badge Draw at 6pm, 7pm, and 8pm.",
+          "time": "11:00",
+          "details": "Join us for Bingo every Tuesday and Friday.",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -805,17 +852,25 @@
             "Tuesday"
           ],
           "time": "18:30",
-          "details": "Join us for Paddy’s Bingo.",
+          "details": "Enjoy Paddy's Bingo every Tuesday.",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
-          "name": "Bingo",
+          "name": "Members Badge Draw",
           "days": [
-            "Tuesday",
             "Friday"
           ],
-          "time": "11:00",
-          "details": "Join us for Bingo.",
+          "time": "18:00, 19:00, 20:00",
+          "details": "Members Badge Draw every Friday.",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "name": "Friday Raffle",
+          "days": [
+            "Friday"
+          ],
+          "time": "19:00",
+          "details": "Participate in the Friday Raffle.",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -824,45 +879,18 @@
             "Wednesday"
           ],
           "time": "19:00",
-          "details": "Participate in Trivia Night.",
+          "details": "Join us for Trivia Night every Wednesday.",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         }
       ],
       "specials": [
         {
-          "title": "Monday Food Special",
+          "title": "Kids Eat Free",
           "days": [
-            "Monday"
+            "Sunday"
           ],
           "meal": "both",
-          "price": "Check menu for details",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "title": "Tuesday Food Special",
-          "days": [
-            "Tuesday"
-          ],
-          "meal": "both",
-          "price": "Check menu for details",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "title": "Wednesday Food Special",
-          "days": [
-            "Wednesday"
-          ],
-          "meal": "dinner",
-          "price": "Check menu for details",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "title": "Thursday Food Special",
-          "days": [
-            "Thursday"
-          ],
-          "meal": "both",
-          "price": "Check menu for details",
+          "price": "Free",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -875,16 +903,43 @@
             "Friday"
           ],
           "meal": "both",
-          "price": "3pm - 5pm",
+          "price": "Discounted",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
-          "title": "Kids Eat Free",
+          "title": "Monday Food Special",
           "days": [
-            "Sunday"
+            "Monday"
           ],
           "meal": "lunch",
-          "price": "All Day",
+          "price": "Special Price",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "Tuesday Food Special",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "lunch",
+          "price": "Special Price",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "Wednesday Food Special",
+          "days": [
+            "Wednesday"
+          ],
+          "meal": "dinner",
+          "price": "Special Price",
+          "source_url": "https://erinaleagues.com.au/whats-on/"
+        },
+        {
+          "title": "Thursday Food Special",
+          "days": [
+            "Thursday"
+          ],
+          "meal": "lunch",
+          "price": "Special Price",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -893,7 +948,7 @@
             "Saturday"
           ],
           "meal": "both",
-          "price": "12pm - 3pm",
+          "price": "Discounted",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         }
       ],
@@ -1478,7 +1533,7 @@
             "Thursday"
           ],
           "time": "18:30",
-          "details": "Tickets on sale from 6:00pm.",
+          "details": "Tickets on sale from 6.00pm.",
           "source_url": "https://www.wyongrsl.com.au/monthly-major-raffle"
         }
       ],
@@ -2272,17 +2327,7 @@
       "address": "315 The Entrance Road",
       "website": "https://www.diggersattheentrance.com.au/",
       "raffles": [],
-      "specials": [
-        {
-          "title": "Father’s Day T-Bone Members Special",
-          "days": [
-            "Sunday"
-          ],
-          "meal": "both",
-          "price": "$39.95",
-          "source_url": "https://www.diggers.club/whats-on/fathers-day/"
-        }
-      ],
+      "specials": [],
       "last_checked": "2026-09-05",
       "needs_review": false,
       "source_pages": [
