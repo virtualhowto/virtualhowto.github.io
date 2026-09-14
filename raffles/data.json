@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-13",
+  "updated": "2026-09-14",
   "region": "Central Coast NSW",
   "coverage_note": "Licensed community clubs relevant to raffles, dining and social visits. Includes major RSL, leagues, bowling, recreation, country and golf clubs identified from Central Coast Bowls, Golf Central Coast, council and current venue sources. Entries marked needs_review require current raffle/special verification.",
   "venues": [
@@ -18,12 +18,12 @@
             "Sunday"
           ],
           "time": "14:00",
-          "details": "60 prizes including meat trays, fruit and veg vouchers, gift cards, and more. Tickets on sale from 1:30pm.",
+          "details": "60 prizes including meat trays, fruit and veg vouchers, Coles Myer Gift Cards, Ming Dragon Gift cards, Reward Points, variety bags, Woolworths Wish Gift Cards and free raffle tickets. Members' special: Buy $20 worth of tickets, get $10 worth free.",
           "source_url": "https://www.mingara.com.au/whats-on/"
         }
       ],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "verified",
       "source_pages": [
@@ -52,7 +52,7 @@
             "Sunday"
           ],
           "time": "17:30",
-          "details": "Tickets on sale from 5:30pm - Drawn from 6:00pm on Sunday and from 6:30pm on Thursday.",
+          "details": "Tickets on sale from 5:30pm - Drawn from 6:00pm on Sunday and 6:30pm on Thursday.",
           "source_url": "https://bateaubaybowlo.com.au/whats-on/"
         },
         {
@@ -66,19 +66,6 @@
         }
       ],
       "specials": [
-        {
-          "title": "Lunch Special",
-          "days": [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday"
-          ],
-          "meal": "lunch",
-          "price": "$16",
-          "source_url": "https://bateaubaybowlo.com.au/dining/"
-        },
         {
           "title": "Loaded Schnitty Night",
           "days": [
@@ -114,9 +101,18 @@
           "meal": "dinner",
           "price": "$28",
           "source_url": "https://bateaubaybowlo.com.au/dining/"
+        },
+        {
+          "title": "Friday Lunch Special",
+          "days": [
+            "Friday"
+          ],
+          "meal": "lunch",
+          "price": "$16",
+          "source_url": "https://bateaubaybowlo.com.au/dining/"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "approximate",
       "source_pages": [
@@ -143,12 +139,12 @@
             "Sunday"
           ],
           "time": "19:00",
-          "details": "Join us every Friday evening and Sunday arvo to win fresh meat trays and support The Entrance Seahawks. There are 10 small meat trays and 1 large meat tray up for grabs at every raffle. Friday Tickets on sale from 5.30pm, raffle starts at 7pm. Sunday Tickets on sale from 12:30pm, raffle starts at 2pm.",
+          "details": "Join us every Friday evening and Sunday arvo to win fresh meat trays and support The Entrance Seahawks. There are 10 small meat trays and 1 large meat tray up for grabs at every raffle. Friday Tickets on sale from 5.30pm, raffle starts at 7pm. Sunday Tickets on sale from 12:30pm, raffle starts at 2pm. Must be present to win.",
           "source_url": "https://thegreenstheentrance.com.au/event/great-raffle-fridays-and-sundays/"
         }
       ],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "approximate",
       "source_pages": [
@@ -181,22 +177,22 @@
       ],
       "specials": [
         {
-          "title": "Tuesday Steak Night",
-          "days": [
-            "Tuesday"
-          ],
-          "meal": "dinner",
-          "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/whats-on/"
-        },
-        {
           "title": "Monday Barra Night",
           "days": [
             "Monday"
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/whats-on/"
+          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+        },
+        {
+          "title": "Tuesday Steak Night",
+          "days": [
+            "Tuesday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/eats/dinner-specials/"
         },
         {
           "title": "Wednesday Schnitzel",
@@ -205,7 +201,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/whats-on/"
+          "source_url": "https://telclub.com.au/eats/dinner-specials/"
         },
         {
           "title": "Thursday Special – Pasta",
@@ -214,16 +210,7 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/whats-on/"
-        },
-        {
-          "title": "Sunday Roast Night",
-          "days": [
-            "Sunday"
-          ],
-          "meal": "dinner",
-          "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/whats-on/"
+          "source_url": "https://telclub.com.au/eats/dinner-specials/"
         },
         {
           "title": "Friday Burger Night",
@@ -232,10 +219,19 @@
           ],
           "meal": "dinner",
           "price": "Check menu for details",
-          "source_url": "https://telclub.com.au/whats-on/"
+          "source_url": "https://telclub.com.au/eats/dinner-specials/"
+        },
+        {
+          "title": "Sunday Roast Night",
+          "days": [
+            "Sunday"
+          ],
+          "meal": "dinner",
+          "price": "Check menu for details",
+          "source_url": "https://telclub.com.au/eats/dinner-specials/"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "approximate",
       "source_pages": [
@@ -258,7 +254,7 @@
       "phone": "02 4325 9888",
       "raffles": [
         {
-          "name": "Gold Raffle",
+          "name": "Gold Draw",
           "days": [
             "Thursday"
           ],
@@ -269,7 +265,7 @@
       ],
       "specials": [
         {
-          "title": "Half Price Meals for Members",
+          "title": "Half Price Meals",
           "days": [
             "Thursday"
           ],
@@ -288,7 +284,7 @@
           "source_url": "https://cclc.com.au/"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "verified",
       "source_pages": [
@@ -370,7 +366,7 @@
           "source_url": "https://www.breakerscc.com/whats-on/dining-deals"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "approximate",
       "source_pages": [
@@ -426,20 +422,11 @@
             "Thursday"
           ],
           "meal": "both",
-          "price": "varies",
+          "price": "great value",
           "source_url": "https://davistownrsl.com.au/tidewater/"
-        },
-        {
-          "title": "Kids Eat Free",
-          "days": [
-            "Friday"
-          ],
-          "meal": "dinner",
-          "price": "free with adult meal",
-          "source_url": "https://davistownrsl.com.au/whats-on/"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "approximate",
       "source_pages": [
@@ -647,7 +634,7 @@
             "Sunday"
           ],
           "time": "18:30",
-          "details": "Raffle Tickets on sale from 5:45pm on Tuesday and Friday, drawn at 6:30pm. Sunday tickets on sale from 2:00pm, drawn at 3:00pm.",
+          "details": "Raffle Tickets on sale from 5:45pm on Tuesday and Friday, drawn at 6:30pm. Tickets on sale from 2:00pm on Sunday, drawn at 3:00pm.",
           "source_url": "https://wallarahbay.com.au/whats-on/"
         },
         {
@@ -676,7 +663,7 @@
             "Monday"
           ],
           "meal": "dinner",
-          "price": "Varies",
+          "price": "From a selected menu",
           "source_url": "https://wallarahbay.com.au/dining/"
         },
         {
@@ -685,7 +672,7 @@
             "Tuesday"
           ],
           "meal": "dinner",
-          "price": "$17 for rump steak or $15 for schnitzel",
+          "price": "$17 rump steak or $15 schnitzel",
           "source_url": "https://wallarahbay.com.au/dining/"
         },
         {
@@ -703,11 +690,11 @@
             "Thursday"
           ],
           "meal": "dinner",
-          "price": "Free with conditions",
+          "price": "Free with purchase of adult meal",
           "source_url": "https://wallarahbay.com.au/dining/"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "approximate",
       "source_pages": [
@@ -757,21 +744,12 @@
       "phone": "02 4365 2233",
       "raffles": [
         {
-          "name": "Sunday Fuel Frenzy Mega Raffle",
+          "name": "Thursday Raffles",
           "days": [
-            "Sunday"
+            "Thursday"
           ],
           "time": "19:00",
-          "details": "Join us for the Sunday Fuel Frenzy Mega Raffle.",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "name": "Sunday Raffle",
-          "days": [
-            "Sunday"
-          ],
-          "time": "19:00",
-          "details": "Participate in the Sunday Raffle.",
+          "details": "Join us for the Thursday Raffles.",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -780,77 +758,27 @@
             "Friday"
           ],
           "time": "19:00",
-          "details": "Join us for the Friday Raffle.",
+          "details": "Participate in the Friday Raffle.",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
-          "name": "Members Badge Draw",
+          "name": "Sunday Raffle",
           "days": [
-            "Friday"
-          ],
-          "time": "18:00, 19:00, 20:00",
-          "details": "Members Badge Draw at 6pm, 7pm & 8pm.",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "name": "Paddy’s Bingo",
-          "days": [
-            "Tuesday"
-          ],
-          "time": "18:30",
-          "details": "Join us for Paddy's Bingo.",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "name": "Bingo",
-          "days": [
-            "Tuesday",
-            "Friday"
-          ],
-          "time": "11:00",
-          "details": "Join us for Bingo.",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "name": "Trivia Night",
-          "days": [
-            "Wednesday"
+            "Sunday"
           ],
           "time": "19:00",
-          "details": "Participate in Trivia Night.",
+          "details": "Don't miss the Sunday Raffle.",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         }
       ],
       "specials": [
         {
-          "title": "Kids Eat Free",
-          "days": [
-            "Sunday"
-          ],
-          "meal": "lunch",
-          "price": "Free",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
-          "title": "Happy Hour",
-          "days": [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday"
-          ],
-          "meal": "both",
-          "price": "Check for details",
-          "source_url": "https://erinaleagues.com.au/whats-on/"
-        },
-        {
           "title": "Monday Food Special",
           "days": [
             "Monday"
           ],
-          "meal": "lunch",
-          "price": "Check for details",
+          "meal": "both",
+          "price": "Available all day",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -858,8 +786,8 @@
           "days": [
             "Tuesday"
           ],
-          "meal": "lunch",
-          "price": "Check for details",
+          "meal": "both",
+          "price": "Available all day",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -868,7 +796,7 @@
             "Wednesday"
           ],
           "meal": "dinner",
-          "price": "Check for details",
+          "price": "From 5pm",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
@@ -876,21 +804,21 @@
           "days": [
             "Thursday"
           ],
-          "meal": "lunch",
-          "price": "Check for details",
+          "meal": "both",
+          "price": "Available all day",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         },
         {
-          "title": "Saturday Happy Hour",
+          "title": "Kids Eat Free",
           "days": [
-            "Saturday"
+            "Sunday"
           ],
-          "meal": "both",
-          "price": "Check for details",
+          "meal": "lunch",
+          "price": "All Day",
           "source_url": "https://erinaleagues.com.au/whats-on/"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "location_accuracy": "approximate",
       "source_pages": [
@@ -1111,7 +1039,7 @@
       "website": "https://www.ccjuniormotorcycleclub.org.au",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.ccjuniormotorcycleclub.org.au/"
@@ -1169,12 +1097,10 @@
       "website": "https://www.shimjang.com/classes/Hamlyn-Terrace-New%20South%20Wales-taekwondo-classes-66.html",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
-        "https://www.shimjang.com/classes/Hamlyn-Terrace-New%20South%20Wales-taekwondo-classes-66.html",
-        "https://www.shimjang.com/events/",
-        "https://www.shimjang.com/classes/events/"
+        "https://www.shimjang.com/classes/Hamlyn-Terrace-New%20South%20Wales-taekwondo-classes-66.html"
       ]
     },
     {
@@ -1262,7 +1188,7 @@
       "website": "http://northernpowercc.nsw.cricket.com.au",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://play.cricket.com.au/"
@@ -1287,7 +1213,7 @@
       "website": "https://www.tlmpc.d2g.com",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.tlmpc.d2g.com/"
@@ -1345,7 +1271,7 @@
       "website": "https://www.houseofpocket.com.au/bars/pocket-bar-terrigal/venue-details/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.houseofpocket.com.au/pocket-bar",
@@ -1404,7 +1330,7 @@
       "website": "https://www.thelakesslsc.com.au/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.thelakesslsc.com.au/",
@@ -1441,7 +1367,7 @@
       "website": "https://www.kvbombers.com/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.ccbombers.com/"
@@ -1462,7 +1388,7 @@
             "Sunday"
           ],
           "time": "17:30",
-          "details": "Join us for your chance to win a selection of prizes with our Club Wyong raffle.",
+          "details": "Join us for your chance to win a selection of prizes with our Club Wyong raffle. Cost: Buy $20 worth of tickets to get $20 free!",
           "source_url": "https://www.wyongrsl.com.au/whats-on/weekly-activities"
         },
         {
@@ -1471,7 +1397,7 @@
             "Thursday"
           ],
           "time": "18:30",
-          "details": "Tickets on sale at 6.00pm, drawn from 6.30pm.",
+          "details": "Tickets on sale at 6.00pm. Drawn from 6.30pm.",
           "source_url": "https://www.wyongrsl.com.au/monthly-major-raffle"
         }
       ],
@@ -1492,7 +1418,7 @@
           "source_url": "https://www.wyongrsl.com.au/whats-on/weekly-activities"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.wyongrsl.com.au/",
@@ -1567,14 +1493,10 @@
       "website": "https://www.thetallies.com.au/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
-        "https://www.thetallies.com.au/",
-        "https://www.thetallies.com.au/whats-on/",
-        "https://www.thetallies.com.au/",
-        "https://www.thetallies.com.au/bistro/",
-        "https://www.thetallies.com.au/book-now/"
+        "https://www.thetallies.com.au/"
       ]
     },
     {
@@ -1585,7 +1507,7 @@
       "website": "https://www.ccsoaring.com.au/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.ccsoaring.com.au/",
@@ -1838,7 +1760,7 @@
           "source_url": "https://wyongbowling.com.au/dining/"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://wyongbowling.com.au/",
@@ -1881,7 +1803,7 @@
           "source_url": "https://www.theettalong.com.au/whats-on/dinner-specials"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.theettalong.com.au/",
@@ -1911,7 +1833,7 @@
       "website": "https://www.killcaresurfclub.com.au/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.killcaresurfclub.com.au/"
@@ -2067,7 +1989,7 @@
           "source_url": "https://www.motelmezza.com.au/events"
         }
       ],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.motelmezza.com.au/",
@@ -2170,7 +2092,7 @@
       "website": "https://www.ccdragons.org.au/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.ccdragons.org.au/"
@@ -2206,7 +2128,7 @@
       "website": "https://www.mmcc.ctcmm.net/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.mmcc.ctcmm.net/"
@@ -2253,7 +2175,7 @@
       "website": "https://www.diggersattheentrance.com.au/",
       "raffles": [],
       "specials": [],
-      "last_checked": "2026-09-13",
+      "last_checked": "2026-09-14",
       "needs_review": false,
       "source_pages": [
         "https://www.diggers.club/",
